@@ -69,11 +69,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Dashboard
     'dash.overview': 'Visão Geral',
     'dash.channels': 'Meus Canais',
-    'dash.search': 'Buscar Canais',
+    'dash.search': 'Busca de Vídeos',
+    'dash.niches': 'Niche Explorer',
     'dash.scripts': 'Roteiros',
     'dash.narration': 'Narração',
+    'dash.branding': 'Branding AI',
     'dash.plan': 'Plano 27 Dias',
-    'dash.settings': 'Configurações',
     // Common
     'common.loading': 'Carregando...',
     'common.save': 'Salvar',
