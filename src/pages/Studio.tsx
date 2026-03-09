@@ -36,8 +36,8 @@ const Studio = () => {
     setBatchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
-  const sliceScript = () => {
-    if (!script.trim()) return toast.error('Cole ou digite o roteiro primeiro');
+  const sliceScript = (): Segment[] | null => {
+    if (!script.trim()) { toast.error('Cole ou digite o roteiro primeiro'); return null; }
     const words = script.split(/\s+/).filter(Boolean);
     const WORDS_PER_SEGMENT = 20;
     const newSegments: Segment[] = [];
