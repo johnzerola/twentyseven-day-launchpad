@@ -229,6 +229,92 @@ export type Database = {
         }
         Relationships: []
       }
+      video_projects: {
+        Row: {
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          niche: string | null
+          script: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          niche?: string | null
+          script?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          niche?: string | null
+          script?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      video_segments: {
+        Row: {
+          audio_url: string | null
+          created_at: string | null
+          duration_ms: number | null
+          id: string
+          project_id: string
+          reference_image_url: string | null
+          segment_index: number
+          status: string | null
+          text_content: string | null
+          video_clip_url: string | null
+          visual_prompt: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          id?: string
+          project_id: string
+          reference_image_url?: string | null
+          segment_index: number
+          status?: string | null
+          text_content?: string | null
+          video_clip_url?: string | null
+          visual_prompt?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          id?: string
+          project_id?: string
+          reference_image_url?: string | null
+          segment_index?: number
+          status?: string | null
+          text_content?: string | null
+          video_clip_url?: string | null
+          visual_prompt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_segments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
