@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      niche_database: {
+        Row: {
+          country: string | null
+          created_at: string | null
+          difficulty: string | null
+          faceless_friendly: boolean | null
+          id: string
+          language: string | null
+          name: string
+          rpm_estimate: number | null
+          saturation: string | null
+          sub_niches: Json | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string | null
+          difficulty?: string | null
+          faceless_friendly?: boolean | null
+          id?: string
+          language?: string | null
+          name: string
+          rpm_estimate?: number | null
+          saturation?: string | null
+          sub_niches?: Json | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string | null
+          difficulty?: string | null
+          faceless_friendly?: boolean | null
+          id?: string
+          language?: string | null
+          name?: string
+          rpm_estimate?: number | null
+          saturation?: string | null
+          sub_niches?: Json | null
+        }
+        Relationships: []
+      }
       onboarding_plans: {
         Row: {
           channel_analysis_json: Json | null
@@ -99,6 +138,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      planner_cards: {
+        Row: {
+          column_id: string
+          created_at: string | null
+          due_date: string | null
+          id: string
+          position: number | null
+          priority: string | null
+          tags: Json | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          column_id?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          position?: number | null
+          priority?: string | null
+          tags?: Json | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          position?: number | null
+          priority?: string | null
+          tags?: Json | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
