@@ -20,7 +20,7 @@ interface Channel {
   linked_at: string;
 }
 
-const YOUTUBE_API_KEY = 'AIzaSyBxMtFibQNPqNP3q_SussnxFmPmwXbhkRw';
+// API key moved to edge function
 
 const Channels = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
