@@ -17,6 +17,8 @@ import Narration from "./pages/Narration";
 import Plan from "./pages/Plan";
 import Channels from "./pages/Channels";
 import Pricing from "./pages/Pricing";
+import Studio from "./pages/Studio";
+import Planner from "./pages/Planner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +45,8 @@ const App = () => (
             <Route path="/scripts" element={<P><Scripts /></P>} />
             <Route path="/narration" element={<P><Narration /></P>} />
             <Route path="/plan" element={<P><Plan /></P>} />
+            <Route path="/studio" element={<P><Studio /></P>} />
+            <Route path="/planner" element={<P><Planner /></P>} />
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
