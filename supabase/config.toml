@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.generate-segment-image]
 verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
+
+[functions.generate-visual-prompts]
+verify_jwt = false
