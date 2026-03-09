@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Search, Eye, ThumbsUp, Star, ExternalLink, Filter, Calendar as CalendarIcon, Copy, TrendingUp, Shield, ShieldOff, Clock } from 'lucide-react';
+import { Search, Eye, ThumbsUp, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,21 +18,11 @@ interface VideoResult {
   engagementRate: string; viewsPerSub: string;
 }
 
-// Mock data for TubeSpy
-const MOCK_VIDEOS: VideoResult[] = [
-  { id: 'v1', title: '5 Investimentos que me fizeram milionário em 2025', channelTitle: 'FinançasPro', channelId: 'ch1', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 2500000, likes: 89000, subscribers: 450000, publishedAt: '2025-12-01', duration: 'PT15M30S', isOutlier: true, engagementRate: '3.56%', viewsPerSub: '5.6x' },
-  { id: 'v2', title: 'A história mais assustadora que já investiguei', channelTitle: 'DarkStories', channelId: 'ch2', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 1800000, likes: 72000, subscribers: 320000, publishedAt: '2025-11-28', duration: 'PT22M15S', isOutlier: true, engagementRate: '4.00%', viewsPerSub: '5.6x' },
-  { id: 'v3', title: 'Setup gamer COMPLETO por menos de R$3.000', channelTitle: 'TechBR', channelId: 'ch3', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 950000, likes: 45000, subscribers: 280000, publishedAt: '2025-12-05', duration: 'PT12M45S', isOutlier: false, engagementRate: '4.74%', viewsPerSub: '3.4x' },
-  { id: 'v4', title: 'O caso que a polícia nunca resolveu', channelTitle: 'CrimeBR', channelId: 'ch4', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 3200000, likes: 125000, subscribers: 500000, publishedAt: '2025-11-20', duration: 'PT28M00S', isOutlier: true, engagementRate: '3.91%', viewsPerSub: '6.4x' },
-  { id: 'v5', title: 'Como eu ganhei R$50.000 em um mês no YouTube', channelTitle: 'MonetizaYT', channelId: 'ch5', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 780000, likes: 31000, subscribers: 150000, publishedAt: '2025-12-08', duration: 'PT18M20S', isOutlier: true, engagementRate: '3.97%', viewsPerSub: '5.2x' },
-  { id: 'v6', title: 'Minecraft mas tudo é 100x maior', channelTitle: 'GameZone', channelId: 'ch6', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 450000, likes: 28000, subscribers: 200000, publishedAt: '2025-12-10', duration: 'PT10M05S', isOutlier: false, engagementRate: '6.22%', viewsPerSub: '2.3x' },
-  { id: 'v7', title: 'Die 10 besten Aktien für 2026', channelTitle: 'FinanzDE', channelId: 'ch7', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 620000, likes: 19000, subscribers: 180000, publishedAt: '2025-12-03', duration: 'PT14M55S', isOutlier: false, engagementRate: '3.06%', viewsPerSub: '3.4x' },
-  { id: 'v8', title: 'Jak zarobić na YouTube w Polsce w 2026', channelTitle: 'PolskiYT', channelId: 'ch8', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 340000, likes: 15000, subscribers: 95000, publishedAt: '2025-12-07', duration: 'PT16M30S', isOutlier: false, engagementRate: '4.41%', viewsPerSub: '3.6x' },
-  { id: 'v9', title: 'I Survived 100 Days in a Haunted House', channelTitle: 'ChallengeKing', channelId: 'ch9', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 8500000, likes: 420000, subscribers: 2000000, publishedAt: '2025-11-15', duration: 'PT25M00S', isOutlier: true, engagementRate: '4.94%', viewsPerSub: '4.3x' },
-  { id: 'v10', title: 'A verdade sobre dropshipping em 2026', channelTitle: 'NegócioDigital', channelId: 'ch10', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 520000, likes: 23000, subscribers: 130000, publishedAt: '2025-12-09', duration: 'PT20M10S', isOutlier: false, engagementRate: '4.42%', viewsPerSub: '4.0x' },
-  { id: 'v11', title: 'Os 7 hábitos que mudaram minha vida', channelTitle: 'MindsetBR', channelId: 'ch11', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 1100000, likes: 55000, subscribers: 300000, publishedAt: '2025-12-02', duration: 'PT13M45S', isOutlier: false, engagementRate: '5.00%', viewsPerSub: '3.7x' },
-  { id: 'v12', title: 'Building a $1M Business from Scratch', channelTitle: 'StartupGrind', channelId: 'ch12', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', views: 1900000, likes: 78000, subscribers: 550000, publishedAt: '2025-11-25', duration: 'PT30M00S', isOutlier: true, engagementRate: '4.11%', viewsPerSub: '3.5x' },
-];
+interface ChannelInfo {
+  id: string; name: string; thumbnail: string; subscribers: number;
+  totalViews: number; videoCount: number; avgViews: number;
+  description?: string; country?: string; isMonetized: boolean;
+}
 
 const formatNumber = (n: number) => {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -62,38 +52,45 @@ const COUNTRIES = [
   { value: 'PL', label: 'Polônia' }, { value: 'GB', label: 'UK' },
 ];
 
+const PERIODS = [
+  { value: '', label: 'Qualquer período' },
+  { value: 'today', label: 'Hoje' },
+  { value: 'week', label: 'Última semana' },
+  { value: 'month', label: 'Último mês' },
+  { value: 'year', label: 'Último ano' },
+];
+
 const ChannelSearch = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VideoResult[]>([]);
+  const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [language, setLanguage] = useState('');
   const [country, setCountry] = useState('');
+  const [period, setPeriod] = useState('');
+  const [minViews, setMinViews] = useState('');
+  const [minSubs, setMinSubs] = useState('');
+  const [maxSubs, setMaxSubs] = useState('');
   const [emulating, setEmulating] = useState<string | null>(null);
   const [emulationResult, setEmulationResult] = useState<any>(null);
-
-  // TODO: This monetization badge will be fed by web scraping looking for 'is_monetization_enabled' in YouTube source
-  const [channelMonetized] = useState(true);
 
   const searchVideos = async () => {
     if (!query.trim()) return;
     setLoading(true);
+    setChannelInfo(null);
+    setResults([]);
     try {
       const { data, error } = await supabase.functions.invoke('search-videos', {
-        body: { query, language, country },
+        body: { query, language, country, period, minViews, minSubs, maxSubs },
       });
       if (error) throw new Error(error.message);
-      if (data?.results?.length) {
-        setResults(data.results);
-      } else {
-        // Fallback to mock data for demo
-        setResults(MOCK_VIDEOS);
-      }
-    } catch {
-      // Use mock data as fallback
-      setResults(MOCK_VIDEOS);
-      toast.info('Exibindo dados de demonstração');
+      if (data?.error) throw new Error(data.error);
+      setResults(data?.results || []);
+      setChannelInfo(data?.channel || null);
+      if (!data?.results?.length) toast.info('Nenhum vídeo encontrado');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro na busca');
     } finally {
       setLoading(false);
     }
@@ -124,6 +121,8 @@ const ChannelSearch = () => {
     toast.success(`${video.channelTitle} rastreado!`);
   };
 
+  const isUrlInput = query.includes('youtube.com') || query.includes('youtu.be') || query.startsWith('@') || query.startsWith('UC');
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -133,32 +132,61 @@ const ChannelSearch = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold font-['Space_Grotesk']">TubeSpy & Radar de Outliers</h1>
-            <p className="text-sm text-muted-foreground">Cole o link de um canal ou vídeo concorrente</p>
+            <p className="text-sm text-muted-foreground">Cole o link de um canal, vídeo ou @handle para espionar</p>
           </div>
         </div>
 
-        {/* Monetization Badge */}
-        {results.length > 0 && (
-          <div className="flex items-center gap-2">
-            {channelMonetized ? (
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
-                <Shield className="w-3 h-3" /> Monetização: ATIVADA
-              </Badge>
-            ) : (
-              <Badge variant="destructive" className="gap-1">
-                <ShieldOff className="w-3 h-3" /> Monetização: DESATIVADA
-              </Badge>
+        {/* Channel Card */}
+        {channelInfo && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="glass rounded-xl p-5 flex items-center gap-5">
+            {channelInfo.thumbnail && (
+              <img src={channelInfo.thumbnail} alt={channelInfo.name} className="w-16 h-16 rounded-full object-cover" />
             )}
-            <span className="text-xs text-muted-foreground">{results.length} vídeos analisados</span>
-          </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg">{channelInfo.name}</h3>
+                {/* TODO: monetization check via web scraping for 'is_monetization_enabled' in YouTube page source */}
+                {channelInfo.isMonetized ? (
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
+                    <Shield className="w-3 h-3" /> Monetização: ATIVADA
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="gap-1">
+                    <ShieldOff className="w-3 h-3" /> Monetização: DESATIVADA
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{channelInfo.description}</p>
+            </div>
+            <div className="flex gap-6 text-center">
+              <div>
+                <p className="text-lg font-bold">{formatNumber(channelInfo.subscribers)}</p>
+                <p className="text-[10px] text-muted-foreground">Inscritos</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{formatNumber(channelInfo.totalViews)}</p>
+                <p className="text-[10px] text-muted-foreground">Views Total</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{channelInfo.videoCount}</p>
+                <p className="text-[10px] text-muted-foreground">Vídeos</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{formatNumber(channelInfo.avgViews)}</p>
+                <p className="text-[10px] text-muted-foreground">Média Views</p>
+              </div>
+            </div>
+          </motion.div>
         )}
 
         {/* Search Bar */}
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Cole o link de um canal, vídeo ou busque por palavra-chave..." value={query}
-              onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && searchVideos()}
+            <Input placeholder="Cole: youtube.com/@canal, youtube.com/watch?v=..., ou busque por palavra-chave"
+              value={query} onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchVideos()}
               className="pl-10 bg-secondary/50 h-12 text-base" />
           </div>
           <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2 h-12">
@@ -169,6 +197,10 @@ const ChannelSearch = () => {
           </Button>
         </div>
 
+        {isUrlInput && (
+          <p className="text-xs text-primary">🔗 URL/handle detectado — vamos buscar os vídeos desse canal</p>
+        )}
+
         {showFilters && (
           <div className="glass rounded-xl p-4 flex gap-4 flex-wrap">
             <select value={language} onChange={e => setLanguage(e.target.value)} className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
@@ -177,6 +209,12 @@ const ChannelSearch = () => {
             <select value={country} onChange={e => setCountry(e.target.value)} className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
               {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
+            <select value={period} onChange={e => setPeriod(e.target.value)} className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+              {PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            <Input placeholder="Min views" value={minViews} onChange={e => setMinViews(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
+            <Input placeholder="Min subs" value={minSubs} onChange={e => setMinSubs(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
+            <Input placeholder="Max subs" value={maxSubs} onChange={e => setMaxSubs(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
           </div>
         )}
 
@@ -190,6 +228,13 @@ const ChannelSearch = () => {
             </div>
             <p className="text-sm text-muted-foreground">{emulationResult.roadmap?.strategy}</p>
           </motion.div>
+        )}
+
+        {/* Results info */}
+        {results.length > 0 && !channelInfo && (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{results.length} vídeos encontrados</Badge>
+          </div>
         )}
 
         {/* Data Table */}
@@ -275,8 +320,8 @@ const ChannelSearch = () => {
         {results.length === 0 && !loading && (
           <div className="text-center py-20 text-muted-foreground">
             <Search className="w-16 h-16 mx-auto mb-4 opacity-20" />
-            <p className="text-lg font-medium">Cole o link de um canal ou busque uma palavra-chave</p>
-            <p className="text-sm mt-1">Analise VPH, Outlier Score e monetização dos concorrentes</p>
+            <p className="text-lg font-medium">Cole um link ou busque uma palavra-chave</p>
+            <p className="text-sm mt-1">Suporta: youtube.com/@canal, youtube.com/watch?v=..., ou keywords</p>
           </div>
         )}
       </div>

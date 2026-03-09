@@ -1,18 +1,32 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2 } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
+
+const STYLES = [
+  { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
+  { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Estilo filme premiado, tensão narrativa' },
+  { value: 'mrbeast', label: '🔥 MrBeast Style', desc: 'Alta energia, desafios, impossível não assistir' },
+  { value: 'storytelling', label: '📖 Storytelling', desc: 'Narrativa envolvente com personagens e plot twists' },
+  { value: 'narração', label: '🎙️ Narração', desc: 'Voz profunda, tom autoritário e misterioso' },
+  { value: 'educativo', label: '📚 Educativo', desc: 'Destruir mitos com fatos e analogias' },
+  { value: 'tutorial', label: '🛠️ Tutorial', desc: 'Passo a passo com resultado visível' },
+  { value: 'documentário', label: '📹 Documentário', desc: 'Profundidade, dados e investigação' },
+  { value: 'listicle', label: '📋 Listicle', desc: 'Top N com escalada de impacto' },
+];
 
 const Scripts = () => {
   const { t } = useLanguage();
   const [topic, setTopic] = useState('');
   const [duration, setDuration] = useState('15');
-  const [style, setStyle] = useState('narração');
+  const [style, setStyle] = useState('dopaminérgico');
   const [niche, setNiche] = useState('');
   const [language, setLanguage] = useState('português');
   const [script, setScript] = useState('');
@@ -50,7 +64,6 @@ const Scripts = () => {
         throw new Error(err.error || 'Erro ao gerar roteiro');
       }
 
-      // Stream the response
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -84,7 +97,6 @@ const Scripts = () => {
         }
       }
 
-      // Flush remaining
       if (buffer.trim()) {
         for (let raw of buffer.split('\n')) {
           if (!raw || raw.startsWith(':') || !raw.startsWith('data: ')) continue;
@@ -112,11 +124,7 @@ const Scripts = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Faça login para salvar'); return; }
     await supabase.from('saved_scripts').insert({
-      user_id: user.id,
-      topic,
-      duration: parseInt(duration),
-      style,
-      script_content: script,
+      user_id: user.id, topic, duration: parseInt(duration), style, script_content: script,
     } as any);
     toast.success('Roteiro salvo!');
     loadHistory();
@@ -138,6 +146,8 @@ const Scripts = () => {
   const wordCount = script.split(/\s+/).filter(Boolean).length;
   const charCount = script.length;
   const estimatedMinutes = Math.round(wordCount / 140);
+  const targetWords = parseInt(duration) * 140;
+  const progressPercent = Math.min(100, Math.round((wordCount / targetWords) * 100));
 
   return (
     <DashboardLayout>
@@ -149,7 +159,7 @@ const Scripts = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold font-['Space_Grotesk']">{t('dash.scripts')}</h1>
-              <p className="text-sm text-muted-foreground">Roteiros de alta retenção com IA</p>
+              <p className="text-sm text-muted-foreground">Roteiros dopaminérgicos de alta retenção com IA</p>
             </div>
           </div>
           <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="gap-2">
@@ -157,15 +167,12 @@ const Scripts = () => {
           </Button>
         </div>
 
-        {/* History panel */}
         {showHistory && savedScripts.length > 0 && (
           <div className="glass rounded-xl p-5 space-y-2 max-h-60 overflow-y-auto">
             {savedScripts.map((s: any) => (
               <div key={s.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
-                <button
-                  onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); }}
-                  className="text-sm text-left flex-1 truncate hover:text-primary transition-colors"
-                >
+                <button onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); }}
+                  className="text-sm text-left flex-1 truncate hover:text-primary transition-colors">
                   {s.topic} ({s.duration}min)
                 </button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteScript(s.id)}>
@@ -181,7 +188,7 @@ const Scripts = () => {
             <h3 className="font-semibold">Configurações</h3>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Tópico do vídeo *</label>
-              <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online" className="bg-secondary/50" />
+              <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-secondary/50" />
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Duração (minutos)</label>
@@ -194,22 +201,27 @@ const Scripts = () => {
               </select>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Estilo</label>
-              <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                <option value="narração">Narração</option>
-                <option value="educativo">Educativo</option>
-                <option value="storytelling">Storytelling</option>
-                <option value="tutorial">Tutorial</option>
-                <option value="documentário">Documentário</option>
-                <option value="listicle">Listicle (Top 10, etc)</option>
-              </select>
+              <label className="text-sm text-muted-foreground mb-2 block">Estilo do roteiro</label>
+              <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                {STYLES.map(s => (
+                  <button key={s.value} onClick={() => setStyle(s.value)}
+                    className={`text-left p-2.5 rounded-lg border transition-all text-sm ${
+                      style === s.value 
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : 'border-border/50 bg-secondary/30 hover:border-primary/30'
+                    }`}>
+                    <span className="font-medium">{s.label}</span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Nicho (opcional)</label>
               <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Ex: finanças, tecnologia" className="bg-secondary/50" />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Idioma do roteiro</label>
+              <label className="text-sm text-muted-foreground mb-1 block">Idioma</label>
               <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
                 <option value="português">Português</option>
                 <option value="inglês">English</option>
@@ -220,7 +232,7 @@ const Scripts = () => {
             </div>
             <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gradient-hero border-0 gap-2">
               <Sparkles className="w-4 h-4" />
-              {loading ? 'Gerando roteiro...' : 'Gerar Roteiro com IA'}
+              {loading ? 'Gerando roteiro com IA...' : 'Gerar Roteiro Dopaminérgico'}
             </Button>
           </div>
 
@@ -229,9 +241,20 @@ const Scripts = () => {
               <div>
                 <h3 className="font-semibold">Roteiro</h3>
                 {script && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {wordCount} palavras • {charCount.toLocaleString()} caracteres • ~{estimatedMinutes} min de narração
-                  </p>
+                  <div className="space-y-2 mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ~{estimatedMinutes} min
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Progress value={progressPercent} className="h-2 flex-1" />
+                      <span className={`text-xs font-medium ${progressPercent >= 100 ? 'text-emerald-400' : progressPercent >= 70 ? 'text-yellow-400' : 'text-destructive'}`}>
+                        {progressPercent}%
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Meta: {targetWords.toLocaleString()} palavras para {duration} min • {progressPercent >= 100 ? '✅ Meta atingida' : `Faltam ${(targetWords - wordCount).toLocaleString()} palavras`}
+                    </p>
+                  </div>
                 )}
               </div>
               {script && (
@@ -246,15 +269,22 @@ const Scripts = () => {
                 </div>
               )}
             </div>
+            {loading && !script && (
+              <div className="text-center py-16">
+                <Zap className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
+                <p className="text-muted-foreground">Gerando roteiro com Gemini 2.5 Pro...</p>
+                <p className="text-xs text-muted-foreground mt-1">Estilo: {STYLES.find(s => s.value === style)?.label}</p>
+              </div>
+            )}
             {script ? (
               <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[600px] pr-2">
                 <ReactMarkdown>{script}</ReactMarkdown>
               </div>
-            ) : (
+            ) : !loading && (
               <div className="text-center py-16 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p>Configure e gere seu primeiro roteiro com IA</p>
-                <p className="text-xs mt-2">Roteiros completos com hook, microhooks, CTA, títulos e thumbnails</p>
+                <p>Selecione um estilo e gere roteiros de alta retenção</p>
+                <p className="text-xs mt-2">Open loops • Pattern interrupts • Curiosity gaps • Hooks magnéticos</p>
               </div>
             )}
           </div>
