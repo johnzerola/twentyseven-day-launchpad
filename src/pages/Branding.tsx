@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Palette, Sparkles, Tag, Type, Image as ImageIcon, Copy, Check } from 'lucide-react';
+import { Palette, Sparkles, Tag, Image as ImageIcon, Copy, Check, Layers, BookOpen } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,63 +8,24 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 
-// Mock identities for demo
-const MOCK_IDENTITIES = [
-  {
-    name: 'DarkFinance',
-    tagline: 'O lado sombrio do dinheiro',
-    palette: [
-      { hex: '#1a1a2e', usage: 'Fundo' },
-      { hex: '#16213e', usage: 'Card' },
-      { hex: '#0f3460', usage: 'Accent' },
-      { hex: '#e94560', usage: 'CTA' },
-      { hex: '#ffffff', usage: 'Texto' },
-    ],
-    logoPrompt: 'A sleek, minimalist logo for "DarkFinance" YouTube channel. Dark blue gradient background, golden coin icon with a skull shadow, modern sans-serif font, cinematic feel. --ar 1:1 --v 6',
-    bannerPrompt: 'YouTube banner for "DarkFinance" channel. Dark moody aesthetic with city skyline silhouette, floating stock charts, neon blue accents, premium feel. 2560x1440 --ar 16:9 --v 6',
-  },
-  {
-    name: 'MoneyWhisper',
-    tagline: 'Segredos que os ricos não contam',
-    palette: [
-      { hex: '#0d1117', usage: 'Fundo' },
-      { hex: '#161b22', usage: 'Card' },
-      { hex: '#f0b429', usage: 'Ouro' },
-      { hex: '#7c3aed', usage: 'Accent' },
-      { hex: '#e5e7eb', usage: 'Texto' },
-    ],
-    logoPrompt: 'Minimalist logo for "MoneyWhisper" YouTube channel. Black background, golden whisper/wind icon carrying dollar signs, luxury serif font, mysterious atmosphere. --ar 1:1 --v 6',
-    bannerPrompt: 'YouTube banner for "MoneyWhisper". Black and gold theme, vault door slightly open with golden light, floating currency symbols, premium typography. 2560x1440 --ar 16:9 --v 6',
-  },
-  {
-    name: 'CashCode',
-    tagline: 'Decodificando a riqueza',
-    palette: [
-      { hex: '#0a0a0a', usage: 'Fundo' },
-      { hex: '#1a1a1a', usage: 'Card' },
-      { hex: '#00ff88', usage: 'Matrix' },
-      { hex: '#00d4ff', usage: 'Accent' },
-      { hex: '#f8f8f8', usage: 'Texto' },
-    ],
-    logoPrompt: 'Futuristic logo for "CashCode" YouTube channel. Matrix-style green code rain forming a dollar sign, dark background, tech monospace font, hacker aesthetic. --ar 1:1 --v 6',
-    bannerPrompt: 'YouTube banner for "CashCode". Dark tech aesthetic with binary code, green neon accents, holographic graphs, cyberpunk financial theme. 2560x1440 --ar 16:9 --v 6',
-  },
-];
-
-const MOCK_KEYWORDS = [
-  'como ganhar dinheiro online', 'investimentos 2026', 'renda passiva youtube',
-  'finanças pessoais', 'educação financeira', 'monetizar canal',
-  'youtube automation', 'faceless channel', 'passive income',
-  'side hustle', 'financial freedom', 'stock market tips',
-  'crypto 2026', 'dropshipping', 'affiliate marketing',
-];
+interface BrandIdentity {
+  name: string;
+  tagline: string;
+  reason: string;
+  logoPrompt: string;
+  bannerPrompt: string;
+  palette: { hex: string; usage: string }[];
+}
 
 const Branding = () => {
   const [niche, setNiche] = useState('');
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [identities, setIdentities] = useState(MOCK_IDENTITIES);
-  const [keywords, setKeywords] = useState(MOCK_KEYWORDS);
+  const [identities, setIdentities] = useState<BrandIdentity[]>([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [thumbnailStyle, setThumbnailStyle] = useState('');
+  const [contentPillars, setContentPillars] = useState<string[]>([]);
+  const [subNiches, setSubNiches] = useState<any[]>([]);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
 
   const generate = async () => {
@@ -72,21 +33,35 @@ const Branding = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-branding', {
-        body: { niche, style: 'Moderno', language: 'Português' },
+        body: { niche, style: 'Moderno/Cinematográfico', language: 'Português' },
       });
-      if (data?.channelNames) {
-        // Use real data if available
-        setIdentities(data.channelNames.slice(0, 3).map((cn: any, i: number) => ({
-          ...MOCK_IDENTITIES[i],
-          name: cn.name,
-          tagline: cn.tagline,
-        })));
-      }
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      const names = data.channelNames || [];
+      const palettes = data.colorPalettes || [];
+
+      setIdentities(names.slice(0, 3).map((cn: any, i: number) => ({
+        name: cn.name,
+        tagline: cn.tagline,
+        reason: cn.reason || '',
+        logoPrompt: cn.logoPrompt || `Logo for "${cn.name}" YouTube channel in ${niche} niche. --ar 1:1 --v 6`,
+        bannerPrompt: cn.bannerPrompt || `YouTube banner for "${cn.name}". 2560x1440 --ar 16:9 --v 6`,
+        palette: palettes[i] || [
+          { hex: '#0f172a', usage: 'Fundo' },
+          { hex: '#1e293b', usage: 'Card' },
+          { hex: '#7c3aed', usage: 'Accent' },
+          { hex: '#f97316', usage: 'CTA' },
+          { hex: '#f8fafc', usage: 'Texto' },
+        ],
+      })));
+      setKeywords(data.seoTags || []);
+      setThumbnailStyle(data.thumbnailStyle || '');
+      setContentPillars(data.contentPillars || []);
+      setSubNiches(data.subNiches || []);
       setShowResults(true);
-    } catch {
-      // Fallback to mock
-      setShowResults(true);
-      toast.info('Exibindo dados de demonstração');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao gerar branding');
     } finally {
       setLoading(false);
     }
@@ -112,7 +87,7 @@ const Branding = () => {
           </div>
         </div>
 
-        {/* Single-step form */}
+        {/* Form */}
         <div className="glass rounded-xl p-6 flex gap-4 items-end">
           <div className="flex-1">
             <label className="text-sm text-muted-foreground mb-2 block">Qual é o nicho do seu canal?</label>
@@ -121,11 +96,11 @@ const Branding = () => {
               className="bg-secondary/50 h-12 text-base" />
           </div>
           <Button onClick={generate} disabled={loading} className="gradient-hero border-0 gap-2 h-12 px-8">
-            <Sparkles className="w-4 h-4" /> {loading ? 'Gerando...' : 'Gerar Identidade'}
+            <Sparkles className="w-4 h-4" /> {loading ? 'Gerando com IA...' : 'Gerar Identidade'}
           </Button>
         </div>
 
-        {showResults && (
+        {showResults && identities.length > 0 && (
           <>
             {/* 3 Identity Cards */}
             <div className="grid md:grid-cols-3 gap-4">
@@ -136,6 +111,7 @@ const Branding = () => {
                     <Badge variant="secondary" className="mb-2">Opção {i + 1}</Badge>
                     <h3 className="text-xl font-bold font-['Space_Grotesk']">{identity.name}</h3>
                     <p className="text-sm text-muted-foreground italic">"{identity.tagline}"</p>
+                    {identity.reason && <p className="text-[10px] text-muted-foreground mt-1">{identity.reason}</p>}
                   </div>
 
                   {/* Color Palette */}
@@ -160,7 +136,7 @@ const Branding = () => {
                         {copiedPrompt === `logo-${i}` ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3 text-muted-foreground hover:text-primary" />}
                       </button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground line-clamp-3">{identity.logoPrompt}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-4">{identity.logoPrompt}</p>
                   </div>
 
                   {/* Banner Prompt */}
@@ -171,14 +147,62 @@ const Branding = () => {
                         {copiedPrompt === `banner-${i}` ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3 text-muted-foreground hover:text-primary" />}
                       </button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground line-clamp-3">{identity.bannerPrompt}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-4">{identity.bannerPrompt}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
 
+            {/* Thumbnail Style Guide */}
+            {thumbnailStyle && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                className="glass rounded-xl p-5">
+                <h3 className="font-semibold flex items-center gap-2 mb-3">
+                  <ImageIcon className="w-4 h-4 text-primary" /> Guia de Thumbnail
+                </h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{thumbnailStyle}</p>
+              </motion.div>
+            )}
+
+            {/* Content Pillars */}
+            {contentPillars.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                className="glass rounded-xl p-5">
+                <h3 className="font-semibold flex items-center gap-2 mb-3">
+                  <Layers className="w-4 h-4 text-primary" /> Pilares de Conteúdo
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {contentPillars.map((pillar, i) => (
+                    <div key={i} className="bg-secondary/30 rounded-lg p-3 text-sm flex items-start gap-2">
+                      <span className="text-primary font-bold">{i + 1}.</span>
+                      <span>{pillar}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Sub-niches */}
+            {subNiches.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                className="glass rounded-xl p-5">
+                <h3 className="font-semibold flex items-center gap-2 mb-3">
+                  <BookOpen className="w-4 h-4 text-accent" /> Sub-nichos Recomendados
+                </h3>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {subNiches.map((sn, i) => (
+                    <div key={i} className="bg-secondary/30 rounded-lg p-3">
+                      <p className="font-medium text-sm">{sn.name}</p>
+                      <p className="text-[10px] text-emerald-400 mt-1">Potencial: {sn.potential}</p>
+                      <p className="text-[10px] text-muted-foreground">Competição: {sn.competition}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* SEO Keywords */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
               className="glass rounded-xl p-5">
               <h3 className="font-semibold flex items-center gap-2 mb-4">
                 <Tag className="w-4 h-4 text-primary" /> Keywords SEO de Alta Conversão
@@ -199,7 +223,7 @@ const Branding = () => {
           <div className="glass rounded-xl p-16 text-center text-muted-foreground">
             <Palette className="w-16 h-16 mx-auto mb-4 opacity-20" />
             <p className="text-lg font-medium">Digite seu nicho para gerar 3 identidades visuais completas</p>
-            <p className="text-sm mt-1">Nomes, paletas, prompts para Midjourney e keywords SEO</p>
+            <p className="text-sm mt-1">Nomes, paletas, prompts para Midjourney, thumbnails, pilares e keywords SEO</p>
           </div>
         )}
       </div>

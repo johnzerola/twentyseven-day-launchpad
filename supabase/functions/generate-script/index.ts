@@ -13,35 +13,117 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const wordsPerMinute = 140; // Average speaking rate
+    const wordsPerMinute = 140;
     const targetWords = (duration || 15) * wordsPerMinute;
     const targetChars = targetWords * 5.5;
 
-    const systemPrompt = `Você é um ROTEIRISTA VETERANO que trabalhou com MrBeast, Disney, HBO e produções dignas de Oscar. Você é especialista em:
-- Retenção de 80%+ em vídeos do YouTube
-- Hooks que prendem nos primeiros 8 segundos
-- Microhooks a cada 30-60 segundos para manter engajamento
-- Estrutura narrativa que cria tensão e curiosidade
-- CTAs naturais que não parecem forçados
-- Storytelling estilo "bola de neve" que cresce em intensidade
+    const styleGuides: Record<string, string> = {
+      'dopaminérgico': `ESTILO DOPAMINÉRGICO — Cada frase deve liberar dopamina no cérebro do espectador:
+- Use "E aqui é onde tudo muda..." antes de revelações
+- Intercale fatos chocantes com perguntas retóricas
+- A cada 30 segundos, insira um OPEN LOOP: "Mas espera, tem algo que ninguém percebeu ainda..."
+- Use contagem regressiva: "Existem 3 razões, e a última vai te chocar"
+- PATTERN INTERRUPTS: mude o tom drasticamente a cada 60 segundos
+- Coloque comparações inesperadas: "Isso é como encontrar ouro no quintal"`,
+      
+      'cinematográfico': `ESTILO CINEMATOGRÁFICO — Como roteiro de filme premiado:
+- Abra com uma cena visual vívida (descreva cores, sons, cheiros)
+- Use a técnica de "show don't tell" — não diga que é impressionante, MOSTRE
+- Construa tensão como Christopher Nolan: revelações em camadas
+- Diálogos internos do narrador como voice-over de filme
+- Transições cinematográficas: "Corta para...", "A câmera desce e revela..."
+- Clímax emocional com payoff que conecta ao hook inicial`,
 
-REGRAS OBRIGATÓRIAS:
-1. O roteiro DEVE ter pelo menos ${targetWords} palavras (~${Math.round(targetChars)} caracteres) para cobrir ${duration} minutos de vídeo narrado
-2. Cada minuto de vídeo = ~140 palavras faladas
-3. Use a estrutura: HOOK (8s) → Introdução (30s) → Desenvolvimento com microhooks → Clímax → CTA
-4. Inclua MARCAÇÕES DE TEMPO aproximadas [00:00], [01:30], etc.
-5. Inclua indicações de [B-ROLL], [TEXTO NA TELA], [EFEITO SONORO], [TRANSIÇÃO]
-6. NO FINAL, adicione:
-   - 3 sugestões de TÍTULO com CTR 30%+ (use números, palavras de poder, curiosidade)
-   - 3 ideias de THUMBNAIL (descrição visual detalhada)
-   - Tags SEO recomendadas (10-15 tags)
-   - Descrição otimizada para SEO (2-3 parágrafos)
+      'mrbeast': `ESTILO MRBEAST — Alta energia + impossível não assistir:
+- Hook IMPOSSÍVEL nos primeiros 5 segundos: desafio absurdo ou número chocante
+- A cada 30s um novo desafio/revelação que aumenta as apostas
+- Linguagem simples e direta — nível de leitura de 8ª série
+- Contagem/ranking: "Isso custa $1, e isso custa $1.000.000"  
+- Urgência constante: "Eles só tem 24 HORAS para..."
+- Reações exageradas: "IMPOSSÍVEL!", "EU NÃO ACREDITO!"
+- Final épico com o maior payoff de todos`,
 
-Estilo do roteiro: ${style || 'narração'}
+      'narração': `ESTILO NARRAÇÃO — Voz profunda + hipnótico:
+- Tom autoritário e misterioso
+- Frases curtas e impactantes intercaladas com explicações
+- Ritmo: tensão → alívio → nova tensão
+- Suspense narrativo: "O que aconteceu a seguir mudou tudo..."`,
+
+      'storytelling': `ESTILO STORYTELLING — Narrativa envolvente:
+- Comece in medias res (no meio da ação)
+- Personagens com nome, motivação e conflito
+- Arco narrativo completo: setup → conflito → escalada → clímax → resolução
+- Detalhes sensoriais em cada cena
+- Plot twists inesperados`,
+
+      'educativo': `ESTILO EDUCATIVO — Aprender sem perceber:
+- Abra com um mito/crença comum e destrua com fatos
+- Analogias do dia-a-dia para conceitos complexos
+- "A maioria das pessoas pensa X, mas a verdade é..."
+- Mini-quizzes: "Antes de eu revelar, tenta adivinhar..."`,
+
+      'tutorial': `ESTILO TUTORIAL — Passo a passo irresistível:
+- Mostre o resultado final PRIMEIRO (antes/depois)
+- Cada passo numerado com mini-resultados
+- "O erro #1 que 90% das pessoas cometem é..."
+- Tips & tricks entre os passos para manter interesse`,
+
+      'documentário': `ESTILO DOCUMENTÁRIO — Profundidade + impacto:
+- Dados e estatísticas impactantes
+- Múltiplas perspectivas sobre o tema
+- Entrevistas simuladas com especialistas
+- Revelações progressivas como uma investigação`,
+
+      'listicle': `ESTILO LISTICLE — Top N irresistível:
+- Comece com uma preview explosiva do #1
+- Cada item escalando em impacto
+- "Mas o número X vai te deixar de queixo caído"
+- Contraste entre itens: surpreendente vs esperado`,
+    };
+
+    const selectedStyle = styleGuides[style?.toLowerCase()] || styleGuides['narração'];
+
+    const systemPrompt = `Você é um ROTEIRISTA VETERANO que trabalhou com MrBeast, Disney, HBO e produções dignas de Oscar. Você domina TODAS as técnicas de retenção que mantêm 80%+ de audiência em vídeos do YouTube.
+
+TÉCNICAS OBRIGATÓRIAS QUE VOCÊ DEVE USAR:
+
+🧠 DOPAMINA & RETENÇÃO:
+- HOOK NOS PRIMEIROS 8 SEGUNDOS: Uma frase impossível de ignorar. Número chocante, pergunta provocativa, ou afirmação contraintuitiva.
+- OPEN LOOPS: A cada 45-60 segundos, abra um loop de curiosidade que só fecha 2-3 minutos depois. "Daqui a pouco vou revelar algo que muda tudo..."
+- PATTERN INTERRUPTS: A cada 60 segundos, mude algo — tom, ritmo, formato, tipo de informação. Nunca deixe o espectador prever o que vem.
+- CURIOSITY GAPS: "Existe um segredo que [experts] usam, e eu vou revelar em um instante..."
+- CLIFFHANGERS INTERNOS: No fim de cada seção, crie expectativa para a próxima.
+- REGRA DOS 8 SEGUNDOS: Nenhum trecho de mais de 8 segundos sem algo que prenda atenção (dado novo, pergunta, mudança visual, emoção).
+
+📐 ESTRUTURA NARRATIVA:
+- HOOK EXPLOSIVO [00:00-00:08] — 1-2 frases que tornam impossível sair
+- INTRO + CONTEXTO [00:08-01:00] — Por que isso importa? Stakeholders altos.
+- DESENVOLVIMENTO com MICROHOOKS a cada 45-60s — Cada seção tem seu mini-hook e payoff
+- BUILD UP progressivo — Cada revelação é maior que a anterior (técnica "bola de neve")
+- CLÍMAX [últimos 3-4 minutos] — O maior payoff, a revelação final
+- CTA NATURAL [final] — Conectado ao tema, não forçado
+
+✍️ REGRAS DE ESCRITA:
+1. O roteiro DEVE ter NO MÍNIMO ${targetWords} palavras (~${Math.round(targetChars)} caracteres) para cobrir ${duration} minutos
+2. Cada minuto = ~140 palavras faladas. Para ${duration} min = ${targetWords} palavras MÍNIMO
+3. ESCREVA CADA PALAVRA. NÃO use "[continue aqui]", "[expanda]", "[adicione mais]" ou qualquer placeholder
+4. Inclua MARCAÇÕES DE TEMPO: [00:00], [01:30], [03:00], etc.
+5. Inclua indicações: [B-ROLL: descrição], [TEXTO NA TELA: texto], [EFEITO SONORO: tipo], [TRANSIÇÃO: tipo]
+6. Parágrafos curtos (2-3 frases) para facilitar narração
+7. Use linguagem conversacional — como se falasse com um amigo inteligente
+
+📝 NO FINAL DO ROTEIRO, ADICIONE:
+- 5 sugestões de TÍTULO com CTR estimado 30%+ (use números, palavras de poder, curiosidade, urgência)
+- 5 ideias de THUMBNAIL (descrição visual ULTRA detalhada: expressões faciais, cores, texto overlay, composição)
+- 15-20 tags SEO relevantes
+- Descrição otimizada para SEO (3 parágrafos: hook, sobre o vídeo, sobre o canal + hashtags)
+
+${selectedStyle}
+
 Nicho: ${niche || 'geral'}
-Idioma do roteiro: ${language || 'português'}
+Idioma: ${language || 'português'}
 
-ESCREVA O ROTEIRO COMPLETO. NÃO use placeholders como "[continue aqui]" ou "[expanda]". Cada seção deve estar TOTALMENTE ESCRITA.`;
+⚠️ ATENÇÃO MÁXIMA: Escreva ABSOLUTAMENTE TUDO. Cada seção COMPLETA. Sem atalhos. Sem resumos. O roteiro final deve ter ${targetWords}+ palavras. Se necessário, adicione mais exemplos, dados, analogias e detalhes sensoriais para atingir a contagem.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -50,10 +132,20 @@ ESCREVA O ROTEIRO COMPLETO. NÃO use placeholders como "[continue aqui]" ou "[ex
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Escreva um roteiro COMPLETO de ${duration} minutos sobre: "${topic}"\n\nO roteiro deve ter no mínimo ${targetWords} palavras. Não encurte, não use placeholders. Escreva TUDO.` }
+          { role: "user", content: `Escreva um roteiro COMPLETO e LONGO de ${duration} minutos sobre: "${topic}"
+
+REQUISITOS INEGOCIÁVEIS:
+- Mínimo ${targetWords} palavras (verifique antes de finalizar)
+- Cada seção totalmente escrita, sem placeholders
+- Hooks, open loops e pattern interrupts ao longo de TODO o roteiro
+- Marcações de tempo realistas
+- Indicações de B-roll e texto na tela
+- Ao final: títulos, thumbnails, tags SEO e descrição
+
+Comece com o HOOK mais explosivo possível. Vamos lá!` }
         ],
         stream: true,
       }),
@@ -61,7 +153,7 @@ ESCREVA O ROTEIRO COMPLETO. NÃO use placeholders como "[continue aqui]" ou "[ex
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente." }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

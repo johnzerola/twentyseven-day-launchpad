@@ -20,28 +20,36 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
-            content: `You are a YouTube branding expert who has created brands for channels with 10M+ subscribers. Generate creative, memorable, and SEO-optimized branding suggestions.`
+            content: `You are a world-class YouTube branding expert who has created brands for channels with 10M+ subscribers. You understand color psychology, typography, thumbnail design, and SEO. Generate creative, memorable, and SEO-optimized branding. Always include detailed Midjourney/Canva prompts.`
           },
           {
             role: "user",
-            content: `Create complete YouTube channel branding for:
+            content: `Create COMPLETE YouTube channel branding for:
 Niche: ${niche || 'general'}
-Style: ${style || 'modern/professional'}
+Style: ${style || 'modern/cinematic'}
 Language: ${language || 'Portuguese'}
 Target audience: ${targetAudience || 'general'}
 
-Generate creative options that are memorable, easy to pronounce, and SEO-friendly.`
+Requirements:
+- 3 unique channel name options with taglines and reasoning
+- 5 professional channel descriptions (SEO-optimized)
+- Detailed Midjourney prompts for LOGO and BANNER for each channel name
+- 5 color palettes with hex codes and usage (primary, secondary, accent, bg, text)
+- Thumbnail style guide with specific examples
+- 10 content pillars/series ideas
+- 20+ SEO tags
+- 3 sub-niche suggestions with potential`
           }
         ],
         tools: [{
           type: "function",
           function: {
             name: "generate_branding",
-            description: "Generate YouTube channel branding",
+            description: "Generate complete YouTube channel branding",
             parameters: {
               type: "object",
               properties: {
@@ -52,9 +60,11 @@ Generate creative options that are memorable, easy to pronounce, and SEO-friendl
                     properties: {
                       name: { type: "string" },
                       tagline: { type: "string" },
-                      reason: { type: "string" }
+                      reason: { type: "string" },
+                      logoPrompt: { type: "string", description: "Detailed Midjourney prompt for the logo" },
+                      bannerPrompt: { type: "string", description: "Detailed Midjourney prompt for the YouTube banner (2560x1440)" }
                     },
-                    required: ["name", "tagline", "reason"]
+                    required: ["name", "tagline", "reason", "logoPrompt", "bannerPrompt"]
                   }
                 },
                 descriptions: {
@@ -65,28 +75,44 @@ Generate creative options that are memorable, easy to pronounce, and SEO-friendl
                   type: "array",
                   items: { type: "string" }
                 },
-                colorPalette: {
+                colorPalettes: {
                   type: "array",
+                  description: "One palette per channel name option",
                   items: {
-                    type: "object",
-                    properties: {
-                      hex: { type: "string" },
-                      usage: { type: "string" }
-                    },
-                    required: ["hex", "usage"]
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        hex: { type: "string" },
+                        usage: { type: "string" }
+                      },
+                      required: ["hex", "usage"]
+                    }
                   }
                 },
                 bannerConcepts: {
                   type: "array",
                   items: { type: "string" }
                 },
-                thumbnailStyle: { type: "string" },
+                thumbnailStyle: { type: "string", description: "Detailed thumbnail style guide with specific examples" },
                 contentPillars: {
                   type: "array",
                   items: { type: "string" }
+                },
+                subNiches: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      potential: { type: "string" },
+                      competition: { type: "string" }
+                    },
+                    required: ["name", "potential", "competition"]
+                  }
                 }
               },
-              required: ["channelNames", "descriptions", "seoTags", "colorPalette", "bannerConcepts", "thumbnailStyle", "contentPillars"]
+              required: ["channelNames", "descriptions", "seoTags", "colorPalettes", "bannerConcepts", "thumbnailStyle", "contentPillars"]
             }
           }
         }],
