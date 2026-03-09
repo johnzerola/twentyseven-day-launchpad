@@ -50,37 +50,21 @@ const Channels = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Faça login primeiro');
 
-      // Resolve channel ID
-      let channelId = channelInput.trim();
-      const urlMatch = channelInput.match(/youtube\.com\/(channel\/|c\/|@)([^\/\?]+)/);
-      if (urlMatch) {
-        if (urlMatch[1] === 'channel/') {
-          channelId = urlMatch[2];
-        } else {
-          const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(urlMatch[2])}&maxResults=1&key=${YOUTUBE_API_KEY}`);
-          const data = await res.json();
-          channelId = data.items?.[0]?.snippet?.channelId || channelId;
-        }
-      } else if (channelInput.startsWith('@')) {
-        const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelInput)}&maxResults=1&key=${YOUTUBE_API_KEY}`);
-        const data = await res.json();
-        channelId = data.items?.[0]?.snippet?.channelId || channelId;
-      }
+      // Resolve channel via edge function (no API key in frontend)
+      const { data: chData, error: chError } = await supabase.functions.invoke('resolve-channel', {
+        body: { channelInput: channelInput.trim() },
+      });
+      if (chError) throw new Error(chError.message);
+      if (chData?.error) throw new Error(chData.error);
 
-      // Get channel data
-      const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`);
-      const chData = await chRes.json();
-      if (!chData.items?.length) throw new Error('Canal não encontrado');
-
-      const ch = chData.items[0];
       await supabase.from('user_channels').insert({
         user_id: user.id,
-        youtube_channel_id: channelId,
-        channel_name: ch.snippet.title,
-        thumbnail: ch.snippet.thumbnails?.medium?.url,
-        subscribers: parseInt(ch.statistics.subscriberCount || '0'),
-        views: parseInt(ch.statistics.viewCount || '0'),
-        videos: parseInt(ch.statistics.videoCount || '0'),
+        youtube_channel_id: chData.channelId,
+        channel_name: chData.name,
+        thumbnail: chData.thumbnail,
+        subscribers: chData.subscribers,
+        views: chData.views,
+        videos: chData.videos,
       } as any);
 
       toast.success('Canal adicionado!');
