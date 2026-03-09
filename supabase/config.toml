@@ -8,3 +8,21 @@ verify_jwt = false
 
 [functions.generate-script]
 verify_jwt = false
+
+[functions.search-videos]
+verify_jwt = false
+
+[functions.niche-explorer]
+verify_jwt = false
+
+[functions.estimate-revenue]
+verify_jwt = false
+
+[functions.generate-branding]
+verify_jwt = false
+
+[functions.emulate-channel]
+verify_jwt = false
+
+[functions.resolve-channel]
+verify_jwt = false

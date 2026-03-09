@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, Settings, LogOut, Menu, X } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, Settings, LogOut, Menu, X, Compass, Palette, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,10 +10,11 @@ const navItems = [
   { key: 'dash.overview', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'dash.channels', icon: Youtube, path: '/channels' },
   { key: 'dash.search', icon: Search, path: '/search' },
+  { key: 'dash.niches', icon: Compass, path: '/niches' },
   { key: 'dash.scripts', icon: FileText, path: '/scripts' },
   { key: 'dash.narration', icon: Mic, path: '/narration' },
+  { key: 'dash.branding', icon: Palette, path: '/branding' },
   { key: 'dash.plan', icon: Calendar, path: '/plan' },
-  { key: 'dash.settings', icon: Settings, path: '/settings' },
 ];
 
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
