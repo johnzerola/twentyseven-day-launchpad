@@ -1,16 +1,53 @@
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { BarChart3, Youtube, FileText, Calendar, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { BarChart3, Youtube, FileText, Calendar, ArrowUpRight, TrendingUp, Mic } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const { t } = useLanguage();
+  const [stats, setStats] = useState({ channels: 0, scripts: 0, planDays: 0, planTotal: 27, hasPlan: false });
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const uid = session.user.id;
+
+      const [channelsRes, scriptsRes, planRes] = await Promise.all([
+        supabase.from('user_channels').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('saved_scripts').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('onboarding_plans').select('plan_json').eq('user_id', uid).order('created_at', { ascending: false }).limit(1),
+      ]);
+
+      let planDays = 0;
+      let planTotal = 27;
+      let hasPlan = false;
+      if (planRes.data && planRes.data.length > 0) {
+        hasPlan = true;
+        const pj = planRes.data[0].plan_json as any;
+        const days = pj?.days || pj?.plan?.days || [];
+        planTotal = Array.isArray(days) ? days.length : 27;
+        planDays = Array.isArray(days) ? days.filter((d: any) => d.completed).length : 0;
+      }
+
+      setStats({
+        channels: channelsRes.count ?? 0,
+        scripts: scriptsRes.count ?? 0,
+        planDays,
+        planTotal,
+        hasPlan,
+      });
+    };
+    load();
+  }, []);
 
   const cards = [
-    { icon: Calendar, label: t('dash.plan'), path: '/plan', color: 'from-primary to-primary', desc: '0/27 dias' },
-    { icon: Youtube, label: t('dash.channels'), path: '/channels', color: 'from-red-500 to-red-600', desc: '0 canais' },
-    { icon: FileText, label: t('dash.scripts'), path: '/scripts', color: 'from-accent to-orange-500', desc: '0 roteiros' },
+    { icon: Calendar, label: t('dash.plan'), path: '/plan', color: 'from-primary to-primary', desc: stats.hasPlan ? `${stats.planDays}/${stats.planTotal} dias` : 'Criar plano' },
+    { icon: Youtube, label: t('dash.channels'), path: '/channels', color: 'from-red-500 to-red-600', desc: `${stats.channels} ${stats.channels === 1 ? 'canal' : 'canais'}` },
+    { icon: FileText, label: t('dash.scripts'), path: '/scripts', color: 'from-accent to-orange-500', desc: `${stats.scripts} ${stats.scripts === 1 ? 'roteiro' : 'roteiros'}` },
     { icon: BarChart3, label: t('dash.search'), path: '/search', color: 'from-emerald-500 to-emerald-600', desc: 'Explorar' },
   ];
 
@@ -46,19 +83,20 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Quick start */}
-        <div className="glass rounded-2xl p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl gradient-hero flex items-center justify-center mx-auto mb-4 glow-primary">
-            <TrendingUp className="w-8 h-8 text-primary-foreground" />
+        {!stats.hasPlan && (
+          <div className="glass rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl gradient-hero flex items-center justify-center mx-auto mb-4 glow-primary">
+              <TrendingUp className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <h2 className="text-xl font-bold font-['Space_Grotesk'] mb-2">{t('onboarding.welcome')}</h2>
+            <p className="text-muted-foreground mb-6">Comece configurando seu canal e criando seu plano de monetização personalizado.</p>
+            <Link to="/onboarding">
+              <button className="gradient-hero text-primary-foreground px-6 py-3 rounded-xl font-medium glow-primary hover:opacity-90 transition-opacity">
+                Iniciar Onboarding →
+              </button>
+            </Link>
           </div>
-          <h2 className="text-xl font-bold font-['Space_Grotesk'] mb-2">{t('onboarding.welcome')}</h2>
-          <p className="text-muted-foreground mb-6">Comece configurando seu canal e criando seu plano de monetização personalizado.</p>
-          <Link to="/onboarding">
-            <button className="gradient-hero text-primary-foreground px-6 py-3 rounded-xl font-medium glow-primary hover:opacity-90 transition-opacity">
-              Iniciar Onboarding →
-            </button>
-          </Link>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   );
