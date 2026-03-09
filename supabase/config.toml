@@ -1,1 +1,10 @@
 project_id = "nwnjopqxcqpvcelswvyt"
+
+[functions.analyze-channel]
+verify_jwt = false
+
+[functions.generate-plan]
+verify_jwt = false
+
+[functions.generate-script]
+verify_jwt = false
