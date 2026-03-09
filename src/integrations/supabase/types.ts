@@ -14,7 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      onboarding_plans: {
+        Row: {
+          channel_analysis_json: Json | null
+          channel_id: string | null
+          content_type: string | null
+          created_at: string
+          goal: string | null
+          id: string
+          language: string | null
+          niche: string | null
+          plan_json: Json
+          time_per_day: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_analysis_json?: Json | null
+          channel_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          goal?: string | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          plan_json?: Json
+          time_per_day?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_analysis_json?: Json | null
+          channel_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          goal?: string | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          plan_json?: Json
+          time_per_day?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_plans_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_scripts: {
+        Row: {
+          created_at: string
+          duration: number | null
+          id: string
+          script_content: string
+          style: string | null
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: number | null
+          id?: string
+          script_content: string
+          style?: string | null
+          topic: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration?: number | null
+          id?: string
+          script_content?: string
+          style?: string | null
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_channels: {
+        Row: {
+          analysis_json: Json | null
+          channel_name: string
+          id: string
+          linked_at: string
+          niche: string | null
+          subscribers: number | null
+          thumbnail: string | null
+          user_id: string
+          videos: number | null
+          views: number | null
+          youtube_channel_id: string
+        }
+        Insert: {
+          analysis_json?: Json | null
+          channel_name: string
+          id?: string
+          linked_at?: string
+          niche?: string | null
+          subscribers?: number | null
+          thumbnail?: string | null
+          user_id: string
+          videos?: number | null
+          views?: number | null
+          youtube_channel_id: string
+        }
+        Update: {
+          analysis_json?: Json | null
+          channel_name?: string
+          id?: string
+          linked_at?: string
+          niche?: string | null
+          subscribers?: number | null
+          thumbnail?: string | null
+          user_id?: string
+          videos?: number | null
+          views?: number | null
+          youtube_channel_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
