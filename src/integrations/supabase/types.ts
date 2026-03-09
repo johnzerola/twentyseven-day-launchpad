@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      generated_branding: {
+        Row: {
+          branding_data: Json | null
+          channel_name_suggestions: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          niche: string | null
+          seo_tags: Json | null
+          user_id: string
+        }
+        Insert: {
+          branding_data?: Json | null
+          channel_name_suggestions?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          niche?: string | null
+          seo_tags?: Json | null
+          user_id: string
+        }
+        Update: {
+          branding_data?: Json | null
+          channel_name_suggestions?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          niche?: string | null
+          seo_tags?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_plans: {
         Row: {
           channel_analysis_json: Json | null
@@ -112,6 +148,42 @@ export type Database = {
           style?: string | null
           topic?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      tracked_channels: {
+        Row: {
+          channel_name: string
+          created_at: string | null
+          folder: string | null
+          id: string
+          last_video_check: string | null
+          subscribers: number | null
+          thumbnail: string | null
+          user_id: string
+          youtube_channel_id: string
+        }
+        Insert: {
+          channel_name: string
+          created_at?: string | null
+          folder?: string | null
+          id?: string
+          last_video_check?: string | null
+          subscribers?: number | null
+          thumbnail?: string | null
+          user_id: string
+          youtube_channel_id: string
+        }
+        Update: {
+          channel_name?: string
+          created_at?: string | null
+          folder?: string | null
+          id?: string
+          last_video_check?: string | null
+          subscribers?: number | null
+          thumbnail?: string | null
+          user_id?: string
+          youtube_channel_id?: string
         }
         Relationships: []
       }
