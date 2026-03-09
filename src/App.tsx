@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -18,6 +19,10 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const P = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>{children}</ProtectedRoute>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
@@ -28,13 +33,13 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/channels" element={<Channels />} />
-            <Route path="/search" element={<ChannelSearch />} />
-            <Route path="/scripts" element={<Scripts />} />
-            <Route path="/narration" element={<Narration />} />
-            <Route path="/plan" element={<Plan />} />
-            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/dashboard" element={<P><Dashboard /></P>} />
+            <Route path="/channels" element={<P><Channels /></P>} />
+            <Route path="/search" element={<P><ChannelSearch /></P>} />
+            <Route path="/scripts" element={<P><Scripts /></P>} />
+            <Route path="/narration" element={<P><Narration /></P>} />
+            <Route path="/plan" element={<P><Plan /></P>} />
+            <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
