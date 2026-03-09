@@ -86,18 +86,17 @@ const Channels = () => {
 
   const refreshChannel = async (channel: Channel) => {
     try {
-      const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channel.youtube_channel_id}&key=${YOUTUBE_API_KEY}`);
-      const chData = await chRes.json();
-      if (chData.items?.length) {
-        const stats = chData.items[0].statistics;
-        await supabase.from('user_channels').update({
-          subscribers: parseInt(stats.subscriberCount || '0'),
-          views: parseInt(stats.viewCount || '0'),
-          videos: parseInt(stats.videoCount || '0'),
-        } as any).eq('id', channel.id);
-        toast.success('Dados atualizados!');
-        loadChannels();
-      }
+      const { data: chData, error } = await supabase.functions.invoke('resolve-channel', {
+        body: { channelInput: channel.youtube_channel_id },
+      });
+      if (error || chData?.error) throw new Error(chData?.error || 'Erro');
+      await supabase.from('user_channels').update({
+        subscribers: chData.subscribers,
+        views: chData.views,
+        videos: chData.videos,
+      } as any).eq('id', channel.id);
+      toast.success('Dados atualizados!');
+      loadChannels();
     } catch {
       toast.error('Erro ao atualizar');
     }
