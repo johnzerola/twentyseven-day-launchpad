@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { Bot, User, Send, Sparkles, Youtube } from 'lucide-react';
+import { Bot, User, Send, Sparkles, Youtube, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 
-type Step = 'channel_type' | 'channel_url' | 'niche' | 'time' | 'goal' | 'content_type' | 'language' | 'generating' | 'done';
+type Step = 'channel_type' | 'channel_url' | 'analyzing' | 'analysis_done' | 'niche' | 'time' | 'goal' | 'content_type' | 'language' | 'generating' | 'done';
 
 interface Message {
   role: 'bot' | 'user';
@@ -15,30 +19,201 @@ interface Message {
 
 const Onboarding = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('channel_type');
   const [messages, setMessages] = useState<Message[]>([
     { role: 'bot', content: t('onboarding.welcome') + '\n\n' + t('onboarding.channel_type') },
   ]);
   const [input, setInput] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [channelAnalysis, setChannelAnalysis] = useState<any>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
 
   const addMessage = (role: 'bot' | 'user', content: string) => {
     setMessages((prev) => [...prev, { role, content }]);
   };
 
-  const handleChoice = (value: string) => {
-    switch (step) {
-      case 'channel_type':
-        addMessage('user', value === 'new' ? t('onboarding.new') : t('onboarding.existing'));
-        setAnswers((p) => ({ ...p, channelType: value }));
-        if (value === 'existing') {
-          addMessage('bot', t('onboarding.url'));
-          setStep('channel_url');
-        } else {
-          addMessage('bot', 'Qual nicho você quer explorar? Ex: finanças, gaming, tecnologia, culinária...');
-          setStep('niche');
+  const analyzeChannel = async (channelInput: string) => {
+    setStep('analyzing');
+    addMessage('bot', '🔍 Analisando seu canal com IA... Isso pode levar alguns segundos.');
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-channel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ channelInput }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro na análise');
+
+      setChannelAnalysis(data);
+      setAnswers((p) => ({ ...p, channelUrl: channelInput, channelId: data.channel.id }));
+
+      // Format analysis as readable message
+      const a = data.analysis;
+      const analysisMsg = `## 📊 Análise do Canal: ${data.channel.name}
+
+**👥 Inscritos:** ${formatNumber(data.channel.subscribers)}
+**👁️ Views totais:** ${formatNumber(data.channel.views)}
+**🎬 Vídeos:** ${data.channel.videos}
+**📊 Média de views recentes:** ${formatNumber(data.avgRecentViews)}
+
+---
+
+### 🎯 Scores
+- **SEO:** ${a.seo_score}/100
+- **Qualidade dos títulos:** ${a.title_quality_score}/100
+- **Nicho detectado:** ${a.niche_detected}
+- **Fit do nicho:** ${a.niche_fit_score}/100
+- **Prontidão para monetização:** ${a.monetization_readiness}/100
+
+### ✅ Pontos fortes
+${a.strengths?.map((s: string) => `- ${s}`).join('\n') || 'N/A'}
+
+### ⚠️ Pontos a melhorar
+${a.weaknesses?.map((w: string) => `- ${w}`).join('\n') || 'N/A'}
+
+### 🔧 Melhorias de SEO
+${a.seo_improvements?.map((s: string) => `- ${s}`).join('\n') || 'N/A'}
+
+### 📝 Melhorias de títulos
+${a.title_improvements?.map((t: string) => `- ${t}`).join('\n') || 'N/A'}
+
+### 🖼️ Sugestões de thumbnails
+${a.thumbnail_suggestions?.map((t: string) => `- ${t}`).join('\n') || 'N/A'}
+
+### 💡 Nichos similares (sem perder público)
+${a.niche_change_suggestions?.map((n: any) => `- **${n.niche}**: ${n.reason} (Retenção: ${n.audience_retention_estimate})`).join('\n') || 'Nenhuma sugestão'}
+
+### 💰 Estimativas
+- **RPM estimado:** $${a.estimated_rpm}
+- **Receita mensal estimada:** ${a.estimated_monthly_revenue}
+- **Estratégia:** ${a.content_strategy}
+
+---
+
+${a.growth_potential}`;
+
+      addMessage('bot', analysisMsg);
+      addMessage('bot', 'Agora me conte: qual nicho você quer focar? Pode manter o atual ou mudar. Ex: finanças, gaming, tecnologia, curiosidades...');
+      setStep('niche');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao analisar canal');
+      addMessage('bot', '❌ Não consegui analisar o canal. Verifique a URL e tente novamente, ou diga qual nicho deseja explorar.');
+      setStep('niche');
+    }
+  };
+
+  const generatePlan = async (allAnswers: Record<string, string>) => {
+    setStep('generating');
+    addMessage('bot', '🎯 Gerando seu plano personalizado de 27 dias com IA... Isso pode levar até 30 segundos.');
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-plan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          answers: allAnswers,
+          channelAnalysis: channelAnalysis?.analysis,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao gerar plano');
+
+      // Save to DB if user is logged in
+      if (user) {
+        // Save channel if existing
+        if (channelAnalysis?.channel) {
+          const ch = channelAnalysis.channel;
+          await supabase.from('user_channels').upsert({
+            user_id: user.id,
+            youtube_channel_id: ch.id,
+            channel_name: ch.name,
+            thumbnail: ch.thumbnail,
+            subscribers: ch.subscribers,
+            views: ch.views,
+            videos: ch.videos,
+            niche: allAnswers.niche,
+            analysis_json: channelAnalysis.analysis,
+          } as any, { onConflict: 'user_id,youtube_channel_id' }).select();
         }
-        break;
+
+        // Save plan
+        await supabase.from('onboarding_plans').insert({
+          user_id: user.id,
+          niche: allAnswers.niche,
+          goal: allAnswers.goal,
+          content_type: allAnswers.contentType,
+          language: allAnswers.language,
+          time_per_day: allAnswers.time,
+          plan_json: data.plan,
+          channel_analysis_json: channelAnalysis?.analysis || null,
+        } as any);
+      }
+
+      // Show plan summary
+      const plan = data.plan;
+      const planMsg = `# 🎯 ${plan.title || 'Seu Plano de Monetização em 27 Dias'}
+
+**Nicho:** ${plan.niche}
+**Receita estimada (30 dias):** ${plan.estimated_revenue_30d}
+**Inscritos estimados (30 dias):** ${plan.estimated_subs_30d}
+**RPM estimado:** $${plan.rpm_estimate}
+
+---
+
+${plan.summary}
+
+### 📅 Metas semanais
+${plan.weekly_goals?.map((w: any) => `- **Semana ${w.week}:** ${w.goal} (${w.videos_target} vídeos)`).join('\n') || ''}
+
+### 🎯 Pilares de conteúdo
+${plan.content_pillars?.map((p: string) => `- ${p}`).join('\n') || ''}
+
+### 🔑 Palavras-chave SEO
+${plan.seo_keywords?.map((k: string) => `\`${k}\``).join(' • ') || ''}
+
+### 💰 Caminho de monetização
+${plan.monetization_path}
+
+---
+
+✅ **Seu plano foi salvo!** Acesse a aba "Plano 27 Dias" para acompanhar dia a dia.`;
+
+      addMessage('bot', planMsg);
+      setStep('done');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao gerar plano');
+      addMessage('bot', '❌ Erro ao gerar o plano. Tente novamente.');
+      setStep('language');
+    }
+  };
+
+  const handleChoice = (value: string) => {
+    if (step === 'channel_type') {
+      addMessage('user', value === 'new' ? t('onboarding.new') : t('onboarding.existing'));
+      setAnswers((p) => ({ ...p, channelType: value }));
+      if (value === 'existing') {
+        addMessage('bot', t('onboarding.url'));
+        setStep('channel_url');
+      } else {
+        addMessage('bot', 'Qual nicho você quer explorar? Ex: finanças, gaming, tecnologia, culinária, curiosidades, histórias emocionantes...');
+        setStep('niche');
+      }
     }
   };
 
@@ -50,42 +225,41 @@ const Onboarding = () => {
 
     switch (step) {
       case 'channel_url':
-        setAnswers((p) => ({ ...p, channelUrl: val }));
-        addMessage('bot', t('onboarding.analyzing') + '\n\nQual nicho você quer explorar?');
-        setStep('niche');
+        analyzeChannel(val);
         break;
       case 'niche':
         setAnswers((p) => ({ ...p, niche: val }));
-        addMessage('bot', 'Quantas horas por dia você pode dedicar ao canal?');
+        addMessage('bot', 'Quantas horas por dia você pode dedicar ao canal?\n\nEx: 1 hora, 2-3 horas, tempo integral...');
         setStep('time');
         break;
       case 'time':
         setAnswers((p) => ({ ...p, time: val }));
-        addMessage('bot', 'Qual sua meta de ganhos mensais? Ex: R$ 1.000, $500...');
+        addMessage('bot', 'Qual sua meta de ganhos mensais?\n\nEx: R$ 1.000, R$ 5.000, $500, 2000 zł...');
         setStep('goal');
         break;
       case 'goal':
         setAnswers((p) => ({ ...p, goal: val }));
-        addMessage('bot', 'Que tipo de conteúdo quer criar?\n\n• Faceless (sem aparecer)\n• Narração com imagens\n• Vlogs / câmera\n• Compilações\n• Tutoriais');
+        addMessage('bot', 'Que tipo de conteúdo quer criar?\n\n• **Faceless** (sem aparecer)\n• **Narração** com imagens/vídeos\n• **Vlogs / câmera**\n• **Compilações**\n• **Tutoriais**\n• **Storytelling / Histórias**');
         setStep('content_type');
         break;
       case 'content_type':
         setAnswers((p) => ({ ...p, contentType: val }));
-        addMessage('bot', 'Em qual idioma vai publicar os vídeos?\n\n• Português\n• Inglês\n• Polonês\n• Alemão\n• Outro');
+        addMessage('bot', 'Em qual idioma vai publicar os vídeos?\n\n• Português\n• Inglês\n• Polonês\n• Alemão\n• Outro (diga qual)');
         setStep('language');
         break;
-      case 'language':
-        setAnswers((p) => ({ ...p, language: val }));
-        addMessage('bot', '🎯 Perfeito! Analisando seus dados e gerando seu plano personalizado de 27 dias...\n\nIsso pode levar alguns segundos.');
-        setStep('generating');
-        // Simulate AI plan generation
-        setTimeout(() => {
-          const plan = generateMockPlan({ ...answers, language: val });
-          addMessage('bot', plan);
-          setStep('done');
-        }, 3000);
+      case 'language': {
+        const finalAnswers = { ...answers, language: val };
+        setAnswers(finalAnswers);
+        generatePlan(finalAnswers);
         break;
+      }
     }
+  };
+
+  const formatNumber = (n: number) => {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return n.toString();
   };
 
   return (
@@ -102,7 +276,7 @@ const Onboarding = () => {
         </div>
 
         <div className="glass rounded-2xl p-6 min-h-[500px] flex flex-col">
-          <div className="flex-1 space-y-4 overflow-y-auto mb-4 max-h-[500px]">
+          <div ref={chatRef} className="flex-1 space-y-4 overflow-y-auto mb-4 max-h-[600px] pr-2">
             <AnimatePresence>
               {messages.map((msg, i) => (
                 <motion.div
@@ -112,21 +286,23 @@ const Onboarding = () => {
                   className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}
                 >
                   {msg.role === 'bot' && (
-                    <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center flex-shrink-0 mt-1">
                       <Bot className="w-4 h-4 text-primary-foreground" />
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
                       msg.role === 'user'
                         ? 'bg-primary/20 text-foreground'
                         : 'bg-secondary text-foreground'
                     }`}
                   >
-                    {msg.content}
+                    <div className="prose prose-sm prose-invert max-w-none [&>h1]:text-lg [&>h2]:text-base [&>h3]:text-sm [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
                   </div>
                   {msg.role === 'user' && (
-                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 mt-1">
                       <User className="w-4 h-4" />
                     </div>
                   )}
@@ -134,10 +310,10 @@ const Onboarding = () => {
               ))}
             </AnimatePresence>
 
-            {step === 'generating' && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {(step === 'analyzing' || step === 'generating') && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-11">
                 <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
-                Gerando plano...
+                {step === 'analyzing' ? 'Analisando canal...' : 'Gerando plano personalizado...'}
               </div>
             )}
           </div>
@@ -169,54 +345,22 @@ const Onboarding = () => {
               </Button>
             </div>
           )}
+
+          {/* Done actions */}
+          {step === 'done' && (
+            <div className="flex gap-3">
+              <Button onClick={() => navigate('/plan')} className="flex-1 gradient-hero border-0 gap-2">
+                <ArrowRight className="w-4 h-4" /> Ver Meu Plano
+              </Button>
+              <Button onClick={() => navigate('/scripts')} variant="outline" className="flex-1 gap-2">
+                Gerar Roteiro
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
   );
 };
-
-function generateMockPlan(answers: Record<string, string>): string {
-  const niche = answers.niche || 'seu nicho';
-  return `# 🎯 Seu Plano de Monetização em 27 Dias
-
-## Nicho: ${niche}
-## Meta: ${answers.goal || 'Monetização'}
-
----
-
-### 📅 Semana 1 — Fundação (Dias 1-7)
-- **Dia 1**: Configurar canal, banner, foto, descrição otimizada
-- **Dia 2**: Pesquisar 10 canais concorrentes no nicho "${niche}"
-- **Dia 3**: Definir 5 palavras-chave principais (SEO)
-- **Dia 4**: Criar primeiro roteiro usando ChannelHacker AI
-- **Dia 5**: Gravar/produzir primeiro vídeo (+8 min)
-- **Dia 6**: Criar thumbnail com CTR 30%+ e publicar
-- **Dia 7**: Analisar métricas iniciais e ajustar
-
-### 📅 Semana 2 — Aceleração (Dias 8-14)
-- **Dia 8-9**: Publicar 2 vídeos (frequência 3x/semana)
-- **Dia 10**: Criar Shorts a partir dos vídeos longos
-- **Dia 11-12**: Publicar mais 2 vídeos + Shorts
-- **Dia 13**: Analisar outliers do nicho para inspiração
-- **Dia 14**: Review semanal e ajuste de estratégia
-
-### 📅 Semana 3 — Crescimento (Dias 15-21)
-- **Dia 15-17**: 3 vídeos de alta retenção (80%+)
-- **Dia 18**: Colaboração ou resposta a vídeos trending
-- **Dia 19-20**: Otimizar SEO de todos os vídeos
-- **Dia 21**: Review e ajuste
-
-### 📅 Semana 4 — Monetização (Dias 22-27)
-- **Dia 22-24**: Publicar vídeos optimizados para watch time
-- **Dia 25**: Aplicar para monetização (se elegível)
-- **Dia 26**: Configurar links de afiliados e descrições
-- **Dia 27**: Review final e plano de longo prazo
-
----
-
-💰 **Estimativa de ganhos**: Com base em RPM médio do nicho "${niche}", seus primeiros 30 dias podem gerar entre R$ 50 - R$ 500 dependendo do tráfego.
-
-✅ Seu plano foi salvo! Acesse a aba "Plano 27 Dias" para acompanhar.`;
-}
 
 export default Onboarding;
