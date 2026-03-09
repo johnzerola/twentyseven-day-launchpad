@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ChannelSearch from "./pages/ChannelSearch";
+import NicheExplorer from "./pages/NicheExplorer";
+import Branding from "./pages/Branding";
 import Onboarding from "./pages/Onboarding";
 import Scripts from "./pages/Scripts";
 import Narration from "./pages/Narration";
