@@ -1,30 +1,76 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Mic, Play, Download, Volume2 } from 'lucide-react';
+import { Mic, Play, Pause, Download, Volume2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-const voices = [
-  { id: 'roger', name: 'Roger', lang: 'EN' },
-  { id: 'sarah', name: 'Sarah', lang: 'EN' },
-  { id: 'daniel', name: 'Daniel', lang: 'PT' },
-  { id: 'alice', name: 'Alice', lang: 'DE' },
-  { id: 'liam', name: 'Liam', lang: 'PL' },
+const VOICES = [
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', lang: 'PT-BR', desc: 'Narração masculina natural' },
+  { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', lang: 'EN-US', desc: 'Voz profunda e clara' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', lang: 'EN-US', desc: 'Feminina profissional' },
+  { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', lang: 'DE', desc: 'Alemão fluente' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', lang: 'PL', desc: 'Polonês nativo' },
+  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', lang: 'ES', desc: 'Espanhol claro' },
+  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', lang: 'EN-US', desc: 'Narrador storytelling' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', lang: 'EN-US', desc: 'Jovem e dinâmica' },
 ];
 
 const Narration = () => {
   const [text, setText] = useState('');
-  const [voice, setVoice] = useState('roger');
+  const [voice, setVoice] = useState(VOICES[0].id);
   const [loading, setLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const estimatedCost = Math.ceil(text.length / 1000) * 0.03;
 
   const generateNarration = async () => {
-    if (!text.trim()) return;
+    if (!text.trim()) return toast.error('Digite o texto para narrar');
+    if (text.length > 5000) return toast.error('Máximo 5000 caracteres por vez');
     setLoading(true);
-    // Will connect to ElevenLabs via edge function
-    setTimeout(() => {
+    setAudioUrl(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
+        body: { text, voiceId: voice },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      if (data?.audioBase64) {
+        const url = `data:audio/mpeg;base64,${data.audioBase64}`;
+        setAudioUrl(url);
+        toast.success('Narração gerada com sucesso!');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao gerar narração');
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const downloadAudio = () => {
+    if (!audioUrl) return;
+    const a = document.createElement('a');
+    a.href = audioUrl;
+    a.download = 'narracao.mp3';
+    a.click();
+  };
+
+  const selectedVoice = VOICES.find(v => v.id === voice);
 
   return (
     <DashboardLayout>
@@ -35,31 +81,68 @@ const Narration = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold font-['Space_Grotesk']">Narração IA</h1>
-            <p className="text-sm text-muted-foreground">Gere narração com vozes neurais</p>
+            <p className="text-sm text-muted-foreground">Gere narração com vozes neurais ElevenLabs</p>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 glass rounded-xl p-6 space-y-4">
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Cole seu texto ou roteiro aqui..."
-              className="bg-secondary/50 min-h-[300px]"
-            />
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{text.length} caracteres</p>
-              <Button onClick={generateNarration} disabled={loading || !text.trim()} className="gradient-hero border-0 gap-2">
-                <Volume2 className="w-4 h-4" />
-                {loading ? 'Gerando...' : 'Gerar Narração'}
-              </Button>
+          <div className="lg:col-span-2 space-y-4">
+            <div className="glass rounded-xl p-6 space-y-4">
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Cole seu texto ou roteiro aqui... (máx. 5000 caracteres)"
+                className="bg-secondary/50 min-h-[300px]"
+              />
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span>{text.length}/5000 caracteres</span>
+                  <span>~${estimatedCost.toFixed(2)} estimado</span>
+                </div>
+                <Button onClick={generateNarration} disabled={loading || !text.trim()} className="gradient-hero border-0 gap-2">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4" />}
+                  {loading ? 'Gerando...' : 'Gerar Narração'}
+                </Button>
+              </div>
             </div>
+
+            {/* Audio Player */}
+            {audioUrl && (
+              <div className="glass rounded-xl p-5 space-y-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-emerald-400" /> Áudio Gerado
+                </h3>
+                <audio ref={audioRef} src={audioUrl}
+                  onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
+                  onEnded={() => setIsPlaying(false)} />
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="icon" onClick={togglePlay} className="h-12 w-12 rounded-full">
+                    {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                  </Button>
+                  <div className="flex-1">
+                    <div className="flex gap-0.5 items-end h-8">
+                      {Array.from({ length: 40 }, (_, i) => (
+                        <div key={i} className="flex-1 bg-emerald-400/60 rounded-full transition-all"
+                          style={{ height: `${Math.random() * 100}%`, opacity: isPlaying ? 1 : 0.4 }} />
+                      ))}
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={downloadAudio} className="gap-2">
+                    <Download className="w-4 h-4" /> MP3
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Badge variant="secondary">{selectedVoice?.name} ({selectedVoice?.lang})</Badge>
+                  <Badge variant="secondary">{text.length} caracteres</Badge>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="glass rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold">Voz</h3>
+            <h3 className="font-semibold">Voz Neural</h3>
             <div className="space-y-2">
-              {voices.map((v) => (
+              {VOICES.map((v) => (
                 <button
                   key={v.id}
                   onClick={() => setVoice(v.id)}
@@ -70,15 +153,15 @@ const Narration = () => {
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs text-primary-foreground font-bold">
                     {v.name[0]}
                   </div>
-                  <div className="text-left">
+                  <div className="text-left flex-1">
                     <p className="font-medium">{v.name}</p>
-                    <p className="text-xs text-muted-foreground">{v.lang}</p>
+                    <p className="text-xs text-muted-foreground">{v.lang} • {v.desc}</p>
                   </div>
                 </button>
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Conecte ElevenLabs para ativar vozes neurais em múltiplos idiomas.
+              Vozes neurais ElevenLabs com multilingual v2.
             </p>
           </div>
         </div>

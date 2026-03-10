@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.generate-visual-prompts]
 verify_jwt = false
+
+[functions.generate-titles]
+verify_jwt = false
+
+[functions.generate-veo3-prompts]
+verify_jwt = false
