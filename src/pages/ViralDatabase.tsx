@@ -70,13 +70,17 @@ const ViralDatabase = () => {
       const { data, error } = await supabase.functions.invoke('generate-viral-db', {
         body: { niche: nicheInput, type: activeTab },
       });
-      if (error) throw error;
+      if (error) {
+        const errorBody = typeof error === 'object' && 'context' in error ? (error as any).context : error;
+        throw new Error(errorBody?.message || String(error));
+      }
       if (data?.error) throw new Error(data.error);
       setAiResults(data?.results || []);
       toast.success(`${data?.results?.length || 0} itens gerados por IA!`);
     } catch (err: any) {
-      if (err.message?.includes('429')) toast.error('Rate limit. Tente em alguns segundos.');
-      else if (err.message?.includes('402')) toast.error('Créditos insuficientes.');
+      const msg = err?.message || '';
+      if (msg.includes('402') || msg.includes('Créditos')) toast.error('Créditos insuficientes. Adicione créditos no workspace.');
+      else if (msg.includes('429')) toast.error('Rate limit. Tente em alguns segundos.');
       else toast.error(err.message || 'Erro ao gerar');
     } finally {
       setGenerating(false);
