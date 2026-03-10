@@ -113,6 +113,8 @@ const ChannelSearch = () => {
   const [emulating, setEmulating] = useState<string | null>(null);
   const [emulationResult, setEmulationResult] = useState<any>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [deepScanning, setDeepScanning] = useState<string | null>(null);
+  const [deepScanResult, setDeepScanResult] = useState<any>(null);
 
   const medianViews = channelInfo?.avgViews || 156_000;
 
