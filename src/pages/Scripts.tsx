@@ -678,6 +678,8 @@ const Scripts = () => {
                         <option value={10}>10 segundos</option>
                         <option value={12}>12 segundos</option>
                         <option value={15}>15 segundos</option>
+                        <option value={20}>20 segundos</option>
+                        <option value={30}>30 segundos</option>
                       </select>
                     </div>
                   </div>
