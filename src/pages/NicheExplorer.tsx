@@ -13,17 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatNumber } from '@/lib/formatters';
 import { COUNTRIES } from '@/lib/constants';
 
-const COUNTRIES = [
-  { value: 'BR', label: '🇧🇷 Brasil' }, { value: 'US', label: '🇺🇸 EUA' },
-  { value: 'PL', label: '🇵🇱 Polônia' }, { value: 'DE', label: '🇩🇪 Alemanha' },
-  { value: 'GB', label: '🇬🇧 Reino Unido' }, { value: 'PT', label: '🇵🇹 Portugal' },
-  { value: 'ES', label: '🇪🇸 Espanha' }, { value: 'FR', label: '🇫🇷 França' },
-  { value: 'JP', label: '🇯🇵 Japão' }, { value: 'IN', label: '🇮🇳 Índia' },
-  { value: 'MX', label: '🇲🇽 México' }, { value: 'CA', label: '🇨🇦 Canadá' },
-  { value: 'AU', label: '🇦🇺 Austrália' }, { value: 'IT', label: '🇮🇹 Itália' },
-  { value: 'KR', label: '🇰🇷 Coreia do Sul' },
-];
-
 const QUICK_NICHES = [
   'finanças pessoais', 'true crime', 'horror stories', 'motivacional', 'curiosidades',
   'crypto', 'saúde', 'tecnologia', 'gaming', 'receitas', 'educação', 'viagem',
