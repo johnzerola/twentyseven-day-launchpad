@@ -66,3 +66,6 @@ verify_jwt = false
 [functions.deep-scan-video]
 verify_jwt = false
 
+[functions.extract-characters]
+verify_jwt = false
+

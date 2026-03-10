@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -91,6 +91,7 @@ const Scripts = () => {
   const [sceneDuration, setSceneDuration] = useState(8);
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
+  const [detectingCharacters, setDetectingCharacters] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => { loadHistory(); }, []);
@@ -257,7 +258,53 @@ const Scripts = () => {
     }
   };
 
-  // Extract clean narration text (remove markdown, titles, tags sections)
+  // Auto-detect characters from script and generate images
+  const autoDetectCharacters = async () => {
+    const cleanScript = getCleanNarration();
+    if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
+    setDetectingCharacters(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-characters', {
+        body: { script: cleanScript, language },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const extracted: Character[] = (data.characters || []).map((c: any) => ({
+        name: c.name,
+        description: c.description,
+        appearance: c.appearance,
+        clothing: c.clothing,
+      }));
+      if (extracted.length === 0) { toast.info('Nenhum personagem detectado no roteiro.'); return; }
+      setCharacters(extracted);
+      toast.success(`${extracted.length} personagens detectados! Gerando imagens...`);
+      
+      // Auto-generate images for all detected characters
+      for (let i = 0; i < extracted.length; i++) {
+        const char = extracted[i];
+        setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: true } : c));
+        try {
+          const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+          const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-segment-image', {
+            body: { visualPrompt: prompt, textContent: '', segmentIndex: i },
+          });
+          if (!imgErr && imgData?.imageUrl) {
+            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, imageUrl: imgData.imageUrl, generatingImage: false } : c));
+          } else {
+            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
+          }
+        } catch {
+          setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
+        }
+      }
+      toast.success('Todos os personagens com imagens geradas!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao detectar personagens');
+    } finally {
+      setDetectingCharacters(false);
+    }
+  };
+
   const getCleanNarration = (): string => {
     // Remove everything after common end markers
     let clean = script;
@@ -613,14 +660,23 @@ const Scripts = () => {
                     </Button>
                   </div>
 
+                  {/* Auto-detect button */}
+                  <Button onClick={autoDetectCharacters} disabled={detectingCharacters} className="w-full gap-2 mb-4" variant="default">
+                    {detectingCharacters ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    {detectingCharacters ? 'Detectando personagens e gerando imagens...' : '🪄 Detectar Personagens do Roteiro + Gerar Imagens'}
+                  </Button>
+
                   {/* Existing characters */}
                   {characters.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {characters.map((c, i) => (
                         <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                          {/* Character image or placeholder */}
                           <div className="shrink-0">
-                            {c.imageUrl ? (
+                            {c.generatingImage ? (
+                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center">
+                                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                              </div>
+                            ) : c.imageUrl ? (
                               <img src={c.imageUrl} alt={c.name} className="w-16 h-16 rounded-lg object-cover border border-border" />
                             ) : (
                               <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-lg font-bold">
@@ -671,14 +727,8 @@ const Scripts = () => {
                     </div>
                   </div>
                   <Button onClick={addCharacter} disabled={!newCharName.trim()} size="sm" variant="outline" className="mt-2 gap-1 text-xs">
-                    <Users className="w-3 h-3" /> Adicionar Personagem
+                    <Users className="w-3 h-3" /> Adicionar Manualmente
                   </Button>
-
-                  {characters.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-3 text-center py-4 border border-dashed border-border/50 rounded-lg">
-                      Sem personagens? Sem problema — pule para Prompts. A IA criará cenas genéricas.
-                    </p>
-                  )}
                 </motion.div>
               )}
 
