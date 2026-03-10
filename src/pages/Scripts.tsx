@@ -925,17 +925,15 @@ const Scripts = () => {
                         </Button>
 
                         <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                          const autoflowFormat = syncedScenes.map((scene) => {
-                            const dur = scene.endTime - scene.startTime;
-                            const charsLine = scene.charactersInScene?.length 
-                              ? ` | Personagens: ${scene.charactersInScene.join(', ')}`
-                              : '';
-                            return `Cena ${scene.sceneIndex + 1}: ${scene.visualPrompt} | Duração: ${dur}s${charsLine}`;
-                          }).join('\n\n');
+                          // AutoFlow needs EACH prompt as a separate entry, one per line
+                          // Just the visual prompt text, separated by blank lines
+                          const autoflowFormat = syncedScenes.map((scene) => 
+                            scene.visualPrompt
+                          ).join('\n\n');
                           navigator.clipboard.writeText(autoflowFormat);
-                          toast.success('Copiado para AutoFlow!');
+                          toast.success(`${syncedScenes.length} prompts copiados para AutoFlow!`);
                         }}>
-                          <Copy className="w-4 h-4" /> AutoFlow
+                          <Copy className="w-4 h-4" /> AutoFlow ({syncedScenes.length} prompts)
                         </Button>
 
                         <Button variant="outline" className="gap-2 text-xs" onClick={() => {
