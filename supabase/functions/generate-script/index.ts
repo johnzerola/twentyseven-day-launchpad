@@ -131,14 +131,14 @@ Idioma: ${language || 'português'}
 
 ⚠️ ATENÇÃO MÁXIMA: Escreva ABSOLUTAMENTE TUDO. Cada seção COMPLETA. Sem atalhos. Sem resumos. O roteiro final deve ter ${targetWords}+ palavras. Se necessário, adicione mais exemplos, dados, analogias e detalhes sensoriais para atingir a contagem.`;
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-pro",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Escreva um roteiro COMPLETO e LONGO de ${duration} minutos sobre: "${topic}"

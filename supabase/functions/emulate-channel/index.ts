@@ -42,14 +42,14 @@ serve(async (req) => {
     }
 
     // AI generates emulation roadmap
-    const aiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "google/gemini-2.5-flash",
         messages: [{
           role: "user",
           content: `Analyze this YouTube channel and create a 1-click emulation roadmap:
