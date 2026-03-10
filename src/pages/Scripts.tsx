@@ -82,8 +82,21 @@ interface SyncedScene {
   visualPrompt: string;
   cameraAngle: string;
   mood: string;
+  narrativeText?: string;
+  narrativeSummary?: string;
+  emotionalBeat?: string;
+  lensSpec?: string;
+  lightingSetup?: string;
+  audioDirection?: string;
+  negativePrompt?: string;
   charactersInScene?: string[];
   transitionNote?: string;
+}
+
+interface TranscriptionBlock {
+  text: string;
+  startTime: number;
+  endTime: number;
 }
 
 const Scripts = () => {
