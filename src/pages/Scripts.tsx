@@ -91,6 +91,7 @@ const Scripts = () => {
   const [sceneDuration, setSceneDuration] = useState(8);
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
+  const [detectingCharacters, setDetectingCharacters] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => { loadHistory(); }, []);
