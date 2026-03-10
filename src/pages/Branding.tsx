@@ -121,26 +121,26 @@ const Branding = () => {
     if (!niche.trim()) return toast.error('Informe o nicho');
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-branding', {
-        body: { niche, style: 'Moderno/Cinematográfico', language: 'Português' },
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-branding`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ niche, style: 'Moderno/Cinematográfico', language: 'Português' }),
       });
-      if (error) {
-        // supabase SDK wraps non-2xx responses - check if error contains the response body
-        const errMsg = typeof error === 'object' && error !== null && 'message' in error 
-          ? (error as any).message 
-          : String(error);
-        if (errMsg.includes('402') || errMsg.includes('créditos') || errMsg.includes('Payment')) {
-          throw new Error('Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
-        }
-        if (errMsg.includes('429') || errMsg.includes('Rate')) {
-          throw new Error('Muitas requisições. Aguarde alguns segundos e tente novamente.');
-        }
-        throw new Error(errMsg || 'Erro ao gerar branding');
+      if (resp.status === 402) {
+        throw new Error('⚠️ Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
       }
+      if (resp.status === 429) {
+        throw new Error('Muitas requisições. Aguarde alguns segundos e tente novamente.');
+      }
+      if (!resp.ok) {
+        throw new Error('Erro ao gerar branding. Tente novamente.');
+      }
+      const data = await resp.json();
       if (data?.error) {
-        if (data.error.includes('créditos') || data.error.includes('402')) {
-          throw new Error('Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
-        }
         throw new Error(data.error);
       }
       const names = data.channelNames || [];
