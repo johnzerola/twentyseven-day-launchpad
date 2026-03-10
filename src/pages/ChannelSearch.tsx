@@ -165,6 +165,24 @@ const ChannelSearch = () => {
     toast.success(`${video.channelTitle} rastreado!`);
   };
 
+  const deepScanVideo = async (videoId: string) => {
+    setDeepScanning(videoId);
+    setDeepScanResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('deep-scan-video', {
+        body: { videoId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setDeepScanResult(data);
+      toast.success('Deep Scan completo!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro no Deep Scan');
+    } finally {
+      setDeepScanning(null);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
