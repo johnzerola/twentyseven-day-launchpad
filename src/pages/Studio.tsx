@@ -65,6 +65,9 @@ const Studio = () => {
   const [videoPollingMap, setVideoPollingMap] = useState<Record<number, NodeJS.Timeout>>({});
   const [veo3Model, setVeo3Model] = useState<'veo-3.1-generate-preview' | 'veo-3.1-fast-generate-preview'>('veo-3.1-generate-preview');
   const [veo3Mode, setVeo3Mode] = useState(true);
+  const [quotaCooldown, setQuotaCooldown] = useState(0);
+  const quotaCooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const batchAbortRef = useRef(false);
   const [characterDesc, setCharacterDesc] = useState('Homem de 30 anos, barba curta, óculos redondos, vestindo moletom preto');
 
   const [previewPlaying, setPreviewPlaying] = useState(false);

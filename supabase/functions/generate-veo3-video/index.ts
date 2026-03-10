@@ -7,20 +7,6 @@ const corsHeaders = {
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url, options);
-    if (response.status === 429 && attempt < maxRetries) {
-      const waitSec = Math.pow(2, attempt + 1) * 5; // 10s, 20s, 40s
-      console.log(`Rate limited, retrying in ${waitSec}s (attempt ${attempt + 1}/${maxRetries})`);
-      await new Promise(r => setTimeout(r, waitSec * 1000));
-      continue;
-    }
-    return response;
-  }
-  throw new Error("Max retries exceeded");
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -31,39 +17,44 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ACTION: generate — start a new video generation
     if (action === "generate") {
-      const { prompt, aspectRatio, duration, model, negativePrompt } = body;
+      const { prompt, aspectRatio, model, negativePrompt } = body;
       if (!prompt) throw new Error("Prompt is required");
 
       const modelId = model || "veo-3.1-generate-preview";
       const url = `${BASE_URL}/models/${modelId}:predictLongRunning`;
 
       const instanceObj: any = { prompt };
-      const parametersObj: any = {
-        aspectRatio: aspectRatio || "16:9",
-        sampleCount: 1,
-      };
+      const parametersObj: any = { aspectRatio: aspectRatio || "16:9", sampleCount: 1 };
       if (negativePrompt) parametersObj.negativePrompt = negativePrompt;
 
-      console.log("Veo3 request URL:", url);
-      console.log("Veo3 request body:", JSON.stringify({ instances: [instanceObj], parameters: parametersObj }));
+      console.log("Veo3 request:", modelId);
 
-      const response = await fetchWithRetry(url, {
+      const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "x-goog-api-key": GOOGLE_AI_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          instances: [instanceObj],
-          parameters: parametersObj,
-        }),
+        headers: { "x-goog-api-key": GOOGLE_AI_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ instances: [instanceObj], parameters: parametersObj }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Veo3 generate error:", response.status, errorText);
+        console.error("Veo3 error:", response.status, errorText);
+
+        // Distinguish quota exhaustion from temporary rate limit
+        const isQuotaExhausted = errorText.includes("RESOURCE_EXHAUSTED") || errorText.includes("exceeded your current quota");
+        
+        if (response.status === 429 || isQuotaExhausted) {
+          return new Response(JSON.stringify({
+            error: isQuotaExhausted
+              ? "Quota da API Google esgotada. Aguarde alguns minutos para o reset."
+              : "Rate limit temporário. Tente novamente em 30s.",
+            quotaExhausted: isQuotaExhausted,
+            retryAfter: isQuotaExhausted ? 120 : 30,
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": isQuotaExhausted ? "120" : "30" },
+          });
+        }
         if (response.status === 402 || response.status === 403) {
           return new Response(JSON.stringify({ error: "Sem créditos ou acesso negado. Verifique sua API Key e billing." }), {
             status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -73,139 +64,92 @@ serve(async (req) => {
       }
 
       const result = await response.json();
-      // Returns operation name for polling
-      return new Response(JSON.stringify({
-        operationName: result.name,
-        status: "RUNNING",
-      }), {
+      return new Response(JSON.stringify({ operationName: result.name, status: "RUNNING" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ACTION: poll — check status of a running operation
     if (action === "poll") {
       const { operationName } = body;
       if (!operationName) throw new Error("operationName is required");
 
-      const url = `${BASE_URL}/${operationName}`;
-      const response = await fetchWithRetry(url, {
+      const response = await fetch(`${BASE_URL}/${operationName}`, {
         headers: { "x-goog-api-key": GOOGLE_AI_API_KEY },
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Veo3 poll error:", response.status, errorText);
+        console.error("Poll error:", response.status, errorText);
         throw new Error(`Poll error: ${response.status}`);
       }
 
       const result = await response.json();
 
-      // Operation still running
       if (!result.done) {
         return new Response(JSON.stringify({
-          status: "RUNNING",
-          operationName,
-          progress: result.metadata?.progress || null,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+          status: "RUNNING", operationName, progress: result.metadata?.progress || null,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Operation complete - extract video
       if (result.error) {
         return new Response(JSON.stringify({
-          status: "FAILED",
-          error: result.error.message || "Video generation failed",
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+          status: "FAILED", error: result.error.message || "Video generation failed",
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Extract video data from response
+      // Extract video data
       const videos = result.response?.generateVideoResponse?.generatedSamples ||
                      result.response?.generatedSamples ||
-                     result.result?.generateVideoResponse?.generatedSamples ||
-                     [];
+                     result.result?.generateVideoResponse?.generatedSamples || [];
 
       if (videos.length === 0) {
-        // Try to find video in alternative response structure
         const videoFile = result.response?.video || result.result?.video;
         if (videoFile) {
-          // Download the video file
           const fileUrl = `${BASE_URL}/files/${videoFile.name || videoFile}`;
-          const fileRes = await fetch(fileUrl, {
-            headers: { "x-goog-api-key": GOOGLE_AI_API_KEY },
-          });
-
+          const fileRes = await fetch(fileUrl, { headers: { "x-goog-api-key": GOOGLE_AI_API_KEY } });
           if (fileRes.ok) {
-            const videoData = await fileRes.arrayBuffer();
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(videoData)));
-            return new Response(JSON.stringify({
-              status: "COMPLETED",
-              videoBase64: base64,
-              mimeType: "video/mp4",
-            }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-        }
-
-        // Return raw response for debugging
-        return new Response(JSON.stringify({
-          status: "COMPLETED",
-          rawResponse: result,
-          videos: [],
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Process generated videos - download first one
-      const firstVideo = videos[0];
-      const videoUri = firstVideo.video?.uri || firstVideo.uri;
-
-      if (videoUri) {
-        // If it's a file reference, download it
-        if (videoUri.startsWith("files/")) {
-          const dlUrl = `${BASE_URL}/${videoUri}?alt=media`;
-          const dlRes = await fetch(dlUrl, {
-            headers: { "x-goog-api-key": GOOGLE_AI_API_KEY },
-          });
-
-          if (dlRes.ok) {
-            const videoBytes = new Uint8Array(await dlRes.arrayBuffer());
-            // Convert to base64 in chunks to avoid stack overflow
+            const videoBytes = new Uint8Array(await fileRes.arrayBuffer());
             let binary = '';
             const chunkSize = 8192;
             for (let i = 0; i < videoBytes.length; i += chunkSize) {
               binary += String.fromCharCode(...videoBytes.slice(i, i + chunkSize));
             }
-            const base64 = btoa(binary);
-
             return new Response(JSON.stringify({
-              status: "COMPLETED",
-              videoBase64: base64,
-              mimeType: "video/mp4",
-            }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+              status: "COMPLETED", videoBase64: btoa(binary), mimeType: "video/mp4",
+            }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
         }
-
-        // Direct URL
-        return new Response(JSON.stringify({
-          status: "COMPLETED",
-          videoUrl: videoUri,
-        }), {
+        return new Response(JSON.stringify({ status: "COMPLETED", rawResponse: result, videos: [] }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Fallback: return raw data
-      return new Response(JSON.stringify({
-        status: "COMPLETED",
-        rawResponse: result,
-      }), {
+      const firstVideo = videos[0];
+      const videoUri = firstVideo.video?.uri || firstVideo.uri;
+
+      if (videoUri) {
+        if (videoUri.startsWith("files/")) {
+          const dlRes = await fetch(`${BASE_URL}/${videoUri}?alt=media`, {
+            headers: { "x-goog-api-key": GOOGLE_AI_API_KEY },
+          });
+          if (dlRes.ok) {
+            const videoBytes = new Uint8Array(await dlRes.arrayBuffer());
+            let binary = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < videoBytes.length; i += chunkSize) {
+              binary += String.fromCharCode(...videoBytes.slice(i, i + chunkSize));
+            }
+            return new Response(JSON.stringify({
+              status: "COMPLETED", videoBase64: btoa(binary), mimeType: "video/mp4",
+            }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        }
+        return new Response(JSON.stringify({ status: "COMPLETED", videoUrl: videoUri }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ status: "COMPLETED", rawResponse: result }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
