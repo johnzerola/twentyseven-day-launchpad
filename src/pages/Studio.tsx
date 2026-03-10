@@ -473,10 +473,15 @@ const Studio = () => {
             </div>
           </div>
           {veo3Mode && (
-            <div className="mt-3">
+            <div className="mt-3 flex gap-3">
               <Input placeholder="Descrição do personagem principal (para consistência entre cenas)..."
                 value={characterDesc} onChange={e => setCharacterDesc(e.target.value)}
-                className="bg-secondary/50 text-sm" />
+                className="bg-secondary/50 text-sm flex-1" />
+              <select value={veo3Model} onChange={e => setVeo3Model(e.target.value as any)}
+                className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-xs">
+                <option value="veo-3.0-generate-preview">Veo3 (Alta Qualidade)</option>
+                <option value="veo-3.0-fast-generate-preview">Veo3 Fast (Rápido)</option>
+              </select>
             </div>
           )}
         </motion.div>
