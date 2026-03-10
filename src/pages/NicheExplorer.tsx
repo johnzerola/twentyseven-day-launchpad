@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatNumber } from '@/lib/formatters';
+import { COUNTRIES } from '@/lib/constants';
 
 const COUNTRIES = [
   { value: 'BR', label: '🇧🇷 Brasil' }, { value: 'US', label: '🇺🇸 EUA' },
