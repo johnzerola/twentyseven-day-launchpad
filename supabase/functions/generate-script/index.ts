@@ -108,9 +108,10 @@ TÉCNICAS OBRIGATÓRIAS QUE VOCÊ DEVE USAR:
 2. Cada minuto = ~140 palavras faladas. Para ${duration} min = ${targetWords} palavras MÍNIMO
 3. ESCREVA CADA PALAVRA. NÃO use "[continue aqui]", "[expanda]", "[adicione mais]" ou qualquer placeholder
 4. Inclua MARCAÇÕES DE TEMPO: [00:00], [01:30], [03:00], etc.
-5. Inclua indicações: [B-ROLL: descrição], [TEXTO NA TELA: texto], [EFEITO SONORO: tipo], [TRANSIÇÃO: tipo]
+5. ⚠️ ROTEIRO LIMPO: Escreva APENAS o texto da narração. NÃO inclua indicações técnicas como [B-ROLL:], [TEXTO NA TELA:], [EFEITO SONORO:], [MÚSICA:], [TRANSIÇÃO:], [CORTE PARA:] ou qualquer anotação entre colchetes que não seja marcação de tempo. O roteiro será usado diretamente para TTS (Text-to-Speech), então qualquer anotação será lida em voz alta pelo narrador.
 6. Parágrafos curtos (2-3 frases) para facilitar narração
 7. Use linguagem conversacional — como se falasse com um amigo inteligente
+8. Use valores monetários em dólares (ex: $15, $1.000, $50.000) — NUNCA use R$
 
 📝 NO FINAL DO ROTEIRO, ADICIONE:
 - 5 sugestões de TÍTULO com CTR estimado 30%+ (use números, palavras de poder, curiosidade, urgência)
