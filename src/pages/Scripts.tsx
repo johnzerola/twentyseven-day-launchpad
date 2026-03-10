@@ -76,6 +76,7 @@ interface Character {
 
 interface SyncedScene {
   sceneIndex: number;
+  sceneDurationSeconds?: number;
   startTime: number;
   endTime: number;
   visualPrompt: string;
