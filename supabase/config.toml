@@ -60,5 +60,9 @@ verify_jwt = false
 [functions.generate-viral-db]
 verify_jwt = false
 
+[functions.generate-synced-prompts]
+verify_jwt = false
+
 [functions.deep-scan-video]
 verify_jwt = false
+
