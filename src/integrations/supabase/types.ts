@@ -229,6 +229,66 @@ export type Database = {
         }
         Relationships: []
       }
+      scene_prompt_knowledge: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          prompt_template: string
+          tags: Json | null
+          title: string
+          viral_score: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          prompt_template: string
+          tags?: Json | null
+          title: string
+          viral_score?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          prompt_template?: string
+          tags?: Json | null
+          title?: string
+          viral_score?: number | null
+        }
+        Relationships: []
+      }
+      script_knowledge: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          effectiveness_score: number | null
+          examples: Json | null
+          id: string
+          title: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          effectiveness_score?: number | null
+          examples?: Json | null
+          id?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          effectiveness_score?: number | null
+          examples?: Json | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       tracked_channels: {
         Row: {
           channel_name: string
@@ -416,6 +476,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      youtube_knowledge: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          priority: number | null
+          source: string | null
+          tags: Json | null
+          title: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          id?: string
+          priority?: number | null
+          source?: string | null
+          tags?: Json | null
+          title: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          priority?: number | null
+          source?: string | null
+          tags?: Json | null
+          title?: string
+        }
+        Relationships: []
       }
     }
     Views: {
