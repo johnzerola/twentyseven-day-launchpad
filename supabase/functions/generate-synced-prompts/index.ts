@@ -78,7 +78,16 @@ serve(async (req) => {
 
     // Build character descriptions for consistency
     const characterBlock = characters?.length > 0
-      ? `\n\nCHARACTER CONSISTENCY (CRITICAL - use these EXACT descriptions every time a character appears):\n${characters.map((c: any, i: number) => `Character ${i + 1} "${c.name}": ${c.description}. Appearance: ${c.appearance}. Clothing: ${c.clothing}`).join('\n')}`
+      ? `\n\nCHARACTER CONSISTENCY (CRITICAL - use these EXACT descriptions every time a character appears):\n${characters.map((c: any, i: number) => {
+          const a = c.appearance || {};
+          const f = c.facial_features || {};
+          const cl = c.clothing || {};
+          return `Character ${i + 1} "${c.name}" (${c.gender || 'unknown'}, age ${c.age || '?'}):
+  Appearance: ${a.skin_color || ''} skin, ${a.hair_color || ''} ${a.hair_style || ''} hair, ${a.eye_color || ''} eyes, ${a.body_type || ''} build, ${a.height || ''}
+  Face: ${f.face_shape || ''} face, ${f.eyebrows || ''} eyebrows, ${f.nose || ''} nose, ${f.mouth || ''}, ${f.ears || ''} ears
+  Clothing: ${cl.shirt || ''}, ${cl.pants || ''}, ${cl.shoes || ''}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}
+  Personality: ${(c.personality || []).join(', ')}`;
+        }).join('\n\n')}`
       : '';
 
     const sceneTexts = scenes.map(s =>

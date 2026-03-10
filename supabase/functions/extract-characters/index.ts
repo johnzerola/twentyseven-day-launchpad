@@ -25,18 +25,26 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a script analyst. Extract ALL characters/people mentioned or implied in a video script. For each character, provide detailed visual descriptions suitable for AI image generation. If a character's appearance isn't explicitly described, infer reasonable details from context (age, gender, style, etc). Language for output: ${language || 'português'}.`,
+            content: `You are an expert character designer for cinematic video production. Extract ALL characters/people mentioned or implied in a video script. For each character, provide EXTREMELY detailed visual descriptions in structured JSON format suitable for AI image generation consistency across multiple scenes.
+
+Rules:
+- If a character's appearance isn't explicitly described, infer reasonable details from context
+- For narrators, create a fitting visual persona
+- Be very specific about facial features, body type, clothing items
+- Include personality traits that affect visual portrayal
+- Language for name/description fields: ${language || 'português'}
+- Physical descriptions MUST be in English for AI image generation consistency`,
           },
           {
             role: "user",
-            content: `Extract all characters from this script. For narrators, create a fitting visual persona.\n\nSCRIPT:\n${script.slice(0, 8000)}`,
+            content: `Extract all characters from this script with full visual detail.\n\nSCRIPT:\n${script.slice(0, 10000)}`,
           },
         ],
         tools: [{
           type: "function",
           function: {
             name: "extracted_characters",
-            description: "Return the list of characters found in the script",
+            description: "Return the list of characters found in the script with detailed visual attributes",
             parameters: {
               type: "object",
               properties: {
@@ -46,11 +54,52 @@ serve(async (req) => {
                     type: "object",
                     properties: {
                       name: { type: "string", description: "Character name or role" },
-                      description: { type: "string", description: "Role in the story (e.g. Protagonista, Narrador, Vilão)" },
-                      appearance: { type: "string", description: "Detailed physical appearance: age, gender, ethnicity, hair, face, body type, distinguishing features" },
-                      clothing: { type: "string", description: "Detailed outfit/clothing description with colors and style" },
+                      gender: { type: "string", enum: ["male", "female", "non-binary"], description: "Character gender" },
+                      age: { type: "number", description: "Character age" },
+                      role: { type: "string", description: "Role in the story (e.g. Protagonista, Narrador, Vilão, Mentor)" },
+                      appearance: {
+                        type: "object",
+                        properties: {
+                          skin_color: { type: "string", description: "e.g. light, tan, olive, brown, dark brown, pale" },
+                          hair_color: { type: "string", description: "e.g. dark brown, black, blonde, red, gray, white" },
+                          hair_style: { type: "string", description: "e.g. short cropped, long wavy, buzz cut, braided, slicked back" },
+                          eye_color: { type: "string", description: "e.g. brown, blue, green, hazel, dark brown" },
+                          body_type: { type: "string", description: "e.g. athletic, slim, muscular, stocky, average" },
+                          height: { type: "string", description: "e.g. 1.75m, tall, short, average height" },
+                        },
+                        required: ["skin_color", "hair_color", "hair_style", "eye_color", "body_type", "height"],
+                        additionalProperties: false,
+                      },
+                      facial_features: {
+                        type: "object",
+                        properties: {
+                          eyebrows: { type: "string", description: "e.g. thick arched, thin straight, bushy" },
+                          nose: { type: "string", description: "e.g. straight medium, wide, pointed, Roman" },
+                          mouth: { type: "string", description: "e.g. thin lips, full lips, medium" },
+                          ears: { type: "string", description: "e.g. normal size, small, slightly protruding" },
+                          face_shape: { type: "string", description: "e.g. angular jaw, round, oval, square, heart-shaped" },
+                        },
+                        required: ["eyebrows", "nose", "mouth", "ears", "face_shape"],
+                        additionalProperties: false,
+                      },
+                      clothing: {
+                        type: "object",
+                        properties: {
+                          shirt: { type: "string", description: "e.g. dark green military jacket, white dress shirt" },
+                          pants: { type: "string", description: "e.g. black jeans, khaki trousers, dark suit pants" },
+                          shoes: { type: "string", description: "e.g. brown leather boots, white sneakers, black dress shoes" },
+                          accessories: { type: "string", description: "e.g. silver watch, round glasses, gold chain, none" },
+                        },
+                        required: ["shirt", "pants", "shoes", "accessories"],
+                        additionalProperties: false,
+                      },
+                      personality: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "3-5 personality traits e.g. brave, curious, determined, mysterious, calm",
+                      },
                     },
-                    required: ["name", "description", "appearance", "clothing"],
+                    required: ["name", "gender", "age", "role", "appearance", "facial_features", "clothing", "personality"],
                     additionalProperties: false,
                   },
                 },

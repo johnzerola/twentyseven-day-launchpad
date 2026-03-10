@@ -37,11 +37,39 @@ const VIDEO_STYLES = [
   { value: 'comic', label: '💥 HQ/Comic', desc: 'Estilo quadrinhos, bold outlines, ação' },
 ];
 
+interface CharacterAppearance {
+  skin_color: string;
+  hair_color: string;
+  hair_style: string;
+  eye_color: string;
+  body_type: string;
+  height: string;
+}
+
+interface CharacterFacialFeatures {
+  eyebrows: string;
+  nose: string;
+  mouth: string;
+  ears: string;
+  face_shape: string;
+}
+
+interface CharacterClothing {
+  shirt: string;
+  pants: string;
+  shoes: string;
+  accessories: string;
+}
+
 interface Character {
   name: string;
-  description: string;
-  appearance: string;
-  clothing: string;
+  gender: string;
+  age: number;
+  role: string;
+  appearance: CharacterAppearance;
+  facial_features: CharacterFacialFeatures;
+  clothing: CharacterClothing;
+  personality: string[];
   imageUrl?: string;
   generatingImage?: boolean;
 }
@@ -209,14 +237,27 @@ const Scripts = () => {
     });
   };
 
-  // Add character
+  // Add character manually
   const addCharacter = () => {
     if (!newCharName.trim()) return;
     setCharacters(prev => [...prev, {
       name: newCharName.trim(),
-      description: newCharDesc.trim() || 'Personagem principal',
-      appearance: newCharAppearance.trim() || 'Adulto, expressão determinada',
-      clothing: newCharClothing.trim() || 'Roupa casual moderna',
+      gender: 'male',
+      age: 30,
+      role: newCharDesc.trim() || 'Personagem',
+      appearance: {
+        skin_color: 'light tan', hair_color: 'dark brown', hair_style: 'short',
+        eye_color: 'brown', body_type: 'average', height: '1.75m',
+      },
+      facial_features: {
+        eyebrows: 'medium arched', nose: 'straight medium', mouth: 'medium lips',
+        ears: 'normal size', face_shape: 'oval',
+      },
+      clothing: {
+        shirt: newCharClothing.trim() || 'casual t-shirt',
+        pants: 'dark jeans', shoes: 'sneakers', accessories: 'none',
+      },
+      personality: ['determined', 'curious'],
     }]);
     setNewCharName('');
     setNewCharDesc('');
@@ -228,13 +269,21 @@ const Scripts = () => {
     setCharacters(prev => prev.filter((_, i) => i !== idx));
   };
 
+  // Build image prompt from structured character
+  const buildCharImagePrompt = (char: Character): string => {
+    const a = char.appearance;
+    const f = char.facial_features;
+    const cl = char.clothing;
+    return `Character reference sheet. ${char.gender}, ${char.age} years old. ${a.skin_color} skin, ${a.hair_color} ${a.hair_style} hair, ${a.eye_color} eyes. ${a.body_type} build, ${a.height}. Face: ${f.face_shape} face, ${f.eyebrows} eyebrows, ${f.nose} nose, ${f.mouth}, ${f.ears} ears. Wearing ${cl.shirt}, ${cl.pants}, ${cl.shoes}${cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}. ${char.role}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+  };
+
   // Generate character reference image
   const generateCharacterImage = async (idx: number) => {
     const char = characters[idx];
     if (!char) return;
     setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, generatingImage: true } : c));
     try {
-      const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+      const prompt = buildCharImagePrompt(char);
       const { data, error } = await supabase.functions.invoke('generate-segment-image', {
         body: { visualPrompt: prompt, textContent: '', segmentIndex: idx },
       });
@@ -271,9 +320,13 @@ const Scripts = () => {
       if (data?.error) throw new Error(data.error);
       const extracted: Character[] = (data.characters || []).map((c: any) => ({
         name: c.name,
-        description: c.description,
-        appearance: c.appearance,
-        clothing: c.clothing,
+        gender: c.gender || 'male',
+        age: c.age || 30,
+        role: c.role || c.description || 'Personagem',
+        appearance: c.appearance || { skin_color: 'light', hair_color: 'dark', hair_style: 'short', eye_color: 'brown', body_type: 'average', height: '1.75m' },
+        facial_features: c.facial_features || { eyebrows: 'medium', nose: 'straight', mouth: 'medium', ears: 'normal', face_shape: 'oval' },
+        clothing: c.clothing || { shirt: 'casual shirt', pants: 'jeans', shoes: 'sneakers', accessories: 'none' },
+        personality: c.personality || ['determined'],
       }));
       if (extracted.length === 0) { toast.info('Nenhum personagem detectado no roteiro.'); return; }
       setCharacters(extracted);
@@ -284,7 +337,7 @@ const Scripts = () => {
         const char = extracted[i];
         setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: true } : c));
         try {
-          const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+          const prompt = buildCharImagePrompt(char);
           const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-segment-image', {
             body: { visualPrompt: prompt, textContent: '', segmentIndex: i },
           });
@@ -353,11 +406,13 @@ const Scripts = () => {
 
   // Duration estimation - more accurate using speech rate per language
   const speechRates: Record<string, number> = {
-    'português': 150, // words per minute
+    'português': 150,
     'inglês': 160,
     'espanhol': 155,
     'polonês': 145,
     'alemão': 140,
+    'turco': 150,
+    'japonês': 130,
   };
   const wpm = speechRates[language] || 150;
   const wordCount = script.split(/\s+/).filter(Boolean).length;
@@ -452,6 +507,8 @@ const Scripts = () => {
                   <option value="15">15 min (~{15 * wpm} palavras)</option>
                   <option value="20">20 min (~{20 * wpm} palavras)</option>
                   <option value="30">30 min (~{30 * wpm} palavras)</option>
+                  <option value="40">40 min (~{40 * wpm} palavras)</option>
+                  <option value="60">60 min (~{60 * wpm} palavras)</option>
                 </select>
               </div>
               <div>
@@ -478,9 +535,11 @@ const Scripts = () => {
                   <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
                     <option value="português">Português</option>
                     <option value="inglês">English</option>
-                    <option value="polonês">Polski</option>
-                    <option value="alemão">Deutsch</option>
                     <option value="espanhol">Español</option>
+                    <option value="alemão">Deutsch</option>
+                    <option value="polonês">Polski</option>
+                    <option value="turco">Türkçe</option>
+                    <option value="japonês">日本語</option>
                   </select>
                 </div>
               </div>
@@ -685,9 +744,11 @@ const Scripts = () => {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground">{c.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{c.description}</p>
-                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance} · 👕 {c.clothing}</p>
+                            <p className="text-sm font-medium text-foreground">{c.name} <span className="text-[10px] text-muted-foreground ml-1">({c.gender}, {c.age} anos)</span></p>
+                            <p className="text-[10px] text-muted-foreground">{c.role}</p>
+                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance.skin_color} skin, {c.appearance.hair_color} {c.appearance.hair_style} hair, {c.appearance.eye_color} eyes</p>
+                            <p className="text-[10px] text-muted-foreground">👕 {c.clothing.shirt}, {c.clothing.pants}, {c.clothing.shoes}</p>
+                            <p className="text-[10px] text-muted-foreground">🧠 {c.personality.join(', ')}</p>
                             <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 mt-1 px-2"
                               disabled={c.generatingImage}
                               onClick={() => generateCharacterImage(i)}>
@@ -813,19 +874,26 @@ const Scripts = () => {
                           <Copy className="w-4 h-4" /> Copiar detalhado ({syncedScenes.length})
                         </Button>
                         <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                          const getCharDesc = (name: string) => {
-                            const c = characters.find(ch => ch.name.toLowerCase() === name.toLowerCase());
-                            return c ? `${c.name} (${c.appearance}, ${c.clothing})` : name;
-                          };
-                          const autoflowFormat = syncedScenes.map((scene) => {
+                          // Build character JSON block at top
+                          const charBlock = characters.length > 0
+                            ? `=== PERSONAGENS ===\n${characters.map(c => {
+                                const charJson = {
+                                  name: c.name, gender: c.gender, age: c.age,
+                                  appearance: c.appearance, facial_features: c.facial_features,
+                                  clothing: c.clothing, personality: c.personality,
+                                };
+                                return `${c.name}: ${JSON.stringify(charJson, null, 2)}`;
+                              }).join('\n\n')}\n\n=== CENAS ===\n`
+                            : '';
+                          const autoflowFormat = charBlock + syncedScenes.map((scene) => {
                             const dur = scene.endTime - scene.startTime;
                             const charsLine = scene.charactersInScene?.length 
-                              ? `\nPersonagens: ${scene.charactersInScene.map(getCharDesc).join('; ')}`
+                              ? ` | Personagens: ${scene.charactersInScene.join(', ')}`
                               : '';
                             return `Cena ${scene.sceneIndex + 1}: ${scene.visualPrompt} | Duração: ${dur}s${charsLine}`;
                           }).join('\n\n');
                           navigator.clipboard.writeText(autoflowFormat);
-                          toast.success('Copiado para AutoFlow! Cole na Prompt List.');
+                          toast.success('Copiado para AutoFlow com JSON de personagens!');
                         }}>
                           <Copy className="w-4 h-4" /> Copiar p/ AutoFlow ({syncedScenes.length})
                         </Button>
