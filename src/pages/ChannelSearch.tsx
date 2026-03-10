@@ -467,6 +467,33 @@ const ChannelSearch = () => {
           </motion.div>
         )}
 
+        {/* Deep Scan Result Panel */}
+        <AnimatePresence>
+          {deepScanResult && (
+            <DeepScanPanel
+              result={deepScanResult}
+              onClose={() => setDeepScanResult(null)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Deep Scanning Loader */}
+        {deepScanning && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="glass rounded-xl p-8 text-center border border-primary/20">
+            <Brain className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
+            <h3 className="font-bold text-lg">Deep Scan em Andamento...</h3>
+            <p className="text-sm text-muted-foreground mt-1">Analisando hooks, retenção, DNA do conteúdo e gerando template de clonagem</p>
+            <div className="flex justify-center gap-2 mt-4">
+              {['Hook', 'Retenção', 'DNA', 'CTR', 'Clone'].map((step, i) => (
+                <Badge key={i} variant="outline" className="text-[10px] animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
+                  {step}
+                </Badge>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Empty state */}
         {hasSearched && !loading && results.length === 0 && !channelInfo && (
           <div className="glass rounded-xl p-12 text-center text-muted-foreground">
