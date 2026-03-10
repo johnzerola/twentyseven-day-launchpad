@@ -164,7 +164,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.product': 'Product',
     'footer.company': 'Company',
     'footer.legal': 'Legal',
-    'footer.rights': '© 2026 ChannelHacker. All rights reserved.',
+    'footer.rights': '© 2026 Monetiza27. All rights reserved.',
     'dash.overview': 'Overview',
     'dash.channels': 'My Channels',
     'dash.search': 'Video Search',
