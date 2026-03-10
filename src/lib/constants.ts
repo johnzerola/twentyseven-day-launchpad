@@ -70,3 +70,49 @@ export const PERIODS = [
   { value: 'month', label: 'Último mês' },
   { value: 'year', label: 'Último ano' },
 ] as const;
+
+/** RPM estimates by niche (USD) — used in Revenue Simulator */
+export const RPM_BY_NICHE: Record<string, { min: number; max: number; avg: number }> = {
+  'finanças': { min: 8, max: 25, avg: 14 },
+  'tecnologia': { min: 6, max: 18, avg: 10 },
+  'saúde': { min: 5, max: 15, avg: 9 },
+  'gaming': { min: 2, max: 8, avg: 4 },
+  'educação': { min: 4, max: 14, avg: 8 },
+  'entretenimento': { min: 2, max: 7, avg: 3.5 },
+  'curiosidades': { min: 3, max: 10, avg: 5 },
+  'história': { min: 4, max: 12, avg: 7 },
+  'ciência': { min: 5, max: 14, avg: 8 },
+  'motivacional': { min: 4, max: 12, avg: 7 },
+  'true crime': { min: 5, max: 16, avg: 9 },
+  'conspiração': { min: 3, max: 10, avg: 5 },
+  'top 10': { min: 2, max: 8, avg: 4 },
+  'receitas': { min: 3, max: 10, avg: 5 },
+  'viagem': { min: 4, max: 14, avg: 8 },
+  'crypto': { min: 10, max: 35, avg: 18 },
+  'imóveis': { min: 8, max: 22, avg: 13 },
+  'marketing digital': { min: 6, max: 20, avg: 12 },
+  'desenvolvimento pessoal': { min: 4, max: 14, avg: 8 },
+  'horror stories': { min: 4, max: 12, avg: 7 },
+};
+
+/** Country RPM multiplier relative to US baseline */
+export const RPM_COUNTRY_MULTIPLIER: Record<string, number> = {
+  US: 1.0,
+  GB: 0.9,
+  CA: 0.85,
+  AU: 0.85,
+  DE: 0.75,
+  FR: 0.65,
+  JP: 0.6,
+  KR: 0.55,
+  IT: 0.5,
+  ES: 0.45,
+  PT: 0.4,
+  PL: 0.35,
+  MX: 0.25,
+  BR: 0.3,
+  IN: 0.1,
+};
+
+/** Growth curve: monthly view multiplier for months 1-12 (faceless channel avg) */
+export const GROWTH_CURVE = [0.05, 0.1, 0.18, 0.3, 0.45, 0.6, 0.72, 0.82, 0.88, 0.93, 0.97, 1.0] as const;
