@@ -13,7 +13,16 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const wordsPerMinute = 140;
+    // Speech rates per language (words per minute)
+    const speechRates: Record<string, number> = {
+      'português': 150, 'inglês': 160, 'english': 160,
+      'espanhol': 155, 'español': 155,
+      'alemão': 140, 'deutsch': 140,
+      'polonês': 145, 'polski': 145,
+      'turco': 150, 'türkçe': 150,
+      'japonês': 130, '日本語': 130,
+    };
+    const wordsPerMinute = speechRates[language?.toLowerCase()] || 150;
     const targetWords = (duration || 15) * wordsPerMinute;
     const targetChars = targetWords * 5.5;
 
