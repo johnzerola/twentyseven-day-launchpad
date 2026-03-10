@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2 } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -76,6 +76,7 @@ interface Character {
 
 interface SyncedScene {
   sceneIndex: number;
+  sceneDurationSeconds?: number;
   startTime: number;
   endTime: number;
   visualPrompt: string;
@@ -94,6 +95,8 @@ const Scripts = () => {
   const [language, setLanguage] = useState('português');
   const [script, setScript] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [scorecard, setScorecard] = useState<{hook:number,retention:number,emotion:number,flow:number,payoff:number} | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [savedScripts, setSavedScripts] = useState<any[]>([]);
@@ -151,12 +154,25 @@ const Scripts = () => {
     return parts.join('\n\n');
   };
 
+  const parseScorecard = (text: string) => {
+    const match = text.match(/---SCORES---\s*hook:(\d+)\s*retention:(\d+)\s*emotion:(\d+)\s*flow:(\d+)\s*payoff:(\d+)\s*---END_SCORES---/);
+    if (match) {
+      setScorecard({ hook: parseInt(match[1]), retention: parseInt(match[2]), emotion: parseInt(match[3]), flow: parseInt(match[4]), payoff: parseInt(match[5]) });
+    }
+  };
+
+  const cleanScoresFromScript = (text: string): string => {
+    return text.replace(/---SCORES---.*?---END_SCORES---\s*/s, '').trim();
+  };
+
   const generateScript = async () => {
     if (!topic.trim()) return;
     setLoading(true);
     setScript('');
     setActiveStep('script');
     setSyncedScenes([]);
+    setScorecard(null);
+    setEditMode(false);
 
     try {
       const viralContext = getViralContext();
@@ -193,10 +209,12 @@ const Scripts = () => {
           try {
             const p = JSON.parse(json);
             const c = p.choices?.[0]?.delta?.content;
-            if (c) { fullScript += c; setScript(fullScript); }
+            if (c) { fullScript += c; setScript(cleanScoresFromScript(fullScript)); }
           } catch { buffer = line + '\n' + buffer; break; }
         }
       }
+      parseScorecard(fullScript);
+      setScript(cleanScoresFromScript(fullScript));
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -632,6 +650,7 @@ const Scripts = () => {
                         <div className="mt-1.5 space-y-1">
                           <p className="text-xs text-muted-foreground">
                             {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ⏱ {estimatedMinutesDisplay} min
+                            {scorecard && <span className="ml-2 text-primary font-medium">• Dual-AI ✓</span>}
                           </p>
                           <div className="flex items-center gap-2">
                             <Progress value={progressPercent} className="h-1.5 flex-1" />
@@ -644,6 +663,10 @@ const Scripts = () => {
                     </div>
                     {script && (
                       <div className="flex gap-1.5">
+                        <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-7 text-xs">
+                          {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                          {editMode ? 'Ler' : 'Editar'}
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
                           <Save className="w-3 h-3" /> Salvar
                         </Button>
@@ -655,17 +678,51 @@ const Scripts = () => {
                         </Button>
                       </div>
                     )}
+                    {!script && !loading && (
+                      <Button size="sm" variant="outline" onClick={() => { setEditMode(true); setScript(''); }} className="gap-1 h-7 text-xs">
+                        <ClipboardPaste className="w-3 h-3" /> Colar meu roteiro
+                      </Button>
+                    )}
                   </div>
+
+                  {/* Scorecard */}
+                  {scorecard && (
+                    <div className="grid grid-cols-5 gap-1.5 mb-3">
+                      {[
+                        { label: '🎯 Hook', score: scorecard.hook },
+                        { label: '📊 Retenção', score: scorecard.retention },
+                        { label: '💥 Emoção', score: scorecard.emotion },
+                        { label: '🌊 Fluidez', score: scorecard.flow },
+                        { label: '🏆 Payoff', score: scorecard.payoff },
+                      ].map(({ label, score }) => (
+                        <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-[9px] text-muted-foreground">{label}</p>
+                          <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>
+                            {score}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {loading && !script && (
                     <div className="text-center py-12">
                       <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
-                      <p className="text-sm text-muted-foreground">Gerando com Gemini 2.5 Pro...</p>
+                      <p className="text-sm text-muted-foreground">Dual-AI: GPT-5 criando → Gemini Pro revisando...</p>
                     </div>
                   )}
-                  {script ? (
-                    <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
-                      <ReactMarkdown>{script}</ReactMarkdown>
-                    </div>
+                  {script || editMode ? (
+                    editMode ? (
+                      <textarea
+                        value={script}
+                        onChange={e => setScript(e.target.value)}
+                        placeholder="Cole seu roteiro aqui ou edite o roteiro gerado..."
+                        className="w-full min-h-[500px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto"
+                      />
+                    ) : (
+                      <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
+                        <ReactMarkdown>{script}</ReactMarkdown>
+                      </div>
+                    )
                   ) : !loading && (
                     <div className="text-center py-12 text-muted-foreground">
                       <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -983,6 +1040,9 @@ const Scripts = () => {
                                 {formatTime(scene.startTime)} - {formatTime(scene.endTime)}
                               </Badge>
                               <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Cena {scene.sceneIndex + 1}</Badge>
+                              {scene.sceneDurationSeconds && (
+                                <Badge variant="outline" className="text-[9px]">⏱ {scene.sceneDurationSeconds}s</Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Badge variant="outline" className="text-[9px]">📷 {scene.cameraAngle}</Badge>
