@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, duration, style, niche, language } = await req.json();
+    const { topic, duration, style, niche, language, viralContext } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
@@ -83,6 +83,11 @@ serve(async (req) => {
 
     const selectedStyle = styleGuides[style?.toLowerCase()] || styleGuides['narração'];
 
+    // Build viral injection block
+    const viralInjection = viralContext
+      ? `\n\n🔥 ELEMENTOS VIRAIS SELECIONADOS PELO USUÁRIO (OBRIGATÓRIO incorporar no roteiro):\n${viralContext}\n\nIMPORTANTE: Os elementos acima foram escolhidos pelo criador. Adapte-os ao tema e integre naturalmente no roteiro. O hook deve ser usado como inspiração/base para os primeiros segundos. O CTA deve ser inserido no local indicado. A estrutura narrativa deve guiar toda a organização do roteiro.\n`
+      : '';
+
     const systemPrompt = `Você é um ROTEIRISTA VETERANO que trabalhou com MrBeast, Disney, HBO e produções dignas de Oscar. Você domina TODAS as técnicas de retenção que mantêm 80%+ de audiência em vídeos do YouTube.
 
 TÉCNICAS OBRIGATÓRIAS QUE VOCÊ DEVE USAR:
@@ -120,7 +125,7 @@ TÉCNICAS OBRIGATÓRIAS QUE VOCÊ DEVE USAR:
 - Descrição otimizada para SEO (3 parágrafos: hook, sobre o vídeo, sobre o canal + hashtags)
 
 ${selectedStyle}
-
+${viralInjection}
 Nicho: ${niche || 'geral'}
 Idioma: ${language || 'português'}
 
@@ -146,6 +151,7 @@ REQUISITOS INEGOCIÁVEIS:
 - ROTEIRO LIMPO: APENAS texto falado. ZERO anotações técnicas ([B-ROLL], [MÚSICA], [EFEITO SONORO], [TRANSIÇÃO], [CORTE], etc.). O texto vai direto pro TTS.
 - Use valores em dólares ($), nunca R$
 - Ao final: títulos, thumbnails, tags SEO e descrição (essa parte pode ter formatação)
+${viralContext ? '\n- INCORPORE os elementos virais selecionados pelo criador (hook, CTA e/ou estrutura narrativa)' : ''}
 
 Comece com o HOOK mais explosivo possível. Vamos lá!` }
         ],
