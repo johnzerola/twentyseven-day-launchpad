@@ -63,7 +63,7 @@ const Studio = () => {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState<number | null>(null);
   const [videoPollingMap, setVideoPollingMap] = useState<Record<number, NodeJS.Timeout>>({});
-  const [veo3Model, setVeo3Model] = useState<'veo-3.0-generate-preview' | 'veo-3.0-fast-generate-preview'>('veo-3.0-generate-preview');
+  const [veo3Model, setVeo3Model] = useState<'veo-3.1-generate-preview' | 'veo-3.1-fast-generate-preview'>('veo-3.1-generate-preview');
   const [veo3Mode, setVeo3Mode] = useState(true);
   const [characterDesc, setCharacterDesc] = useState('Homem de 30 anos, barba curta, óculos redondos, vestindo moletom preto');
 
@@ -497,8 +497,8 @@ const Studio = () => {
                 className="bg-secondary/50 text-sm flex-1" />
               <select value={veo3Model} onChange={e => setVeo3Model(e.target.value as any)}
                 className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-xs">
-                <option value="veo-3.0-generate-preview">Veo3 (Alta Qualidade)</option>
-                <option value="veo-3.0-fast-generate-preview">Veo3 Fast (Rápido)</option>
+                <option value="veo-3.1-generate-preview">Veo3.1 (Alta Qualidade)</option>
+                <option value="veo-3.1-fast-generate-preview">Veo3.1 Fast (Rápido)</option>
               </select>
             </div>
           )}

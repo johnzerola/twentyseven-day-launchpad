@@ -22,7 +22,7 @@ serve(async (req) => {
       const { prompt, aspectRatio, duration, model, negativePrompt } = body;
       if (!prompt) throw new Error("Prompt is required");
 
-      const modelId = model || "veo-3.0-generate-preview";
+      const modelId = model || "veo-3.1-generate-preview";
       const url = `${BASE_URL}/models/${modelId}:generateVideos`;
 
       const config: any = {
