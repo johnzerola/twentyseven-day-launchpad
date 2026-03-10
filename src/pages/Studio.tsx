@@ -285,8 +285,21 @@ const Studio = () => {
     setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
   };
 
-  const generateSegmentVideo = async (seg: Segment) => {
-    if (!seg.visualPrompt) return toast.error('Gere o prompt visual primeiro');
+  const startQuotaCooldown = (seconds: number) => {
+    setQuotaCooldown(seconds);
+    if (quotaCooldownRef.current) clearInterval(quotaCooldownRef.current);
+    quotaCooldownRef.current = setInterval(() => {
+      setQuotaCooldown(prev => {
+        if (prev <= 1) { clearInterval(quotaCooldownRef.current!); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const generateSegmentVideo = async (seg: Segment): Promise<boolean> => {
+    if (!seg.visualPrompt) { toast.error('Gere o prompt visual primeiro'); return false; }
+    if (quotaCooldown > 0) { toast.error(`Aguarde ${quotaCooldown}s (cooldown de quota)`); return false; }
+    
     updateSegment(seg.index, 'videoStatus', 'generating');
     setGeneratingVideo(seg.index);
     addLog(`🎬 Gerando vídeo Veo3 cena ${seg.index + 1}...`);
@@ -301,19 +314,40 @@ const Studio = () => {
           duration: 8,
         },
       });
-      if (error) throw new Error(error.message);
+      
+      // Handle quota/rate limit errors
+      if (error) {
+        const errMsg = error.message || '';
+        if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('Quota')) {
+          startQuotaCooldown(120);
+          updateSegment(seg.index, 'videoStatus', 'failed');
+          addLog(`🚫 Quota esgotada — cooldown de 120s ativado`);
+          toast.error('Quota da API esgotada. Cooldown de 2 min ativado.');
+          return false; // signal to stop batch
+        }
+        throw new Error(errMsg);
+      }
+      if (data?.quotaExhausted) {
+        startQuotaCooldown(data.retryAfter || 120);
+        updateSegment(seg.index, 'videoStatus', 'failed');
+        addLog(`🚫 Quota esgotada — cooldown de ${data.retryAfter || 120}s`);
+        toast.error('Quota da API esgotada. Cooldown ativado.');
+        return false;
+      }
       if (data?.error) throw new Error(data.error);
       
       if (data?.operationName) {
         updateSegment(seg.index, 'videoOperationName', data.operationName);
         updateSegment(seg.index, 'videoStatus', 'polling');
-        addLog(`⏳ Vídeo cena ${seg.index + 1} em processamento (polling a cada 10s)...`);
+        addLog(`⏳ Vídeo cena ${seg.index + 1} em processamento...`);
         pollVideoOperation(seg.index, data.operationName);
       }
+      return true; // success
     } catch (err: any) {
       updateSegment(seg.index, 'videoStatus', 'failed');
       addLog(`⚠️ Vídeo cena ${seg.index + 1} falhou: ${err.message}`);
       toast.error(err.message);
+      return true; // non-quota error, can continue batch
     } finally {
       setGeneratingVideo(null);
     }
@@ -324,18 +358,23 @@ const Studio = () => {
     const withPrompts = segs.filter(s => s.visualPrompt);
     if (!withPrompts.length) return toast.error('Gere os prompts visuais primeiro');
     
-    addLog(`🎬 Iniciando geração sequencial de ${withPrompts.length} vídeos Veo3 (1 por vez, intervalo de 15s)...`);
+    batchAbortRef.current = false;
+    addLog(`🎬 Gerando ${withPrompts.length} vídeos Veo3 sequencialmente (30s entre cada)...`);
     for (let i = 0; i < withPrompts.length; i++) {
+      if (batchAbortRef.current) { addLog('🛑 Batch interrompido'); break; }
       const seg = withPrompts[i];
-      addLog(`🎬 Enviando vídeo ${i + 1}/${withPrompts.length} (segmento #${seg.index + 1})...`);
-      await generateSegmentVideo(seg);
-      // 15s delay between requests to avoid Veo3 rate limiting
+      addLog(`🎬 Enviando vídeo ${i + 1}/${withPrompts.length} (cena #${seg.index + 1})...`);
+      const canContinue = await generateSegmentVideo(seg);
+      if (!canContinue) {
+        addLog('🛑 Batch interrompido: quota esgotada');
+        break;
+      }
       if (i < withPrompts.length - 1) {
-        addLog(`⏳ Aguardando 15s antes do próximo vídeo...`);
-        await new Promise(r => setTimeout(r, 15000));
+        addLog(`⏳ Aguardando 30s antes do próximo vídeo...`);
+        await new Promise(r => setTimeout(r, 30000));
       }
     }
-    toast.success(`${withPrompts.length} vídeos Veo3 enviados para geração!`);
+    toast.success('Batch de vídeos finalizado!');
   };
 
   const downloadAll = async () => {
