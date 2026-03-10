@@ -337,7 +337,7 @@ const Scripts = () => {
         const char = extracted[i];
         setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: true } : c));
         try {
-          const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+          const prompt = buildCharImagePrompt(char);
           const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-segment-image', {
             body: { visualPrompt: prompt, textContent: '', segmentIndex: i },
           });
