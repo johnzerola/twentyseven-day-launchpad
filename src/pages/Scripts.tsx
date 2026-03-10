@@ -153,12 +153,25 @@ const Scripts = () => {
     return parts.join('\n\n');
   };
 
+  const parseScorecard = (text: string) => {
+    const match = text.match(/---SCORES---\s*hook:(\d+)\s*retention:(\d+)\s*emotion:(\d+)\s*flow:(\d+)\s*payoff:(\d+)\s*---END_SCORES---/);
+    if (match) {
+      setScorecard({ hook: parseInt(match[1]), retention: parseInt(match[2]), emotion: parseInt(match[3]), flow: parseInt(match[4]), payoff: parseInt(match[5]) });
+    }
+  };
+
+  const cleanScoresFromScript = (text: string): string => {
+    return text.replace(/---SCORES---.*?---END_SCORES---\s*/s, '').trim();
+  };
+
   const generateScript = async () => {
     if (!topic.trim()) return;
     setLoading(true);
     setScript('');
     setActiveStep('script');
     setSyncedScenes([]);
+    setScorecard(null);
+    setEditMode(false);
 
     try {
       const viralContext = getViralContext();
@@ -195,10 +208,12 @@ const Scripts = () => {
           try {
             const p = JSON.parse(json);
             const c = p.choices?.[0]?.delta?.content;
-            if (c) { fullScript += c; setScript(fullScript); }
+            if (c) { fullScript += c; setScript(cleanScoresFromScript(fullScript)); }
           } catch { buffer = line + '\n' + buffer; break; }
         }
       }
+      parseScorecard(fullScript);
+      setScript(cleanScoresFromScript(fullScript));
     } catch (err: any) {
       toast.error(err.message);
     } finally {
