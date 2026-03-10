@@ -57,15 +57,10 @@ const Planner = () => {
     if (!user) { setLoading(false); return; }
     const { data, error } = await supabase.from('planner_cards').select('*')
       .eq('user_id', user.id).order('position');
-    if (error || !data?.length) {
-      // Keep mock data if no DB cards
-      setLoading(false);
-      return;
-    }
-
+    
     const cols = COLUMNS_META.map(c => ({
       ...c,
-      cards: data
+      cards: (data || [])
         .filter((card: any) => card.column_id === c.id)
         .map((card: any) => ({
           id: card.id,
@@ -77,7 +72,6 @@ const Planner = () => {
         })),
     }));
     setColumns(cols);
-    setDbLoaded(true);
     setLoading(false);
   };
 
