@@ -136,6 +136,9 @@ const Scripts = () => {
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [detectingCharacters, setDetectingCharacters] = useState(false);
+  const [transcription, setTranscription] = useState<{ fullText: string; blocks: TranscriptionBlock[]; audioDuration: number } | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [showTranscription, setShowTranscription] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => { loadHistory(); }, []);
