@@ -114,7 +114,9 @@ serve(async (req) => {
       }
     } else {
       // Regular keyword search
-      let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(parsed.value)}&maxResults=24&order=viewCount&key=${YOUTUBE_API_KEY}`;
+      // Combine niche with query for more targeted results
+      const fullQuery = niche ? `${parsed.value} ${niche}` : parsed.value;
+      let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(fullQuery)}&maxResults=24&order=viewCount&key=${YOUTUBE_API_KEY}`;
       if (language) url += `&relevanceLanguage=${language}`;
       if (country) url += `&regionCode=${country}`;
       if (period) {
