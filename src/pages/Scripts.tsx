@@ -227,6 +227,36 @@ const Scripts = () => {
     setCharacters(prev => prev.filter((_, i) => i !== idx));
   };
 
+  // Generate character reference image
+  const generateCharacterImage = async (idx: number) => {
+    const char = characters[idx];
+    if (!char) return;
+    setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, generatingImage: true } : c));
+    try {
+      const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+      const { data, error } = await supabase.functions.invoke('generate-segment-image', {
+        body: { visualPrompt: prompt, textContent: '', segmentIndex: idx },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.imageUrl) {
+        setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, imageUrl: data.imageUrl, generatingImage: false } : c));
+        toast.success(`Imagem de ${char.name} gerada!`);
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao gerar imagem: ${err.message}`);
+      setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, generatingImage: false } : c));
+    }
+  };
+
+  const generateAllCharacterImages = async () => {
+    for (let i = 0; i < characters.length; i++) {
+      if (!characters[i].imageUrl) {
+        await generateCharacterImage(i);
+      }
+    }
+  };
+
   // Extract clean narration text (remove markdown, titles, tags sections)
   const getCleanNarration = (): string => {
     // Remove everything after common end markers
