@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, ChevronRight, ArrowRight, Lightbulb, FileText, Mic, Wand2, Film, Scissors, Upload, ExternalLink, Loader2 } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, ArrowRight, Lightbulb, FileText, Wand2, Film, Upload, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
