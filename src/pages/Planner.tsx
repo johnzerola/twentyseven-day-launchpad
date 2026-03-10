@@ -107,31 +107,9 @@ const Planner = () => {
       setDraggedCard(null);
       return;
     }
-    if (dbLoaded) {
-      await supabase.from('planner_cards').update({ column_id: toColumn } as any).eq('id', draggedCard.cardId);
-      setDraggedCard(null);
-      await loadCards();
-    } else {
-      // Move mock card locally
-      let movedCard: KanbanCard | undefined;
-      setColumns(prev => {
-        const updated = prev.map(col => {
-          if (col.id === draggedCard.fromColumn) {
-            const card = col.cards.find(c => c.id === draggedCard.cardId);
-            if (card) movedCard = card;
-            return { ...col, cards: col.cards.filter(c => c.id !== draggedCard.cardId) };
-          }
-          return col;
-        });
-        if (movedCard) {
-          return updated.map(col =>
-            col.id === toColumn ? { ...col, cards: [...col.cards, movedCard!] } : col
-          );
-        }
-        return updated;
-      });
-      setDraggedCard(null);
-    }
+    await supabase.from('planner_cards').update({ column_id: toColumn } as any).eq('id', draggedCard.cardId);
+    setDraggedCard(null);
+    await loadCards();
     toast.success('Card movido!');
   };
 
