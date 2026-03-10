@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { visualPrompt, textContent, segmentIndex } = await req.json();
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     if (!visualPrompt?.trim() && !textContent?.trim()) {
       throw new Error("Visual prompt or text content required");
@@ -21,46 +21,44 @@ serve(async (req) => {
       ? visualPrompt
       : `Cinematic scene for a YouTube video narration. Scene description based on this script segment: "${textContent}". High quality, 16:9 aspect ratio, dramatic lighting, professional cinematography.`;
 
-    const fullPrompt = `Generate a cinematic, high-quality image for a YouTube video scene. ${prompt}. Style: ultra-realistic, dramatic lighting, 16:9 composition, movie-quality.`;
+    const fullPrompt = `Generate a cinematic, high-quality image for a YouTube video scene. ${prompt}. Style: ultra-realistic, dramatic lighting, 16:9 composition, movie-quality. On a clean background.`;
 
-    // Use Gemini 2.0 Flash with image generation via Imagen
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_AI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3.1-flash-image-preview",
+        messages: [{ role: "user", content: fullPrompt }],
+        modalities: ["image", "text"],
+      }),
+    });
 
     if (!response.ok) {
       const t = await response.text();
       console.error("Image gen error:", response.status, t);
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit. Tente novamente." }), {
+        return new Response(JSON.stringify({ error: "Rate limit. Tente novamente.", retryAfter: 60 }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error(`Image generation failed: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Extract image from Gemini response
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
-    
-    if (!imagePart) {
-      console.error("No image in response. Parts:", JSON.stringify(parts.map((p: any) => Object.keys(p))));
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+    if (!imageUrl) {
+      console.error("No image in response:", JSON.stringify(data).slice(0, 500));
       throw new Error("No image generated");
     }
-
-    const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 
     return new Response(JSON.stringify({ imageUrl, segmentIndex }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
