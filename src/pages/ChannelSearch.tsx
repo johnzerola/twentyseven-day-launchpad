@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
+import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
 
 interface VideoResult {
   id: string; title: string; channelTitle: string; channelId: string;
