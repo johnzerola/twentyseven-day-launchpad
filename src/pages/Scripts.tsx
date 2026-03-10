@@ -863,77 +863,102 @@ const Scripts = () => {
                   {/* Generated Scenes */}
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
+                      {/* AutoFlow Export Label */}
+                      <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                        <p className="text-xs font-medium text-foreground">🚀 Exportar para AutoFlow</p>
+                        <p className="text-[10px] text-muted-foreground">Cada modo gera o formato exato que o AutoFlow espera. Cole na Prompt List e clique Add to Queue.</p>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Text-to-Video: one prompt per line */}
+                          <Button variant="default" className="gap-2 text-xs" onClick={() => {
+                            // AutoFlow Text-to-Video: one prompt per line with [V1-S#] tags
+                            const lines = syncedScenes.map((scene) => 
+                              `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
+                            ).join('\n');
+                            navigator.clipboard.writeText(lines);
+                            toast.success(`${syncedScenes.length} prompts copiados para Text-to-Video!`);
+                          }}>
+                            <Copy className="w-4 h-4" /> 🎬 Text-to-Video ({syncedScenes.length})
+                          </Button>
+
+                          {/* Image → Video pipeline: [V#-S#] image prompt ||| [V#-S#] video prompt */}
+                          <Button variant="default" className="gap-2 text-xs" onClick={() => {
+                            const lines = syncedScenes.map((scene) => {
+                              const tag = `[V1-S${scene.sceneIndex + 1}]`;
+                              const imagePrompt = scene.visualPrompt;
+                              const videoPrompt = `${scene.cameraAngle} shot, ${scene.mood} mood, cinematic motion, ${scene.visualPrompt.slice(0, 120)}`;
+                              return `${tag} ${imagePrompt} ||| ${tag} ${videoPrompt}`;
+                            }).join('\n');
+                            navigator.clipboard.writeText(lines);
+                            toast.success(`${syncedScenes.length} prompts Image→Video copiados!`);
+                          }}>
+                            <Copy className="w-4 h-4" /> 🖼️→🎬 Image→Video ({syncedScenes.length})
+                          </Button>
+
+                          {/* Create Image only */}
+                          <Button variant="outline" className="gap-2 text-xs" onClick={() => {
+                            const lines = syncedScenes.map((scene) => 
+                              `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
+                            ).join('\n');
+                            navigator.clipboard.writeText(lines);
+                            toast.success(`${syncedScenes.length} prompts de imagem copiados!`);
+                          }}>
+                            <Copy className="w-4 h-4" /> 🖼️ Create Image ({syncedScenes.length})
+                          </Button>
+
+                          {/* Ingredients mode - refs + prompts */}
+                          <Button variant="outline" className="gap-2 text-xs" onClick={() => {
+                            const lines = syncedScenes.map((scene) => 
+                              `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
+                            ).join('\n');
+                            navigator.clipboard.writeText(lines);
+                            toast.success(`${syncedScenes.length} prompts para Ingredients copiados!`);
+                          }}>
+                            <Copy className="w-4 h-4" /> 🧩 Ingredients ({syncedScenes.length})
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Other exports */}
                       <div className="grid grid-cols-3 gap-2">
-                        {/* Copy full JSON */}
-                        <Button variant="default" className="gap-2 text-xs col-span-3" onClick={() => {
+                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
                           const fullJson = {
                             project: {
-                              topic,
-                              duration: parseInt(duration),
-                              language,
-                              style,
-                              videoStyle,
+                              topic, duration: parseInt(duration), language, style, videoStyle,
                               totalScenes: syncedScenes.length,
                               estimatedDuration: audioDuration > 0 ? audioDuration : syncedScenes.length * sceneDuration,
-                              sceneDuration,
-                              wordCount,
-                              generatedAt: new Date().toISOString(),
+                              sceneDuration, wordCount, generatedAt: new Date().toISOString(),
                             },
-                            script: {
-                              fullText: getCleanNarration(),
-                              wordCount,
-                              estimatedMinutes: estimatedMinutesDisplay,
-                            },
+                            script: { fullText: getCleanNarration(), wordCount, estimatedMinutes: estimatedMinutesDisplay },
                             characters: characters.map(c => ({
-                              name: c.name,
-                              gender: c.gender,
-                              age: c.age,
-                              role: c.role,
-                              appearance: c.appearance,
-                              facial_features: c.facial_features,
-                              clothing: c.clothing,
-                              personality: c.personality,
+                              name: c.name, gender: c.gender, age: c.age, role: c.role,
+                              appearance: c.appearance, facial_features: c.facial_features,
+                              clothing: c.clothing, personality: c.personality,
                               referenceImageUrl: c.imageUrl || null,
                             })),
                             scenes: syncedScenes.map(scene => ({
-                              sceneIndex: scene.sceneIndex + 1,
-                              startTime: scene.startTime,
-                              endTime: scene.endTime,
+                              sceneIndex: scene.sceneIndex + 1, startTime: scene.startTime, endTime: scene.endTime,
                               duration: scene.endTime - scene.startTime,
                               timestamp: `${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}`,
-                              visualPrompt: scene.visualPrompt,
-                              cameraAngle: scene.cameraAngle,
-                              mood: scene.mood,
-                              charactersInScene: scene.charactersInScene || [],
+                              visualPrompt: scene.visualPrompt, cameraAngle: scene.cameraAngle,
+                              mood: scene.mood, charactersInScene: scene.charactersInScene || [],
                               transitionNote: scene.transitionNote || null,
                             })),
                           };
                           navigator.clipboard.writeText(JSON.stringify(fullJson, null, 2));
-                          toast.success(`JSON completo copiado! (${syncedScenes.length} cenas + ${characters.length} personagens)`);
+                          toast.success(`JSON completo copiado!`);
                         }}>
-                          <Copy className="w-4 h-4" /> 📋 Copiar JSON Completo ({syncedScenes.length} cenas)
+                          <Copy className="w-4 h-4" /> JSON Completo
                         </Button>
 
                         <Button variant="outline" className="gap-2 text-xs" onClick={() => {
                           const allPrompts = syncedScenes.map((scene) => 
-                            `Cena ${scene.sceneIndex + 1} [${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}] (${scene.cameraAngle} | ${scene.mood}):\n${scene.visualPrompt}${scene.charactersInScene?.length ? `\nPersonagens: ${scene.charactersInScene.join(', ')}` : ''}${scene.transitionNote ? `\nTransição: ${scene.transitionNote}` : ''}`
+                            `Cena ${scene.sceneIndex + 1} [${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}] (${scene.cameraAngle} | ${scene.mood}):\n${scene.visualPrompt}${scene.charactersInScene?.length ? `\nPersonagens: ${scene.charactersInScene.join(', ')}` : ''}`
                           ).join('\n\n---\n\n');
                           navigator.clipboard.writeText(allPrompts);
                           toast.success('Prompts detalhados copiados!');
                         }}>
                           <Copy className="w-4 h-4" /> Detalhado
-                        </Button>
-
-                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                          // AutoFlow needs EACH prompt as a separate entry, one per line
-                          // Just the visual prompt text, separated by blank lines
-                          const autoflowFormat = syncedScenes.map((scene) => 
-                            scene.visualPrompt
-                          ).join('\n\n');
-                          navigator.clipboard.writeText(autoflowFormat);
-                          toast.success(`${syncedScenes.length} prompts copiados para AutoFlow!`);
-                        }}>
-                          <Copy className="w-4 h-4" /> AutoFlow ({syncedScenes.length} prompts)
                         </Button>
 
                         <Button variant="outline" className="gap-2 text-xs" onClick={() => {
