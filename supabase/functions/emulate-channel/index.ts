@@ -11,9 +11,9 @@ serve(async (req) => {
   try {
     const { channelId } = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Get channel info
     const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`);
@@ -42,14 +42,14 @@ serve(async (req) => {
     }
 
     // AI generates emulation roadmap
-    const aiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "google/gemini-2.5-flash",
         messages: [{
           role: "user",
           content: `Analyze this YouTube channel and create a 1-click emulation roadmap:

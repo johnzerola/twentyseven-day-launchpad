@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { segments, characterDescription } = await req.json();
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const prompt = `Gere prompts otimizados para o Google Veo3 (gerador de vídeo IA) para cada segmento de narração.
 
@@ -27,14 +27,14 @@ Para cada segmento, crie um prompt Veo3 que:
 4. Use formato: "A [shot type] of [subject] [action] in [setting]. [lighting]. [camera movement]. 8 seconds."
 5. Inclua referência ao personagem se houver`;
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "Expert cinematographer creating Veo3 video generation prompts. Return ONLY valid JSON." },
           { role: "user", content: prompt },
