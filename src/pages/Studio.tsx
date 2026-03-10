@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Film, Sparkles, Download, Send, Loader2, Volume2, Wand2, Zap, RefreshCcw, Play, Pause, SkipForward, ToggleLeft, ToggleRight, Terminal, Upload } from 'lucide-react';
+import { Film, Sparkles, Download, Send, Loader2, Volume2, Wand2, Zap, RefreshCcw, Play, Pause, SkipForward, ToggleLeft, ToggleRight, Terminal, Upload, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -25,13 +25,13 @@ const VOICES = [
 const MOCK_SCRIPT = `Você sabia que existem pessoas ganhando mais de 10 mil reais por mês com canais do YouTube sem nunca mostrar o rosto? Isso mesmo. Canais chamados "dark" ou "faceless" estão dominando nichos inteiros. E o melhor: você pode começar hoje, do zero, sem nenhum equipamento caro. Neste vídeo, vou te mostrar o passo a passo completo. Primeiro, vamos falar sobre a escolha do nicho. O nicho é a base de tudo. Um nicho ruim vai te fazer perder meses de trabalho. Nichos como finanças pessoais pagam até 15 dólares por mil visualizações. Já gaming paga apenas 4 dólares. A diferença é brutal. Segundo passo: identidade visual. Seu canal precisa parecer profissional desde o primeiro dia. Use ferramentas de IA para gerar logo, banner e thumbnails que chamem atenção.`;
 
 const MOCK_SEGMENTS: Segment[] = [
-  { index: 0, text: 'Você sabia que existem pessoas ganhando mais de 10 mil reais por mês com canais do YouTube sem nunca mostrar o rosto?', visualPrompt: 'Cinematic shot of a laptop screen showing YouTube analytics dashboard with earnings graph going up, dark moody lighting, shallow depth of field, 8K quality', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success' },
-  { index: 1, text: 'Isso mesmo. Canais chamados "dark" ou "faceless" estão dominando nichos inteiros. E o melhor: você pode começar hoje.', visualPrompt: 'Montage of multiple YouTube channel thumbnails floating in dark space, neon purple glow, cinematic composition, dark aesthetic', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success' },
-  { index: 2, text: 'Do zero, sem nenhum equipamento caro. Neste vídeo, vou te mostrar o passo a passo completo.', visualPrompt: 'Close-up of hands typing on a minimalist desk setup with single monitor, dramatic rim lighting, dark background, professional look', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success' },
-  { index: 3, text: 'Primeiro, vamos falar sobre a escolha do nicho. O nicho é a base de tudo. Um nicho ruim vai te fazer perder meses.', visualPrompt: 'Holographic 3D pie chart showing different YouTube niches with labels, floating in dark space, sci-fi aesthetic, purple and orange accents', referenceImage: null, generatedImage: null, audioBase64: null, status: 'generating' },
-  { index: 4, text: 'Nichos como finanças pessoais pagam até 15 dólares por mil visualizações. Já gaming paga apenas 4 dólares.', visualPrompt: 'Split screen comparison: left side shows stacks of money (finance), right side shows game controller (gaming), dramatic contrast lighting', referenceImage: null, generatedImage: null, audioBase64: null, status: 'pending' },
-  { index: 5, text: 'A diferença é brutal. Segundo passo: identidade visual. Seu canal precisa parecer profissional desde o primeiro dia.', visualPrompt: 'Before/after comparison of amateur vs professional YouTube channel page, dramatic reveal animation style, dark theme', referenceImage: null, generatedImage: null, audioBase64: null, status: 'pending' },
-  { index: 6, text: 'Use ferramentas de IA para gerar logo, banner e thumbnails que chamem atenção.', visualPrompt: 'AI generating brand assets on screen — logos, banners morphing into shape, magical particle effects, dark studio environment', referenceImage: null, generatedImage: null, audioBase64: null, status: 'failed' },
+  { index: 0, text: 'Você sabia que existem pessoas ganhando mais de 10 mil reais por mês com canais do YouTube sem nunca mostrar o rosto?', visualPrompt: 'Cinematic shot of a laptop screen showing YouTube analytics dashboard with earnings graph going up, dark moody lighting, shallow depth of field, 8K quality', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
+  { index: 1, text: 'Isso mesmo. Canais chamados "dark" ou "faceless" estão dominando nichos inteiros. E o melhor: você pode começar hoje.', visualPrompt: 'Montage of multiple YouTube channel thumbnails floating in dark space, neon purple glow, cinematic composition, dark aesthetic', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
+  { index: 2, text: 'Do zero, sem nenhum equipamento caro. Neste vídeo, vou te mostrar o passo a passo completo.', visualPrompt: 'Close-up of hands typing on a minimalist desk setup with single monitor, dramatic rim lighting, dark background, professional look', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
+  { index: 3, text: 'Primeiro, vamos falar sobre a escolha do nicho. O nicho é a base de tudo. Um nicho ruim vai te fazer perder meses.', visualPrompt: 'Holographic 3D pie chart showing different YouTube niches with labels, floating in dark space, sci-fi aesthetic, purple and orange accents', referenceImage: null, generatedImage: null, audioBase64: null, status: 'generating', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
+  { index: 4, text: 'Nichos como finanças pessoais pagam até 15 dólares por mil visualizações. Já gaming paga apenas 4 dólares.', visualPrompt: 'Split screen comparison: left side shows stacks of money (finance), right side shows game controller (gaming), dramatic contrast lighting', referenceImage: null, generatedImage: null, audioBase64: null, status: 'pending', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
+  { index: 5, text: 'A diferença é brutal. Segundo passo: identidade visual. Seu canal precisa parecer profissional desde o primeiro dia.', visualPrompt: 'Before/after comparison of amateur vs professional YouTube channel page, dramatic reveal animation style, dark theme', referenceImage: null, generatedImage: null, audioBase64: null, status: 'pending', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
+  { index: 6, text: 'Use ferramentas de IA para gerar logo, banner e thumbnails que chamem atenção.', visualPrompt: 'AI generating brand assets on screen — logos, banners morphing into shape, magical particle effects, dark studio environment', referenceImage: null, generatedImage: null, audioBase64: null, status: 'failed', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
 ];
 
 const MOCK_LOGS = [
@@ -61,6 +61,9 @@ const Studio = () => {
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [generatingVideo, setGeneratingVideo] = useState<number | null>(null);
+  const [videoPollingMap, setVideoPollingMap] = useState<Record<number, NodeJS.Timeout>>({});
+  const [veo3Model, setVeo3Model] = useState<'veo-3.0-generate-preview' | 'veo-3.0-fast-generate-preview'>('veo-3.0-generate-preview');
   const [veo3Mode, setVeo3Mode] = useState(true);
   const [characterDesc, setCharacterDesc] = useState('Homem de 30 anos, barba curta, óculos redondos, vestindo moletom preto');
 
@@ -88,6 +91,10 @@ const Studio = () => {
         generatedImage: null,
         audioBase64: null,
         status: 'pending',
+        videoUrl: null,
+        videoBase64: null,
+        videoStatus: 'idle',
+        videoOperationName: null,
       });
     }
     setSegments(newSegments);
@@ -229,12 +236,111 @@ const Studio = () => {
     toast.success('Retry completo!');
   };
 
+  const pollVideoOperation = (segIndex: number, operationName: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-veo3-video', {
+          body: { action: 'poll', operationName },
+        });
+        if (error) throw new Error(error.message);
+        
+        if (data?.status === 'COMPLETED') {
+          clearInterval(interval);
+          setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
+          
+          if (data.videoBase64) {
+            updateSegment(segIndex, 'videoBase64', data.videoBase64);
+          } else if (data.videoUrl) {
+            updateSegment(segIndex, 'videoUrl', data.videoUrl);
+          }
+          updateSegment(segIndex, 'videoStatus', 'completed');
+          addLog(`✅ Vídeo Veo3 cena ${segIndex + 1} pronto!`);
+          toast.success(`Vídeo #${segIndex + 1} gerado!`);
+        } else if (data?.status === 'FAILED') {
+          clearInterval(interval);
+          setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
+          updateSegment(segIndex, 'videoStatus', 'failed');
+          addLog(`⚠️ Vídeo cena ${segIndex + 1} falhou: ${data.error}`);
+        } else {
+          updateSegment(segIndex, 'videoStatus', 'polling');
+        }
+      } catch (err: any) {
+        clearInterval(interval);
+        setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
+        updateSegment(segIndex, 'videoStatus', 'failed');
+        addLog(`⚠️ Poll vídeo ${segIndex + 1} erro: ${err.message}`);
+      }
+    }, 10000); // Poll every 10 seconds
+    
+    setVideoPollingMap(prev => ({ ...prev, [segIndex]: interval }));
+  };
+
+  const generateSegmentVideo = async (seg: Segment) => {
+    if (!seg.visualPrompt) return toast.error('Gere o prompt visual primeiro');
+    updateSegment(seg.index, 'videoStatus', 'generating');
+    setGeneratingVideo(seg.index);
+    addLog(`🎬 Gerando vídeo Veo3 cena ${seg.index + 1}...`);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-veo3-video', {
+        body: {
+          action: 'generate',
+          prompt: seg.visualPrompt,
+          model: veo3Model,
+          aspectRatio: '16:9',
+          duration: 8,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      
+      if (data?.operationName) {
+        updateSegment(seg.index, 'videoOperationName', data.operationName);
+        updateSegment(seg.index, 'videoStatus', 'polling');
+        addLog(`⏳ Vídeo cena ${seg.index + 1} em processamento (polling a cada 10s)...`);
+        pollVideoOperation(seg.index, data.operationName);
+      }
+    } catch (err: any) {
+      updateSegment(seg.index, 'videoStatus', 'failed');
+      addLog(`⚠️ Vídeo cena ${seg.index + 1} falhou: ${err.message}`);
+      toast.error(err.message);
+    } finally {
+      setGeneratingVideo(null);
+    }
+  };
+
+  const runBatchVideos = async (targetSegs?: Segment[]) => {
+    const segs = targetSegs || segmentsRef.current;
+    const withPrompts = segs.filter(s => s.visualPrompt);
+    if (!withPrompts.length) return toast.error('Gere os prompts visuais primeiro');
+    
+    addLog(`🎬 Iniciando geração de ${withPrompts.length} vídeos Veo3...`);
+    for (const seg of withPrompts) {
+      await generateSegmentVideo(seg);
+      // Small delay between requests to avoid rate limiting
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    toast.success(`${withPrompts.length} vídeos Veo3 enviados para geração!`);
+  };
+
   const downloadAll = async () => {
     const segs = segmentsRef.current;
-    const hasContent = segs.some(s => s.generatedImage || s.audioBase64);
+    const hasContent = segs.some(s => s.generatedImage || s.audioBase64 || s.videoBase64 || s.videoUrl);
     if (!hasContent) return toast.error('Nenhum conteúdo para baixar');
     const zip = new JSZip();
     for (const seg of segs) {
+      if (seg.videoBase64) {
+        const binary = atob(seg.videoBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, bytes);
+      } else if (seg.videoUrl) {
+        try {
+          const resp = await fetch(seg.videoUrl);
+          const blob = await resp.blob();
+          zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, blob);
+        } catch { /* skip */ }
+      }
       if (seg.generatedImage) {
         try {
           const resp = await fetch(seg.generatedImage);
@@ -269,15 +375,21 @@ const Studio = () => {
     setShowLogs(true);
     setBatchLogs([]);
     addLog('🚀 Pipeline Completo Iniciado');
-    addLog('📝 Passo 1/3: Fatiando roteiro...');
+    addLog('📝 Passo 1/4: Fatiando roteiro...');
     const newSegs = sliceScript();
     if (!newSegs) { setPipelineRunning(false); return; }
     await new Promise(r => setTimeout(r, 300));
-    addLog('🎙️ Passo 2/3: Gerando áudio + prompts visuais...');
+    addLog('🎙️ Passo 2/4: Gerando áudio + prompts visuais...');
     await Promise.all([generateAllAudio(newSegs), autoGeneratePrompts(newSegs)]);
-    addLog('🎨 Passo 3/3: Gerando imagens em lote...');
+    addLog('🎨 Passo 3/4: Gerando imagens em lote...');
     await runBatchImages(newSegs);
-    addLog('🎉 Pipeline completo! Todos os assets foram gerados.');
+    if (veo3Mode) {
+      addLog('🎬 Passo 4/4: Gerando vídeos Veo3...');
+      await runBatchVideos(newSegs);
+      addLog('🎉 Pipeline completo! Vídeos Veo3 estão sendo processados em background.');
+    } else {
+      addLog('🎉 Pipeline completo! Todos os assets foram gerados.');
+    }
     setPipelineRunning(false);
     toast.success('Pipeline completo! 🎬');
   };
@@ -312,6 +424,8 @@ const Studio = () => {
   const failedCount = segments.filter(s => s.status === 'failed').length;
   const generatingCount = segments.filter(s => s.status === 'generating').length;
   const audioCount = segments.filter(s => s.audioBase64).length;
+  const videoCount = segments.filter(s => s.videoStatus === 'completed').length;
+  const videoGeneratingCount = segments.filter(s => s.videoStatus === 'generating' || s.videoStatus === 'polling').length;
   const totalDuration = Math.ceil(segments.length * 8 / 60);
 
   return (
@@ -338,10 +452,16 @@ const Studio = () => {
                 </Button>
               )}
               <Button onClick={() => runBatchImages()} disabled={batchRunning || pipelineRunning} className="gradient-hero border-0 gap-2">
-                <Send className="w-4 h-4" /> Disparar Prompts em Lote
+                <Send className="w-4 h-4" /> Disparar Imagens em Lote
               </Button>
+              {veo3Mode && (
+                <Button onClick={() => runBatchVideos()} disabled={batchRunning || pipelineRunning}
+                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white border-0">
+                  <Video className="w-4 h-4" /> Gerar Vídeos Veo3
+                </Button>
+              )}
               <Button variant="outline" className="gap-2" onClick={downloadAll}>
-                <Download className="w-4 h-4" /> Baixar Todos os Clipes
+                <Download className="w-4 h-4" /> Baixar Assets
               </Button>
             </div>
           )}
@@ -355,7 +475,7 @@ const Studio = () => {
                 <Zap className="w-4 h-4 text-primary" /> Pipeline Completo (1 clique)
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Fatiar → Gerar Áudio (ElevenLabs) + Prompts {veo3Mode ? 'Veo3' : 'Visuais'} (IA) → Gerar Imagens em Lote
+                Fatiar → Áudio (ElevenLabs) + Prompts (IA) → Imagens em Lote {veo3Mode ? '→ Vídeos Veo3' : ''}
               </p>
             </div>
             <div className="flex gap-2 items-center">
@@ -371,10 +491,15 @@ const Studio = () => {
             </div>
           </div>
           {veo3Mode && (
-            <div className="mt-3">
+            <div className="mt-3 flex gap-3">
               <Input placeholder="Descrição do personagem principal (para consistência entre cenas)..."
                 value={characterDesc} onChange={e => setCharacterDesc(e.target.value)}
-                className="bg-secondary/50 text-sm" />
+                className="bg-secondary/50 text-sm flex-1" />
+              <select value={veo3Model} onChange={e => setVeo3Model(e.target.value as any)}
+                className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-xs">
+                <option value="veo-3.0-generate-preview">Veo3 (Alta Qualidade)</option>
+                <option value="veo-3.0-fast-generate-preview">Veo3 Fast (Rápido)</option>
+              </select>
             </div>
           )}
         </motion.div>
@@ -388,6 +513,8 @@ const Studio = () => {
             {generatingCount > 0 && <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1 animate-pulse">⏳ {generatingCount} gerando</Badge>}
             {failedCount > 0 && <Badge variant="destructive" className="gap-1">❌ {failedCount} falhas</Badge>}
             <Badge variant="outline" className="gap-1">🔊 {audioCount} áudios</Badge>
+            {videoCount > 0 && <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1">🎬 {videoCount} vídeos</Badge>}
+            {videoGeneratingCount > 0 && <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1 animate-pulse">🎬 {videoGeneratingCount} processando</Badge>}
           </div>
         )}
 
@@ -504,8 +631,10 @@ const Studio = () => {
                       <SegmentCard key={seg.index} seg={seg}
                         onUpdateSegment={updateSegment}
                         onGenerateImage={generateSegmentImage}
+                        onGenerateVideo={generateSegmentVideo}
                         generatingImage={generatingImage}
-                        batchRunning={batchRunning} />
+                        batchRunning={batchRunning}
+                        veo3Mode={veo3Mode} />
                     ))}
                   </AnimatePresence>
                 </div>
