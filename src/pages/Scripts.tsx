@@ -258,7 +258,53 @@ const Scripts = () => {
     }
   };
 
-  // Extract clean narration text (remove markdown, titles, tags sections)
+  // Auto-detect characters from script and generate images
+  const autoDetectCharacters = async () => {
+    const cleanScript = getCleanNarration();
+    if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
+    setDetectingCharacters(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-characters', {
+        body: { script: cleanScript, language },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const extracted: Character[] = (data.characters || []).map((c: any) => ({
+        name: c.name,
+        description: c.description,
+        appearance: c.appearance,
+        clothing: c.clothing,
+      }));
+      if (extracted.length === 0) { toast.info('Nenhum personagem detectado no roteiro.'); return; }
+      setCharacters(extracted);
+      toast.success(`${extracted.length} personagens detectados! Gerando imagens...`);
+      
+      // Auto-generate images for all detected characters
+      for (let i = 0; i < extracted.length; i++) {
+        const char = extracted[i];
+        setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: true } : c));
+        try {
+          const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+          const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-segment-image', {
+            body: { visualPrompt: prompt, textContent: '', segmentIndex: i },
+          });
+          if (!imgErr && imgData?.imageUrl) {
+            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, imageUrl: imgData.imageUrl, generatingImage: false } : c));
+          } else {
+            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
+          }
+        } catch {
+          setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
+        }
+      }
+      toast.success('Todos os personagens com imagens geradas!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao detectar personagens');
+    } finally {
+      setDetectingCharacters(false);
+    }
+  };
+
   const getCleanNarration = (): string => {
     // Remove everything after common end markers
     let clean = script;
