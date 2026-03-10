@@ -11,17 +11,13 @@ const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'DubSpy', icon: Search, path: '/search' },
   { key: 'HacksLab', icon: Palette, path: '/branding' },
-  { key: 'Dotti Studio', icon: Film, path: '/studio' },
-  { key: 'Dotti Planner', icon: Kanban, path: '/planner' },
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
-  { key: 'Narração', icon: Mic, path: '/narration' },
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
   { key: 'Monetização', icon: DollarSign, path: '/monetization' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
-  { key: 'Plano 27 Dias', icon: Calendar, path: '/plan' },
 ];
 
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {

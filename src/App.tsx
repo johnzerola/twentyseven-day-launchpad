@@ -13,12 +13,8 @@ import NicheExplorer from "./pages/NicheExplorer";
 import Branding from "./pages/Branding";
 import Onboarding from "./pages/Onboarding";
 import Scripts from "./pages/Scripts";
-import Narration from "./pages/Narration";
-import Plan from "./pages/Plan";
 import Channels from "./pages/Channels";
 import Pricing from "./pages/Pricing";
-import Studio from "./pages/Studio";
-import Planner from "./pages/Planner";
 import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
@@ -47,11 +43,10 @@ const App = () => (
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
             <Route path="/branding" element={<P><Branding /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
-            <Route path="/narration" element={<P><Narration /></P>} />
-            <Route path="/plan" element={<P><Plan /></P>} />
-            <Route path="/studio" element={<P><Studio /></P>} />
-            <Route path="/planner" element={<P><Planner /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />
+            <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
+            <Route path="/workflow" element={<P><Workflow /></P>} />
+            <Route path="/monetization" element={<P><MonetizationPlanner /></P>} />
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/workflow" element={<P><Workflow /></P>} />
             <Route path="/monetization" element={<P><MonetizationPlanner /></P>} />
