@@ -279,7 +279,7 @@ const Studio = () => {
     // Stagger initial polls: each segment starts polling 5s apart
     const initialDelay = Object.keys(videoPollingMap).length * 5000;
     const timeout = setTimeout(() => poll(), initialDelay);
-    setVideoPollingMap(prev => ({ ...prev, [segIndex]: timeout as unknown as number }));
+    setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
   };
 
   const generateSegmentVideo = async (seg: Segment) => {
