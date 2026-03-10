@@ -49,7 +49,7 @@ serve(async (req) => {
       console.log("Veo3 request URL:", url);
       console.log("Veo3 request body:", JSON.stringify({ instances: [instanceObj], parameters: parametersObj }));
 
-      const response = await fetch(url, {
+      const response = await fetchWithRetry(url, {
         method: "POST",
         headers: {
           "x-goog-api-key": GOOGLE_AI_API_KEY,
