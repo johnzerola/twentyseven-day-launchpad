@@ -27,9 +27,9 @@ serve(async (req) => {
   try {
     const { niche, country, language, maxResults } = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const limit = Math.min(maxResults || 50, 50);
 
@@ -147,14 +147,14 @@ serve(async (req) => {
     }).filter(Boolean).sort((a: any, b: any) => b.viralScore - a.viralScore);
 
     // Use AI to detect faceless-friendly niches and add insights
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "gemini-2.5-flash-lite",
         messages: [{
           role: "user",
           content: `Given these YouTube channel names and their top video titles in the "${niche}" niche, classify each as "faceless" (no face on camera) or "camera" (person on camera). Return JSON array: [{"channelId":"...","faceless":true/false}]\n\nChannels:\n${channels.slice(0, 10).map((c: any) => `- ${c.name} (${c.id}): ${c.videos.map((v: any) => v.title).join(', ')}`).join('\n')}`

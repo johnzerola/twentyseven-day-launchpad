@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { topic, duration, style, niche, language } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const wordsPerMinute = 140;
     const targetWords = (duration || 15) * wordsPerMinute;
@@ -126,14 +126,14 @@ Idioma: ${language || 'português'}
 
 ⚠️ ATENÇÃO MÁXIMA: Escreva ABSOLUTAMENTE TUDO. Cada seção COMPLETA. Sem atalhos. Sem resumos. O roteiro final deve ter ${targetWords}+ palavras. Se necessário, adicione mais exemplos, dados, analogias e detalhes sensoriais para atingir a contagem.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Escreva um roteiro COMPLETO e LONGO de ${duration} minutos sobre: "${topic}"
