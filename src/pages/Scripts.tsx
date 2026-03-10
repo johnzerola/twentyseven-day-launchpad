@@ -710,8 +710,6 @@ const Scripts = () => {
                       <p className="text-sm text-muted-foreground">Dual-AI: GPT-5 criando → Gemini Pro revisando...</p>
                     </div>
                   )}
-                    </div>
-                  )}
                   {script || editMode ? (
                     editMode ? (
                       <textarea
