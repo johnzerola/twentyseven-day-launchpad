@@ -44,9 +44,10 @@ interface SegmentCardProps {
   generatingImage: number | null;
   batchRunning: boolean;
   veo3Mode?: boolean;
+  quotaCooldown?: number;
 }
 
-const SegmentCard = memo(({ seg, onUpdateSegment, onGenerateImage, onGenerateVideo, generatingImage, batchRunning, veo3Mode }: SegmentCardProps) => {
+const SegmentCard = memo(({ seg, onUpdateSegment, onGenerateImage, onGenerateVideo, generatingImage, batchRunning, veo3Mode, quotaCooldown = 0 }: SegmentCardProps) => {
   const statusCfg = STATUS_CONFIG[seg.status];
   const StatusIcon = statusCfg.icon;
   const videoStatus = seg.videoStatus || 'idle';
@@ -119,9 +120,9 @@ const SegmentCard = memo(({ seg, onUpdateSegment, onGenerateImage, onGenerateVid
               <label className="text-[10px] text-muted-foreground mb-1 block uppercase tracking-wider">Vídeo Veo3</label>
               <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1 border-violet-500/30 hover:border-violet-500/60"
                 onClick={() => onGenerateVideo(seg)}
-                disabled={videoStatus === 'generating' || videoStatus === 'polling' || batchRunning}>
+                disabled={videoStatus === 'generating' || videoStatus === 'polling' || batchRunning || quotaCooldown > 0}>
                 <Film className="w-3 h-3 text-violet-400" />
-                {videoStatus === 'generating' || videoStatus === 'polling' ? 'Gerando...' : 'Vídeo'}
+                {quotaCooldown > 0 ? `${quotaCooldown}s` : videoStatus === 'generating' || videoStatus === 'polling' ? 'Gerando...' : 'Vídeo'}
               </Button>
             </div>
           )}
