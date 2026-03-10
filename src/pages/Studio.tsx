@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Film, Sparkles, Download, Send, Loader2, Volume2, Wand2, Zap, RefreshCcw, Play, Pause, SkipForward, ToggleLeft, ToggleRight, Terminal, Upload } from 'lucide-react';
+import { Film, Sparkles, Download, Send, Loader2, Volume2, Wand2, Zap, RefreshCcw, Play, Pause, SkipForward, ToggleLeft, ToggleRight, Terminal, Upload, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
