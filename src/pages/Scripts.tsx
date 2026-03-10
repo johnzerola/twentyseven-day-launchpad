@@ -237,14 +237,27 @@ const Scripts = () => {
     });
   };
 
-  // Add character
+  // Add character manually
   const addCharacter = () => {
     if (!newCharName.trim()) return;
     setCharacters(prev => [...prev, {
       name: newCharName.trim(),
-      description: newCharDesc.trim() || 'Personagem principal',
-      appearance: newCharAppearance.trim() || 'Adulto, expressão determinada',
-      clothing: newCharClothing.trim() || 'Roupa casual moderna',
+      gender: 'male',
+      age: 30,
+      role: newCharDesc.trim() || 'Personagem',
+      appearance: {
+        skin_color: 'light tan', hair_color: 'dark brown', hair_style: 'short',
+        eye_color: 'brown', body_type: 'average', height: '1.75m',
+      },
+      facial_features: {
+        eyebrows: 'medium arched', nose: 'straight medium', mouth: 'medium lips',
+        ears: 'normal size', face_shape: 'oval',
+      },
+      clothing: {
+        shirt: newCharClothing.trim() || 'casual t-shirt',
+        pants: 'dark jeans', shoes: 'sneakers', accessories: 'none',
+      },
+      personality: ['determined', 'curious'],
     }]);
     setNewCharName('');
     setNewCharDesc('');
