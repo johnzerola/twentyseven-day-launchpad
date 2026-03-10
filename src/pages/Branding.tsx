@@ -124,8 +124,25 @@ const Branding = () => {
       const { data, error } = await supabase.functions.invoke('generate-branding', {
         body: { niche, style: 'Moderno/Cinematográfico', language: 'Português' },
       });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        // supabase SDK wraps non-2xx responses - check if error contains the response body
+        const errMsg = typeof error === 'object' && error !== null && 'message' in error 
+          ? (error as any).message 
+          : String(error);
+        if (errMsg.includes('402') || errMsg.includes('créditos') || errMsg.includes('Payment')) {
+          throw new Error('Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
+        }
+        if (errMsg.includes('429') || errMsg.includes('Rate')) {
+          throw new Error('Muitas requisições. Aguarde alguns segundos e tente novamente.');
+        }
+        throw new Error(errMsg || 'Erro ao gerar branding');
+      }
+      if (data?.error) {
+        if (data.error.includes('créditos') || data.error.includes('402')) {
+          throw new Error('Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
+        }
+        throw new Error(data.error);
+      }
       const names = data.channelNames || [];
       const palettes = data.colorPalettes || [];
       setIdentities(names.slice(0, 3).map((cn: any, i: number) => ({
