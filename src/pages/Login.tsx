@@ -7,6 +7,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { APP_NAME } from '@/lib/constants';
 
 const Login = () => {
   const { t } = useLanguage();
