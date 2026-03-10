@@ -19,7 +19,7 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
       .select("category,title,prompt_template,tags")
-      .order("viral_score", { ascending: false }).limit(12);
+      .order("viral_score", { ascending: false }).limit(20);
 
     const knowledgeBlock = (sceneKnowledge || []).map((r: any) =>
       `[${r.category.toUpperCase()}] ${r.title}:\n${r.prompt_template}`
@@ -53,41 +53,41 @@ serve(async (req) => {
     }
     if (currentText.trim()) scenes.push({ index: idx, text: currentText.trim() });
 
-    // ========== Style guides ==========
+    // ========== Style guides (Netflix/Disney grade) ==========
     const styleGuides: Record<string, string> = {
-      'cinematográfico': `Hyper-realistic cinematic photography shot on ARRI ALEXA 65 with Cooke Anamorphic lenses. Shallow DOF (f/1.4-2.8), natural film grain (ISO 800), volumetric god rays. Three-point lighting, chiaroscuro. Teal-orange color palette. Roger Deakins, Emmanuel Lubezki reference.`,
-      '2d': `Premium 2D animation. Vibrant flat colors, clean vector linework, Kurzgesagt meets Studio Trigger. Bold outlines, parallax depth, smooth 24fps feel.`,
-      '3d': `Pixar/DreamWorks feature-film 3D. SSS on skin, PBR materials, GI with ray-traced reflections. Hair simulation. 8K textures.`,
-      'anime': `Top-tier anime (Ufotable/MAPPA). Dynamic sakuga poses, detailed backgrounds, professional cel-shading, rim lighting, particle systems.`,
-      'wojak': 'Wojak/meme art style. Simple line drawings, emotional faces, minimalist backgrounds.',
-      'stickmen': 'Stick figure animation. Simple black figures on clean backgrounds. Humor through simplicity.',
-      'realista': `Photorealistic. Sony A7R V, 85mm f/1.2 GM, 8K, natural light, pore-level skin detail. No AI artifacts.`,
-      'dark': `Dark cinematic. Crushed blacks, neon accents (cyan, magenta). Volumetric fog. Blade Runner 2049 meets Se7en. Noir shadow patterns.`,
-      'whiteboard': 'Whiteboard animation. Hand-drawn black ink on white. Strategic color highlights. Educational clarity.',
-      'comic': 'Premium graphic novel. Bold ink outlines, Ben-Day halftone, dynamic compositions, rich saturated colors.',
+      'cinematográfico': `Netflix/Disney premium cinematography. Shot on ARRI ALEXA 65 with Cooke Anamorphic S7/i lenses. ACES color science, Kodak Vision3 500T film emulation. Shallow DOF f/1.4-2.8, creamy bokeh. Skin tones warm and natural with visible pores. Lifted blacks, subtle halation on highlights. Volumetric god rays, atmospheric haze. Reference: Roger Deakins, Bradford Young, Hoyte van Hoytema.`,
+      '2d': `Premium 2D animation, Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector linework, bold outlines, parallax depth layers, smooth 24fps feel. Rich color palettes, dynamic compositions.`,
+      '3d': `Pixar/DreamWorks/Illumination feature-film 3D. Subsurface scattering on skin, PBR materials, global illumination with ray-traced reflections. Strand-based hair simulation. 8K textures, micro-detail on surfaces.`,
+      'anime': `Top-tier anime production (Ufotable/MAPPA/WIT Studio). Dynamic sakuga key poses, Makoto Shinkai-level backgrounds, professional cel-shading, rim lighting, volumetric particle systems, dramatic speed lines.`,
+      'wojak': 'Wojak/meme art style. Simple clean line drawings, expressive emotional faces, minimalist backgrounds, internet culture aesthetic.',
+      'stickmen': 'Stick figure animation. Simple black figures on clean white backgrounds. Humor through simplicity and timing.',
+      'realista': `Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM lens, 8K resolution, natural available light, pore-level skin detail, strand-level hair, fabric texture. Zero AI artifacts. Documentary-grade realism.`,
+      'dark': `Dark cinematic noir. Crushed blacks, neon accent lighting (cyan, magenta, amber). Dense volumetric fog. Blade Runner 2049 meets Se7en. Noir shadow patterns, wet reflective surfaces, silhouettes.`,
+      'whiteboard': 'Whiteboard explainer animation. Hand-drawn black ink on clean white surface. Strategic color highlights for emphasis. Educational clarity, smooth drawing reveal.',
+      'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, rich saturated colors, dramatic perspective.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
 
     // ========== Character identity block with image refs ==========
     const characterBlock = characters?.length > 0
-      ? `\n\nCHARACTER IDENTITY SHEETS (COPY VERBATIM into EVERY prompt where character appears):\n${characters.map((c: any, i: number) => {
+      ? `\n\nCHARACTER IDENTITY SHEETS — COPY THIS TEXT VERBATIM INTO EVERY PROMPT WHERE CHARACTER APPEARS:\n${characters.map((c: any, i: number) => {
           const a = c.appearance || {};
           const f = c.facial_features || {};
           const cl = c.clothing || {};
-          const refImg = c.imageUrl ? `\nREFERENCE IMAGE: ${c.imageUrl} — Match this appearance EXACTLY.` : '';
+          const refImg = c.imageUrl ? `\nREFERENCE IMAGE: ${c.imageUrl} — Match this exact appearance.` : '';
           return `═══ CHARACTER ${i + 1}: "${c.name}" ═══
 Gender: ${c.gender || 'unknown'} | Age: ${c.age || 'unknown'}
-BODY: ${a.body_type || 'average'} build, ${a.height || 'average'}, ${a.skin_color || 'medium'} skin
-HAIR: ${a.hair_color || 'dark'} ${a.hair_style || 'short'}
-EYES: ${a.eye_color || 'brown'}, ${f.eyebrows || 'natural'} eyebrows
-FACE: ${f.face_shape || 'oval'}, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth
-OUTFIT: ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}`;
-        }).join('\n\n')}\n\n⚠️ RULE: Include FULL character description in EVERY prompt they appear in.`
+BODY: ${a.body_type || 'average'} build, ${a.height || 'average'} height, ${a.skin_color || 'medium'} skin with natural pores and micro-imperfections
+HAIR: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail
+EYES: ${a.eye_color || 'brown'} eyes, ${f.eyebrows || 'natural'} eyebrows
+FACE: ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture
+OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}`;
+        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULE: Include FULL character description block in EVERY prompt they appear in. Use IDENTICAL wording — never paraphrase.`
       : '';
 
     const sceneTexts = scenes.map(s => `Scene ${s.index + 1}: "${s.text}"`).join('\n\n');
 
-    // ========== AI Generation with dynamic duration ==========
+    // ========== AI Generation — Veo3 Optimized ==========
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -100,7 +100,7 @@ OUTFIT: ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers
           type: "function",
           function: {
             name: "set_synced_prompts",
-            description: "Generate synchronized visual prompts with dynamic duration per scene",
+            description: "Generate Veo3-optimized synchronized visual prompts with dynamic duration per scene",
             parameters: {
               type: "object",
               properties: {
@@ -110,16 +110,20 @@ OUTFIT: ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers
                     type: "object",
                     properties: {
                       sceneIndex: { type: "number" },
-                      sceneDurationSeconds: { type: "number", description: "Dynamic duration 5-15s based on narrative weight. Hook scenes (first 1-2): 8-10s. Action: 5-6s. Emotional/descriptive: 10-15s. Transitions: 5s." },
+                      sceneDurationSeconds: { type: "number", description: "Dynamic 5-8s. Hook scene 1: 8s. Action: 5-6s. Emotional: 7-8s." },
                       startTime: { type: "number" },
                       endTime: { type: "number" },
-                      visualPrompt: { type: "string", description: "Ultra-detailed 80-150 word visual prompt in English. Include full character descriptions." },
-                      cameraAngle: { type: "string" },
+                      visualPrompt: { type: "string", description: "100-200 word Veo3 prompt. Structure: [Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]. MUST end with: (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)" },
+                      negativePrompt: { type: "string", description: "Negative exclusions: subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, blurry, distorted, deformed hands, extra fingers, amateur" },
+                      cameraAngle: { type: "string", description: "Specific Veo3 camera: dolly shot, tracking shot, crane shot, steadicam, slow pan, orbit shot, push-in, pull-out, rack focus, Dutch angle, POV" },
+                      lensSpec: { type: "string", description: "Lens: 24mm wide, 35mm, 50mm, 85mm portrait, 135mm telephoto, anamorphic" },
+                      lightingSetup: { type: "string", description: "Lighting: golden hour, Rembrandt, butterfly, split, rim/edge, volumetric, chiaroscuro, practical lights, neon" },
+                      audioDirection: { type: "string", description: "Audio cues: ambient sounds, foley SFX, music mood. NO dialogue unless narration requires it" },
                       mood: { type: "string" },
                       charactersInScene: { type: "array", items: { type: "string" } },
                       transitionNote: { type: "string" },
                     },
-                    required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "visualPrompt", "cameraAngle", "mood"],
+                    required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "visualPrompt", "negativePrompt", "cameraAngle", "lensSpec", "lightingSetup", "mood"],
                     additionalProperties: false
                   }
                 }
@@ -133,47 +137,70 @@ OUTFIT: ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers
         messages: [
           {
             role: "system",
-            content: `You are a WORLD-CLASS visual director (Marvel, Nolan, Villeneuve productions).
+            content: `You are a WORLD-CLASS visual director creating prompts for Google Veo 3 video generation model. Your prompts produce Netflix/Disney/Marvel-grade cinematic video.
+
+═══════════════════════════════════════
+🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
+═══════════════════════════════════════
+NEVER include ANY of these in prompts:
+- NO subtitles, NO text, NO titles, NO captions
+- NO logos, NO watermarks, NO signatures  
+- NO on-screen graphics, NO lower thirds
+- NO burned-in text, NO UI elements
+- NO letters, NO words, NO writing of ANY kind
+- EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+- EVERY negativePrompt MUST include: "subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements"
+═══════════════════════════════════════
+
+VEO 3 PROMPT FORMULA (use for EVERY prompt):
+[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance] + [Anti-text block]
 
 MASTER VISUAL STYLE:
 ${selectedStyleGuide}
 ${characterBlock}
 
-🎓 CINEMATIC KNOWLEDGE BASE:
+🎓 CINEMATIC & VEO3 KNOWLEDGE BASE:
 ${knowledgeBlock}
 
 YOUR COMMANDMENTS:
 
-1. DYNAMIC SCENE DURATION: Assign 5-15 seconds per scene based on narrative weight:
-   - HOOK SCENE (Scene 1): 8-10s — MOST visually striking, impossible-to-ignore opening. Ultra-premium quality.
-   - Action/transition scenes: 5-6s
-   - Emotional/descriptive scenes: 10-15s
-   - Calculate startTime/endTime cumulatively from sceneDurationSeconds
+1. DYNAMIC SCENE DURATION: 5-8 seconds per Veo3 generation:
+   - HOOK SCENE (Scene 1): 8s — MOST spectacular, impossible-to-ignore Netflix opening shot
+   - Action/transition: 5-6s
+   - Emotional/descriptive: 7-8s
+   - Calculate startTime/endTime cumulatively
 
-2. SCENE 1 SPECIAL TREATMENT: This is the HOOK. It MUST be the most visually spectacular, award-winning shot. Add "HOOK SCENE — ultra-premium, award-winning opening shot, maximum visual impact" to the prompt.
+2. SCENE 1 = HOOK: Must be the single most visually arresting shot. Use: extreme close-up rack focus reveal, dramatic volumetric lighting, atmospheric particles (dust/embers/rain), anamorphic bokeh, cinematic lens flare. Add "HOOK SCENE" prefix.
 
-3. PROMPT LENGTH: 80-150 words each. Structure: Subject → Action → Environment → Lighting → Camera → Atmosphere → Color → Mood keywords.
+3. PROMPT LENGTH: 100-200 words. Use professional film terminology Veo3 understands: dolly, steadicam, crane, rack focus, Dutch angle, push-in, pull-out, orbit.
 
-4. CHARACTER CONSISTENCY: Include FULL identity sheet in EVERY prompt where they appear.
+4. LENS SPECIFICATION: Every prompt must specify exact lens (24mm, 35mm, 50mm, 85mm, 135mm, or anamorphic).
 
-5. CINEMATOGRAPHIC VARIETY: Never repeat camera angles in consecutive scenes. Use 5+ different shot types.
+5. LIGHTING: Every prompt must specify exact lighting setup (golden hour, Rembrandt, butterfly, split, rim, volumetric, chiaroscuro, practical).
 
-6. QUALITY TAGS: End every prompt with "masterpiece, award-winning cinematography, 8K UHD, photorealistic, film grain"
+6. ANTI-AI REALISM: Include in every prompt: natural skin pores, asymmetric compositions, motion blur, lens breathing, chromatic aberration, film grain, dust particles, subtle camera shake on handheld, cloth wrinkles, environmental imperfections.
 
-7. ANTI-AI: Natural skin with pores, asymmetric compositions, motion blur, dust particles, lens aberration.
+7. CAMERA VARIETY: Never repeat camera angles in consecutive scenes. Use 5+ different shot types across the video.
 
-8. ALL PROMPTS IN ENGLISH.`
+8. AUDIO DIRECTION: Specify ambient sounds, foley SFX, and music mood. NEVER describe on-screen text or subtitles in audio.
+
+9. ALL PROMPTS IN ENGLISH.
+
+10. QUALITY TAGS: End every visualPrompt (before anti-text block) with: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain, ACES color science"`
           },
           {
             role: "user",
-            content: `Generate ${scenes.length} CINEMA-QUALITY visual prompts with DYNAMIC DURATION per scene.
-Total audio duration: ${totalDuration > 0 ? `${totalDuration}s` : 'estimate from text'}
-Default scene length: ~${defaultSceneLen}s (but vary 5-15s based on content)
-Video style: ${videoStyle || 'cinematográfico'}
-Language: ${language || 'português'}
+            content: `Generate ${scenes.length} NETFLIX/DISNEY-GRADE Veo3 video prompts with DYNAMIC DURATION.
+Total audio: ${totalDuration > 0 ? `${totalDuration}s` : 'estimate from text'}
+Default scene: ~${defaultSceneLen}s (vary 5-8s based on content)
+Style: ${videoStyle || 'cinematográfico'}
+Language context: ${language || 'português'}
 
-CRITICAL: Scene 1 is the HOOK — make it the most visually stunning shot possible.
-Assign sceneDurationSeconds dynamically. Calculate startTime/endTime cumulatively.
+CRITICAL RULES:
+1. Scene 1 = HOOK — most visually stunning shot possible
+2. ZERO text/subtitles/captions in ANY prompt
+3. Every prompt ends with "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+4. Use Veo3 formula: [Cinematography] + [Subject] + [Action] + [Context] + [Style]
 
 SCENES:\n\n${sceneTexts}`
           }
@@ -202,6 +229,8 @@ SCENES:\n\n${sceneTexts}`
         videoStyle: videoStyle || 'cinematográfico',
         charactersCount: characters?.length || 0,
         dynamicTiming: true,
+        veo3Optimized: true,
+        antiTextEnforced: true,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
