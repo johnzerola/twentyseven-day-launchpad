@@ -236,8 +236,9 @@ const Studio = () => {
     toast.success('Retry completo!');
   };
 
+  // Centralized sequential polling - polls one operation at a time with staggered timing
   const pollVideoOperation = (segIndex: number, operationName: string) => {
-    const interval = setInterval(async () => {
+    const poll = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('generate-veo3-video', {
           body: { action: 'poll', operationName },
@@ -245,7 +246,6 @@ const Studio = () => {
         if (error) throw new Error(error.message);
         
         if (data?.status === 'COMPLETED') {
-          clearInterval(interval);
           setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
           
           if (data.videoBase64) {
@@ -256,23 +256,30 @@ const Studio = () => {
           updateSegment(segIndex, 'videoStatus', 'completed');
           addLog(`✅ Vídeo Veo3 cena ${segIndex + 1} pronto!`);
           toast.success(`Vídeo #${segIndex + 1} gerado!`);
+          return; // Done
         } else if (data?.status === 'FAILED') {
-          clearInterval(interval);
           setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
           updateSegment(segIndex, 'videoStatus', 'failed');
           addLog(`⚠️ Vídeo cena ${segIndex + 1} falhou: ${data.error}`);
+          return; // Done
         } else {
           updateSegment(segIndex, 'videoStatus', 'polling');
         }
       } catch (err: any) {
-        clearInterval(interval);
         setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
         updateSegment(segIndex, 'videoStatus', 'failed');
         addLog(`⚠️ Poll vídeo ${segIndex + 1} erro: ${err.message}`);
+        return; // Done on error
       }
-    }, 10000); // Poll every 10 seconds
+      // Schedule next poll with 20s delay (longer to avoid rate limits)
+      const timeout = setTimeout(() => poll(), 20000);
+      setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
+    };
     
-    setVideoPollingMap(prev => ({ ...prev, [segIndex]: interval }));
+    // Stagger initial polls: each segment starts polling 5s apart
+    const initialDelay = Object.keys(videoPollingMap).length * 5000;
+    const timeout = setTimeout(() => poll(), initialDelay);
+    setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
   };
 
   const generateSegmentVideo = async (seg: Segment) => {
