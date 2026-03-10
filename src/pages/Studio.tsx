@@ -386,6 +386,21 @@ const Studio = () => {
       const promptsTxt = segs.map(s => `[Cena ${s.index + 1}]\n${s.visualPrompt}\n`).join('\n');
       zip.file('veo3-prompts.txt', promptsTxt);
     }
+    // Autoflow structured prompts
+    const autoflowJson = segs.map(s => ({
+      scene: s.index + 1,
+      narration: s.text,
+      visual_prompt: s.visualPrompt,
+      scene_description: s.visualPrompt,
+      visual_style: "cinematic, high quality, 4K",
+      character_consistency: characterDesc || "maintain consistent character appearance across all scenes",
+      lighting: "natural cinematic lighting with dramatic shadows",
+      camera_style: "smooth cinematic camera movement",
+      duration_seconds: 8,
+      aspect_ratio: "16:9",
+    }));
+    zip.file('autoflow-scenes.json', JSON.stringify(autoflowJson, null, 2));
+    
     const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -394,6 +409,43 @@ const Studio = () => {
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Download iniciado!');
+  };
+
+  const exportAutoflow = () => {
+    const segs = segmentsRef.current;
+    if (!segs.length || !segs.some(s => s.visualPrompt)) {
+      return toast.error('Gere os prompts visuais primeiro');
+    }
+    const autoflowData = {
+      project: {
+        total_scenes: segs.length,
+        total_duration_seconds: segs.length * 8,
+        character_description: characterDesc || "",
+        visual_style: "cinematic, high quality, 4K",
+      },
+      scenes: segs.map(s => ({
+        scene_number: s.index + 1,
+        narration_text: s.text,
+        visual_prompt: s.visualPrompt,
+        scene_description: s.visualPrompt,
+        visual_style: "cinematic, high quality, 4K, photorealistic",
+        character_consistency: characterDesc || "maintain consistent character appearance",
+        lighting: "natural cinematic lighting",
+        camera_style: "smooth cinematic camera movement, slight zoom",
+        duration_seconds: 8,
+        aspect_ratio: "16:9",
+        has_audio: !!s.audioBase64,
+        has_reference_image: !!s.referenceImage,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(autoflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'autoflow-scenes.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Prompts Autoflow exportados!');
   };
 
   const runFullPipeline = async () => {
