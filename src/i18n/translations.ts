@@ -258,7 +258,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.product': 'Produkt',
     'footer.company': 'Firma',
     'footer.legal': 'Prawne',
-    'footer.rights': '© 2026 ChannelHacker. Wszelkie prawa zastrzeżone.',
+    'footer.rights': '© 2026 Monetiza27. Wszelkie prawa zastrzeżone.',
     'dash.overview': 'Przegląd',
     'dash.channels': 'Moje kanały',
     'dash.search': 'Szukaj wideo',
