@@ -10,7 +10,7 @@ import { VOICES } from '@/lib/constants';
 
 const Narration = () => {
   const [text, setText] = useState('');
-  const [voice, setVoice] = useState(VOICES[0].id);
+  const [voice, setVoice] = useState<string>(VOICES[0].id);
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
