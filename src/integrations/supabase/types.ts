@@ -307,6 +307,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_progress: {
+        Row: {
+          completed_items: Json
+          id: string
+          module: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_items?: Json
+          id?: string
+          module: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_items?: Json
+          id?: string
+          module?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_projects: {
         Row: {
           created_at: string | null
