@@ -22,11 +22,9 @@ interface WorkflowStep {
 const STEPS_TEMPLATE: Omit<WorkflowStep, 'status'>[] = [
   { id: 1, title: 'Descoberta de Nicho', description: 'Encontre nichos lucrativos e analise canais virais com DubSpy e Niche Explorer.', icon: Lightbulb, route: '/niches', tips: ['Use o DubSpy para encontrar canais emergentes', 'Verifique o RPM estimado no Niche Explorer', 'Procure nichos com score > 70'] },
   { id: 2, title: 'Roteirização', description: 'Gere roteiros cinematográficos com hooks virais do Viral Database.', icon: FileText, route: '/scripts', tips: ['Selecione hooks do Viral Database', 'Use estrutura de 3 atos para retenção', 'Adicione loops abertos a cada 2-3 minutos'] },
-  { id: 3, title: 'Narração', description: 'Gere narração neural com vozes profissionais via ElevenLabs.', icon: Mic, route: '/narration', tips: ['Daniel é ideal para PT-BR', 'Brian funciona bem para storytelling EN', 'Ajuste velocidade para match com cenas'] },
-  { id: 4, title: 'Prompt Engine', description: 'Gere prompts visuais otimizados para cada cena do roteiro.', icon: Wand2, route: '/studio', tips: ['Defina o personagem principal para consistência', 'Use referência visual quando possível', 'Ative modo Veo3 para melhor qualidade'] },
-  { id: 5, title: 'Geração de Cenas', description: 'Execute prompts no Autoflow ou gere com Veo3 direto.', icon: Film, route: '/studio', tips: ['Exporte Autoflow JSON para execução em lote', 'Use Veo3 Fast para protótipos rápidos', 'Verifique consistência de personagens'] },
-  { id: 6, title: 'Edição & Revisão', description: 'Revise os segmentos, ajuste timing e faça export final.', icon: Scissors, route: '/studio', tips: ['Use preview sequencial no Studio', 'Verifique sync áudio/vídeo', 'Baixe ZIP com todos os assets'] },
-  { id: 7, title: 'Publicação', description: 'Configure título, thumbnail, tags SEO e agende o upload.', icon: Upload, route: '/titles', tips: ['Gere títulos com score de CTR > 80', 'Use SEO keywords do Viral Database', 'Agende para horário de pico do nicho'] },
+  { id: 3, title: 'Títulos & SEO', description: 'Gere títulos virais otimizados para CTR e descrições SEO completas.', icon: Wand2, route: '/titles', tips: ['Use o A/B Tester para comparar títulos', 'Gere descrição SEO com timestamps', 'Teste diferentes estilos: curiosidade, urgência, números'] },
+  { id: 4, title: 'Identidade Visual', description: 'Crie marca, paleta de cores e conceitos de thumbnail no Growth Center.', icon: Film, route: '/branding', tips: ['Gere Brand Kit completo com IA', 'Use o Thumbnail Lab para conceitos visuais', 'Simule receita no Revenue Simulator'] },
+  { id: 5, title: 'Publicação', description: 'Configure thumbnail, tags SEO e publique no YouTube.', icon: Upload, route: '/workflow', tips: ['Siga o Growth Checklist', 'Agende para horário de pico do nicho', 'Use community posts para gerar antecipação'] },
 ];
 
 function buildSteps(completedIds: number[]): WorkflowStep[] {
