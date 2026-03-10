@@ -273,7 +273,7 @@ const Studio = () => {
       }
       // Schedule next poll with 20s delay (longer to avoid rate limits)
       const timeout = setTimeout(() => poll(), 20000);
-      setVideoPollingMap(prev => ({ ...prev, [segIndex]: timeout as unknown as number }));
+      setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
     };
     
     // Stagger initial polls: each segment starts polling 5s apart
