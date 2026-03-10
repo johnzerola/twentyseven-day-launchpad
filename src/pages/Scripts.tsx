@@ -94,6 +94,8 @@ const Scripts = () => {
   const [language, setLanguage] = useState('português');
   const [script, setScript] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [scorecard, setScorecard] = useState<{hook:number,retention:number,emotion:number,flow:number,payoff:number} | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [savedScripts, setSavedScripts] = useState<any[]>([]);
