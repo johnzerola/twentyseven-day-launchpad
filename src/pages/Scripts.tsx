@@ -42,6 +42,8 @@ interface Character {
   description: string;
   appearance: string;
   clothing: string;
+  imageUrl?: string;
+  generatingImage?: boolean;
 }
 
 interface SyncedScene {
