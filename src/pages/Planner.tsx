@@ -39,38 +39,14 @@ const PRIORITY_COLORS: Record<string, string> = {
   baixa: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 
-// MOCK pre-loaded cards to show a realistic Kanban board
-const MOCK_CARDS: KanbanCard[] = [
-  { id: 'm1', title: '5 Fontes de Renda Passiva para 2026', priority: 'alta', due_date: '2026-03-15', tags: ['finanças', 'viral'], position: 0 },
-  { id: 'm2', title: 'Como Fiz R$10k Sem Aparecer', priority: 'alta', due_date: '2026-03-18', tags: ['faceless', 'storytelling'], position: 1 },
-  { id: 'm3', title: 'O Segredo dos Canais Dark', priority: 'média', due_date: null, tags: ['tutorial'], position: 2 },
-  { id: 'm4', title: 'Tesouro Direto vs CDB — Comparativo', priority: 'média', due_date: '2026-03-20', tags: ['finanças'], position: 0 },
-  { id: 'm5', title: 'Roteiro: 7 Erros de Iniciantes', priority: 'alta', due_date: '2026-03-12', tags: ['roteiro'], position: 0 },
-  { id: 'm6', title: 'Gerando 50 cenas no Veo3', priority: 'baixa', due_date: null, tags: ['produção'], position: 0 },
-  { id: 'm7', title: 'Edição final — vídeo de finanças', priority: 'alta', due_date: '2026-03-11', tags: ['edição'], position: 0 },
-  { id: 'm8', title: 'Upload: Renda Passiva ep.1', priority: 'alta', due_date: '2026-03-13', tags: ['upload'], position: 0 },
-];
-
-const MOCK_COLUMN_MAP: Record<string, string[]> = {
-  ideas: ['m1', 'm2', 'm3'],
-  scripting: ['m4', 'm5'],
-  media: ['m6'],
-  editing: ['m7'],
-  scheduled: ['m8'],
-};
-
 const Planner = () => {
   const [columns, setColumns] = useState<Column[]>(
-    COLUMNS_META.map(c => ({
-      ...c,
-      cards: (MOCK_COLUMN_MAP[c.id] || []).map(id => MOCK_CARDS.find(card => card.id === id)!).filter(Boolean),
-    }))
+    COLUMNS_META.map(c => ({ ...c, cards: [] }))
   );
   const [draggedCard, setDraggedCard] = useState<{ cardId: string; fromColumn: string } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
-  const [dbLoaded, setDbLoaded] = useState(false);
 
   useEffect(() => {
     loadCards();
@@ -81,15 +57,10 @@ const Planner = () => {
     if (!user) { setLoading(false); return; }
     const { data, error } = await supabase.from('planner_cards').select('*')
       .eq('user_id', user.id).order('position');
-    if (error || !data?.length) {
-      // Keep mock data if no DB cards
-      setLoading(false);
-      return;
-    }
-
+    
     const cols = COLUMNS_META.map(c => ({
       ...c,
-      cards: data
+      cards: (data || [])
         .filter((card: any) => card.column_id === c.id)
         .map((card: any) => ({
           id: card.id,
@@ -101,7 +72,6 @@ const Planner = () => {
         })),
     }));
     setColumns(cols);
-    setDbLoaded(true);
     setLoading(false);
   };
 
@@ -127,15 +97,8 @@ const Planner = () => {
   };
 
   const deleteCard = async (cardId: string) => {
-    if (dbLoaded) {
-      await supabase.from('planner_cards').delete().eq('id', cardId);
-      await loadCards();
-    } else {
-      setColumns(prev => prev.map(col => ({
-        ...col,
-        cards: col.cards.filter(c => c.id !== cardId),
-      })));
-    }
+    await supabase.from('planner_cards').delete().eq('id', cardId);
+    await loadCards();
     toast.success('Card removido');
   };
 
@@ -144,31 +107,9 @@ const Planner = () => {
       setDraggedCard(null);
       return;
     }
-    if (dbLoaded) {
-      await supabase.from('planner_cards').update({ column_id: toColumn } as any).eq('id', draggedCard.cardId);
-      setDraggedCard(null);
-      await loadCards();
-    } else {
-      // Move mock card locally
-      let movedCard: KanbanCard | undefined;
-      setColumns(prev => {
-        const updated = prev.map(col => {
-          if (col.id === draggedCard.fromColumn) {
-            const card = col.cards.find(c => c.id === draggedCard.cardId);
-            if (card) movedCard = card;
-            return { ...col, cards: col.cards.filter(c => c.id !== draggedCard.cardId) };
-          }
-          return col;
-        });
-        if (movedCard) {
-          return updated.map(col =>
-            col.id === toColumn ? { ...col, cards: [...col.cards, movedCard!] } : col
-          );
-        }
-        return updated;
-      });
-      setDraggedCard(null);
-    }
+    await supabase.from('planner_cards').update({ column_id: toColumn } as any).eq('id', draggedCard.cardId);
+    setDraggedCard(null);
+    await loadCards();
     toast.success('Card movido!');
   };
 

@@ -4,6 +4,7 @@ import { Menu, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { APP_NAME } from '@/lib/constants';
 
 export const LandingNav = () => {
   const { t } = useLanguage();
@@ -17,7 +18,7 @@ export const LandingNav = () => {
             <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
               <Zap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold font-['Space_Grotesk']">ChannelHacker</span>
+            <span className="text-lg font-bold font-['Space_Grotesk']">{APP_NAME}</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-6">

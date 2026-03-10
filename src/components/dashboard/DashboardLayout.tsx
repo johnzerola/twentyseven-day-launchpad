@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { APP_NAME } from '@/lib/constants';
 
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -26,18 +27,6 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) navigate('/login');
-    };
-    check();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) navigate('/login');
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success('Logout realizado!');
@@ -50,7 +39,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
           <Zap className="w-5 h-5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-bold font-['Space_Grotesk'] text-sidebar-foreground">Monetiza27</span>
+        <span className="text-lg font-bold font-['Space_Grotesk'] text-sidebar-foreground">{APP_NAME}</span>
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
@@ -96,7 +85,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           <button onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </button>
-          <span className="ml-3 font-semibold font-['Space_Grotesk']">Monetiza27</span>
+          <span className="ml-3 font-semibold font-['Space_Grotesk']">{APP_NAME}</span>
         </header>
         <main className="p-6">{children}</main>
       </div>

@@ -7,6 +7,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { APP_NAME } from '@/lib/constants';
 
 const Login = () => {
   const { t } = useLanguage();
@@ -55,7 +56,7 @@ const Login = () => {
           <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center">
             <Zap className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold font-['Space_Grotesk']">ChannelHacker</span>
+          <span className="text-2xl font-bold font-['Space_Grotesk']">{APP_NAME}</span>
         </Link>
 
         <div className="glass rounded-2xl p-8">

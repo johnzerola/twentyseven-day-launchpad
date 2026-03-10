@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { formatNumber } from '@/lib/formatters';
 
 type Step = 'channel_type' | 'channel_url' | 'analyzing' | 'analysis_done' | 'niche' | 'time' | 'goal' | 'content_type' | 'language' | 'generating' | 'done';
 
@@ -256,11 +257,6 @@ ${plan.monetization_path}
     }
   };
 
-  const formatNumber = (n: number) => {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-    return n.toString();
-  };
 
   return (
     <DashboardLayout>

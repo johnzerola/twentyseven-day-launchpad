@@ -10,29 +10,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-const COUNTRIES = [
-  { value: 'BR', label: '🇧🇷 Brasil' }, { value: 'US', label: '🇺🇸 EUA' },
-  { value: 'PL', label: '🇵🇱 Polônia' }, { value: 'DE', label: '🇩🇪 Alemanha' },
-  { value: 'GB', label: '🇬🇧 Reino Unido' }, { value: 'PT', label: '🇵🇹 Portugal' },
-  { value: 'ES', label: '🇪🇸 Espanha' }, { value: 'FR', label: '🇫🇷 França' },
-  { value: 'JP', label: '🇯🇵 Japão' }, { value: 'IN', label: '🇮🇳 Índia' },
-  { value: 'MX', label: '🇲🇽 México' }, { value: 'CA', label: '🇨🇦 Canadá' },
-  { value: 'AU', label: '🇦🇺 Austrália' }, { value: 'IT', label: '🇮🇹 Itália' },
-  { value: 'KR', label: '🇰🇷 Coreia do Sul' },
-];
+import { formatNumber } from '@/lib/formatters';
+import { COUNTRIES } from '@/lib/constants';
 
 const QUICK_NICHES = [
   'finanças pessoais', 'true crime', 'horror stories', 'motivacional', 'curiosidades',
   'crypto', 'saúde', 'tecnologia', 'gaming', 'receitas', 'educação', 'viagem',
   'beleza', 'fitness', 'negócios', 'humor', 'estoicismo', 'história', 'ciência', 'IA',
 ];
-
-const fmt = (n: number) => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-  return n.toString();
-};
 
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(142,76%,36%)', 'hsl(210,100%,56%)', 'hsl(45,93%,47%)'];
 
@@ -424,7 +409,7 @@ const NicheExplorer = () => {
                         <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
                         <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `$${v}`} />
                         <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
-                          formatter={(v: number, name: string) => [`${name === 'revenue' ? '$' : ''}${fmt(v)}`, name === 'revenue' ? 'Receita' : name === 'views' ? 'Views' : 'Subs']} />
+                          formatter={(v: number, name: string) => [`${name === 'revenue' ? '$' : ''}${formatNumber(v)}`, name === 'revenue' ? 'Receita' : name === 'views' ? 'Views' : 'Subs']} />
                         <Area type="monotone" dataKey="revenue" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.15} strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -435,8 +420,8 @@ const NicheExplorer = () => {
                     {a.revenueProjection.map((r: any) => (
                       <div key={r.month} className="bg-secondary/30 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-muted-foreground">Mês {r.month}</p>
-                        <p className="text-lg font-bold text-accent">${fmt(r.revenue)}</p>
-                        <p className="text-[9px] text-muted-foreground">{fmt(r.views)} views · {fmt(r.subs)} subs</p>
+                        <p className="text-lg font-bold text-accent">${formatNumber(r.revenue)}</p>
+                        <p className="text-[9px] text-muted-foreground">{formatNumber(r.views)} views · {formatNumber(r.subs)} subs</p>
                       </div>
                     ))}
                   </div>
@@ -468,8 +453,8 @@ const NicheExplorer = () => {
                       {ch.contentStyle && <Badge className="bg-secondary text-muted-foreground text-[9px]">{ch.contentStyle}</Badge>}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>{fmt(ch.subscribers)} subs</span>
-                      <span>{fmt(ch.totalViews)} views</span>
+                      <span>{formatNumber(ch.subscribers)} subs</span>
+                      <span>{formatNumber(ch.totalViews)} views</span>
                       <span>{ch.videoCount} vídeos</span>
                       {ch.outlierCount > 0 && <span className="text-accent">⭐ {ch.outlierCount} outliers</span>}
                       {ch.superOutlierCount > 0 && <span className="text-yellow-400">🔥 {ch.superOutlierCount} super</span>}
@@ -515,8 +500,8 @@ const NicheExplorer = () => {
                         <h4 className="text-xs font-medium line-clamp-2 mb-2">{v.title}</h4>
                         <p className="text-[10px] text-muted-foreground mb-1">{v.channelTitle}</p>
                         <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
-                          <span>{fmt(v.views)} views</span>
-                          <span>{fmt(v.vph)} v/h</span>
+                          <span>{formatNumber(v.views)} views</span>
+                          <span>{formatNumber(v.vph)} v/h</span>
                           <span>{v.engagementRate}% eng</span>
                           {v.viewsPerSub > 1 && <span className="text-accent">{v.viewsPerSub}x subs</span>}
                         </div>

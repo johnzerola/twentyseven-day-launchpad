@@ -11,6 +11,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
+import { formatNumber } from '@/lib/formatters';
+import { NICHES, COUNTRIES, LANGUAGES, PERIODS } from '@/lib/constants';
 
 interface VideoResult {
   id: string; title: string; channelTitle: string; channelId: string;
@@ -25,12 +27,6 @@ interface ChannelInfo {
   description?: string; country?: string; isMonetized: boolean;
 }
 
-const formatNumber = (n: number) => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-  return n.toString();
-};
-
 const calcVPH = (views: number, publishedAt: string) => {
   const hours = Math.max(1, (Date.now() - new Date(publishedAt).getTime()) / 3600000);
   return Math.round(views / hours);
@@ -41,56 +37,9 @@ const calcOutlierScore = (views: number, medianViews: number) => {
   return Math.round((views / medianViews) * 10) / 10;
 };
 
-const NICHES = [
-  { value: '', label: 'Qualquer nicho' },
-  { value: 'finanças', label: '💰 Finanças' },
-  { value: 'tecnologia', label: '💻 Tecnologia' },
-  { value: 'saúde', label: '🏥 Saúde' },
-  { value: 'gaming', label: '🎮 Gaming' },
-  { value: 'educação', label: '📚 Educação' },
-  { value: 'entretenimento', label: '🎭 Entretenimento' },
-  { value: 'curiosidades', label: '🔍 Curiosidades' },
-  { value: 'história', label: '📜 História' },
-  { value: 'ciência', label: '🔬 Ciência' },
-  { value: 'motivacional', label: '🚀 Motivacional' },
-  { value: 'true crime', label: '🔎 True Crime' },
-  { value: 'conspiração', label: '👁️ Conspiração' },
-  { value: 'top 10', label: '🏆 Top 10 / Listicle' },
-  { value: 'receitas', label: '🍳 Receitas' },
-  { value: 'viagem', label: '✈️ Viagem' },
-];
-
-const COUNTRIES = [
-  { value: '', label: '🌍 Todos os países' },
-  { value: 'BR', label: '🇧🇷 Brasil' },
-  { value: 'US', label: '🇺🇸 Estados Unidos' },
-  { value: 'PT', label: '🇵🇹 Portugal' },
-  { value: 'GB', label: '🇬🇧 Reino Unido' },
-  { value: 'DE', label: '🇩🇪 Alemanha' },
-  { value: 'PL', label: '🇵🇱 Polônia' },
-  { value: 'ES', label: '🇪🇸 Espanha' },
-  { value: 'MX', label: '🇲🇽 México' },
-  { value: 'FR', label: '🇫🇷 França' },
-  { value: 'IN', label: '🇮🇳 Índia' },
-];
-
 const SEARCH_TYPES = [
   { value: 'video', label: 'Vídeos', icon: Video, desc: 'Buscar vídeos por palavra-chave' },
   { value: 'channel', label: 'Canais', icon: Tv, desc: 'Espionar canal específico' },
-];
-
-const LANGUAGES = [
-  { value: '', label: 'Todos idiomas' }, { value: 'pt', label: 'Português' },
-  { value: 'en', label: 'English' }, { value: 'pl', label: 'Polski' },
-  { value: 'de', label: 'Deutsch' }, { value: 'es', label: 'Español' },
-];
-
-const PERIODS = [
-  { value: '', label: 'Qualquer período' },
-  { value: 'today', label: 'Hoje' },
-  { value: 'week', label: 'Última semana' },
-  { value: 'month', label: 'Último mês' },
-  { value: 'year', label: 'Último ano' },
 ];
 
 const ChannelSearch = () => {
