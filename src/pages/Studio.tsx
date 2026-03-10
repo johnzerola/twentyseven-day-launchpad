@@ -232,6 +232,94 @@ const Studio = () => {
     toast.success('Retry completo!');
   };
 
+  const pollVideoOperation = (segIndex: number, operationName: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-veo3-video', {
+          body: { action: 'poll', operationName },
+        });
+        if (error) throw new Error(error.message);
+        
+        if (data?.status === 'COMPLETED') {
+          clearInterval(interval);
+          setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
+          
+          if (data.videoBase64) {
+            updateSegment(segIndex, 'videoBase64', data.videoBase64);
+          } else if (data.videoUrl) {
+            updateSegment(segIndex, 'videoUrl', data.videoUrl);
+          }
+          updateSegment(segIndex, 'videoStatus', 'completed');
+          addLog(`✅ Vídeo Veo3 cena ${segIndex + 1} pronto!`);
+          toast.success(`Vídeo #${segIndex + 1} gerado!`);
+        } else if (data?.status === 'FAILED') {
+          clearInterval(interval);
+          setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
+          updateSegment(segIndex, 'videoStatus', 'failed');
+          addLog(`⚠️ Vídeo cena ${segIndex + 1} falhou: ${data.error}`);
+        } else {
+          updateSegment(segIndex, 'videoStatus', 'polling');
+        }
+      } catch (err: any) {
+        clearInterval(interval);
+        setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
+        updateSegment(segIndex, 'videoStatus', 'failed');
+        addLog(`⚠️ Poll vídeo ${segIndex + 1} erro: ${err.message}`);
+      }
+    }, 10000); // Poll every 10 seconds
+    
+    setVideoPollingMap(prev => ({ ...prev, [segIndex]: interval }));
+  };
+
+  const generateSegmentVideo = async (seg: Segment) => {
+    if (!seg.visualPrompt) return toast.error('Gere o prompt visual primeiro');
+    updateSegment(seg.index, 'videoStatus', 'generating');
+    setGeneratingVideo(seg.index);
+    addLog(`🎬 Gerando vídeo Veo3 cena ${seg.index + 1}...`);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-veo3-video', {
+        body: {
+          action: 'generate',
+          prompt: seg.visualPrompt,
+          model: veo3Model,
+          aspectRatio: '16:9',
+          duration: 8,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      
+      if (data?.operationName) {
+        updateSegment(seg.index, 'videoOperationName', data.operationName);
+        updateSegment(seg.index, 'videoStatus', 'polling');
+        addLog(`⏳ Vídeo cena ${seg.index + 1} em processamento (polling a cada 10s)...`);
+        pollVideoOperation(seg.index, data.operationName);
+      }
+    } catch (err: any) {
+      updateSegment(seg.index, 'videoStatus', 'failed');
+      addLog(`⚠️ Vídeo cena ${seg.index + 1} falhou: ${err.message}`);
+      toast.error(err.message);
+    } finally {
+      setGeneratingVideo(null);
+    }
+  };
+
+  const runBatchVideos = async (targetSegs?: Segment[]) => {
+    const segs = targetSegs || segmentsRef.current;
+    const withPrompts = segs.filter(s => s.visualPrompt);
+    if (!withPrompts.length) return toast.error('Gere os prompts visuais primeiro');
+    
+    addLog(`🎬 Iniciando geração de ${withPrompts.length} vídeos Veo3...`);
+    for (const seg of withPrompts) {
+      await generateSegmentVideo(seg);
+      // Small delay between requests to avoid rate limiting
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    toast.success(`${withPrompts.length} vídeos Veo3 enviados para geração!`);
+  };
+  };
+
   const downloadAll = async () => {
     const segs = segmentsRef.current;
     const hasContent = segs.some(s => s.generatedImage || s.audioBase64);
