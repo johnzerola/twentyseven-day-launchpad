@@ -13,7 +13,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Speech rates per language (words per minute)
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160,
       'espanhol': 155, 'español': 155,
@@ -92,55 +91,85 @@ serve(async (req) => {
 
     const selectedStyle = styleGuides[style?.toLowerCase()] || styleGuides['narração'];
 
-    // Build viral injection block
     const viralInjection = viralContext
-      ? `\n\n🔥 ELEMENTOS VIRAIS SELECIONADOS PELO USUÁRIO (OBRIGATÓRIO incorporar no roteiro):\n${viralContext}\n\nIMPORTANTE: Os elementos acima foram escolhidos pelo criador. Adapte-os ao tema e integre naturalmente no roteiro. O hook deve ser usado como inspiração/base para os primeiros segundos. O CTA deve ser inserido no local indicado. A estrutura narrativa deve guiar toda a organização do roteiro.\n`
+      ? `\n\n🔥 ELEMENTOS VIRAIS SELECIONADOS PELO USUÁRIO (OBRIGATÓRIO incorporar no roteiro):\n${viralContext}\n\nIMPORTANTE: Os elementos acima foram escolhidos pelo criador. Adapte-os ao tema e integre naturalmente no roteiro.\n`
       : '';
 
-    const systemPrompt = `Você é um ROTEIRISTA VETERANO que trabalhou com MrBeast, Disney, HBO e produções dignas de Oscar. Você domina TODAS as técnicas de retenção que mantêm 80%+ de audiência em vídeos do YouTube.
+    // ========== PHASE 1: Generate the script with Gemini Pro ==========
+    const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO. Seus roteiros têm 95%+ de retenção no YouTube. Você estudou TODOS os vídeos com mais de 100M de views e extraiu os padrões que fazem as pessoas NÃO CONSEGUIREM PARAR DE ASSISTIR.
 
-TÉCNICAS OBRIGATÓRIAS QUE VOCÊ DEVE USAR:
+VOCÊ ESCREVE COMO SE ESTIVESSE CONTANDO O MAIOR SEGREDO DO MUNDO. Cada frase é uma ISCA que puxa para a próxima. O espectador sente que se parar, vai perder algo CRUCIAL.
 
-🧠 DOPAMINA & RETENÇÃO:
-- HOOK NOS PRIMEIROS 8 SEGUNDOS: Uma frase impossível de ignorar. Número chocante, pergunta provocativa, ou afirmação contraintuitiva.
-- OPEN LOOPS: A cada 45-60 segundos, abra um loop de curiosidade que só fecha 2-3 minutos depois. "Daqui a pouco vou revelar algo que muda tudo..."
-- PATTERN INTERRUPTS: A cada 60 segundos, mude algo — tom, ritmo, formato, tipo de informação. Nunca deixe o espectador prever o que vem.
-- CURIOSITY GAPS: "Existe um segredo que [experts] usam, e eu vou revelar em um instante..."
-- CLIFFHANGERS INTERNOS: No fim de cada seção, crie expectativa para a próxima.
-- REGRA DOS 8 SEGUNDOS: Nenhum trecho de mais de 8 segundos sem algo que prenda atenção (dado novo, pergunta, mudança visual, emoção).
+🧲 TÉCNICAS DE MAGNETISMO NARRATIVO (USE TODAS):
 
-📐 ESTRUTURA NARRATIVA:
-- HOOK EXPLOSIVO [00:00-00:08] — 1-2 frases que tornam impossível sair
-- INTRO + CONTEXTO [00:08-01:00] — Por que isso importa? Stakeholders altos.
-- DESENVOLVIMENTO com MICROHOOKS a cada 45-60s — Cada seção tem seu mini-hook e payoff
-- BUILD UP progressivo — Cada revelação é maior que a anterior (técnica "bola de neve")
-- CLÍMAX [últimos 3-4 minutos] — O maior payoff, a revelação final
-- CTA NATURAL [final] — Conectado ao tema, não forçado
+1. HOOK DE CHOQUE [primeiros 5 segundos]:
+   - Comece com uma afirmação ABSURDA, CONTRAINTUITIVA ou um NÚMERO IMPOSSÍVEL
+   - Ex: "Um homem de 23 anos descobriu algo que fez a NASA entrar em pânico"
+   - Ex: "Existe um lugar no fundo do oceano onde chove metal líquido"
+   - NUNCA comece com "Você já se perguntou..." ou "Nesse vídeo vou falar sobre..."
+
+2. LOOPS DE CURIOSIDADE IRRESISTÍVEIS:
+   - Abra 2-3 loops nos primeiros 60 segundos que só fecham no final
+   - "Daqui a pouco eu vou revelar o detalhe que ninguém percebeu... e quando você souber, nunca mais vai ver isso da mesma forma"
+   - Cada loop aberto cria uma COCEIRA MENTAL que só passa quando fecha
+
+3. ESCALADA EMOCIONAL CONSTANTE:
+   - Cada revelação é MAIOR que a anterior (técnica bola de neve)
+   - Use a estrutura: fato surpreendente → contexto → implicação CHOCANTE
+   - "Isso já é impressionante, mas o que vem agora muda TUDO"
+
+4. PATTERN INTERRUPTS A CADA 45 SEGUNDOS:
+   - Mude o tom: sério → humor → choque → reflexão
+   - Faça perguntas diretas: "Para e pensa comigo..."
+   - Use analogias viscerais: "É como se alguém te desse a chave de um cofre e dissesse: abra por sua conta e risco"
+
+5. TENSÃO NARRATIVA CONSTANTE:
+   - Nunca entregue tudo de uma vez — sempre segure algo
+   - "Mas tem um detalhe que muda completamente essa história..."
+   - Crie mini-cliffhangers entre cada seção
+
+6. LINGUAGEM HIPNÓTICA:
+   - Frases curtas. Impactantes. Que grudam na mente.
+   - Use presente do indicativo (cria urgência): "Ele abre a porta. O que ele vê muda tudo."
+   - Metáforas sensoriais: sons, cheiros, texturas, cores
+   - Ritmo: frase curta, frase curta, frase LONGA que explode
+
+7. REGRA DO "E DAÍ?":
+   - Após cada informação, pergunte-se "e daí?" — se não tem impacto emocional, REESCREVA
+   - Cada frase deve ter um PROPÓSITO: chocar, ensinar, emocionar ou criar suspense
+
+📐 ESTRUTURA OBRIGATÓRIA:
+- HOOK EXPLOSIVO [00:00-00:08] — A frase mais impossível de ignorar
+- SETUP + PRIMEIRO LOOP [00:08-01:00] — Por que isso importa + abra curiosidade
+- DESENVOLVIMENTO com MICROHOOKS a cada 45s — Cada bloco tem seu mini-gancho
+- ESCALADA PROGRESSIVA — Cada revelação maior que a anterior
+- CLÍMAX [últimos 20%] — O maior payoff, conectado ao hook
+- CTA NATURAL [final] — Integrado à narrativa, não forçado
 
 ✍️ REGRAS DE ESCRITA:
 1. O roteiro DEVE ter NO MÍNIMO ${targetWords} palavras (~${Math.round(targetChars)} caracteres) para cobrir ${duration} minutos
-2. Cada minuto = ~140 palavras faladas. Para ${duration} min = ${targetWords} palavras MÍNIMO
+2. Cada minuto = ~${wordsPerMinute} palavras faladas. Para ${duration} min = ${targetWords} palavras MÍNIMO
 3. ESCREVA CADA PALAVRA. NÃO use "[continue aqui]", "[expanda]", "[adicione mais]" ou qualquer placeholder
-4. Inclua MARCAÇÕES DE TEMPO: [00:00], [01:30], [03:00], etc.
-5. ⚠️ ROTEIRO LIMPO: Escreva APENAS o texto da narração. NÃO inclua indicações técnicas como [B-ROLL:], [TEXTO NA TELA:], [EFEITO SONORO:], [MÚSICA:], [TRANSIÇÃO:], [CORTE PARA:] ou qualquer anotação entre colchetes que não seja marcação de tempo. O roteiro será usado diretamente para TTS (Text-to-Speech), então qualquer anotação será lida em voz alta pelo narrador.
-6. Parágrafos curtos (2-3 frases) para facilitar narração
-7. Use linguagem conversacional — como se falasse com um amigo inteligente
-8. Use valores monetários em dólares (ex: $15, $1.000, $50.000) — NUNCA use R$
-
-📝 NO FINAL DO ROTEIRO, ADICIONE:
-- 5 sugestões de TÍTULO com CTR estimado 30%+ (use números, palavras de poder, curiosidade, urgência)
-- 5 ideias de THUMBNAIL (descrição visual ULTRA detalhada: expressões faciais, cores, texto overlay, composição)
-- 15-20 tags SEO relevantes
-- Descrição otimizada para SEO (3 parágrafos: hook, sobre o vídeo, sobre o canal + hashtags)
+4. ⚠️ ROTEIRO LIMPO: APENAS o texto da narração. ZERO indicações técnicas ([B-ROLL:], [TEXTO NA TELA:], [EFEITO SONORO:], [MÚSICA:], [TRANSIÇÃO:], [CORTE PARA:]). ZERO marcações de tempo ([00:00], [01:30]). O texto vai direto pro TTS.
+5. Parágrafos curtos (2-3 frases) para facilitar narração
+6. Use linguagem conversacional — como se falasse com um amigo inteligente
+7. Use valores monetários em dólares ($) — NUNCA use R$
+8. PROIBIDO: "Narrador:", "Cena:", cabeçalhos de seção, ou qualquer meta-texto
 
 ${selectedStyle}
 ${viralInjection}
 Nicho: ${niche || 'geral'}
 Idioma: ${language || 'português'}
 
-⚠️ ATENÇÃO MÁXIMA: Escreva ABSOLUTAMENTE TUDO. Cada seção COMPLETA. Sem atalhos. Sem resumos. O roteiro final deve ter ${targetWords}+ palavras. Se necessário, adicione mais exemplos, dados, analogias e detalhes sensoriais para atingir a contagem.`;
+📝 NO FINAL DO ROTEIRO, ADICIONE (separado por "---EXTRAS---"):
+- 5 sugestões de TÍTULO com CTR estimado 30%+ (números, palavras de poder, curiosidade, urgência)
+- 5 ideias de THUMBNAIL (descrição visual ULTRA detalhada: expressões faciais, cores, texto overlay, composição)
+- 15-20 tags SEO relevantes
+- Descrição otimizada para SEO (3 parágrafos + hashtags)
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+⚠️ ATENÇÃO: Escreva ABSOLUTAMENTE TUDO. Sem atalhos. O roteiro final deve ter ${targetWords}+ palavras.`;
+
+    const generateResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -150,41 +179,121 @@ Idioma: ${language || 'português'}
         model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Escreva um roteiro COMPLETO e LONGO de ${duration} minutos sobre: "${topic}"
+          { role: "user", content: `Escreva um roteiro MAGNÉTICO e HIPNÓTICO de ${duration} minutos sobre: "${topic}"
+
+O espectador NÃO PODE conseguir parar de assistir. Cada frase puxa para a próxima como um vício.
 
 REQUISITOS INEGOCIÁVEIS:
-- Mínimo ${targetWords} palavras (verifique antes de finalizar)
-- Cada seção totalmente escrita, sem placeholders
-- Hooks, open loops e pattern interrupts ao longo de TODO o roteiro
-- Marcações de tempo realistas [00:00], [01:30], etc.
-- ROTEIRO LIMPO: APENAS texto falado. ZERO anotações técnicas ([B-ROLL], [MÚSICA], [EFEITO SONORO], [TRANSIÇÃO], [CORTE], etc.). O texto vai direto pro TTS.
+- Mínimo ${targetWords} palavras
+- Hook de CHOQUE nos primeiros 5 segundos (número absurdo, fato impossível, ou revelação que causa arrepio)
+- 2-3 loops de curiosidade abertos nos primeiros 60 segundos
+- Pattern interrupts a cada 45 segundos
+- Escalada emocional constante — cada revelação MAIOR que a anterior
+- ROTEIRO LIMPO: APENAS texto falado. ZERO anotações, ZERO timestamps. Vai direto pro TTS.
 - Use valores em dólares ($), nunca R$
-- Ao final: títulos, thumbnails, tags SEO e descrição (essa parte pode ter formatação)
-${viralContext ? '\n- INCORPORE os elementos virais selecionados pelo criador (hook, CTA e/ou estrutura narrativa)' : ''}
+- Ao final (após ---EXTRAS---): títulos, thumbnails, tags SEO e descrição
+${viralContext ? '\n- INCORPORE os elementos virais selecionados' : ''}
 
-Comece com o HOOK mais explosivo possível. Vamos lá!` }
+Comece com o HOOK mais IMPOSSÍVEL DE IGNORAR que você já criou. Vamos!` }
+        ],
+        stream: false,
+      }),
+    });
+
+    if (!generateResponse.ok) {
+      if (generateResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (generateResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const t = await generateResponse.text();
+      console.error("AI Phase 1 error:", generateResponse.status, t);
+      throw new Error("Script generation failed");
+    }
+
+    const phase1Data = await generateResponse.json();
+    const draftScript = phase1Data.choices?.[0]?.message?.content;
+    if (!draftScript) throw new Error("No script generated in Phase 1");
+
+    console.log("Phase 1 complete. Draft length:", draftScript.length, "chars");
+
+    // ========== PHASE 2: Review & Enhance with second AI pass ==========
+    const reviewResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: `Você é um DIRETOR CRIATIVO IMPLACÁVEL que avalia roteiros para canais com 10M+ inscritos. Seu trabalho é pegar um roteiro BOM e transformar em OBRA-PRIMA.
+
+VOCÊ AVALIA E REESCREVE baseado nesses critérios:
+
+🔍 CRITÉRIOS DE AVALIAÇÃO:
+1. HOOK (primeiros 5 seg): É IMPOSSÍVEL de ignorar? Causa choque/curiosidade visceral?
+2. LOOPS DE CURIOSIDADE: Existem 2-3 loops abertos nos primeiros 60 seg?
+3. RETENÇÃO: Tem pattern interrupts a cada 45 seg? O espectador seria INCAPAZ de sair?
+4. ESCALADA: Cada revelação é MAIOR que a anterior? Existe crescendo emocional?
+5. LINGUAGEM: É HIPNÓTICA? Frases curtas + impactantes? Metáforas sensoriais?
+6. FLUIDEZ: A narração flui naturalmente? Parece conversa, não texto?
+7. CLÍMAX: O final conecta ao hook? O payoff é SATISFATÓRIO?
+8. MAGNETISMO: Se você fosse espectador, conseguiria parar de assistir?
+
+🔧 SEU PROCESSO:
+1. Leia o roteiro inteiro
+2. Identifique TODOS os pontos fracos (partes chatas, previsíveis, genéricas, sem tensão)
+3. REESCREVA o roteiro COMPLETO, mantendo a estrutura geral mas:
+   - Turbine o hook (se não causa arrepio, refaça)
+   - Adicione loops de curiosidade onde faltam
+   - Injete pattern interrupts onde está monótono
+   - Substitua frases genéricas por frases viscerais e específicas
+   - Aumente a tensão narrativa em cada transição
+   - Torne cada frase IMPOSSÍVEL DE PULAR
+
+⚠️ REGRAS ABSOLUTAS:
+- Retorne APENAS o roteiro reescrito (texto da narração + extras após ---EXTRAS---)
+- ZERO anotações técnicas, ZERO timestamps, ZERO marcações de tempo
+- ZERO meta-texto como "Narrador:", "Cena:", cabeçalhos
+- Mantenha o mínimo de ${targetWords} palavras
+- Idioma: ${language || 'português'}
+- Valores em dólares ($), nunca R$
+- O roteiro vai direto pro TTS — escreva SOMENTE o que será falado` },
+          { role: "user", content: `ROTEIRO PARA REVISAR E TURBINAR:
+
+${draftScript}
+
+MISSÃO: Transforme esse roteiro em algo que o espectador NÃO CONSIGA parar de assistir. Cada segundo deve criar dependência. Se alguma parte está fraca, monótona ou previsível — REESCREVA com força total.
+
+Retorne o roteiro COMPLETO reescrito (incluindo a seção ---EXTRAS--- com títulos, thumbnails, tags e descrição).` }
         ],
         stream: true,
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    if (!reviewResponse.ok) {
+      if (reviewResponse.status === 429) {
+        // If review fails due to rate limit, stream the draft instead
+        console.log("Phase 2 rate limited, returning Phase 1 draft");
+        return streamText(draftScript, corsHeaders);
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (reviewResponse.status === 402) {
+        console.log("Phase 2 payment required, returning Phase 1 draft");
+        return streamText(draftScript, corsHeaders);
       }
-      const t = await response.text();
-      console.error("AI error:", response.status, t);
-      throw new Error("Script generation failed");
+      console.error("Phase 2 error, falling back to Phase 1 draft");
+      return streamText(draftScript, corsHeaders);
     }
 
-    return new Response(response.body, {
+    console.log("Phase 2 streaming enhanced script...");
+
+    return new Response(reviewResponse.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
@@ -194,3 +303,26 @@ Comece com o HOOK mais explosivo possível. Vamos lá!` }
     });
   }
 });
+
+// Helper: convert plain text to SSE stream format for fallback
+function streamText(text: string, corsHeaders: Record<string, string>): Response {
+  const encoder = new TextEncoder();
+  const chunks = text.match(/.{1,80}/g) || [text];
+  
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        const sseData = JSON.stringify({
+          choices: [{ delta: { content: chunk } }]
+        });
+        controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
