@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -82,8 +82,28 @@ interface SyncedScene {
   visualPrompt: string;
   cameraAngle: string;
   mood: string;
+  narrativeText?: string;
+  narrativeSummary?: string;
+  emotionalBeat?: string;
+  lensSpec?: string;
+  lightingSetup?: string;
+  audioDirection?: string;
+  negativePrompt?: string;
   charactersInScene?: string[];
   transitionNote?: string;
+}
+
+interface TranscriptionBlock {
+  text: string;
+  startTime: number;
+  endTime: number;
+}
+
+interface TranscriptionData {
+  fullText: string;
+  wordCount: number;
+  audioDuration: number;
+  blocks: TranscriptionBlock[];
 }
 
 const Scripts = () => {
@@ -123,6 +143,9 @@ const Scripts = () => {
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [detectingCharacters, setDetectingCharacters] = useState(false);
+  const [transcription, setTranscription] = useState<TranscriptionData | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [showTranscription, setShowTranscription] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => { loadHistory(); }, []);
@@ -393,7 +416,7 @@ const Scripts = () => {
     return clean.trim();
   };
 
-  // Generate synced prompts
+  // Generate synced prompts (text-based fallback)
   const generateSyncedPrompts = async () => {
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
@@ -418,6 +441,59 @@ const Scripts = () => {
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar prompts');
     } finally {
+      setGeneratingPrompts(false);
+    }
+  };
+
+  // Audio Intelligence: Transcribe + Analyze + Generate Contextual Scenes
+  const generateFromAudio = async () => {
+    if (!audioFile) { toast.error('Faça upload do áudio narrado primeiro'); return; }
+    const cleanScript = getCleanNarration();
+
+    setTranscribing(true);
+    setGeneratingPrompts(true);
+    setTranscription(null);
+    setSyncedScenes([]);
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioFile);
+      formData.append('script', cleanScript || '');
+      formData.append('videoStyle', videoStyle);
+      formData.append('characters', JSON.stringify(characters));
+      formData.append('sceneDuration', String(sceneDuration));
+      formData.append('language', language);
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/audio-to-scenes`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: formData,
+      });
+
+      if (resp.status === 429) throw new Error('Rate limit. Tente novamente em alguns segundos.');
+      if (resp.status === 402) throw new Error('Créditos insuficientes.');
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+
+      if (data.transcription) {
+        setTranscription(data.transcription);
+        setAudioDuration(data.transcription.audioDuration || 0);
+        setTranscribing(false);
+        setShowTranscription(true);
+      }
+
+      setSyncedScenes(data.scenes || []);
+      toast.success(`🎬 ${data.scenes?.length || 0} cenas contextuais geradas a partir do áudio!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao processar áudio');
+    } finally {
+      setTranscribing(false);
       setGeneratingPrompts(false);
     }
   };
@@ -850,72 +926,109 @@ const Scripts = () => {
                 </motion.div>
               )}
 
-              {/* Step 4: Synced Prompts */}
+              {/* Step 4: Audio Intelligence + Prompts */}
               {activeStep === 'prompts' && script && (
                 <motion.div key="prompts" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Prompts Visuais Sincronizados</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">Upload do áudio narrado + IA gera prompts sincronizados com o tempo</p>
+                      <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Audio Intelligence → Cenas Contextuais</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">A IA transcreve o áudio, analisa cada momento narrado e gera prompts visuais que ilustram exatamente o que está sendo dito</p>
                     </div>
                   </div>
 
-                  {/* Audio Upload + Settings */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                    <div className="md:col-span-2">
-                      <label className="text-xs text-muted-foreground mb-1 block">🎙️ Áudio Narrado (opcional — melhora a sincronização)</label>
-                      <div className="flex gap-2">
-                        <label className="flex-1 flex items-center gap-2 p-2.5 rounded-lg border border-dashed border-border hover:border-primary/40 cursor-pointer transition-all bg-muted/20">
-                          <Upload className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {audioFile ? `${audioFile.name} (${formatTime(audioDuration)})` : 'Selecionar áudio .mp3/.wav'}
+                  {/* Audio Upload — Primary CTA */}
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Mic className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">🎙️ Upload do Áudio Narrado</span>
+                      <Badge className="bg-primary/20 text-primary text-[10px]">Recomendado</Badge>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mb-3">A IA vai transcrever, analisar semanticamente e criar prompts que ilustram cada momento da narração — não genéricos, mas específicos ao que está sendo dito.</p>
+
+                    <div className="flex gap-2 mb-3">
+                      <label className="flex-1 flex items-center gap-2 p-3 rounded-lg border-2 border-dashed border-primary/30 hover:border-primary/60 cursor-pointer transition-all bg-primary/5 hover:bg-primary/10">
+                        <Upload className="w-5 h-5 text-primary" />
+                        <div>
+                          <span className="text-sm font-medium text-foreground block">
+                            {audioFile ? audioFile.name : 'Selecionar áudio .mp3 / .wav'}
                           </span>
-                          <input type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden" />
-                        </label>
-                        {audioFile && (
-                          <Button size="icon" variant="ghost" className="shrink-0 h-9 w-9" onClick={() => { setAudioFile(null); setAudioDuration(0); }}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
+                          {audioFile && audioDuration > 0 && (
+                            <span className="text-[10px] text-primary">Duração: {formatTime(audioDuration)} → ~{Math.ceil(audioDuration / sceneDuration)} cenas</span>
+                          )}
+                        </div>
+                        <input type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden" />
+                      </label>
+                      {audioFile && (
+                        <Button size="icon" variant="ghost" className="shrink-0 h-11 w-11" onClick={() => { setAudioFile(null); setAudioDuration(0); setTranscription(null); }}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground mb-1 block">⏱️ Duração por cena</label>
+                        <select value={sceneDuration} onChange={e => setSceneDuration(parseInt(e.target.value))} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
+                          <option value={6}>6 segundos</option>
+                          <option value={7}>7 segundos</option>
+                          <option value={8}>8 segundos (padrão)</option>
+                          <option value={9}>9 segundos</option>
+                          <option value={10}>10 segundos</option>
+                        </select>
                       </div>
-                      {audioDuration > 0 && (
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <Clock className="w-3 h-3 text-accent" />
-                          <span className="text-[10px] text-accent font-medium">Duração do áudio: {formatTime(audioDuration)} → {Math.ceil(audioDuration / sceneDuration)} cenas</span>
+                      <div className="flex items-end">
+                        <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground w-full">
+                          🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong>
+                          {characters.length > 0 && <> • 👥 {characters.length} personagens</>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Primary action: Audio Intelligence */}
+                    <Button onClick={generateFromAudio} disabled={!audioFile || generatingPrompts || transcribing}
+                      className="w-full gap-2 h-11 text-sm gradient-hero border-0">
+                      {transcribing ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Transcrevendo e analisando narração...</>
+                      ) : generatingPrompts ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Gerando cenas contextuais...</>
+                      ) : (
+                        <><Sparkles className="w-4 h-4" /> 🧠 Transcrever + Gerar Cenas Inteligentes</>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Transcription Display */}
+                  {transcription && (
+                    <div className="mb-4">
+                      <button onClick={() => setShowTranscription(!showTranscription)}
+                        className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 mb-2">
+                        <FileText className="w-3 h-3" />
+                        {showTranscription ? 'Esconder' : 'Ver'} Transcrição ({transcription.wordCount} palavras • {formatTime(transcription.audioDuration)})
+                      </button>
+                      {showTranscription && (
+                        <div className="bg-muted/30 rounded-lg p-3 max-h-[200px] overflow-y-auto border border-border/50">
+                          {transcription.blocks.map((block, i) => (
+                            <p key={i} className="text-xs text-foreground mb-1">
+                              <span className="text-[9px] text-primary font-mono mr-1">[{formatTime(block.startTime)}]</span>
+                              {block.text}
+                            </p>
+                          ))}
                         </div>
                       )}
                     </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">⏱️ Duração por cena</label>
-                      <select value={sceneDuration} onChange={e => setSceneDuration(parseInt(e.target.value))} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-                        <option value={5}>5 segundos</option>
-                        <option value={6}>6 segundos</option>
-                        <option value={8}>8 segundos (padrão)</option>
-                        <option value={10}>10 segundos</option>
-                        <option value={12}>12 segundos</option>
-                        <option value={15}>15 segundos</option>
-                        <option value={20}>20 segundos</option>
-                        <option value={30}>30 segundos</option>
-                      </select>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Summary before generation */}
-                  <div className="bg-muted/30 rounded-lg p-3 mb-4 space-y-1">
-                    <p className="text-xs font-medium text-foreground">📋 Resumo da Geração:</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] text-muted-foreground">
-                      <span>🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong></span>
-                      <span>👥 Personagens: <strong className="text-foreground">{characters.length || 'Nenhum'}</strong></span>
-                      <span>⏱️ Cenas: <strong className="text-foreground">~{audioDuration > 0 ? Math.ceil(audioDuration / sceneDuration) : '?'}</strong></span>
-                      <span>🎵 Áudio: <strong className="text-foreground">{audioDuration > 0 ? formatTime(audioDuration) : 'Do texto'}</strong></span>
+                  {/* Fallback: Text-only generation */}
+                  {!audioFile && (
+                    <div className="border border-border/50 rounded-lg p-3 mb-4">
+                      <p className="text-[10px] text-muted-foreground mb-2">Sem áudio? Gere prompts baseados apenas no texto do roteiro (menos preciso):</p>
+                      <Button onClick={generateSyncedPrompts} disabled={generatingPrompts} variant="outline" size="sm" className="gap-2">
+                        {generatingPrompts ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        Gerar do Texto (fallback)
+                      </Button>
                     </div>
-                  </div>
-
-                  <Button onClick={generateSyncedPrompts} disabled={generatingPrompts} className="w-full gap-2 mb-4">
-                    {generatingPrompts ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    {generatingPrompts ? 'Gerando prompts sincronizados...' : 'Gerar Prompts Sincronizados'}
-                  </Button>
+                  )}
 
                   {/* Generated Scenes */}
                   {syncedScenes.length > 0 && (
@@ -1049,6 +1162,12 @@ const Scripts = () => {
                               <Badge variant="outline" className="text-[9px]">🎭 {scene.mood}</Badge>
                             </div>
                           </div>
+                          {scene.narrativeSummary && (
+                            <p className="text-[10px] text-accent italic mb-1.5">🎯 {scene.narrativeSummary}</p>
+                          )}
+                          {scene.narrativeText && (
+                            <p className="text-[10px] text-muted-foreground mb-1.5 border-l-2 border-primary/30 pl-2">"{scene.narrativeText}"</p>
+                          )}
                           <p className="text-xs text-foreground leading-relaxed">{scene.visualPrompt}</p>
                           {scene.charactersInScene && scene.charactersInScene.length > 0 && (
                             <div className="flex gap-1 mt-1.5">
