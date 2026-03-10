@@ -434,10 +434,16 @@ const Studio = () => {
                 </Button>
               )}
               <Button onClick={() => runBatchImages()} disabled={batchRunning || pipelineRunning} className="gradient-hero border-0 gap-2">
-                <Send className="w-4 h-4" /> Disparar Prompts em Lote
+                <Send className="w-4 h-4" /> Disparar Imagens em Lote
               </Button>
+              {veo3Mode && (
+                <Button onClick={() => runBatchVideos()} disabled={batchRunning || pipelineRunning}
+                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white border-0">
+                  <Video className="w-4 h-4" /> Gerar Vídeos Veo3
+                </Button>
+              )}
               <Button variant="outline" className="gap-2" onClick={downloadAll}>
-                <Download className="w-4 h-4" /> Baixar Todos os Clipes
+                <Download className="w-4 h-4" /> Baixar Assets
               </Button>
             </div>
           )}
