@@ -37,11 +37,39 @@ const VIDEO_STYLES = [
   { value: 'comic', label: '💥 HQ/Comic', desc: 'Estilo quadrinhos, bold outlines, ação' },
 ];
 
+interface CharacterAppearance {
+  skin_color: string;
+  hair_color: string;
+  hair_style: string;
+  eye_color: string;
+  body_type: string;
+  height: string;
+}
+
+interface CharacterFacialFeatures {
+  eyebrows: string;
+  nose: string;
+  mouth: string;
+  ears: string;
+  face_shape: string;
+}
+
+interface CharacterClothing {
+  shirt: string;
+  pants: string;
+  shoes: string;
+  accessories: string;
+}
+
 interface Character {
   name: string;
-  description: string;
-  appearance: string;
-  clothing: string;
+  gender: string;
+  age: number;
+  role: string;
+  appearance: CharacterAppearance;
+  facial_features: CharacterFacialFeatures;
+  clothing: CharacterClothing;
+  personality: string[];
   imageUrl?: string;
   generatingImage?: boolean;
 }
