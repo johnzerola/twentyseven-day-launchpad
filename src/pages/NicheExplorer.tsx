@@ -409,7 +409,7 @@ const NicheExplorer = () => {
                         <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
                         <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `$${v}`} />
                         <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
-                          formatter={(v: number, name: string) => [`${name === 'revenue' ? '$' : ''}${fmt(v)}`, name === 'revenue' ? 'Receita' : name === 'views' ? 'Views' : 'Subs']} />
+                          formatter={(v: number, name: string) => [`${name === 'revenue' ? '$' : ''}${formatNumber(v)}`, name === 'revenue' ? 'Receita' : name === 'views' ? 'Views' : 'Subs']} />
                         <Area type="monotone" dataKey="revenue" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.15} strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
