@@ -269,13 +269,21 @@ const Scripts = () => {
     setCharacters(prev => prev.filter((_, i) => i !== idx));
   };
 
+  // Build image prompt from structured character
+  const buildCharImagePrompt = (char: Character): string => {
+    const a = char.appearance;
+    const f = char.facial_features;
+    const cl = char.clothing;
+    return `Character reference sheet. ${char.gender}, ${char.age} years old. ${a.skin_color} skin, ${a.hair_color} ${a.hair_style} hair, ${a.eye_color} eyes. ${a.body_type} build, ${a.height}. Face: ${f.face_shape} face, ${f.eyebrows} eyebrows, ${f.nose} nose, ${f.mouth}, ${f.ears} ears. Wearing ${cl.shirt}, ${cl.pants}, ${cl.shoes}${cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}. ${char.role}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+  };
+
   // Generate character reference image
   const generateCharacterImage = async (idx: number) => {
     const char = characters[idx];
     if (!char) return;
     setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, generatingImage: true } : c));
     try {
-      const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+      const prompt = buildCharImagePrompt(char);
       const { data, error } = await supabase.functions.invoke('generate-segment-image', {
         body: { visualPrompt: prompt, textContent: '', segmentIndex: idx },
       });
