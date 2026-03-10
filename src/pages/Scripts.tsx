@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
@@ -22,6 +23,37 @@ const STYLES = [
   { value: 'documentário', label: '📹 Documentário', desc: 'Profundidade, dados e investigação' },
   { value: 'listicle', label: '📋 Listicle', desc: 'Top N com escalada de impacto' },
 ];
+
+const VIDEO_STYLES = [
+  { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Ultra-realista, estilo filme, iluminação dramática' },
+  { value: '2d', label: '🎨 2D Animação', desc: 'Motion graphics, Kurzgesagt style, flat design' },
+  { value: '3d', label: '🧊 3D Render', desc: 'Estilo Pixar/Disney, personagens estilizados' },
+  { value: 'anime', label: '⛩️ Anime', desc: 'Estilo anime japonês, expressivo e dinâmico' },
+  { value: 'wojak', label: '😐 Wojak/Meme', desc: 'Desenho simples, expressões emocionais, cultura internet' },
+  { value: 'stickmen', label: '🧍 Stickmen', desc: 'Figuras palito, minimalista, humor pela simplicidade' },
+  { value: 'realista', label: '📷 Fotorrealista', desc: 'Parece foto real, 8K, iluminação natural' },
+  { value: 'dark', label: '🌑 Dark/Cyberpunk', desc: 'Sombras profundas, neon, atmosférico' },
+  { value: 'whiteboard', label: '📝 Whiteboard', desc: 'Quadro branco, desenhos à mão, educativo' },
+  { value: 'comic', label: '💥 HQ/Comic', desc: 'Estilo quadrinhos, bold outlines, ação' },
+];
+
+interface Character {
+  name: string;
+  description: string;
+  appearance: string;
+  clothing: string;
+}
+
+interface SyncedScene {
+  sceneIndex: number;
+  startTime: number;
+  endTime: number;
+  visualPrompt: string;
+  cameraAngle: string;
+  mood: string;
+  charactersInScene?: string[];
+  transitionNote?: string;
+}
 
 const Scripts = () => {
   const { t } = useLanguage();
@@ -36,11 +68,28 @@ const Scripts = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [savedScripts, setSavedScripts] = useState<any[]>([]);
 
-  // Viral Database selections
+  // Viral Database
   const [showViralPanel, setShowViralPanel] = useState(false);
   const [selectedHook, setSelectedHook] = useState<string | null>(null);
   const [selectedCTA, setSelectedCTA] = useState<string | null>(null);
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
+
+  // Post-script pipeline
+  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts'>('script');
+  const [videoStyle, setVideoStyle] = useState('cinematográfico');
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [newCharName, setNewCharName] = useState('');
+  const [newCharDesc, setNewCharDesc] = useState('');
+  const [newCharAppearance, setNewCharAppearance] = useState('');
+  const [newCharClothing, setNewCharClothing] = useState('');
+
+  // Audio & Synced Prompts
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
+  const [sceneDuration, setSceneDuration] = useState(8);
+  const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
+  const [generatingPrompts, setGeneratingPrompts] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => { loadHistory(); }, []);
 
@@ -55,17 +104,17 @@ const Scripts = () => {
     const parts: string[] = [];
     if (selectedHook) {
       const hook = VIRAL_HOOKS.find(h => h.id === selectedHook);
-      if (hook) parts.push(`HOOK OBRIGATÓRIO (use como base/inspiração para os primeiros 5 segundos): ${hook.text}`);
+      if (hook) parts.push(`HOOK OBRIGATÓRIO: ${hook.text}`);
     }
     if (selectedCTA) {
       const cta = VIRAL_CTAS.find(c => c.id === selectedCTA);
-      if (cta) parts.push(`CTA OBRIGATÓRIO (insira no ${cta.placement} do roteiro, adaptado ao tema): ${cta.text}`);
+      if (cta) parts.push(`CTA OBRIGATÓRIO (${cta.placement}): ${cta.text}`);
     }
     if (selectedStructure) {
       const structure = STORY_STRUCTURES.find(s => s.id === selectedStructure);
       if (structure) {
         const phases = structure.phases.map(p => `${p.name} (${p.duration}): ${p.tip}`).join('\n');
-        parts.push(`ESTRUTURA NARRATIVA OBRIGATÓRIA — Siga esta estrutura "${structure.name}":\n${phases}`);
+        parts.push(`ESTRUTURA: \"${structure.name}\":\n${phases}`);
       }
     }
     return parts.join('\n\n');
@@ -75,6 +124,8 @@ const Scripts = () => {
     if (!topic.trim()) return;
     setLoading(true);
     setScript('');
+    setActiveStep('script');
+    setSyncedScenes([]);
 
     try {
       const viralContext = getViralContext();
@@ -87,16 +138,9 @@ const Scripts = () => {
         body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext }),
       });
 
-      if (resp.status === 402) {
-        throw new Error('⚠️ Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
-      }
-      if (resp.status === 429) {
-        throw new Error('Muitas requisições. Aguarde alguns segundos e tente novamente.');
-      }
-      if (!resp.ok || !resp.body) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || 'Erro ao gerar roteiro');
-      }
+      if (resp.status === 402) throw new Error('Créditos insuficientes.');
+      if (resp.status === 429) throw new Error('Rate limit. Aguarde e tente novamente.');
+      if (!resp.ok || !resp.body) throw new Error('Erro ao gerar roteiro');
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -107,47 +151,23 @@ const Scripts = () => {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx: number;
-        while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, newlineIdx);
-          buffer = buffer.slice(newlineIdx + 1);
+        let idx: number;
+        while ((idx = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
           if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
           if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
+          const json = line.slice(6).trim();
+          if (json === '[DONE]') break;
           try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullScript += content;
-              setScript(fullScript);
-            }
-          } catch {
-            buffer = line + '\n' + buffer;
-            break;
-          }
-        }
-      }
-
-      if (buffer.trim()) {
-        for (let raw of buffer.split('\n')) {
-          if (!raw || raw.startsWith(':') || !raw.startsWith('data: ')) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullScript += content;
-              setScript(fullScript);
-            }
-          } catch {}
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content;
+            if (c) { fullScript += c; setScript(fullScript); }
+          } catch { buffer = line + '\n' + buffer; break; }
         }
       }
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao gerar roteiro');
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -156,31 +176,116 @@ const Scripts = () => {
   const saveScript = async () => {
     if (!script) return;
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error('Faça login para salvar'); return; }
-    await supabase.from('saved_scripts').insert({
-      user_id: user.id, topic, duration: parseInt(duration), style, script_content: script,
-    } as any);
+    if (!user) { toast.error('Faça login'); return; }
+    await supabase.from('saved_scripts').insert({ user_id: user.id, topic, duration: parseInt(duration), style, script_content: script } as any);
     toast.success('Roteiro salvo!');
     loadHistory();
   };
 
   const deleteScript = async (id: string) => {
     await supabase.from('saved_scripts').delete().eq('id', id);
-    toast.success('Roteiro removido');
+    toast.success('Removido');
     loadHistory();
   };
 
   const copyScript = () => {
     navigator.clipboard.writeText(script);
     setCopied(true);
-    toast.success('Roteiro copiado!');
+    toast.success('Copiado!');
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Audio handling
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAudioFile(file);
+    const audio = new Audio(URL.createObjectURL(file));
+    audio.addEventListener('loadedmetadata', () => {
+      setAudioDuration(Math.ceil(audio.duration));
+    });
+  };
+
+  // Add character
+  const addCharacter = () => {
+    if (!newCharName.trim()) return;
+    setCharacters(prev => [...prev, {
+      name: newCharName.trim(),
+      description: newCharDesc.trim() || 'Personagem principal',
+      appearance: newCharAppearance.trim() || 'Adulto, expressão determinada',
+      clothing: newCharClothing.trim() || 'Roupa casual moderna',
+    }]);
+    setNewCharName('');
+    setNewCharDesc('');
+    setNewCharAppearance('');
+    setNewCharClothing('');
+  };
+
+  const removeCharacter = (idx: number) => {
+    setCharacters(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // Extract clean narration text (remove markdown, titles, tags sections)
+  const getCleanNarration = (): string => {
+    // Remove everything after common end markers
+    let clean = script;
+    const endMarkers = ['## Títulos', '## TÍTULOS', '## Sugestões de Título', '**Títulos**', '**TÍTULOS**', '## Tags', '## SEO', '## Thumbnail', '## THUMBNAIL'];
+    for (const marker of endMarkers) {
+      const idx = clean.indexOf(marker);
+      if (idx > 0) clean = clean.slice(0, idx);
+    }
+    // Remove markdown formatting
+    clean = clean.replace(/^#+\s.*/gm, '');
+    clean = clean.replace(/\*\*.*?\*\*/g, '');
+    clean = clean.replace(/\[[\d:]+\]/g, '');
+    clean = clean.replace(/[*_#>`~]/g, '');
+    clean = clean.replace(/\n{3,}/g, '\n\n');
+    return clean.trim();
+  };
+
+  // Generate synced prompts
+  const generateSyncedPrompts = async () => {
+    const cleanScript = getCleanNarration();
+    if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
+
+    setGeneratingPrompts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-synced-prompts', {
+        body: {
+          script: cleanScript,
+          videoStyle,
+          characters: characters.length > 0 ? characters : undefined,
+          audioDurationSeconds: audioDuration || undefined,
+          sceneDurationSeconds: sceneDuration,
+          language,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSyncedScenes(data.scenes || []);
+      toast.success(`${data.scenes?.length || 0} cenas sincronizadas geradas!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao gerar prompts');
+    } finally {
+      setGeneratingPrompts(false);
+    }
+  };
+
+  // Duration estimation - more accurate using speech rate per language
+  const speechRates: Record<string, number> = {
+    'português': 150, // words per minute
+    'inglês': 160,
+    'espanhol': 155,
+    'polonês': 145,
+    'alemão': 140,
+  };
+  const wpm = speechRates[language] || 150;
   const wordCount = script.split(/\s+/).filter(Boolean).length;
   const charCount = script.length;
-  const estimatedMinutes = Math.round(wordCount / 140);
-  const targetWords = parseInt(duration) * 140;
+  const estimatedMinutes = wordCount > 0 ? (wordCount / wpm) : 0;
+  const estimatedMinutesDisplay = `${Math.floor(estimatedMinutes)}:${String(Math.round((estimatedMinutes % 1) * 60)).padStart(2, '0')}`;
+  const targetWords = parseInt(duration) * wpm;
   const progressPercent = Math.min(100, Math.round((wordCount / targetWords) * 100));
 
   const activeHook = VIRAL_HOOKS.find(h => h.id === selectedHook);
@@ -188,29 +293,40 @@ const Scripts = () => {
   const activeStructure = STORY_STRUCTURES.find(s => s.id === selectedStructure);
   const viralCount = [selectedHook, selectedCTA, selectedStructure].filter(Boolean).length;
 
+  const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  const pipelineSteps = [
+    { key: 'script', label: '1. Roteiro', icon: FileText, done: !!script },
+    { key: 'style', label: '2. Estilo Visual', icon: Film, done: !!videoStyle && activeStep !== 'script' },
+    { key: 'characters', label: '3. Personagens', icon: Users, done: characters.length > 0 || activeStep === 'prompts' },
+    { key: 'prompts', label: '4. Prompts Visuais', icon: Image, done: syncedScenes.length > 0 },
+  ] as const;
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center">
-              <FileText className="w-5 h-5 text-accent-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-bold font-['Space_Grotesk']">{t('dash.scripts')}</h1>
-              <p className="text-sm text-muted-foreground">Roteiros dopaminérgicos de alta retenção com IA</p>
+              <p className="text-sm text-muted-foreground">Roteiro → Estilo → Personagens → Prompts Sincronizados</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="gap-2">
-            <History className="w-4 h-4" /> Histórico ({savedScripts.length})
+          <Button variant="outline" onClick={() => setShowHistory(!showHistory)} size="sm" className="gap-2">
+            <History className="w-4 h-4" /> ({savedScripts.length})
           </Button>
         </div>
 
+        {/* History */}
         {showHistory && savedScripts.length > 0 && (
-          <div className="glass rounded-xl p-5 space-y-2 max-h-60 overflow-y-auto">
+          <div className="bg-card border border-border rounded-xl p-4 space-y-1.5 max-h-48 overflow-y-auto">
             {savedScripts.map((s: any) => (
-              <div key={s.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
-                <button onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); }}
+              <div key={s.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5">
+                <button onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); setActiveStep('style'); }}
                   className="text-sm text-left flex-1 truncate hover:text-primary transition-colors">
                   {s.topic} ({s.duration}min)
                 </button>
@@ -222,33 +338,50 @@ const Scripts = () => {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        {/* Pipeline Progress */}
+        {script && (
+          <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-2">
+            {pipelineSteps.map((step, i) => (
+              <button key={step.key} onClick={() => setActiveStep(step.key as any)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                  activeStep === step.key
+                    ? 'bg-primary text-primary-foreground'
+                    : step.done ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/30'
+                }`}>
+                <step.icon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{step.label}</span>
+                {step.done && activeStep !== step.key && <Check className="w-3 h-3" />}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Left: Config */}
           <div className="space-y-4">
-            <div className="glass rounded-xl p-6 space-y-4">
-              <h3 className="font-semibold">Configurações</h3>
+            <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+              <h3 className="font-semibold text-sm">Configurações</h3>
               <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Tópico do vídeo *</label>
-                <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-secondary/50" />
+                <label className="text-xs text-muted-foreground mb-1 block">Tópico *</label>
+                <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-muted/30" />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Duração (minutos)</label>
-                <select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                  <option value="5">5 min (~700 palavras)</option>
-                  <option value="10">10 min (~1.400 palavras)</option>
-                  <option value="15">15 min (~2.100 palavras)</option>
-                  <option value="20">20 min (~2.800 palavras)</option>
-                  <option value="30">30 min (~4.200 palavras)</option>
+                <label className="text-xs text-muted-foreground mb-1 block">Duração (minutos)</label>
+                <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
+                  <option value="5">5 min (~{5 * wpm} palavras)</option>
+                  <option value="10">10 min (~{10 * wpm} palavras)</option>
+                  <option value="15">15 min (~{15 * wpm} palavras)</option>
+                  <option value="20">20 min (~{20 * wpm} palavras)</option>
+                  <option value="30">30 min (~{30 * wpm} palavras)</option>
                 </select>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Estilo do roteiro</label>
-                <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                <label className="text-xs text-muted-foreground mb-1 block">Estilo do roteiro</label>
+                <div className="grid grid-cols-1 gap-1.5 max-h-[180px] overflow-y-auto pr-1">
                   {STYLES.map(s => (
                     <button key={s.value} onClick={() => setStyle(s.value)}
-                      className={`text-left p-2.5 rounded-lg border transition-all text-sm ${
-                        style === s.value 
-                          ? 'border-primary bg-primary/10 text-primary' 
-                          : 'border-border/50 bg-secondary/30 hover:border-primary/30'
+                      className={`text-left p-2 rounded-lg border transition-all text-xs ${
+                        style === s.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
                       }`}>
                       <span className="font-medium">{s.label}</span>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
@@ -256,197 +389,357 @@ const Scripts = () => {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Nicho (opcional)</label>
-                <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Ex: finanças, tecnologia" className="bg-secondary/50" />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Nicho</label>
+                  <Input value={niche} onChange={e => setNiche(e.target.value)} placeholder="finanças" className="bg-muted/30" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Idioma</label>
+                  <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
+                    <option value="português">Português</option>
+                    <option value="inglês">English</option>
+                    <option value="polonês">Polski</option>
+                    <option value="alemão">Deutsch</option>
+                    <option value="espanhol">Español</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Idioma</label>
-                <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                  <option value="português">Português</option>
-                  <option value="inglês">English</option>
-                  <option value="polonês">Polski</option>
-                  <option value="alemão">Deutsch</option>
-                  <option value="espanhol">Español</option>
-                </select>
-              </div>
-              <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gradient-hero border-0 gap-2">
+              <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gap-2">
                 <Sparkles className="w-4 h-4" />
-                {loading ? 'Gerando roteiro com IA...' : 'Gerar Roteiro Dopaminérgico'}
+                {loading ? 'Gerando...' : 'Gerar Roteiro'}
               </Button>
             </div>
 
             {/* Viral Database Panel */}
-            <div className="glass rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
               <button onClick={() => setShowViralPanel(!showViralPanel)}
-                className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors">
+                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-2">
                   <Flame className="w-4 h-4 text-orange-400" />
-                  <span className="font-semibold text-sm">Viral Database</span>
-                  {viralCount > 0 && (
-                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">
-                      {viralCount} selecionado{viralCount > 1 ? 's' : ''}
-                    </Badge>
-                  )}
+                  <span className="font-semibold text-xs">Viral Database</span>
+                  {viralCount > 0 && <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">{viralCount}</Badge>}
                 </div>
                 {showViralPanel ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </button>
-
               {showViralPanel && (
-                <div className="px-4 pb-4 space-y-4 border-t border-border/30 pt-3">
-                  {/* Hook Selector */}
+                <div className="px-3 pb-3 space-y-3 border-t border-border/30 pt-2">
+                  {/* Hooks */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-medium flex items-center gap-1.5">
-                        <Zap className="w-3 h-3 text-primary" /> Hook (primeiros 5s)
-                      </label>
-                      {selectedHook && (
-                        <button onClick={() => setSelectedHook(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Limpar</button>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-medium flex items-center gap-1"><Zap className="w-3 h-3 text-primary" /> Hook (5s)</label>
+                      {selectedHook && <button onClick={() => setSelectedHook(null)} className="text-[9px] text-muted-foreground hover:text-destructive">✕</button>}
                     </div>
-                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
-                      {VIRAL_HOOKS.slice(0, 8).map(hook => (
-                        <button key={hook.id} onClick={() => setSelectedHook(selectedHook === hook.id ? null : hook.id)}
-                          className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
-                            selectedHook === hook.id
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border/30 bg-secondary/20 hover:border-primary/30 text-muted-foreground'
+                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                      {VIRAL_HOOKS.slice(0, 8).map(h => (
+                        <button key={h.id} onClick={() => setSelectedHook(selectedHook === h.id ? null : h.id)}
+                          className={`w-full text-left p-1.5 rounded text-[10px] border transition-all ${
+                            selectedHook === h.id ? 'border-primary bg-primary/10 text-primary' : 'border-border/30 hover:border-primary/30 text-muted-foreground'
                           }`}>
-                          <span className="line-clamp-2">{hook.text}</span>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <Badge variant="outline" className="text-[9px] px-1 py-0">{hook.style}</Badge>
-                            <span className="text-[9px] text-emerald-400">{hook.estimatedRetention}% ret.</span>
-                          </div>
+                          <span className="line-clamp-1">{h.text}</span>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* CTA Selector */}
+                  {/* CTAs */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-medium flex items-center gap-1.5">
-                        <Target className="w-3 h-3 text-primary" /> Call-to-Action
-                      </label>
-                      {selectedCTA && (
-                        <button onClick={() => setSelectedCTA(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Limpar</button>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-medium flex items-center gap-1"><Target className="w-3 h-3 text-primary" /> CTA</label>
+                      {selectedCTA && <button onClick={() => setSelectedCTA(null)} className="text-[9px] text-muted-foreground hover:text-destructive">✕</button>}
                     </div>
-                    <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
-                      {VIRAL_CTAS.slice(0, 6).map(cta => (
-                        <button key={cta.id} onClick={() => setSelectedCTA(selectedCTA === cta.id ? null : cta.id)}
-                          className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
-                            selectedCTA === cta.id
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border/30 bg-secondary/20 hover:border-primary/30 text-muted-foreground'
+                    <div className="space-y-1 max-h-[100px] overflow-y-auto">
+                      {VIRAL_CTAS.slice(0, 6).map(c => (
+                        <button key={c.id} onClick={() => setSelectedCTA(selectedCTA === c.id ? null : c.id)}
+                          className={`w-full text-left p-1.5 rounded text-[10px] border transition-all ${
+                            selectedCTA === c.id ? 'border-primary bg-primary/10 text-primary' : 'border-border/30 hover:border-primary/30 text-muted-foreground'
                           }`}>
-                          <span className="line-clamp-2">{cta.text}</span>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <Badge variant="outline" className="text-[9px] px-1 py-0">{cta.type}</Badge>
-                            <Badge variant="outline" className="text-[9px] px-1 py-0">{cta.placement}</Badge>
-                          </div>
+                          <span className="line-clamp-1">{c.text}</span>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Structure Selector */}
+                  {/* Structures */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-medium flex items-center gap-1.5">
-                        <BookOpen className="w-3 h-3 text-primary" /> Estrutura Narrativa
-                      </label>
-                      {selectedStructure && (
-                        <button onClick={() => setSelectedStructure(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Limpar</button>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-medium flex items-center gap-1"><BookOpen className="w-3 h-3 text-primary" /> Estrutura</label>
+                      {selectedStructure && <button onClick={() => setSelectedStructure(null)} className="text-[9px] text-muted-foreground hover:text-destructive">✕</button>}
                     </div>
-                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
                       {STORY_STRUCTURES.map(s => (
                         <button key={s.id} onClick={() => setSelectedStructure(selectedStructure === s.id ? null : s.id)}
-                          className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
-                            selectedStructure === s.id
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border/30 bg-secondary/20 hover:border-primary/30 text-muted-foreground'
+                          className={`w-full text-left p-1.5 rounded text-[10px] border transition-all ${
+                            selectedStructure === s.id ? 'border-primary bg-primary/10 text-primary' : 'border-border/30 hover:border-primary/30 text-muted-foreground'
                           }`}>
                           <span className="font-medium">{s.name}</span>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{s.description}</p>
-                          <div className="flex gap-1 mt-1 flex-wrap">
-                            {s.bestFor.slice(0, 3).map(b => <Badge key={b} variant="outline" className="text-[8px] px-1 py-0">{b}</Badge>)}
-                          </div>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Active selections summary */}
-                  {viralCount > 0 && (
-                    <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/20 space-y-1">
-                      <p className="text-[10px] font-medium text-orange-400">Elementos virais ativos:</p>
-                      {activeHook && <p className="text-[10px] text-muted-foreground">⚡ Hook: {activeHook.text.slice(0, 50)}...</p>}
-                      {activeCTA && <p className="text-[10px] text-muted-foreground">🎯 CTA ({activeCTA.placement}): {activeCTA.text.slice(0, 50)}...</p>}
-                      {activeStructure && <p className="text-[10px] text-muted-foreground">📖 Estrutura: {activeStructure.name}</p>}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="lg:col-span-2 glass rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold">Roteiro</h3>
-                {script && (
-                  <div className="space-y-2 mt-2">
-                    <p className="text-xs text-muted-foreground">
-                      {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ~{estimatedMinutes} min
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Progress value={progressPercent} className="h-2 flex-1" />
-                      <span className={`text-xs font-medium ${progressPercent >= 100 ? 'text-emerald-400' : progressPercent >= 70 ? 'text-yellow-400' : 'text-destructive'}`}>
-                        {progressPercent}%
-                      </span>
+          {/* Right: Content Area */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Script Output */}
+            <AnimatePresence mode="wait">
+              {(activeStep === 'script' || !script) && (
+                <motion.div key="script" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-sm">Roteiro</h3>
+                      {script && (
+                        <div className="mt-1.5 space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ⏱ {estimatedMinutesDisplay} min
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Progress value={progressPercent} className="h-1.5 flex-1" />
+                            <span className={`text-[10px] font-medium ${progressPercent >= 100 ? 'text-emerald-400' : progressPercent >= 70 ? 'text-yellow-400' : 'text-destructive'}`}>
+                              {progressPercent}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      Meta: {targetWords.toLocaleString()} palavras para {duration} min • {progressPercent >= 100 ? '✅ Meta atingida' : `Faltam ${(targetWords - wordCount).toLocaleString()} palavras`}
-                    </p>
+                    {script && (
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
+                          <Save className="w-3 h-3" /> Salvar
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1 h-7 text-xs">
+                          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        </Button>
+                        <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-1 h-7 text-xs">
+                          Próximo <Film className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              {script && (
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1">
-                    <Save className="w-3 h-3" /> Salvar
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1">
-                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copiado!' : 'Copiar'}
-                  </Button>
-                </div>
+                  {loading && !script && (
+                    <div className="text-center py-12">
+                      <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
+                      <p className="text-sm text-muted-foreground">Gerando com Gemini 2.5 Pro...</p>
+                    </div>
+                  )}
+                  {script ? (
+                    <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
+                      <ReactMarkdown>{script}</ReactMarkdown>
+                    </div>
+                  ) : !loading && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">Configure e gere seu roteiro viral</p>
+                    </div>
+                  )}
+                </motion.div>
               )}
-            </div>
-            {loading && !script && (
-              <div className="text-center py-16">
-                <Zap className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
-                <p className="text-muted-foreground">Gerando roteiro com Gemini 2.5 Pro...</p>
-                <p className="text-xs text-muted-foreground mt-1">Estilo: {STYLES.find(s => s.value === style)?.label}</p>
-                {viralCount > 0 && (
-                  <p className="text-xs text-orange-400 mt-2">🔥 {viralCount} elemento{viralCount > 1 ? 's' : ''} viral injetado{viralCount > 1 ? 's' : ''}</p>
-                )}
-              </div>
-            )}
-            {script ? (
-              <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[600px] pr-2">
-                <ReactMarkdown>{script}</ReactMarkdown>
-              </div>
-            ) : !loading && (
-              <div className="text-center py-16 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p>Selecione um estilo e gere roteiros de alta retenção</p>
-                <p className="text-xs mt-2">Open loops • Pattern interrupts • Curiosity gaps • Hooks magnéticos</p>
-                <p className="text-xs mt-3 text-orange-400/70">💡 Dica: Expanda o painel "Viral Database" para injetar hooks, CTAs e estruturas no roteiro</p>
-              </div>
-            )}
+
+              {/* Step 2: Video Style */}
+              {activeStep === 'style' && script && (
+                <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-sm flex items-center gap-2"><Film className="w-4 h-4 text-accent" /> Estilo Visual do Vídeo</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">Escolha como as imagens/cenas serão geradas</p>
+                    </div>
+                    <Button size="sm" onClick={() => setActiveStep('characters')} className="gap-1 h-7 text-xs">
+                      Próximo <Users className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {VIDEO_STYLES.map(vs => (
+                      <button key={vs.value} onClick={() => setVideoStyle(vs.value)}
+                        className={`text-left p-3 rounded-xl border-2 transition-all ${
+                          videoStyle === vs.value
+                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
+                            : 'border-border hover:border-primary/30'
+                        }`}>
+                        <span className="text-lg block mb-1">{vs.label.split(' ')[0]}</span>
+                        <p className="text-[10px] font-medium text-foreground">{vs.label.split(' ').slice(1).join(' ')}</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">{vs.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 3: Characters */}
+              {activeStep === 'characters' && script && (
+                <motion.div key="chars" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-sm flex items-center gap-2"><Users className="w-4 h-4 text-accent" /> Personagens</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">Defina personagens para consistência visual entre cenas</p>
+                    </div>
+                    <Button size="sm" onClick={() => setActiveStep('prompts')} className="gap-1 h-7 text-xs">
+                      Próximo <Image className="w-3 h-3" />
+                    </Button>
+                  </div>
+
+                  {/* Existing characters */}
+                  {characters.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {characters.map((c, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground">{c.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{c.description}</p>
+                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance} · 👕 {c.clothing}</p>
+                          </div>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeCharacter(i)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add character form */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-0.5 block">Nome *</label>
+                      <Input value={newCharName} onChange={e => setNewCharName(e.target.value)} placeholder="Ex: Narrador" className="bg-muted/30 h-8 text-xs" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-0.5 block">Papel</label>
+                      <Input value={newCharDesc} onChange={e => setNewCharDesc(e.target.value)} placeholder="Protagonista" className="bg-muted/30 h-8 text-xs" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-0.5 block">Aparência</label>
+                      <Input value={newCharAppearance} onChange={e => setNewCharAppearance(e.target.value)} placeholder="Homem 30 anos, cabelo curto" className="bg-muted/30 h-8 text-xs" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-0.5 block">Roupa</label>
+                      <Input value={newCharClothing} onChange={e => setNewCharClothing(e.target.value)} placeholder="Terno azul escuro" className="bg-muted/30 h-8 text-xs" />
+                    </div>
+                  </div>
+                  <Button onClick={addCharacter} disabled={!newCharName.trim()} size="sm" variant="outline" className="mt-2 gap-1 text-xs">
+                    <Users className="w-3 h-3" /> Adicionar Personagem
+                  </Button>
+
+                  {characters.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-3 text-center py-4 border border-dashed border-border/50 rounded-lg">
+                      Sem personagens? Sem problema — pule para Prompts. A IA criará cenas genéricas.
+                    </p>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Step 4: Synced Prompts */}
+              {activeStep === 'prompts' && script && (
+                <motion.div key="prompts" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Prompts Visuais Sincronizados</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">Upload do áudio narrado + IA gera prompts sincronizados com o tempo</p>
+                    </div>
+                  </div>
+
+                  {/* Audio Upload + Settings */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-muted-foreground mb-1 block">🎙️ Áudio Narrado (opcional — melhora a sincronização)</label>
+                      <div className="flex gap-2">
+                        <label className="flex-1 flex items-center gap-2 p-2.5 rounded-lg border border-dashed border-border hover:border-primary/40 cursor-pointer transition-all bg-muted/20">
+                          <Upload className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {audioFile ? `${audioFile.name} (${formatTime(audioDuration)})` : 'Selecionar áudio .mp3/.wav'}
+                          </span>
+                          <input type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden" />
+                        </label>
+                        {audioFile && (
+                          <Button size="icon" variant="ghost" className="shrink-0 h-9 w-9" onClick={() => { setAudioFile(null); setAudioDuration(0); }}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {audioDuration > 0 && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <Clock className="w-3 h-3 text-accent" />
+                          <span className="text-[10px] text-accent font-medium">Duração do áudio: {formatTime(audioDuration)} → {Math.ceil(audioDuration / sceneDuration)} cenas</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">⏱️ Duração por cena</label>
+                      <select value={sceneDuration} onChange={e => setSceneDuration(parseInt(e.target.value))} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
+                        <option value={5}>5 segundos</option>
+                        <option value={6}>6 segundos</option>
+                        <option value={8}>8 segundos (padrão)</option>
+                        <option value={10}>10 segundos</option>
+                        <option value={12}>12 segundos</option>
+                        <option value={15}>15 segundos</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Summary before generation */}
+                  <div className="bg-muted/30 rounded-lg p-3 mb-4 space-y-1">
+                    <p className="text-xs font-medium text-foreground">📋 Resumo da Geração:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] text-muted-foreground">
+                      <span>🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong></span>
+                      <span>👥 Personagens: <strong className="text-foreground">{characters.length || 'Nenhum'}</strong></span>
+                      <span>⏱️ Cenas: <strong className="text-foreground">~{audioDuration > 0 ? Math.ceil(audioDuration / sceneDuration) : '?'}</strong></span>
+                      <span>🎵 Áudio: <strong className="text-foreground">{audioDuration > 0 ? formatTime(audioDuration) : 'Do texto'}</strong></span>
+                    </div>
+                  </div>
+
+                  <Button onClick={generateSyncedPrompts} disabled={generatingPrompts} className="w-full gap-2 mb-4">
+                    {generatingPrompts ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {generatingPrompts ? 'Gerando prompts sincronizados...' : 'Gerar Prompts Sincronizados'}
+                  </Button>
+
+                  {/* Generated Scenes */}
+                  {syncedScenes.length > 0 && (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                      {syncedScenes.map((scene, i) => (
+                        <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                          className="border border-border rounded-lg p-3 hover:border-primary/20 transition-all">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[9px] font-mono">
+                                {formatTime(scene.startTime)} - {formatTime(scene.endTime)}
+                              </Badge>
+                              <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Cena {scene.sceneIndex + 1}</Badge>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[9px]">📷 {scene.cameraAngle}</Badge>
+                              <Badge variant="outline" className="text-[9px]">🎭 {scene.mood}</Badge>
+                            </div>
+                          </div>
+                          <p className="text-xs text-foreground leading-relaxed">{scene.visualPrompt}</p>
+                          {scene.charactersInScene && scene.charactersInScene.length > 0 && (
+                            <div className="flex gap-1 mt-1.5">
+                              {scene.charactersInScene.map((c, ci) => (
+                                <Badge key={ci} variant="secondary" className="text-[9px]">👤 {c}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          {scene.transitionNote && (
+                            <p className="text-[10px] text-muted-foreground mt-1 italic">↗ {scene.transitionNote}</p>
+                          )}
+                          <div className="mt-2">
+                            <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1"
+                              onClick={() => { navigator.clipboard.writeText(scene.visualPrompt); toast.success('Prompt copiado!'); }}>
+                              <Copy className="w-3 h-3" /> Copiar prompt
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
