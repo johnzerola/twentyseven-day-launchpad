@@ -99,6 +99,13 @@ interface TranscriptionBlock {
   endTime: number;
 }
 
+interface TranscriptionData {
+  fullText: string;
+  wordCount: number;
+  audioDuration: number;
+  blocks: TranscriptionBlock[];
+}
+
 const Scripts = () => {
   const { t } = useLanguage();
   const [topic, setTopic] = useState('');
