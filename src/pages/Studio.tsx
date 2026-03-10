@@ -509,6 +509,8 @@ const Studio = () => {
             {generatingCount > 0 && <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1 animate-pulse">⏳ {generatingCount} gerando</Badge>}
             {failedCount > 0 && <Badge variant="destructive" className="gap-1">❌ {failedCount} falhas</Badge>}
             <Badge variant="outline" className="gap-1">🔊 {audioCount} áudios</Badge>
+            {videoCount > 0 && <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1">🎬 {videoCount} vídeos</Badge>}
+            {videoGeneratingCount > 0 && <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1 animate-pulse">🎬 {videoGeneratingCount} processando</Badge>}
           </div>
         )}
 
