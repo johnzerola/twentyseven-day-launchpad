@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle } from 'lucide-react';
+import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
