@@ -4,6 +4,7 @@ import { Menu, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { APP_NAME } from '@/lib/constants';
 
 export const LandingNav = () => {
   const { t } = useLanguage();
