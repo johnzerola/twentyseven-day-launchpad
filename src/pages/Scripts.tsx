@@ -505,6 +505,8 @@ const Scripts = () => {
                   <option value="15">15 min (~{15 * wpm} palavras)</option>
                   <option value="20">20 min (~{20 * wpm} palavras)</option>
                   <option value="30">30 min (~{30 * wpm} palavras)</option>
+                  <option value="40">40 min (~{40 * wpm} palavras)</option>
+                  <option value="60">60 min (~{60 * wpm} palavras)</option>
                 </select>
               </div>
               <div>
