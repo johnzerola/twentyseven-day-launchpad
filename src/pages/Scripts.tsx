@@ -59,6 +59,12 @@ const Scripts = () => {
         body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language }),
       });
 
+      if (resp.status === 402) {
+        throw new Error('⚠️ Créditos de IA insuficientes. Adicione créditos em Settings → Workspace → Usage.');
+      }
+      if (resp.status === 429) {
+        throw new Error('Muitas requisições. Aguarde alguns segundos e tente novamente.');
+      }
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({}));
         throw new Error(err.error || 'Erro ao gerar roteiro');
