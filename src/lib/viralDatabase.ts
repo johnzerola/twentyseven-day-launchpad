@@ -20,7 +20,7 @@ export interface TitlePattern {
   id: string;
   pattern: string;
   example: string;
-  style: 'curiosidade' | 'urgência' | 'números' | 'contraintuitivo' | 'storytelling' | 'polêmica';
+  style: string;
   avgCTR: number;
 }
 

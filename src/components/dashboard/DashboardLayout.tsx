@@ -16,6 +16,7 @@ const navItems = [
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
+  { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Narração', icon: Mic, path: '/narration' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Plano 27 Dias', icon: Calendar, path: '/plan' },
