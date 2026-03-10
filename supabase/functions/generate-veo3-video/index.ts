@@ -19,11 +19,17 @@ serve(async (req) => {
 
     // ACTION: generate — start a new video generation
     if (action === "generate") {
-      const { prompt, aspectRatio, duration, model } = body;
+      const { prompt, aspectRatio, duration, model, negativePrompt } = body;
       if (!prompt) throw new Error("Prompt is required");
 
       const modelId = model || "veo-3.0-generate-preview";
-      const url = `${BASE_URL}/models/${modelId}:predictLongRunning`;
+      const url = `${BASE_URL}/models/${modelId}:generateVideos`;
+
+      const config: any = {
+        aspectRatio: aspectRatio || "16:9",
+        numberOfVideos: 1,
+      };
+      if (negativePrompt) config.negativePrompt = negativePrompt;
 
       const response = await fetch(url, {
         method: "POST",
@@ -32,14 +38,8 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          instances: [{
-            prompt: prompt,
-          }],
-          parameters: {
-            aspectRatio: aspectRatio || "16:9",
-            sampleCount: 1,
-            durationSeconds: duration || 8,
-          },
+          prompt,
+          config,
         }),
       });
 
