@@ -91,6 +91,10 @@ const Studio = () => {
         generatedImage: null,
         audioBase64: null,
         status: 'pending',
+        videoUrl: null,
+        videoBase64: null,
+        videoStatus: 'idle',
+        videoOperationName: null,
       });
     }
     setSegments(newSegments);
