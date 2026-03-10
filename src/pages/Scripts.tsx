@@ -42,6 +42,8 @@ interface Character {
   description: string;
   appearance: string;
   clothing: string;
+  imageUrl?: string;
+  generatingImage?: boolean;
 }
 
 interface SyncedScene {
@@ -223,6 +225,36 @@ const Scripts = () => {
 
   const removeCharacter = (idx: number) => {
     setCharacters(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // Generate character reference image
+  const generateCharacterImage = async (idx: number) => {
+    const char = characters[idx];
+    if (!char) return;
+    setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, generatingImage: true } : c));
+    try {
+      const prompt = `Character reference sheet. ${char.appearance}. Wearing ${char.clothing}. ${char.description}. Full body portrait, clean background, ${VIDEO_STYLES.find(v => v.value === videoStyle)?.desc || 'cinematic style'}. Highly detailed, consistent character design.`;
+      const { data, error } = await supabase.functions.invoke('generate-segment-image', {
+        body: { visualPrompt: prompt, textContent: '', segmentIndex: idx },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.imageUrl) {
+        setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, imageUrl: data.imageUrl, generatingImage: false } : c));
+        toast.success(`Imagem de ${char.name} gerada!`);
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao gerar imagem: ${err.message}`);
+      setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, generatingImage: false } : c));
+    }
+  };
+
+  const generateAllCharacterImages = async () => {
+    for (let i = 0; i < characters.length; i++) {
+      if (!characters[i].imageUrl) {
+        await generateCharacterImage(i);
+      }
+    }
   };
 
   // Extract clean narration text (remove markdown, titles, tags sections)
@@ -586,19 +618,36 @@ const Scripts = () => {
                     <div className="space-y-2 mb-4">
                       {characters.map((c, i) => (
                         <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
-                            {c.name.charAt(0).toUpperCase()}
+                          {/* Character image or placeholder */}
+                          <div className="shrink-0">
+                            {c.imageUrl ? (
+                              <img src={c.imageUrl} alt={c.name} className="w-16 h-16 rounded-lg object-cover border border-border" />
+                            ) : (
+                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-lg font-bold">
+                                {c.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground">{c.name}</p>
                             <p className="text-[10px] text-muted-foreground">{c.description}</p>
                             <p className="text-[10px] text-muted-foreground">👤 {c.appearance} · 👕 {c.clothing}</p>
+                            <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 mt-1 px-2"
+                              disabled={c.generatingImage}
+                              onClick={() => generateCharacterImage(i)}>
+                              {c.generatingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
+                              {c.imageUrl ? 'Regerar imagem' : 'Gerar imagem'}
+                            </Button>
                           </div>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeCharacter(i)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       ))}
+                      <Button onClick={generateAllCharacterImages} variant="outline" size="sm" className="w-full gap-2 text-xs"
+                        disabled={characters.some(c => c.generatingImage)}>
+                        <Image className="w-3 h-3" /> Gerar imagens de todos os personagens
+                      </Button>
                     </div>
                   )}
 
@@ -714,7 +763,17 @@ const Scripts = () => {
                           <Copy className="w-4 h-4" /> Copiar detalhado ({syncedScenes.length})
                         </Button>
                         <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                          const autoflowFormat = syncedScenes.map((scene) => scene.visualPrompt).join('\n\n');
+                          const getCharDesc = (name: string) => {
+                            const c = characters.find(ch => ch.name.toLowerCase() === name.toLowerCase());
+                            return c ? `${c.name} (${c.appearance}, ${c.clothing})` : name;
+                          };
+                          const autoflowFormat = syncedScenes.map((scene) => {
+                            const dur = scene.endTime - scene.startTime;
+                            const charsLine = scene.charactersInScene?.length 
+                              ? `\nPersonagens: ${scene.charactersInScene.map(getCharDesc).join('; ')}`
+                              : '';
+                            return `Cena ${scene.sceneIndex + 1}: ${scene.visualPrompt} | Duração: ${dur}s${charsLine}`;
+                          }).join('\n\n');
                           navigator.clipboard.writeText(autoflowFormat);
                           toast.success('Copiado para AutoFlow! Cole na Prompt List.');
                         }}>
