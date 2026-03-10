@@ -420,6 +420,8 @@ const Studio = () => {
   const failedCount = segments.filter(s => s.status === 'failed').length;
   const generatingCount = segments.filter(s => s.status === 'generating').length;
   const audioCount = segments.filter(s => s.audioBase64).length;
+  const videoCount = segments.filter(s => s.videoStatus === 'completed').length;
+  const videoGeneratingCount = segments.filter(s => s.videoStatus === 'generating' || s.videoStatus === 'polling').length;
   const totalDuration = Math.ceil(segments.length * 8 / 60);
 
   return (
