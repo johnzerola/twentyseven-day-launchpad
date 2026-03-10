@@ -11,15 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import SegmentCard, { type Segment } from '@/components/studio/SegmentCard';
 import JSZip from 'jszip';
-
-const VOICES = [
-  { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', lang: 'EN-US' },
-  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', lang: 'EN-US' },
-  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', lang: 'PT-BR' },
-  { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', lang: 'DE' },
-  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', lang: 'PL' },
-  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', lang: 'ES' },
-];
+import { VOICES } from '@/lib/constants';
 
 // MOCK pre-loaded segments to showcase the 8-second timeline
 const MOCK_SCRIPT = `Você sabia que existem pessoas ganhando mais de 10 mil reais por mês com canais do YouTube sem nunca mostrar o rosto? Isso mesmo. Canais chamados "dark" ou "faceless" estão dominando nichos inteiros. E o melhor: você pode começar hoje, do zero, sem nenhum equipamento caro. Neste vídeo, vou te mostrar o passo a passo completo. Primeiro, vamos falar sobre a escolha do nicho. O nicho é a base de tudo. Um nicho ruim vai te fazer perder meses de trabalho. Nichos como finanças pessoais pagam até 15 dólares por mil visualizações. Já gaming paga apenas 4 dólares. A diferença é brutal. Segundo passo: identidade visual. Seu canal precisa parecer profissional desde o primeiro dia. Use ferramentas de IA para gerar logo, banner e thumbnails que chamem atenção.`;
