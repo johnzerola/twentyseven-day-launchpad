@@ -17,15 +17,89 @@ interface BrandIdentity {
   palette: { hex: string; usage: string }[];
 }
 
+// MOCK — pre-loaded identity results for "Finanças Pessoais" niche
+const MOCK_IDENTITIES: BrandIdentity[] = [
+  {
+    name: 'FinanceiraMente',
+    tagline: 'Liberdade financeira começa na mente.',
+    reason: 'Combina "financeira" com "mente", transmitindo inteligência e mentalidade de riqueza.',
+    logoPrompt: 'Minimalist brain icon merged with a rising bar chart, gradient from deep navy #0f172a to electric purple #7c3aed, clean vector style, dark background --ar 1:1 --v 6',
+    bannerPrompt: 'YouTube banner for "FinanceiraMente" finance channel, cinematic dark background with glowing purple and gold accents, abstract wealth symbols, 2560x1440 --ar 16:9 --v 6',
+    palette: [
+      { hex: '#0f172a', usage: 'Fundo' },
+      { hex: '#1e293b', usage: 'Card' },
+      { hex: '#7c3aed', usage: 'Accent' },
+      { hex: '#f59e0b', usage: 'CTA' },
+      { hex: '#f8fafc', usage: 'Texto' },
+    ],
+  },
+  {
+    name: 'CashFlow Dark',
+    tagline: 'Seu dinheiro trabalhando enquanto você dorme.',
+    reason: 'Direto e poderoso. "Dark" indica canal faceless premium.',
+    logoPrompt: 'Neon green dollar sign morphing into flowing water streams, black background, cyberpunk aesthetic, sharp edges --ar 1:1 --v 6',
+    bannerPrompt: 'YouTube banner for "CashFlow Dark", matrix-style falling money symbols, green neon glow on black, futuristic and premium, 2560x1440 --ar 16:9 --v 6',
+    palette: [
+      { hex: '#0a0a0a', usage: 'Fundo' },
+      { hex: '#171717', usage: 'Card' },
+      { hex: '#22c55e', usage: 'Accent' },
+      { hex: '#ef4444', usage: 'CTA' },
+      { hex: '#e5e5e5', usage: 'Texto' },
+    ],
+  },
+  {
+    name: 'Renda Automática',
+    tagline: 'Automatize seus ganhos. Libere seu tempo.',
+    reason: 'SEO forte — "renda" é keyword top. "Automática" conecta com passive income.',
+    logoPrompt: 'Gear/cog icon with a money plant growing through center, warm orange and deep blue tones, modern flat design, clean background --ar 1:1 --v 6',
+    bannerPrompt: 'YouTube banner for "Renda Automática", robotic arm arranging money stacks, warm cinematic lighting, orange and blue color scheme, premium feel, 2560x1440 --ar 16:9 --v 6',
+    palette: [
+      { hex: '#1a1a2e', usage: 'Fundo' },
+      { hex: '#16213e', usage: 'Card' },
+      { hex: '#e94560', usage: 'Accent' },
+      { hex: '#f97316', usage: 'CTA' },
+      { hex: '#ffffff', usage: 'Texto' },
+    ],
+  },
+];
+
+const MOCK_KEYWORDS = [
+  'renda passiva 2026', 'como ganhar dinheiro online', 'investimentos para iniciantes',
+  'finanças pessoais', 'independência financeira', 'dinheiro trabalhando pra você',
+  'tesouro direto', 'renda extra', 'como investir pouco', 'canal dark youtube',
+  'youtube sem aparecer', 'monetização youtube', 'RPM alto', 'nicho lucrativo',
+  'passive income', 'cash flow', 'financial freedom',
+];
+
+const MOCK_THUMBNAIL_STYLE = `**Estilo recomendado para thumbnails de Finanças:**
+• Rosto expressivo (choque/surpresa) OU imagens de dinheiro/gráficos em ascensão
+• Texto bold com no máximo 4-5 palavras
+• Cores contrastantes: amarelo/laranja sobre fundo escuro
+• Números grandes destacados (ex: "R$50.000", "5 fontes")
+• Evitar excesso de elementos — foco em 1 ponto visual`;
+
+const MOCK_PILLARS = [
+  'Investimentos para Iniciantes — CDB, Tesouro, FIIs explicados de forma simples',
+  'Renda Passiva — Estratégias reais para gerar dinheiro no piloto automático',
+  'Mentalidade de Riqueza — Hábitos e mindset dos milionários',
+  'YouTube Dark — Como criar canais faceless lucrativos do zero',
+];
+
+const MOCK_SUBNICHES = [
+  { name: 'Dividendos Mensais', potential: 'Alto', competition: 'Média' },
+  { name: 'Criptomoedas para Iniciantes', potential: 'Muito Alto', competition: 'Alta' },
+  { name: 'Frugalismo', potential: 'Médio', competition: 'Baixa' },
+];
+
 const Branding = () => {
-  const [niche, setNiche] = useState('');
+  const [niche, setNiche] = useState('Finanças Pessoais');
   const [loading, setLoading] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [identities, setIdentities] = useState<BrandIdentity[]>([]);
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [thumbnailStyle, setThumbnailStyle] = useState('');
-  const [contentPillars, setContentPillars] = useState<string[]>([]);
-  const [subNiches, setSubNiches] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(true);
+  const [identities, setIdentities] = useState<BrandIdentity[]>(MOCK_IDENTITIES);
+  const [keywords, setKeywords] = useState<string[]>(MOCK_KEYWORDS);
+  const [thumbnailStyle, setThumbnailStyle] = useState(MOCK_THUMBNAIL_STYLE);
+  const [contentPillars, setContentPillars] = useState<string[]>(MOCK_PILLARS);
+  const [subNiches, setSubNiches] = useState<any[]>(MOCK_SUBNICHES);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
 
   const generate = async () => {
@@ -47,13 +121,7 @@ const Branding = () => {
         reason: cn.reason || '',
         logoPrompt: cn.logoPrompt || `Logo for "${cn.name}" YouTube channel in ${niche} niche. --ar 1:1 --v 6`,
         bannerPrompt: cn.bannerPrompt || `YouTube banner for "${cn.name}". 2560x1440 --ar 16:9 --v 6`,
-        palette: palettes[i] || [
-          { hex: '#0f172a', usage: 'Fundo' },
-          { hex: '#1e293b', usage: 'Card' },
-          { hex: '#7c3aed', usage: 'Accent' },
-          { hex: '#f97316', usage: 'CTA' },
-          { hex: '#f8fafc', usage: 'Texto' },
-        ],
+        palette: palettes[i] || MOCK_IDENTITIES[0].palette,
       })));
       setKeywords(data.seoTags || []);
       setThumbnailStyle(data.thumbnailStyle || '');
@@ -78,7 +146,7 @@ const Branding = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center glow-primary">
             <Palette className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
@@ -217,14 +285,6 @@ const Branding = () => {
               </div>
             </motion.div>
           </>
-        )}
-
-        {!showResults && (
-          <div className="glass rounded-xl p-16 text-center text-muted-foreground">
-            <Palette className="w-16 h-16 mx-auto mb-4 opacity-20" />
-            <p className="text-lg font-medium">Digite seu nicho para gerar 3 identidades visuais completas</p>
-            <p className="text-sm mt-1">Nomes, paletas, prompts para Midjourney, thumbnails, pilares e keywords SEO</p>
-          </div>
         )}
       </div>
     </DashboardLayout>

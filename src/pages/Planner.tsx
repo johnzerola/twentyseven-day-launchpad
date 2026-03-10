@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Kanban, GripVertical, Plus, Calendar, Trash2, Loader2 } from 'lucide-react';
+import { Kanban, GripVertical, Plus, Calendar, Trash2, Loader2, Film, FileText, Sparkles, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,15 +21,16 @@ interface Column {
   id: string;
   title: string;
   emoji: string;
+  color: string;
   cards: KanbanCard[];
 }
 
 const COLUMNS_META = [
-  { id: 'ideas', title: 'Ideias', emoji: '💡' },
-  { id: 'scripting', title: 'Escrevendo Roteiro', emoji: '✍️' },
-  { id: 'media', title: 'Gerando Mídia', emoji: '🎬' },
-  { id: 'editing', title: 'Editando', emoji: '✂️' },
-  { id: 'scheduled', title: 'Agendado', emoji: '📅' },
+  { id: 'ideas', title: 'Ideias', emoji: '💡', color: 'border-t-yellow-500' },
+  { id: 'scripting', title: 'Escrevendo Roteiro', emoji: '✍️', color: 'border-t-violet-500' },
+  { id: 'media', title: 'Gerando Mídia', emoji: '🎬', color: 'border-t-blue-500' },
+  { id: 'editing', title: 'Editando', emoji: '✂️', color: 'border-t-orange-500' },
+  { id: 'scheduled', title: 'Agendado no YouTube', emoji: '📅', color: 'border-t-emerald-500' },
 ];
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -38,25 +39,57 @@ const PRIORITY_COLORS: Record<string, string> = {
   baixa: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 
+// MOCK pre-loaded cards to show a realistic Kanban board
+const MOCK_CARDS: KanbanCard[] = [
+  { id: 'm1', title: '5 Fontes de Renda Passiva para 2026', priority: 'alta', due_date: '2026-03-15', tags: ['finanças', 'viral'], position: 0 },
+  { id: 'm2', title: 'Como Fiz R$10k Sem Aparecer', priority: 'alta', due_date: '2026-03-18', tags: ['faceless', 'storytelling'], position: 1 },
+  { id: 'm3', title: 'O Segredo dos Canais Dark', priority: 'média', due_date: null, tags: ['tutorial'], position: 2 },
+  { id: 'm4', title: 'Tesouro Direto vs CDB — Comparativo', priority: 'média', due_date: '2026-03-20', tags: ['finanças'], position: 0 },
+  { id: 'm5', title: 'Roteiro: 7 Erros de Iniciantes', priority: 'alta', due_date: '2026-03-12', tags: ['roteiro'], position: 0 },
+  { id: 'm6', title: 'Gerando 50 cenas no Veo3', priority: 'baixa', due_date: null, tags: ['produção'], position: 0 },
+  { id: 'm7', title: 'Edição final — vídeo de finanças', priority: 'alta', due_date: '2026-03-11', tags: ['edição'], position: 0 },
+  { id: 'm8', title: 'Upload: Renda Passiva ep.1', priority: 'alta', due_date: '2026-03-13', tags: ['upload'], position: 0 },
+];
+
+const MOCK_COLUMN_MAP: Record<string, string[]> = {
+  ideas: ['m1', 'm2', 'm3'],
+  scripting: ['m4', 'm5'],
+  media: ['m6'],
+  editing: ['m7'],
+  scheduled: ['m8'],
+};
+
 const Planner = () => {
-  const [columns, setColumns] = useState<Column[]>(COLUMNS_META.map(c => ({ ...c, cards: [] })));
+  const [columns, setColumns] = useState<Column[]>(
+    COLUMNS_META.map(c => ({
+      ...c,
+      cards: (MOCK_COLUMN_MAP[c.id] || []).map(id => MOCK_CARDS.find(card => card.id === id)!).filter(Boolean),
+    }))
+  );
   const [draggedCard, setDraggedCard] = useState<{ cardId: string; fromColumn: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const [dbLoaded, setDbLoaded] = useState(false);
 
-  useEffect(() => { loadCards(); }, []);
+  useEffect(() => {
+    loadCards();
+  }, []);
 
   const loadCards = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     const { data, error } = await supabase.from('planner_cards').select('*')
       .eq('user_id', user.id).order('position');
-    if (error) { toast.error('Erro ao carregar cards'); setLoading(false); return; }
+    if (error || !data?.length) {
+      // Keep mock data if no DB cards
+      setLoading(false);
+      return;
+    }
 
     const cols = COLUMNS_META.map(c => ({
       ...c,
-      cards: (data || [])
+      cards: data
         .filter((card: any) => card.column_id === c.id)
         .map((card: any) => ({
           id: card.id,
@@ -68,6 +101,7 @@ const Planner = () => {
         })),
     }));
     setColumns(cols);
+    setDbLoaded(true);
     setLoading(false);
   };
 
@@ -93,8 +127,15 @@ const Planner = () => {
   };
 
   const deleteCard = async (cardId: string) => {
-    await supabase.from('planner_cards').delete().eq('id', cardId);
-    await loadCards();
+    if (dbLoaded) {
+      await supabase.from('planner_cards').delete().eq('id', cardId);
+      await loadCards();
+    } else {
+      setColumns(prev => prev.map(col => ({
+        ...col,
+        cards: col.cards.filter(c => c.id !== cardId),
+      })));
+    }
     toast.success('Card removido');
   };
 
@@ -103,11 +144,35 @@ const Planner = () => {
       setDraggedCard(null);
       return;
     }
-    await supabase.from('planner_cards').update({ column_id: toColumn } as any).eq('id', draggedCard.cardId);
-    setDraggedCard(null);
-    await loadCards();
+    if (dbLoaded) {
+      await supabase.from('planner_cards').update({ column_id: toColumn } as any).eq('id', draggedCard.cardId);
+      setDraggedCard(null);
+      await loadCards();
+    } else {
+      // Move mock card locally
+      let movedCard: KanbanCard | undefined;
+      setColumns(prev => {
+        const updated = prev.map(col => {
+          if (col.id === draggedCard.fromColumn) {
+            const card = col.cards.find(c => c.id === draggedCard.cardId);
+            if (card) movedCard = card;
+            return { ...col, cards: col.cards.filter(c => c.id !== draggedCard.cardId) };
+          }
+          return col;
+        });
+        if (movedCard) {
+          return updated.map(col =>
+            col.id === toColumn ? { ...col, cards: [...col.cards, movedCard!] } : col
+          );
+        }
+        return updated;
+      });
+      setDraggedCard(null);
+    }
     toast.success('Card movido!');
   };
+
+  const totalCards = columns.reduce((acc, c) => acc + c.cards.length, 0);
 
   if (loading) {
     return (
@@ -124,12 +189,12 @@ const Planner = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center glow-primary">
               <Kanban className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-bold font-['Space_Grotesk']">Dotti Planner</h1>
-              <p className="text-sm text-muted-foreground">Gerencie seus projetos de vídeo estilo Kanban</p>
+              <p className="text-sm text-muted-foreground">Gerencie seus projetos de vídeo • {totalCards} projetos</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -144,9 +209,11 @@ const Planner = () => {
 
         <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
           {columns.map((column) => (
-            <div key={column.id} className="flex-shrink-0 w-64"
-              onDragOver={e => e.preventDefault()} onDrop={() => handleDrop(column.id)}>
-              <div className="glass rounded-xl p-3 min-h-[400px]">
+            <div key={column.id} className="flex-shrink-0 w-72"
+              onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-primary/30', 'rounded-xl'); }}
+              onDragLeave={e => { e.currentTarget.classList.remove('ring-2', 'ring-primary/30', 'rounded-xl'); }}
+              onDrop={e => { e.currentTarget.classList.remove('ring-2', 'ring-primary/30', 'rounded-xl'); handleDrop(column.id); }}>
+              <div className={`glass rounded-xl p-3 min-h-[500px] border-t-2 ${column.color}`}>
                 <div className="flex items-center justify-between mb-3 px-1">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <span>{column.emoji}</span> {column.title}
@@ -168,7 +235,7 @@ const Planner = () => {
                             </Badge>
                             {card.due_date && (
                               <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Calendar className="w-2.5 h-2.5" /> {card.due_date}
+                                <Clock className="w-2.5 h-2.5" /> {new Date(card.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                               </span>
                             )}
                           </div>
@@ -187,6 +254,11 @@ const Planner = () => {
                       </div>
                     </motion.div>
                   ))}
+                  {column.cards.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground/40">
+                      <p className="text-xs">Arraste cards aqui</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
