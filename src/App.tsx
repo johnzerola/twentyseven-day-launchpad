@@ -21,6 +21,8 @@ import Studio from "./pages/Studio";
 import Planner from "./pages/Planner";
 import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
+import Workflow from "./pages/Workflow";
+import MonetizationPlanner from "./pages/MonetizationPlanner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
