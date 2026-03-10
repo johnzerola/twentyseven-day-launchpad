@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles, Flame } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,7 @@ const navItems = [
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
+  { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Narração', icon: Mic, path: '/narration' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Plano 27 Dias', icon: Calendar, path: '/plan' },
