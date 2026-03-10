@@ -863,29 +863,69 @@ const Scripts = () => {
                   {/* Generated Scenes */}
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* Copy full JSON */}
+                        <Button variant="default" className="gap-2 text-xs col-span-3" onClick={() => {
+                          const fullJson = {
+                            project: {
+                              topic,
+                              duration: parseInt(duration),
+                              language,
+                              style,
+                              videoStyle,
+                              totalScenes: syncedScenes.length,
+                              estimatedDuration: audioDuration > 0 ? audioDuration : syncedScenes.length * sceneDuration,
+                              sceneDuration,
+                              wordCount,
+                              generatedAt: new Date().toISOString(),
+                            },
+                            script: {
+                              fullText: getCleanNarration(),
+                              wordCount,
+                              estimatedMinutes: estimatedMinutesDisplay,
+                            },
+                            characters: characters.map(c => ({
+                              name: c.name,
+                              gender: c.gender,
+                              age: c.age,
+                              role: c.role,
+                              appearance: c.appearance,
+                              facial_features: c.facial_features,
+                              clothing: c.clothing,
+                              personality: c.personality,
+                              referenceImageUrl: c.imageUrl || null,
+                            })),
+                            scenes: syncedScenes.map(scene => ({
+                              sceneIndex: scene.sceneIndex + 1,
+                              startTime: scene.startTime,
+                              endTime: scene.endTime,
+                              duration: scene.endTime - scene.startTime,
+                              timestamp: `${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}`,
+                              visualPrompt: scene.visualPrompt,
+                              cameraAngle: scene.cameraAngle,
+                              mood: scene.mood,
+                              charactersInScene: scene.charactersInScene || [],
+                              transitionNote: scene.transitionNote || null,
+                            })),
+                          };
+                          navigator.clipboard.writeText(JSON.stringify(fullJson, null, 2));
+                          toast.success(`JSON completo copiado! (${syncedScenes.length} cenas + ${characters.length} personagens)`);
+                        }}>
+                          <Copy className="w-4 h-4" /> 📋 Copiar JSON Completo ({syncedScenes.length} cenas)
+                        </Button>
+
                         <Button variant="outline" className="gap-2 text-xs" onClick={() => {
                           const allPrompts = syncedScenes.map((scene) => 
                             `Cena ${scene.sceneIndex + 1} [${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}] (${scene.cameraAngle} | ${scene.mood}):\n${scene.visualPrompt}${scene.charactersInScene?.length ? `\nPersonagens: ${scene.charactersInScene.join(', ')}` : ''}${scene.transitionNote ? `\nTransição: ${scene.transitionNote}` : ''}`
                           ).join('\n\n---\n\n');
                           navigator.clipboard.writeText(allPrompts);
-                          toast.success('Todos os prompts copiados!');
+                          toast.success('Prompts detalhados copiados!');
                         }}>
-                          <Copy className="w-4 h-4" /> Copiar detalhado ({syncedScenes.length})
+                          <Copy className="w-4 h-4" /> Detalhado
                         </Button>
-                        <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                          // Build character JSON block at top
-                          const charBlock = characters.length > 0
-                            ? `=== PERSONAGENS ===\n${characters.map(c => {
-                                const charJson = {
-                                  name: c.name, gender: c.gender, age: c.age,
-                                  appearance: c.appearance, facial_features: c.facial_features,
-                                  clothing: c.clothing, personality: c.personality,
-                                };
-                                return `${c.name}: ${JSON.stringify(charJson, null, 2)}`;
-                              }).join('\n\n')}\n\n=== CENAS ===\n`
-                            : '';
-                          const autoflowFormat = charBlock + syncedScenes.map((scene) => {
+
+                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
+                          const autoflowFormat = syncedScenes.map((scene) => {
                             const dur = scene.endTime - scene.startTime;
                             const charsLine = scene.charactersInScene?.length 
                               ? ` | Personagens: ${scene.charactersInScene.join(', ')}`
@@ -893,9 +933,21 @@ const Scripts = () => {
                             return `Cena ${scene.sceneIndex + 1}: ${scene.visualPrompt} | Duração: ${dur}s${charsLine}`;
                           }).join('\n\n');
                           navigator.clipboard.writeText(autoflowFormat);
-                          toast.success('Copiado para AutoFlow com JSON de personagens!');
+                          toast.success('Copiado para AutoFlow!');
                         }}>
-                          <Copy className="w-4 h-4" /> Copiar p/ AutoFlow ({syncedScenes.length})
+                          <Copy className="w-4 h-4" /> AutoFlow
+                        </Button>
+
+                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
+                          const charsJson = characters.map(c => ({
+                            name: c.name, gender: c.gender, age: c.age, role: c.role,
+                            appearance: c.appearance, facial_features: c.facial_features,
+                            clothing: c.clothing, personality: c.personality,
+                          }));
+                          navigator.clipboard.writeText(JSON.stringify(charsJson, null, 2));
+                          toast.success(`JSON de ${characters.length} personagens copiado!`);
+                        }}>
+                          <Copy className="w-4 h-4" /> Personagens JSON
                         </Button>
                       </div>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
