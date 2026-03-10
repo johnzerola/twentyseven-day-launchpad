@@ -700,6 +700,16 @@ const Scripts = () => {
 
                   {/* Generated Scenes */}
                   {syncedScenes.length > 0 && (
+                    <div className="space-y-3">
+                      <Button variant="outline" className="w-full gap-2" onClick={() => {
+                        const allPrompts = syncedScenes.map((scene, i) => 
+                          `Cena ${scene.sceneIndex + 1} [${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}] (${scene.cameraAngle} | ${scene.mood}):\n${scene.visualPrompt}${scene.charactersInScene?.length ? `\nPersonagens: ${scene.charactersInScene.join(', ')}` : ''}${scene.transitionNote ? `\nTransição: ${scene.transitionNote}` : ''}`
+                        ).join('\n\n---\n\n');
+                        navigator.clipboard.writeText(allPrompts);
+                        toast.success('Todos os prompts copiados!');
+                      }}>
+                        <Copy className="w-4 h-4" /> Copiar todos os prompts ({syncedScenes.length} cenas)
+                      </Button>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                       {syncedScenes.map((scene, i) => (
                         <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
@@ -735,6 +745,7 @@ const Scripts = () => {
                           </div>
                         </motion.div>
                       ))}
+                    </div>
                     </div>
                   )}
                 </motion.div>
