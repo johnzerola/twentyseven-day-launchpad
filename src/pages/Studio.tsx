@@ -13,42 +13,14 @@ import SegmentCard, { type Segment } from '@/components/studio/SegmentCard';
 import JSZip from 'jszip';
 import { VOICES } from '@/lib/constants';
 
-// MOCK pre-loaded segments to showcase the 8-second timeline
-const MOCK_SCRIPT = `Você sabia que existem pessoas ganhando mais de 10 mil reais por mês com canais do YouTube sem nunca mostrar o rosto? Isso mesmo. Canais chamados "dark" ou "faceless" estão dominando nichos inteiros. E o melhor: você pode começar hoje, do zero, sem nenhum equipamento caro. Neste vídeo, vou te mostrar o passo a passo completo. Primeiro, vamos falar sobre a escolha do nicho. O nicho é a base de tudo. Um nicho ruim vai te fazer perder meses de trabalho. Nichos como finanças pessoais pagam até 15 dólares por mil visualizações. Já gaming paga apenas 4 dólares. A diferença é brutal. Segundo passo: identidade visual. Seu canal precisa parecer profissional desde o primeiro dia. Use ferramentas de IA para gerar logo, banner e thumbnails que chamem atenção.`;
-
-const MOCK_SEGMENTS: Segment[] = [
-  { index: 0, text: 'Você sabia que existem pessoas ganhando mais de 10 mil reais por mês com canais do YouTube sem nunca mostrar o rosto?', visualPrompt: 'Cinematic shot of a laptop screen showing YouTube analytics dashboard with earnings graph going up, dark moody lighting, shallow depth of field, 8K quality', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-  { index: 1, text: 'Isso mesmo. Canais chamados "dark" ou "faceless" estão dominando nichos inteiros. E o melhor: você pode começar hoje.', visualPrompt: 'Montage of multiple YouTube channel thumbnails floating in dark space, neon purple glow, cinematic composition, dark aesthetic', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-  { index: 2, text: 'Do zero, sem nenhum equipamento caro. Neste vídeo, vou te mostrar o passo a passo completo.', visualPrompt: 'Close-up of hands typing on a minimalist desk setup with single monitor, dramatic rim lighting, dark background, professional look', referenceImage: null, generatedImage: null, audioBase64: null, status: 'success', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-  { index: 3, text: 'Primeiro, vamos falar sobre a escolha do nicho. O nicho é a base de tudo. Um nicho ruim vai te fazer perder meses.', visualPrompt: 'Holographic 3D pie chart showing different YouTube niches with labels, floating in dark space, sci-fi aesthetic, purple and orange accents', referenceImage: null, generatedImage: null, audioBase64: null, status: 'generating', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-  { index: 4, text: 'Nichos como finanças pessoais pagam até 15 dólares por mil visualizações. Já gaming paga apenas 4 dólares.', visualPrompt: 'Split screen comparison: left side shows stacks of money (finance), right side shows game controller (gaming), dramatic contrast lighting', referenceImage: null, generatedImage: null, audioBase64: null, status: 'pending', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-  { index: 5, text: 'A diferença é brutal. Segundo passo: identidade visual. Seu canal precisa parecer profissional desde o primeiro dia.', visualPrompt: 'Before/after comparison of amateur vs professional YouTube channel page, dramatic reveal animation style, dark theme', referenceImage: null, generatedImage: null, audioBase64: null, status: 'pending', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-  { index: 6, text: 'Use ferramentas de IA para gerar logo, banner e thumbnails que chamem atenção.', visualPrompt: 'AI generating brand assets on screen — logos, banners morphing into shape, magical particle effects, dark studio environment', referenceImage: null, generatedImage: null, audioBase64: null, status: 'failed', videoUrl: null, videoBase64: null, videoStatus: 'idle', videoOperationName: null },
-];
-
-const MOCK_LOGS = [
-  '[14:32:01] 🚀 Pipeline Completo Iniciado',
-  '[14:32:01] 📝 Passo 1/3: Fatiando roteiro em blocos de 8s...',
-  '[14:32:02] ✅ Roteiro fatiado em 7 segmentos',
-  '[14:32:02] 🎙️ Passo 2/3: Gerando áudio + prompts visuais...',
-  '[14:32:05] ✅ Áudio segmento 1 pronto',
-  '[14:32:08] ✅ Áudio segmento 2 pronto',
-  '[14:32:11] ✅ Áudio segmento 3 pronto',
-  '[14:32:14] 🎨 Passo 3/3: Gerando imagens em lote...',
-  '[14:32:18] ✅ Cena 1 renderizada no Veo3',
-  '[14:32:22] ✅ Cena 2 renderizada no Veo3',
-  '[14:32:26] ✅ Cena 3 renderizada no Veo3',
-  '[14:32:30] ⏳ Renderizando cena 4 de 7 no Veo3...',
-];
-
 const Studio = () => {
-  const [script, setScript] = useState(MOCK_SCRIPT);
-  const [voice, setVoice] = useState(VOICES[2].id);
-  const [segments, setSegments] = useState<Segment[]>(MOCK_SEGMENTS);
+  const [script, setScript] = useState('');
+  const [voice, setVoice] = useState(VOICES[0].id);
+  const [segments, setSegments] = useState<Segment[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
-  const [batchProgress, setBatchProgress] = useState(57);
-  const [batchLogs, setBatchLogs] = useState<string[]>(MOCK_LOGS);
-  const [showLogs, setShowLogs] = useState(true);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchLogs, setBatchLogs] = useState<string[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
   const [generatingImage, setGeneratingImage] = useState<number | null>(null);
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
@@ -60,13 +32,22 @@ const Studio = () => {
   const [quotaCooldown, setQuotaCooldown] = useState(0);
   const quotaCooldownRef = useRef<NodeJS.Timeout | null>(null);
   const batchAbortRef = useRef(false);
-  const [characterDesc, setCharacterDesc] = useState('Homem de 30 anos, barba curta, óculos redondos, vestindo moletom preto');
+  const [characterDesc, setCharacterDesc] = useState('');
 
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const segmentsRef = useRef(segments);
   useEffect(() => { segmentsRef.current = segments; }, [segments]);
+
+  // Cleanup polling timers and cooldown on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(videoPollingMap).forEach(t => clearTimeout(t));
+      if (quotaCooldownRef.current) clearInterval(quotaCooldownRef.current);
+      audioPreviewRef.current?.pause();
+    };
+  }, []);
 
   const addLog = (msg: string) => {
     setBatchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
