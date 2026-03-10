@@ -23,13 +23,17 @@ serve(async (req) => {
       if (!prompt) throw new Error("Prompt is required");
 
       const modelId = model || "veo-3.1-generate-preview";
-      const url = `${BASE_URL}/models/${modelId}:generateVideos`;
+      const url = `${BASE_URL}/models/${modelId}:predictLongRunning`;
 
-      const config: any = {
+      const instanceObj: any = { prompt };
+      const parametersObj: any = {
         aspectRatio: aspectRatio || "16:9",
-        numberOfVideos: 1,
+        sampleCount: 1,
       };
-      if (negativePrompt) config.negativePrompt = negativePrompt;
+      if (negativePrompt) parametersObj.negativePrompt = negativePrompt;
+
+      console.log("Veo3 request URL:", url);
+      console.log("Veo3 request body:", JSON.stringify({ instances: [instanceObj], parameters: parametersObj }));
 
       const response = await fetch(url, {
         method: "POST",
@@ -38,8 +42,8 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt,
-          config,
+          instances: [instanceObj],
+          parameters: parametersObj,
         }),
       });
 
