@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle } from 'lucide-react';
+import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
+import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
 
 interface VideoResult {
   id: string; title: string; channelTitle: string; channelId: string;
@@ -112,6 +113,8 @@ const ChannelSearch = () => {
   const [emulating, setEmulating] = useState<string | null>(null);
   const [emulationResult, setEmulationResult] = useState<any>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [deepScanning, setDeepScanning] = useState<string | null>(null);
+  const [deepScanResult, setDeepScanResult] = useState<any>(null);
 
   const medianViews = channelInfo?.avgViews || 156_000;
 
@@ -162,6 +165,24 @@ const ChannelSearch = () => {
     toast.success(`${video.channelTitle} rastreado!`);
   };
 
+  const deepScanVideo = async (videoId: string) => {
+    setDeepScanning(videoId);
+    setDeepScanResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('deep-scan-video', {
+        body: { videoId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setDeepScanResult(data);
+      toast.success('Deep Scan completo!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro no Deep Scan');
+    } finally {
+      setDeepScanning(null);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -170,8 +191,8 @@ const ChannelSearch = () => {
             <Search className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk']">TubeSpy & Radar de Outliers</h1>
-            <p className="text-sm text-muted-foreground">Espione concorrentes e descubra vídeos virais</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk']">TubeSpy — Deep Scan & Engenharia Reversa</h1>
+            <p className="text-sm text-muted-foreground">Espione, analise hooks, retenção, clone vídeos virais — fique 10 passos à frente</p>
           </div>
         </div>
 
@@ -422,6 +443,12 @@ const ChannelSearch = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" 
+                              onClick={() => deepScanVideo(v.id)} 
+                              disabled={deepScanning === v.id}
+                              title="Deep Scan — Engenharia Reversa">
+                              {deepScanning === v.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3 text-primary" />}
+                            </Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => trackChannel(v)} title="Rastrear canal">
                               <Star className="w-3 h-3" />
                             </Button>
@@ -436,6 +463,33 @@ const ChannelSearch = () => {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Deep Scan Result Panel */}
+        <AnimatePresence>
+          {deepScanResult && (
+            <DeepScanPanel
+              result={deepScanResult}
+              onClose={() => setDeepScanResult(null)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Deep Scanning Loader */}
+        {deepScanning && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="glass rounded-xl p-8 text-center border border-primary/20">
+            <Brain className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
+            <h3 className="font-bold text-lg">Deep Scan em Andamento...</h3>
+            <p className="text-sm text-muted-foreground mt-1">Analisando hooks, retenção, DNA do conteúdo e gerando template de clonagem</p>
+            <div className="flex justify-center gap-2 mt-4">
+              {['Hook', 'Retenção', 'DNA', 'CTR', 'Clone'].map((step, i) => (
+                <Badge key={i} variant="outline" className="text-[10px] animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
+                  {step}
+                </Badge>
+              ))}
             </div>
           </motion.div>
         )}
