@@ -93,7 +93,7 @@ serve(async (req) => {
       if (!operationName) throw new Error("operationName is required");
 
       const url = `${BASE_URL}/${operationName}`;
-      const response = await fetch(url, {
+      const response = await fetchWithRetry(url, {
         headers: { "x-goog-api-key": GOOGLE_AI_API_KEY },
       });
 
