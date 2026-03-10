@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock } from 'lucide-react';
+import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock, ExternalLink, Swords, Timer, BadgeDollarSign } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatNumber } from '@/lib/formatters';
 import { COUNTRIES } from '@/lib/constants';
@@ -38,7 +38,7 @@ const NicheExplorer = () => {
     setData(null);
     setActiveTab('overview');
 
-    const phases = ['Buscando vídeos trending...', 'Analisando canais...', 'IA processando inteligência...', 'Calculando RPM e projeções...'];
+    const phases = ['Buscando vídeos trending...', 'Analisando canais concorrentes...', 'IA processando inteligência...', 'Calculando projeções realistas...'];
     let i = 0;
     setLoadingPhase(phases[0]);
     const interval = setInterval(() => {
@@ -63,9 +63,23 @@ const NicheExplorer = () => {
     }
   };
 
+  const trackChannel = async (ch: any) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return toast.error('Faça login');
+    const { error } = await supabase.from('tracked_channels').insert({
+      user_id: user.id, youtube_channel_id: ch.id,
+      channel_name: ch.name, subscribers: ch.subscribers,
+      thumbnail: ch.thumbnail || '',
+    } as any);
+    if (error?.code === '23505') return toast.info('Canal já rastreado');
+    if (error) return toast.error('Erro');
+    toast.success(`${ch.name} rastreado!`);
+  };
+
   const a = data?.analysis;
   const channels = data?.channels || [];
   const trending = data?.trending || [];
+  const countryMeta = data?.meta?.countryData;
   const filteredChannels = filterFaceless ? channels.filter((c: any) => c.faceless) : channels;
 
   const radarData = a?.radarMetrics ? [
@@ -79,6 +93,16 @@ const NicheExplorer = () => {
 
   const copyText = (text: string) => { navigator.clipboard.writeText(text); toast.success('Copiado!'); };
 
+  const strategyTypeLabel = (type: string) => {
+    switch (type) {
+      case 'hook_pattern': return { label: 'Hook', color: 'bg-accent/20 text-accent', icon: Zap };
+      case 'title_formula': return { label: 'Título', color: 'bg-primary/20 text-primary', icon: Crown };
+      case 'content_gap': return { label: 'Gap', color: 'bg-emerald-500/20 text-emerald-400', icon: Target };
+      case 'viral_format': return { label: 'Viral', color: 'bg-yellow-500/20 text-yellow-400', icon: Flame };
+      default: return { label: type, color: 'bg-secondary', icon: Lightbulb };
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -91,7 +115,7 @@ const NicheExplorer = () => {
             <h1 className="text-2xl font-bold font-['Space_Grotesk'] flex items-center gap-2">
               Niche Intelligence <Badge className="bg-accent/20 text-accent text-[10px]">AI CEO</Badge>
             </h1>
-            <p className="text-sm text-muted-foreground">Engenharia Reversa com dados reais do YouTube + IA com visão de CEO</p>
+            <p className="text-sm text-muted-foreground">Dados reais do YouTube API — projeções realistas por país</p>
           </div>
         </div>
 
@@ -113,7 +137,6 @@ const NicheExplorer = () => {
             </Button>
           </div>
 
-          {/* Quick niches */}
           <div className="flex flex-wrap gap-2">
             {QUICK_NICHES.map(n => (
               <button key={n} onClick={() => explore(n)} disabled={loading}
@@ -133,7 +156,7 @@ const NicheExplorer = () => {
                 <Brain className="w-8 h-8 text-primary animate-spin" style={{ animationDuration: '3s' }} />
               </div>
               <p className="text-lg font-semibold">{loadingPhase}</p>
-              <p className="text-sm text-muted-foreground">Analisando com visão de CEO — dados reais do YouTube API</p>
+              <p className="text-sm text-muted-foreground">Dados reais do YouTube API — cada pesquisa é única</p>
               <Progress value={undefined} className="h-1 w-48 mx-auto" />
             </motion.div>
           )}
@@ -144,11 +167,10 @@ const NicheExplorer = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="bg-secondary/50 p-1 h-auto flex-wrap">
               <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary/20"><Target className="w-4 h-4" /> Inteligência</TabsTrigger>
-              <TabsTrigger value="hooks" className="gap-2 data-[state=active]:bg-primary/20"><Zap className="w-4 h-4" /> Hooks & Títulos</TabsTrigger>
+              <TabsTrigger value="strategy" className="gap-2 data-[state=active]:bg-primary/20"><Zap className="w-4 h-4" /> Estratégia</TabsTrigger>
               <TabsTrigger value="revenue" className="gap-2 data-[state=active]:bg-primary/20"><DollarSign className="w-4 h-4" /> Projeção $</TabsTrigger>
-              <TabsTrigger value="channels" className="gap-2 data-[state=active]:bg-primary/20"><Users className="w-4 h-4" /> Canais ({filteredChannels.length})</TabsTrigger>
+              <TabsTrigger value="channels" className="gap-2 data-[state=active]:bg-primary/20"><Users className="w-4 h-4" /> Concorrentes ({filteredChannels.length})</TabsTrigger>
               <TabsTrigger value="trending" className="gap-2 data-[state=active]:bg-primary/20"><Flame className="w-4 h-4" /> Trending</TabsTrigger>
-              <TabsTrigger value="action" className="gap-2 data-[state=active]:bg-primary/20"><Rocket className="w-4 h-4" /> Plano 27 Dias</TabsTrigger>
             </TabsList>
 
             {/* === TAB: OVERVIEW === */}
@@ -171,15 +193,42 @@ const NicheExplorer = () => {
                     </div>
                   </div>
                   <div className="flex gap-6 text-center">
-                    <div><p className="text-2xl font-bold text-accent">${a.estimatedRpm}</p><p className="text-[10px] text-muted-foreground">RPM estimado</p></div>
+                    <div><p className="text-2xl font-bold text-accent">${a.estimatedRpm}</p><p className="text-[10px] text-muted-foreground">RPM ({country})</p></div>
                     <div><p className="text-2xl font-bold text-primary">{a.facelessViability}%</p><p className="text-[10px] text-muted-foreground">Faceless Viável</p></div>
                     <div><p className="text-2xl font-bold">{data.meta.totalChannels}</p><p className="text-[10px] text-muted-foreground">Canais analisados</p></div>
                   </div>
                 </div>
               </motion.div>
 
+              {/* Monetization Timeline */}
+              <div className="glass rounded-2xl p-5 border border-accent/20">
+                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Timer className="w-4 h-4 text-accent" /> Linha do Tempo de Monetização — {COUNTRIES.find(c => c.value === country)?.label || country}
+                </h3>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="bg-secondary/30 rounded-xl p-4 text-center">
+                    <BadgeDollarSign className="w-6 h-6 text-primary mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-primary">{a.monthsToMonetize || countryMeta?.avgMonths || '?'} meses</p>
+                    <p className="text-[10px] text-muted-foreground">Para atingir YPP</p>
+                    <p className="text-[9px] text-muted-foreground mt-1">({YPP_SUBS} subs + {YPP_HOURS} watch hours)</p>
+                  </div>
+                  <div className="bg-secondary/30 rounded-xl p-4 text-center">
+                    <DollarSign className="w-6 h-6 text-accent mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-accent">{a.monthsToFirstPayout || (countryMeta?.avgMonths ? countryMeta.avgMonths + 2 : '?')} meses</p>
+                    <p className="text-[10px] text-muted-foreground">Primeiro pagamento</p>
+                    <p className="text-[9px] text-muted-foreground mt-1">Min: {countryMeta?.currency} {countryMeta?.minPayout}</p>
+                  </div>
+                  <div className="bg-secondary/30 rounded-xl p-4 text-center">
+                    <TrendingUp className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-emerald-400">${a.estimatedRpm}</p>
+                    <p className="text-[10px] text-muted-foreground">RPM médio ({country})</p>
+                    <p className="text-[9px] text-muted-foreground mt-1">Varia por nicho e conteúdo</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Metrics Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[
                   { icon: DollarSign, label: 'RPM', value: `$${a.estimatedRpm}`, color: 'text-accent' },
                   { icon: BarChart3, label: 'Saturação', value: a.saturation, color: a.saturation === 'Baixa' ? 'text-emerald-400' : a.saturation === 'Média' ? 'text-yellow-400' : 'text-destructive' },
@@ -202,7 +251,7 @@ const NicheExplorer = () => {
                 {radarData.length > 0 && (
                   <div className="glass rounded-2xl p-5">
                     <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                      <Target className="w-4 h-4 text-primary" /> Radar de Oportunidade (dados reais)
+                      <Target className="w-4 h-4 text-primary" /> Radar de Oportunidade
                     </h3>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
@@ -264,6 +313,7 @@ const NicheExplorer = () => {
                           }`}>{sn.opportunity}</Badge>
                         </div>
                         <p className="text-[11px] text-muted-foreground line-clamp-2">{sn.reason}</p>
+                        <p className="text-[9px] text-primary mt-1">Clique para analisar →</p>
                       </button>
                     ))}
                   </div>
@@ -274,7 +324,7 @@ const NicheExplorer = () => {
               {a.retentionBlueprint && (
                 <div className="glass rounded-2xl p-5">
                   <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-accent" /> Blueprint de Retenção (Engenharia Reversa)
+                    <BookOpen className="w-4 h-4 text-accent" /> Blueprint de Retenção
                   </h3>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                     {[
@@ -341,72 +391,95 @@ const NicheExplorer = () => {
               </div>
             </TabsContent>
 
-            {/* === TAB: HOOKS & TITLES === */}
-            <TabsContent value="hooks" className="space-y-4">
-              {/* Hook Patterns */}
-              {a.hookPatterns?.length > 0 && (
-                <div className="glass rounded-2xl p-5">
-                  <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-accent" /> Padrões de Hook Detectados (Engenharia Reversa)
-                  </h3>
-                  <div className="space-y-3">
-                    {a.hookPatterns.map((h: any, i: number) => (
-                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                        className="bg-secondary/30 rounded-xl p-4 flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0 ${
-                          h.effectiveness >= 80 ? 'bg-emerald-500/20 text-emerald-400' : h.effectiveness >= 60 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-secondary text-muted-foreground'
-                        }`}>{h.effectiveness}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold">{h.pattern}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">Ex: "{h.example}"</p>
-                        </div>
-                        <Button size="sm" variant="ghost" onClick={() => copyText(h.example)} className="shrink-0">
-                          <Copy className="w-3.5 h-3.5" />
-                        </Button>
-                      </motion.div>
-                    ))}
+            {/* === TAB: STRATEGY (replaced Hooks & Titles) === */}
+            <TabsContent value="strategy" className="space-y-4">
+              {a.contentStrategy?.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="glass rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-accent" /> Estratégias de Conteúdo (baseadas nos dados reais)
+                    </h3>
+                    <div className="space-y-3">
+                      {a.contentStrategy.map((s: any, i: number) => {
+                        const st = strategyTypeLabel(s.type);
+                        return (
+                          <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                            className="bg-secondary/30 rounded-xl p-4">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
+                                s.effectiveness >= 80 ? 'bg-emerald-500/20 text-emerald-400' : s.effectiveness >= 60 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-secondary text-muted-foreground'
+                              }`}>{s.effectiveness}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`text-[9px] ${st.color}`}>{st.label}</Badge>
+                                  <p className="text-sm font-semibold truncate">{s.name}</p>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">{s.description}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 bg-secondary/50 rounded-lg px-3 py-2 mt-2">
+                              <span className="text-[10px] text-muted-foreground">Ex:</span>
+                              <p className="text-xs flex-1 italic">"{s.example}"</p>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0" onClick={() => copyText(s.example)}>
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Title Formulas */}
-              {a.titleFormulas?.length > 0 && (
-                <div className="glass rounded-2xl p-5">
-                  <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                    <Crown className="w-4 h-4 text-primary" /> Fórmulas de Título Reverso-Engenhariadas
-                  </h3>
-                  <div className="space-y-3">
-                    {a.titleFormulas.map((tf: any, i: number) => (
-                      <div key={i} className="bg-secondary/30 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge className="bg-primary/20 text-primary text-xs">{tf.formula}</Badge>
-                          <span className="text-xs font-bold text-accent">~{tf.estimatedCtr}% CTR</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground flex-1">"{tf.example}"</p>
-                          <Button size="sm" variant="ghost" onClick={() => copyText(tf.example)}>
-                            <Copy className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              ) : (
+                <div className="glass rounded-2xl p-8 text-center text-muted-foreground">
+                  <Zap className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p>Nenhuma estratégia identificada.</p>
                 </div>
               )}
             </TabsContent>
 
             {/* === TAB: REVENUE === */}
             <TabsContent value="revenue" className="space-y-4">
+              {/* Monetization timeline */}
+              <div className="glass rounded-2xl p-5 border border-accent/20">
+                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Timer className="w-4 h-4 text-accent" /> Realidade da Monetização — {COUNTRIES.find(c => c.value === country)?.label || country}
+                </h3>
+                <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</div>
+                    <div>
+                      <p className="text-sm font-medium">Requisitos do YPP</p>
+                      <p className="text-xs text-muted-foreground">1.000 inscritos + 4.000 horas de exibição (ou 10M views de Shorts)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">2</div>
+                    <div>
+                      <p className="text-sm font-medium">Tempo estimado: ~{a.monthsToMonetize || countryMeta?.avgMonths} meses</p>
+                      <p className="text-xs text-muted-foreground">Neste nicho em {country}, com uploads consistentes (2-3x/semana)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-bold text-emerald-400">3</div>
+                    <div>
+                      <p className="text-sm font-medium">Primeiro pagamento: ~{a.monthsToFirstPayout || '?'} meses</p>
+                      <p className="text-xs text-muted-foreground">Mínimo para saque: {countryMeta?.currency} {countryMeta?.minPayout} | RPM médio: ${a.estimatedRpm}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {a.revenueProjection?.length > 0 && (
                 <div className="glass rounded-2xl p-6">
                   <h3 className="text-lg font-bold font-['Space_Grotesk'] flex items-center gap-2 mb-4">
-                    <DollarSign className="w-5 h-5 text-accent" /> Projeção de Receita — {niche} ({country})
+                    <DollarSign className="w-5 h-5 text-accent" /> Projeção Realista — {niche} ({country})
                   </h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={a.revenueProjection.map((r: any) => ({ ...r, month: `Mês ${r.month}` }))}>
+                      <AreaChart data={a.revenueProjection.map((r: any) => ({ ...r, label: `Mês ${r.month}` }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                        <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
                         <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `$${v}`} />
                         <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
                           formatter={(v: number, name: string) => [`${name === 'revenue' ? '$' : ''}${formatNumber(v)}`, name === 'revenue' ? 'Receita' : name === 'views' ? 'Views' : 'Subs']} />
@@ -415,13 +488,17 @@ const NicheExplorer = () => {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Revenue cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                     {a.revenueProjection.map((r: any) => (
                       <div key={r.month} className="bg-secondary/30 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-muted-foreground">Mês {r.month}</p>
-                        <p className="text-lg font-bold text-accent">${formatNumber(r.revenue)}</p>
+                        <p className={`text-lg font-bold ${r.revenue > 0 ? 'text-accent' : 'text-muted-foreground'}`}>
+                          {r.revenue > 0 ? `$${formatNumber(r.revenue)}` : '$0'}
+                        </p>
                         <p className="text-[9px] text-muted-foreground">{formatNumber(r.views)} views · {formatNumber(r.subs)} subs</p>
+                        {r.milestone && (
+                          <Badge className="text-[8px] mt-1 bg-accent/20 text-accent">{r.milestone}</Badge>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -429,8 +506,8 @@ const NicheExplorer = () => {
               )}
             </TabsContent>
 
-            {/* === TAB: CHANNELS === */}
-            <TabsContent value="channels" className="space-y-3">
+            {/* === TAB: CHANNELS / COMPETITORS === */}
+            <TabsContent value="channels" className="space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={filterFaceless} onChange={e => setFilterFaceless(e.target.checked)} className="rounded" />
@@ -439,6 +516,57 @@ const NicheExplorer = () => {
                 <span className="text-xs text-muted-foreground">{filteredChannels.length} canais</span>
               </div>
 
+              {/* Competitor Insights */}
+              {a.competitorInsights?.length > 0 && (
+                <div className="glass rounded-2xl p-5 border border-primary/20">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <Swords className="w-4 h-4 text-primary" /> Análise de Concorrentes — Como Competir
+                  </h3>
+                  <div className="space-y-3">
+                    {a.competitorInsights.map((ci: any, i: number) => {
+                      const ch = channels.find((c: any) => c.id === ci.channelId);
+                      return (
+                        <div key={i} className="bg-secondary/30 rounded-xl p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            {ch?.thumbnail && <img src={ch.thumbnail} alt="" className="w-8 h-8 rounded-full" />}
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">{ch?.name || `Canal ${i + 1}`}</p>
+                              <p className="text-[10px] text-muted-foreground">{ch ? `${formatNumber(ch.subscribers)} subs` : ''}</p>
+                            </div>
+                            {ch && (
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => trackChannel(ch)}>
+                                  <Star className="w-3 h-3" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                                  onClick={() => window.open(`https://youtube.com/channel/${ch.id}`, '_blank')}>
+                                  <ExternalLink className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="grid sm:grid-cols-3 gap-2 text-xs">
+                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2">
+                              <p className="text-[9px] text-emerald-400 font-medium mb-0.5">💪 Força</p>
+                              <p className="text-muted-foreground">{ci.strength}</p>
+                            </div>
+                            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-2">
+                              <p className="text-[9px] text-destructive font-medium mb-0.5">⚠️ Fraqueza</p>
+                              <p className="text-muted-foreground">{ci.weakness}</p>
+                            </div>
+                            <div className="bg-primary/5 border border-primary/20 rounded-lg p-2">
+                              <p className="text-[9px] text-primary font-medium mb-0.5">🎯 Como competir</p>
+                              <p className="text-muted-foreground">{ci.strategyToCompete}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Channel list */}
               {filteredChannels.length > 0 ? filteredChannels.map((ch: any, i: number) => (
                 <motion.div key={ch.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
                   className="glass rounded-xl p-4 flex items-center gap-4 hover:border-primary/30 transition-all">
@@ -457,18 +585,22 @@ const NicheExplorer = () => {
                       <span>{formatNumber(ch.totalViews)} views</span>
                       <span>{ch.videoCount} vídeos</span>
                       {ch.outlierCount > 0 && <span className="text-accent">⭐ {ch.outlierCount} outliers</span>}
-                      {ch.superOutlierCount > 0 && <span className="text-yellow-400">🔥 {ch.superOutlierCount} super</span>}
                       {ch.uploadFrequency && <span>📅 {ch.uploadFrequency}</span>}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="flex items-center gap-1">
-                      <Zap className="w-4 h-4 text-accent" />
-                      <span className="text-lg font-bold" style={{
-                        color: ch.viralScore >= 70 ? 'hsl(var(--accent))' : ch.viralScore >= 40 ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
-                      }}>{ch.viralScore}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <div className="flex items-center gap-1">
+                        <Zap className="w-4 h-4 text-accent" />
+                        <span className="text-lg font-bold" style={{
+                          color: ch.viralScore >= 70 ? 'hsl(var(--accent))' : ch.viralScore >= 40 ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
+                        }}>{ch.viralScore}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Viral Score</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Viral Score</p>
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => trackChannel(ch)}>
+                      <Star className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </motion.div>
               )) : (
@@ -513,34 +645,6 @@ const NicheExplorer = () => {
                 <p className="text-center text-muted-foreground py-8">Sem vídeos trending.</p>
               )}
             </TabsContent>
-
-            {/* === TAB: ACTION PLAN === */}
-            <TabsContent value="action" className="space-y-4">
-              {a.actionPlan?.length > 0 && (
-                <div className="glass rounded-2xl p-6">
-                  <h3 className="text-lg font-bold font-['Space_Grotesk'] flex items-center gap-2 mb-6">
-                    <Rocket className="w-5 h-5 text-primary" /> Plano de Ação — 27 Dias para Monetização
-                  </h3>
-                  <div className="space-y-4">
-                    {a.actionPlan.map((step: any, i: number) => (
-                      <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
-                        className="flex gap-4 items-start">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
-                          {i + 1}
-                        </div>
-                        <div className="flex-1 bg-secondary/30 rounded-xl p-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <Badge className="bg-primary/20 text-primary text-xs">{step.week}</Badge>
-                          </div>
-                          <p className="text-sm font-semibold mt-1">{step.action}</p>
-                          <p className="text-xs text-muted-foreground mt-1">🎯 Meta: {step.goal}</p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </TabsContent>
           </Tabs>
         )}
 
@@ -549,12 +653,16 @@ const NicheExplorer = () => {
           <div className="text-center py-16 text-muted-foreground">
             <Brain className="w-20 h-20 mx-auto mb-4 opacity-15" />
             <p className="text-xl font-bold mb-2">Escolha um nicho para análise profunda</p>
-            <p className="text-sm">A IA analisa dados reais do YouTube API com visão de CEO — RPM, hooks, retenção, projeção de receita</p>
+            <p className="text-sm">Dados reais do YouTube API — projeções realistas de monetização por país</p>
           </div>
         )}
       </div>
     </DashboardLayout>
   );
 };
+
+// Constants for display
+const YPP_SUBS = '1.000';
+const YPP_HOURS = '4.000h';
 
 export default NicheExplorer;
