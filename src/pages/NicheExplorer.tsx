@@ -19,12 +19,6 @@ const QUICK_NICHES = [
   'beleza', 'fitness', 'negócios', 'humor', 'estoicismo', 'história', 'ciência', 'IA',
 ];
 
-const fmt = (n: number) => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-  return n.toString();
-};
-
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(142,76%,36%)', 'hsl(210,100%,56%)', 'hsl(45,93%,47%)'];
 
 const NicheExplorer = () => {
