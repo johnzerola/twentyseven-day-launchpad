@@ -453,8 +453,8 @@ const NicheExplorer = () => {
                       {ch.contentStyle && <Badge className="bg-secondary text-muted-foreground text-[9px]">{ch.contentStyle}</Badge>}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>{fmt(ch.subscribers)} subs</span>
-                      <span>{fmt(ch.totalViews)} views</span>
+                      <span>{formatNumber(ch.subscribers)} subs</span>
+                      <span>{formatNumber(ch.totalViews)} views</span>
                       <span>{ch.videoCount} vídeos</span>
                       {ch.outlierCount > 0 && <span className="text-accent">⭐ {ch.outlierCount} outliers</span>}
                       {ch.superOutlierCount > 0 && <span className="text-yellow-400">🔥 {ch.superOutlierCount} super</span>}
