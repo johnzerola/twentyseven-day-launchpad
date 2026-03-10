@@ -82,7 +82,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { query, language, country, period, minViews, minLikes, minSubs, maxSubs } = await req.json();
+    const { query, language, country, period, minViews, minLikes, minSubs, maxSubs, niche, searchType } = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
     if (!query?.trim()) throw new Error("Query is required");
@@ -114,7 +114,9 @@ serve(async (req) => {
       }
     } else {
       // Regular keyword search
-      let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(parsed.value)}&maxResults=24&order=viewCount&key=${YOUTUBE_API_KEY}`;
+      // Combine niche with query for more targeted results
+      const fullQuery = niche ? `${parsed.value} ${niche}` : parsed.value;
+      let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(fullQuery)}&maxResults=24&order=viewCount&key=${YOUTUBE_API_KEY}`;
       if (language) url += `&relevanceLanguage=${language}`;
       if (country) url += `&regionCode=${country}`;
       if (period) {
