@@ -1040,6 +1040,9 @@ const Scripts = () => {
                                 {formatTime(scene.startTime)} - {formatTime(scene.endTime)}
                               </Badge>
                               <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Cena {scene.sceneIndex + 1}</Badge>
+                              {scene.sceneDurationSeconds && (
+                                <Badge variant="outline" className="text-[9px]">⏱ {scene.sceneDurationSeconds}s</Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Badge variant="outline" className="text-[9px]">📷 {scene.cameraAngle}</Badge>
