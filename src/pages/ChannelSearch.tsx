@@ -191,8 +191,8 @@ const ChannelSearch = () => {
             <Search className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk']">TubeSpy & Radar de Outliers</h1>
-            <p className="text-sm text-muted-foreground">Espione concorrentes e descubra vídeos virais</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk']">TubeSpy — Deep Scan & Engenharia Reversa</h1>
+            <p className="text-sm text-muted-foreground">Espione, analise hooks, retenção, clone vídeos virais — fique 10 passos à frente</p>
           </div>
         </div>
 
