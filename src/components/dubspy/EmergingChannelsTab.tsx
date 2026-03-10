@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Rocket, Loader2, Filter, ExternalLink, Star, Users, Eye, Video, Clock, TrendingUp, Flame, Zap, Search as SearchIcon } from 'lucide-react';
+import { Rocket, Loader2, Filter, ExternalLink, Star, Users, Eye, Video, Clock, TrendingUp, Flame, Zap, Search as SearchIcon, BarChart3, MessageSquare, ThumbsUp, Activity, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,15 @@ interface ChannelResult {
   viewsPerSub: number; efficiencyScore: number; outlierCount: number;
   growthVelocity: number; isEmerging: boolean; isAlgorithmEscapee: boolean;
   videos: any[];
+  // New viral metrics
+  viralScore: number;
+  growthPotentialScore: number;
+  algorithmBoostProbability: number;
+  avgEngagement: number;
+  avgCommentEngagement: number;
+  avgLikeRatio: number;
+  avgViewVelocity72h: number;
+  uploadFrequencyDays: number;
 }
 
 interface EmergingChannelsTabProps {
@@ -29,7 +38,30 @@ const EMERGING_PRESETS = [
   { label: '< 10 vídeos', maxVideos: 10, maxAge: 180 },
   { label: '< 1 mês', maxVideos: 50, maxAge: 30 },
   { label: '< 3 meses', maxVideos: 50, maxAge: 90 },
+  { label: '< 6 meses', maxVideos: 50, maxAge: 180 },
 ];
+
+const ViralScoreRing = ({ score, label, size = 48 }: { score: number; label: string; size?: number }) => {
+  const radius = (size - 6) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = score >= 70 ? 'text-emerald-400' : score >= 40 ? 'text-amber-400' : 'text-red-400';
+  const stroke = score >= 70 ? 'stroke-emerald-400' : score >= 40 ? 'stroke-amber-400' : 'stroke-red-400';
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" strokeWidth="3" className="stroke-secondary/50" />
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" strokeWidth="3" className={stroke}
+            strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
+        </svg>
+        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${color}`}>{score}</span>
+      </div>
+      <span className="text-[8px] text-muted-foreground text-center leading-tight">{label}</span>
+    </div>
+  );
+};
 
 export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   const [niche, setNiche] = useState('');
@@ -40,11 +72,13 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   const [meta, setMeta] = useState<any>(null);
   const [hasSearched, setHasSearched] = useState(false);
   
-  // Emerging-specific
   const [maxVideos, setMaxVideos] = useState(10);
   const [maxAge, setMaxAge] = useState(90);
   const [maxSubs, setMaxSubs] = useState('');
+  const [maxChannelVideos, setMaxChannelVideos] = useState('');
+  const [minVideoViews, setMinVideoViews] = useState('');
   const [customNiche, setCustomNiche] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const scan = async () => {
     const nicheQuery = niche || customNiche;
@@ -61,6 +95,8 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           maxVideos: mode === 'emerging' ? maxVideos : undefined,
           maxChannelAgeDays: mode === 'emerging' ? maxAge : undefined,
           maxSubs: maxSubs ? parseInt(maxSubs) : undefined,
+          maxChannelVideos: maxChannelVideos ? parseInt(maxChannelVideos) : undefined,
+          minVideoViews: minVideoViews ? parseInt(minVideoViews) : undefined,
         },
       });
       if (error) throw new Error(error.message);
@@ -120,7 +156,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           </div>
         </div>
 
-        {/* Mode-specific filters */}
         {mode === 'emerging' && (
           <div>
             <label className="text-sm font-medium mb-2 block flex items-center gap-2">
@@ -152,7 +187,7 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Max subs:</span>
-                <Input type="number" placeholder="Sem limite" value={maxSubs} onChange={e => setMaxSubs(e.target.value)}
+                <Input type="number" placeholder="100k" value={maxSubs} onChange={e => setMaxSubs(e.target.value)}
                   className="h-8 w-28 bg-secondary/50 text-sm" />
               </div>
             </div>
@@ -167,6 +202,28 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
             </p>
           </div>
         )}
+
+        {/* Advanced Filters */}
+        <div>
+          <button onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+            <Filter className="w-3 h-3" /> {showAdvanced ? 'Esconder' : 'Mostrar'} filtros avançados
+          </button>
+          {showAdvanced && (
+            <div className="flex gap-3 flex-wrap mt-3 pt-3 border-t border-border/30">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Max vídeos do canal:</span>
+                <Input type="number" placeholder="50" value={maxChannelVideos} onChange={e => setMaxChannelVideos(e.target.value)}
+                  className="h-8 w-24 bg-secondary/50 text-sm" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Min views (melhor vídeo):</span>
+                <Input type="number" placeholder="100000" value={minVideoViews} onChange={e => setMinVideoViews(e.target.value)}
+                  className="h-8 w-28 bg-secondary/50 text-sm" />
+              </div>
+            </div>
+          )}
+        </div>
 
         <Button onClick={scan} disabled={loading} className="gradient-hero border-0 gap-2 h-11 px-6 w-full sm:w-auto">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchIcon className="w-4 h-4" />}
@@ -235,7 +292,7 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{ch.description}</p>
 
-                  {/* Metrics row */}
+                  {/* Basic Metrics row */}
                   <div className="flex gap-4 mt-3 flex-wrap text-center">
                     <div>
                       <p className="text-sm font-bold">{formatNumber(ch.subscribers)}</p>
@@ -244,10 +301,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                     <div>
                       <p className="text-sm font-bold">{ch.videoCount}</p>
                       <p className="text-[9px] text-muted-foreground flex items-center gap-0.5"><Video className="w-2.5 h-2.5" /> Vídeos</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{formatNumber(ch.avgViews)}</p>
-                      <p className="text-[9px] text-muted-foreground">Média views</p>
                     </div>
                     <div>
                       <p className="text-sm font-bold">{formatNumber(ch.maxVideoViews)}</p>
@@ -263,13 +316,28 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                       </p>
                       <p className="text-[9px] text-muted-foreground flex items-center gap-0.5"><TrendingUp className="w-2.5 h-2.5" /> Growth</p>
                     </div>
+                    <div>
+                      <p className="text-sm font-bold">{ch.uploadFrequencyDays || '—'}d</p>
+                      <p className="text-[9px] text-muted-foreground flex items-center gap-0.5"><Upload className="w-2.5 h-2.5" /> Freq.</p>
+                    </div>
                   </div>
 
-                  {/* Efficiency bar */}
-                  <div className="flex items-center gap-2 mt-3">
-                    <span className="text-[10px] text-muted-foreground">Eficiência:</span>
-                    <Progress value={ch.efficiencyScore} className="h-1.5 flex-1" />
-                    <span className="text-xs font-mono font-bold">{ch.efficiencyScore}/100</span>
+                  {/* Viral Score Rings */}
+                  <div className="flex gap-4 mt-3 items-start">
+                    <ViralScoreRing score={ch.viralScore || 0} label="Viral Score" />
+                    <ViralScoreRing score={ch.growthPotentialScore || 0} label="Growth" />
+                    <ViralScoreRing score={ch.algorithmBoostProbability || 0} label="Algo Boost" />
+                    <div className="flex flex-col gap-1 text-[10px] ml-2">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <ThumbsUp className="w-3 h-3" /> Like: {ch.avgLikeRatio || 0}%
+                      </span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <MessageSquare className="w-3 h-3" /> Comments: {ch.avgCommentEngagement || 0}%
+                      </span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Activity className="w-3 h-3" /> V72h: {formatNumber(ch.avgViewVelocity72h || 0)}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Top videos */}
