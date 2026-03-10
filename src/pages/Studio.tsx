@@ -314,11 +314,16 @@ const Studio = () => {
     const withPrompts = segs.filter(s => s.visualPrompt);
     if (!withPrompts.length) return toast.error('Gere os prompts visuais primeiro');
     
-    addLog(`🎬 Iniciando geração de ${withPrompts.length} vídeos Veo3...`);
-    for (const seg of withPrompts) {
+    addLog(`🎬 Iniciando geração sequencial de ${withPrompts.length} vídeos Veo3 (1 por vez, intervalo de 15s)...`);
+    for (let i = 0; i < withPrompts.length; i++) {
+      const seg = withPrompts[i];
+      addLog(`🎬 Enviando vídeo ${i + 1}/${withPrompts.length} (segmento #${seg.index + 1})...`);
       await generateSegmentVideo(seg);
-      // Small delay between requests to avoid rate limiting
-      await new Promise(r => setTimeout(r, 2000));
+      // 15s delay between requests to avoid Veo3 rate limiting
+      if (i < withPrompts.length - 1) {
+        addLog(`⏳ Aguardando 15s antes do próximo vídeo...`);
+        await new Promise(r => setTimeout(r, 15000));
+      }
     }
     toast.success(`${withPrompts.length} vídeos Veo3 enviados para geração!`);
   };
