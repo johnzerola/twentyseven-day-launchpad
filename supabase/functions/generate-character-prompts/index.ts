@@ -32,41 +32,53 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "system",
-            content: `You are a visual prompt engineer specialized in creating consistent character descriptions for AI video generation (Veo3, Runway, Kling). 
-Your job is to ensure CHARACTER CONSISTENCY across all scenes by:
-1. Creating a detailed "character sheet" with exact physical attributes
-2. Rewriting each scene prompt to include the character's exact appearance
-3. Maintaining the same clothing, hairstyle, body type, and distinctive features
+            content: `You are a Netflix/Disney-level character design director creating consistent character prompts for Google Veo 3 video generation.
 
-Visual style for all scenes: ${visualStyle || "cinematic documentary"}
+═══════════════════════════════════════
+🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
+═══════════════════════════════════════
+- NEVER include text, subtitles, captions, titles, logos, watermarks in ANY prompt
+- EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+═══════════════════════════════════════
 
-CRITICAL RULES:
-- Every scene prompt MUST reference characters by their exact physical description, not just name
-- Include lighting, camera angle, and composition suggestions
-- Maintain emotional continuity between scenes`
+VEO 3 PROMPT FORMULA: [Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]
+
+CHARACTER CONSISTENCY PROTOCOL:
+1. Create a DETAILED "identity sheet" with EXACT physical attributes — skin tone with pores, hair strand detail, eye color, face shape, body type, height, distinguishing marks
+2. Use IDENTICAL wording for each character across ALL scene prompts — never paraphrase
+3. Include the FULL identity description in EVERY prompt where character appears
+4. Specify consistent wardrobe with fabric textures and colors
+5. Reference image-to-video consistency when available
+
+CINEMATOGRAPHY RULES:
+- Specify exact camera: dolly, tracking, crane, steadicam, rack focus, Dutch angle, orbit
+- Specify exact lens: 24mm, 35mm, 50mm, 85mm, 135mm, anamorphic
+- Specify exact lighting: golden hour, Rembrandt, butterfly, rim, volumetric, chiaroscuro
+- Anti-AI realism: skin pores, asymmetric composition, motion blur, film grain, dust particles
+- End with: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain"
+- Then ALWAYS: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+
+Visual style: ${visualStyle || "Netflix cinematic"}
+Scene 1 = HOOK — most visually spectacular shot.`
           },
           {
             role: "user",
-            content: `Create consistent character prompts for these characters and scenes:
+            content: `Create Veo3-optimized character-consistent prompts. ZERO text/subtitles anywhere.
 
-CHARACTERS:
-${characterDescriptions}
+CHARACTERS:\n${characterDescriptions}
 
-SCENES:
-${sceneTexts}
-
-Generate optimized prompts for each scene maintaining character consistency.`
+SCENES:\n${sceneTexts}`
           }
         ],
         tools: [{
           type: "function",
           function: {
             name: "character_consistent_prompts",
-            description: "Return character sheets and scene prompts with consistent characters",
+            description: "Return character sheets and Veo3 scene prompts with consistent characters",
             parameters: {
               type: "object",
               properties: {
@@ -76,10 +88,10 @@ Generate optimized prompts for each scene maintaining character consistency.`
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      physicalDescription: { type: "string", description: "Detailed physical appearance for consistency" },
+                      physicalDescription: { type: "string", description: "Detailed appearance with skin pores, hair strands, fabric texture for Veo3 consistency" },
                       outfit: { type: "string" },
                       distinctiveFeatures: { type: "string" },
-                      referencePrompt: { type: "string", description: "A standalone prompt to generate a reference image of this character" },
+                      referencePrompt: { type: "string", description: "Standalone Veo3 prompt to generate reference of this character. Must end with anti-text block." },
                     },
                     required: ["name", "physicalDescription", "outfit", "distinctiveFeatures", "referencePrompt"],
                     additionalProperties: false,
@@ -91,12 +103,14 @@ Generate optimized prompts for each scene maintaining character consistency.`
                     type: "object",
                     properties: {
                       sceneIndex: { type: "number" },
-                      prompt: { type: "string", description: "Full scene prompt with embedded character descriptions" },
-                      camera: { type: "string", description: "Camera angle and movement" },
-                      lighting: { type: "string" },
+                      prompt: { type: "string", description: "Full Veo3 prompt with embedded character descriptions. MUST end with anti-text block." },
+                      negativePrompt: { type: "string", description: "Always include: subtitles, text, titles, captions, logos, watermarks, writing, letters, blurry, distorted, deformed" },
+                      camera: { type: "string", description: "Veo3 camera: dolly, tracking, crane, steadicam, rack focus, orbit, push-in" },
+                      lensSpec: { type: "string", description: "24mm, 35mm, 50mm, 85mm, 135mm, anamorphic" },
+                      lighting: { type: "string", description: "golden hour, Rembrandt, butterfly, rim, volumetric, chiaroscuro" },
                       mood: { type: "string" },
                     },
-                    required: ["sceneIndex", "prompt", "camera", "lighting", "mood"],
+                    required: ["sceneIndex", "prompt", "negativePrompt", "camera", "lensSpec", "lighting", "mood"],
                     additionalProperties: false,
                   },
                 },
@@ -111,16 +125,8 @@ Generate optimized prompts for each scene maintaining character consistency.`
     });
 
     if (!res.ok) {
-      if (res.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (res.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos esgotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit excedido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (res.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       throw new Error(`AI gateway error: ${res.status}`);
     }
 
