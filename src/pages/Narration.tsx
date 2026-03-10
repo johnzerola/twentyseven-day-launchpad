@@ -6,17 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-
-const VOICES = [
-  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', lang: 'PT-BR', desc: 'Narração masculina natural' },
-  { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', lang: 'EN-US', desc: 'Voz profunda e clara' },
-  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', lang: 'EN-US', desc: 'Feminina profissional' },
-  { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', lang: 'DE', desc: 'Alemão fluente' },
-  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', lang: 'PL', desc: 'Polonês nativo' },
-  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', lang: 'ES', desc: 'Espanhol claro' },
-  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', lang: 'EN-US', desc: 'Narrador storytelling' },
-  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', lang: 'EN-US', desc: 'Jovem e dinâmica' },
-];
+import { VOICES } from '@/lib/constants';
 
 const Narration = () => {
   const [text, setText] = useState('');
