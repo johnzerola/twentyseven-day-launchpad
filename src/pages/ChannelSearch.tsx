@@ -443,6 +443,12 @@ const ChannelSearch = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" 
+                              onClick={() => deepScanVideo(v.id)} 
+                              disabled={deepScanning === v.id}
+                              title="Deep Scan — Engenharia Reversa">
+                              {deepScanning === v.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3 text-primary" />}
+                            </Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => trackChannel(v)} title="Rastrear canal">
                               <Star className="w-3 h-3" />
                             </Button>
