@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Rocket, Loader2, Filter, ExternalLink, Star, Users, Eye, Video, Clock, TrendingUp, Flame, Zap, Search as SearchIcon, BarChart3, MessageSquare, ThumbsUp, Activity, Upload } from 'lucide-react';
+import { Rocket, Loader2, Filter, ExternalLink, Star, Users, Eye, Video, Clock, TrendingUp, Flame, Zap, Search as SearchIcon, BarChart3, MessageSquare, ThumbsUp, Activity, Upload, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,6 @@ interface ChannelResult {
   viewsPerSub: number; efficiencyScore: number; outlierCount: number;
   growthVelocity: number; isEmerging: boolean; isAlgorithmEscapee: boolean;
   videos: any[];
-  // New viral metrics
   viralScore: number;
   growthPotentialScore: number;
   algorithmBoostProbability: number;
@@ -39,6 +38,15 @@ const EMERGING_PRESETS = [
   { label: '< 1 mês', maxVideos: 50, maxAge: 30 },
   { label: '< 3 meses', maxVideos: 50, maxAge: 90 },
   { label: '< 6 meses', maxVideos: 50, maxAge: 180 },
+];
+
+const SORT_OPTIONS = [
+  { value: 'viralScore', label: '🔥 Viral Score' },
+  { value: 'subscribers', label: '👥 Inscritos' },
+  { value: 'maxVideoViews', label: '👁 Max Views' },
+  { value: 'growthVelocity', label: '📈 Crescimento' },
+  { value: 'avgEngagement', label: '💬 Engajamento' },
+  { value: 'avgViewVelocity72h', label: '⚡ Velocidade 72h' },
 ];
 
 const ViralScoreRing = ({ score, label, size = 48 }: { score: number; label: string; size?: number }) => {
@@ -74,11 +82,17 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   
   const [maxVideos, setMaxVideos] = useState(10);
   const [maxAge, setMaxAge] = useState(90);
+  const [minSubs, setMinSubs] = useState('');
   const [maxSubs, setMaxSubs] = useState('');
   const [maxChannelVideos, setMaxChannelVideos] = useState('');
   const [minVideoViews, setMinVideoViews] = useState('');
+  const [minEngagement, setMinEngagement] = useState('');
+  const [minViralScore, setMinViralScore] = useState('');
+  const [sortBy, setSortBy] = useState(mode === 'escapees' ? 'growthVelocity' : 'viralScore');
   const [customNiche, setCustomNiche] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const activeFilterCount = [minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore].filter(v => v).length;
 
   const scan = async () => {
     const nicheQuery = niche || customNiche;
@@ -92,18 +106,22 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           niche: nicheQuery,
           country,
           language,
+          sortBy,
           maxVideos: mode === 'emerging' ? maxVideos : undefined,
           maxChannelAgeDays: mode === 'emerging' ? maxAge : undefined,
+          minSubs: minSubs ? parseInt(minSubs) : undefined,
           maxSubs: maxSubs ? parseInt(maxSubs) : undefined,
           maxChannelVideos: maxChannelVideos ? parseInt(maxChannelVideos) : undefined,
           minVideoViews: minVideoViews ? parseInt(minVideoViews) : undefined,
+          minEngagement: minEngagement ? parseFloat(minEngagement) : undefined,
+          minViralScore: minViralScore ? parseInt(minViralScore) : undefined,
         },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setChannels(data?.channels || []);
       setMeta(data?.meta || null);
-      if (!data?.channels?.length) toast.info('Nenhum canal encontrado com esses filtros');
+      if (!data?.channels?.length) toast.info('Nenhum canal encontrado. Tente ampliar os filtros.');
     } catch (err: any) {
       toast.error(err.message || 'Erro na varredura');
     } finally {
@@ -185,11 +203,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                 <Input type="number" value={maxAge} onChange={e => setMaxAge(parseInt(e.target.value) || 90)}
                   className="h-8 w-20 bg-secondary/50 text-sm" />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Max subs:</span>
-                <Input type="number" placeholder="100k" value={maxSubs} onChange={e => setMaxSubs(e.target.value)}
-                  className="h-8 w-28 bg-secondary/50 text-sm" />
-              </div>
             </div>
           </div>
         )}
@@ -203,32 +216,66 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           </div>
         )}
 
-        {/* Advanced Filters */}
+        {/* Advanced Filters — shared across modes */}
         <div>
           <button onClick={() => setShowAdvanced(!showAdvanced)}
             className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
-            <Filter className="w-3 h-3" /> {showAdvanced ? 'Esconder' : 'Mostrar'} filtros avançados
+            <SlidersHorizontal className="w-3 h-3" /> 
+            {showAdvanced ? 'Esconder' : 'Mostrar'} filtros avançados
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{activeFilterCount} ativo{activeFilterCount > 1 ? 's' : ''}</Badge>
+            )}
           </button>
           {showAdvanced && (
-            <div className="flex gap-3 flex-wrap mt-3 pt-3 border-t border-border/30">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Max vídeos do canal:</span>
-                <Input type="number" placeholder="50" value={maxChannelVideos} onChange={e => setMaxChannelVideos(e.target.value)}
-                  className="h-8 w-24 bg-secondary/50 text-sm" />
+            <div className="grid sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-border/30">
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Min inscritos</label>
+                <Input type="number" placeholder="ex: 1000" value={minSubs} onChange={e => setMinSubs(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Min views (melhor vídeo):</span>
-                <Input type="number" placeholder="100000" value={minVideoViews} onChange={e => setMinVideoViews(e.target.value)}
-                  className="h-8 w-28 bg-secondary/50 text-sm" />
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Max inscritos</label>
+                <Input type="number" placeholder="ex: 100000" value={maxSubs} onChange={e => setMaxSubs(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Max vídeos do canal</label>
+                <Input type="number" placeholder="ex: 50" value={maxChannelVideos} onChange={e => setMaxChannelVideos(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Min views (melhor vídeo)</label>
+                <Input type="number" placeholder="ex: 10000" value={minVideoViews} onChange={e => setMinVideoViews(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Min engajamento (%)</label>
+                <Input type="number" step="0.1" placeholder="ex: 3.0" value={minEngagement} onChange={e => setMinEngagement(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Min Viral Score</label>
+                <Input type="number" placeholder="ex: 30" value={minViralScore} onChange={e => setMinViralScore(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
               </div>
             </div>
           )}
         </div>
 
-        <Button onClick={scan} disabled={loading} className="gradient-hero border-0 gap-2 h-11 px-6 w-full sm:w-auto">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchIcon className="w-4 h-4" />}
-          {loading ? 'Escaneando...' : mode === 'emerging' ? 'Detectar Canais Emergentes' : 'Detectar Algorithm Escapees'}
-        </Button>
+        {/* Sort + Scan */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              className="h-9 rounded-md border border-input bg-secondary/50 px-2 text-xs">
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <Button onClick={scan} disabled={loading} className="gradient-hero border-0 gap-2 h-11 px-6 flex-1 sm:flex-none">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchIcon className="w-4 h-4" />}
+            {loading ? 'Escaneando...' : mode === 'emerging' ? 'Detectar Emergentes' : 'Detectar Escapees'}
+          </Button>
+        </div>
       </div>
 
       {/* Stats bar */}
@@ -254,7 +301,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
               transition={{ delay: i * 0.05 }}
               className="glass rounded-xl p-5 border border-border/30 hover:border-primary/30 transition-all">
               <div className="flex gap-4 flex-wrap">
-                {/* Channel avatar */}
                 <div className="relative flex-shrink-0">
                   {ch.thumbnail ? (
                     <img src={ch.thumbnail} alt={ch.name} className="w-14 h-14 rounded-full object-cover border-2 border-primary/20" />
@@ -270,7 +316,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-sm">{ch.name}</h3>
@@ -292,7 +337,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{ch.description}</p>
 
-                  {/* Basic Metrics row */}
                   <div className="flex gap-4 mt-3 flex-wrap text-center">
                     <div>
                       <p className="text-sm font-bold">{formatNumber(ch.subscribers)}</p>
@@ -322,7 +366,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                     </div>
                   </div>
 
-                  {/* Viral Score Rings */}
                   <div className="flex gap-4 mt-3 items-start">
                     <ViralScoreRing score={ch.viralScore || 0} label="Viral Score" />
                     <ViralScoreRing score={ch.growthPotentialScore || 0} label="Growth" />
@@ -340,7 +383,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                     </div>
                   </div>
 
-                  {/* Top videos */}
                   {ch.videos.length > 0 && (
                     <div className="mt-3 space-y-1">
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Top vídeos recentes:</p>
@@ -355,7 +397,6 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                   )}
                 </div>
 
-                {/* Actions */}
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => trackChannel(ch)}>
                     <Star className="w-3 h-3" /> Rastrear
@@ -371,11 +412,10 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
         </AnimatePresence>
       </div>
 
-      {/* Empty state */}
       {hasSearched && !loading && channels.length === 0 && (
         <div className="glass rounded-xl p-12 text-center text-muted-foreground">
           <Rocket className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p>Nenhum canal emergente encontrado. Tente outro nicho ou amplie os filtros.</p>
+          <p>Nenhum canal encontrado. Tente outro nicho ou amplie os filtros.</p>
         </div>
       )}
     </div>
