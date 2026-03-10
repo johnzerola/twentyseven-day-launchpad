@@ -409,7 +409,7 @@ const Scripts = () => {
     return clean.trim();
   };
 
-  // Generate synced prompts
+  // Generate synced prompts (text-based fallback)
   const generateSyncedPrompts = async () => {
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
@@ -434,6 +434,59 @@ const Scripts = () => {
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar prompts');
     } finally {
+      setGeneratingPrompts(false);
+    }
+  };
+
+  // Audio Intelligence: Transcribe + Analyze + Generate Contextual Scenes
+  const generateFromAudio = async () => {
+    if (!audioFile) { toast.error('Faça upload do áudio narrado primeiro'); return; }
+    const cleanScript = getCleanNarration();
+
+    setTranscribing(true);
+    setGeneratingPrompts(true);
+    setTranscription(null);
+    setSyncedScenes([]);
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioFile);
+      formData.append('script', cleanScript || '');
+      formData.append('videoStyle', videoStyle);
+      formData.append('characters', JSON.stringify(characters));
+      formData.append('sceneDuration', String(sceneDuration));
+      formData.append('language', language);
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/audio-to-scenes`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: formData,
+      });
+
+      if (resp.status === 429) throw new Error('Rate limit. Tente novamente em alguns segundos.');
+      if (resp.status === 402) throw new Error('Créditos insuficientes.');
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+
+      if (data.transcription) {
+        setTranscription(data.transcription);
+        setAudioDuration(data.transcription.audioDuration || 0);
+        setTranscribing(false);
+        setShowTranscription(true);
+      }
+
+      setSyncedScenes(data.scenes || []);
+      toast.success(`🎬 ${data.scenes?.length || 0} cenas contextuais geradas a partir do áudio!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao processar áudio');
+    } finally {
+      setTranscribing(false);
       setGeneratingPrompts(false);
     }
   };
