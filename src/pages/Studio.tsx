@@ -542,6 +542,10 @@ const Studio = () => {
               <Button variant="outline" className="gap-2" onClick={downloadAll}>
                 <Download className="w-4 h-4" /> Baixar Assets
               </Button>
+              <Button variant="outline" className="gap-2 border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+                onClick={exportAutoflow}>
+                <Upload className="w-4 h-4" /> Autoflow Export
+              </Button>
             </div>
           )}
         </div>
