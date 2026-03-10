@@ -63,7 +63,7 @@ const Studio = () => {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState<number | null>(null);
   const [videoPollingMap, setVideoPollingMap] = useState<Record<number, NodeJS.Timeout>>({});
-  const [veo3Model, setVeo3Model] = useState<'veo-3.0-generate-preview' | 'veo-3.0-fast-generate-preview'>('veo-3.0-generate-preview');
+  const [veo3Model, setVeo3Model] = useState<'veo-3.1-generate-preview' | 'veo-3.1-fast-generate-preview'>('veo-3.1-generate-preview');
   const [veo3Mode, setVeo3Mode] = useState(true);
   const [characterDesc, setCharacterDesc] = useState('Homem de 30 anos, barba curta, óculos redondos, vestindo moletom preto');
 
