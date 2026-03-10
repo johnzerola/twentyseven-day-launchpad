@@ -116,7 +116,7 @@ const Workflow = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {steps.map((step, i) => (
             <button key={step.id} onClick={() => setActiveStep(i)}
               className={`relative flex flex-col items-center p-2 rounded-lg transition-all ${activeStep === i ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-card'}`}>
