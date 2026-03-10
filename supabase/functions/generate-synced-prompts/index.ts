@@ -18,16 +18,13 @@ serve(async (req) => {
     const sceneLen = sceneDurationSeconds || 8;
     const totalDuration = audioDurationSeconds || 0;
 
-    // Split script into scenes based on duration
     const sentences = script.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter((s: string) => s.trim());
     const totalChars = sentences.reduce((sum: number, s: string) => sum + s.length, 0);
 
-    // Calculate number of scenes
     const numScenes = totalDuration > 0
       ? Math.max(1, Math.ceil(totalDuration / sceneLen))
       : Math.max(1, Math.ceil(sentences.length / 3));
 
-    // Distribute sentences across scenes proportionally
     const scenes: { index: number; text: string; startTime: number; endTime: number }[] = [];
     const charsPerScene = Math.ceil(totalChars / numScenes);
     let currentSceneText = '';
@@ -51,7 +48,6 @@ serve(async (req) => {
       }
     }
 
-    // Push remaining text as last scene
     if (currentSceneText.trim()) {
       scenes.push({
         index: sceneIndex,
@@ -62,32 +58,50 @@ serve(async (req) => {
     }
 
     const styleGuides: Record<string, string> = {
-      'cinematográfico': 'Ultra-realistic cinematic photography. 35mm film grain, anamorphic lens flares, dramatic chiaroscuro lighting. Think Roger Deakins cinematography. Every frame looks like a movie still.',
-      '2d': 'High-quality 2D animation style. Vibrant flat colors, clean linework, expressive character poses. Similar to modern motion graphics or Kurzgesagt style. Bold outlines, geometric shapes.',
-      '3d': 'Pixar/Disney quality 3D rendering. Subsurface scattering on skin, volumetric lighting, detailed textures. Characters are stylized but realistic. Professional studio lighting setup.',
-      'anime': 'High-quality anime art style. Dynamic poses, speed lines, expressive eyes. Studio Ghibli meets modern anime aesthetics. Detailed backgrounds, cel-shading, atmospheric lighting.',
-      'wojak': 'Wojak/meme art style. Simple line drawings with emotional faces. Minimalist backgrounds. Characters express emotions through exaggerated facial features. Internet culture aesthetic.',
-      'stickmen': 'Stick figure animation style. Simple black stick figures on white/colored backgrounds. Humor through simplicity. Expressive despite minimal detail. Clean and readable.',
-      'realista': 'Photorealistic image. 8K resolution quality, natural lighting, accurate proportions. Looks like a real photograph taken with a professional DSLR camera.',
-      'dark': 'Dark moody aesthetic. Deep shadows, neon accents, cyberpunk undertones. Dramatic contrast, fog/mist effects. Think Blade Runner meets noir cinema.',
-      'whiteboard': 'Whiteboard animation style. Hand-drawn illustrations appearing on white background. Simple, educational, clean. Black ink with occasional color highlights.',
-      'comic': 'Comic book/graphic novel style. Bold outlines, halftone dots, dynamic panel compositions. Speech bubbles, action lines, vivid colors. Marvel/DC aesthetic.',
+      'cinematográfico': `Hyper-realistic cinematic photography shot on ARRI ALEXA 65 with Cooke Anamorphic lenses. 
+Characteristics: Shallow depth of field (f/1.4-2.8), natural film grain (ISO 800), organic lens flares, volumetric god rays through atmospheric haze. 
+Lighting: Three-point lighting with motivated practical sources. Key light through windows/doorways creating dramatic chiaroscuro. Rim lighting separating subjects from background. Color temperature shifts between warm tungsten (3200K) and cool daylight (5600K).
+Color grading: Teal and orange color palette reminiscent of David Fincher. Rich blacks, lifted shadows with subtle blue tint. Skin tones preserved warm and natural.
+Composition: Rule of thirds with leading lines. Negative space for dramatic tension. Foreground elements for depth layers. 
+Reference directors: Roger Deakins, Emmanuel Lubezki, Bradford Young cinematography.`,
+      
+      '2d': `Premium 2D animation. Vibrant flat colors, clean vector linework, expressive character animation. Kurzgesagt meets Studio Trigger quality. Bold outlines, geometric design language, parallax depth layers, smooth 24fps motion feel. Rich color palettes with complementary accent colors. Professional motion design with easing curves.`,
+      
+      '3d': `Pixar/DreamWorks feature-film quality 3D rendering. Subsurface scattering on skin, physically-based materials (PBR), global illumination with ray-traced reflections. Volumetric atmospheric effects. Hair/fur simulation detail. Professional 3-point studio lighting with HDRI environments. Depth of field with bokeh. 8K texture resolution.`,
+      
+      'anime': `Top-tier anime production quality (Ufotable/MAPPA level). Dynamic sakuga-quality poses with motion blur. Detailed background art with atmospheric perspective. Professional cel-shading with multiple shadow layers. Rim lighting effects, particle systems, lens flares. Expressive eyes with light reflections. Detailed hair physics. Dramatic speed lines for action.`,
+      
+      'wojak': 'Wojak/meme art style. Simple line drawings with emotional faces. Minimalist backgrounds. Characters express emotions through exaggerated facial features. Internet culture aesthetic. Clean white backgrounds.',
+      
+      'stickmen': 'Stick figure animation style. Simple black stick figures on clean colored backgrounds. Humor through simplicity. Expressive despite minimal detail. Professional whiteboard feel.',
+      
+      'realista': `Photorealistic digital photography. Shot on Sony A7R V with 85mm f/1.2 GM lens. 8K resolution, natural available light with subtle fill. Accurate skin texture with pore-level detail. EXIF-accurate depth of field. Color science matching real camera profiles. No AI artifacts — indistinguishable from DSLR photograph.`,
+      
+      'dark': `Dark cinematic aesthetic. Deep crushed blacks, neon accent lighting (cyan, magenta, amber). Volumetric fog and atmospheric haze. Rain-slicked surfaces with reflections. Blade Runner 2049 meets Se7en. High contrast ratio (1000:1). Motivated practical lighting — neon signs, screen glow, street lamps. Noir shadow patterns.`,
+      
+      'whiteboard': 'Professional whiteboard animation. Hand-drawn black ink illustrations on pristine white surface. Appearing stroke-by-stroke. Occasional strategic color highlights (red, blue, green). Educational clarity. Dan Roam visual thinking style.',
+      
+      'comic': 'Premium graphic novel art. Bold ink outlines with varied line weight. Ben-Day dot halftone shading. Dynamic compositions with dramatic foreshortening. Rich saturated colors. Professional hand-lettering style. Jim Lee meets Alex Ross quality.',
     };
 
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
 
-    // Build character descriptions for consistency
+    // Build detailed character identity cards
     const characterBlock = characters?.length > 0
-      ? `\n\nCHARACTER CONSISTENCY (CRITICAL - use these EXACT descriptions every time a character appears):\n${characters.map((c: any, i: number) => {
+      ? `\n\nCHARACTER IDENTITY SHEETS (CRITICAL — Copy-paste these descriptions VERBATIM into EVERY prompt where the character appears. NEVER paraphrase or simplify. Consistency is NON-NEGOTIABLE):\n${characters.map((c: any, i: number) => {
           const a = c.appearance || {};
           const f = c.facial_features || {};
           const cl = c.clothing || {};
-          return `Character ${i + 1} "${c.name}" (${c.gender || 'unknown'}, age ${c.age || '?'}):
-  Appearance: ${a.skin_color || ''} skin, ${a.hair_color || ''} ${a.hair_style || ''} hair, ${a.eye_color || ''} eyes, ${a.body_type || ''} build, ${a.height || ''}
-  Face: ${f.face_shape || ''} face, ${f.eyebrows || ''} eyebrows, ${f.nose || ''} nose, ${f.mouth || ''}, ${f.ears || ''} ears
-  Clothing: ${cl.shirt || ''}, ${cl.pants || ''}, ${cl.shoes || ''}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}
-  Personality: ${(c.personality || []).join(', ')}`;
-        }).join('\n\n')}`
+          return `
+═══ CHARACTER ${i + 1}: "${c.name}" ═══
+Gender: ${c.gender || 'unknown'} | Age: ${c.age || 'unknown'}
+BODY: ${a.body_type || 'average'} build, ${a.height || 'average height'}, ${a.skin_color || 'medium'} skin tone
+HAIR: ${a.hair_color || 'dark'} colored ${a.hair_style || 'short'} hairstyle
+EYES: ${a.eye_color || 'brown'} eyes, ${f.eyebrows || 'natural'} eyebrows
+FACE: ${f.face_shape || 'oval'} face shape, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth/lips, ${f.ears || 'normal'} ears
+OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'casual bottoms'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, wearing ${cl.accessories}` : ''}
+PERSONALITY/EXPRESSION: ${(c.personality || ['neutral']).join(', ')} — reflect this in body language and micro-expressions`;
+        }).join('\n')}\n\n⚠️ RULE: When a character appears, include their FULL description (body, hair, eyes, face, outfit) in the prompt. NEVER say just "the character" or use only their name without the visual description.`
       : '';
 
     const sceneTexts = scenes.map(s =>
@@ -101,7 +115,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         tools: [{
           type: "function",
           function: {
@@ -118,11 +132,11 @@ serve(async (req) => {
                       sceneIndex: { type: "number" },
                       startTime: { type: "number" },
                       endTime: { type: "number" },
-                      visualPrompt: { type: "string", description: "Detailed visual prompt in English for image/video generation" },
-                      cameraAngle: { type: "string", description: "e.g. close-up, wide shot, aerial, tracking, POV" },
-                      mood: { type: "string", description: "e.g. tense, joyful, mysterious, epic" },
-                      charactersInScene: { type: "array", items: { type: "string" }, description: "Names of characters appearing in this scene" },
-                      transitionNote: { type: "string", description: "How to transition from previous scene" },
+                      visualPrompt: { type: "string", description: "Ultra-detailed visual prompt (80-150 words) in English for professional image/video generation. Must include full character descriptions when characters appear." },
+                      cameraAngle: { type: "string", description: "Specific cinematographic shot: extreme close-up, medium close-up, over-the-shoulder, wide establishing, low-angle hero shot, dutch angle, tracking dolly, crane shot, Steadicam follow, POV first-person, bird's-eye overhead" },
+                      mood: { type: "string", description: "Emotional atmosphere with lighting descriptor: e.g. 'tense suspense with cold blue backlighting', 'warm nostalgic with golden hour glow'" },
+                      charactersInScene: { type: "array", items: { type: "string" }, description: "Names of characters appearing" },
+                      transitionNote: { type: "string", description: "Professional transition: match cut, J-cut, whip pan, dissolve, smash cut, iris wipe" },
                     },
                     required: ["sceneIndex", "startTime", "endTime", "visualPrompt", "cameraAngle", "mood"],
                     additionalProperties: false
@@ -138,31 +152,61 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an elite visual director and storyboard artist. You create synchronized visual prompts that match narration text perfectly.
+            content: `You are a WORLD-CLASS visual director who has worked on Marvel, Christopher Nolan, and Denis Villeneuve productions. You create prompts that produce BREATHTAKING, PHOTOREALISTIC, CINEMA-QUALITY images.
 
-VISUAL STYLE FOR ALL SCENES:
+MASTER VISUAL STYLE:
 ${selectedStyleGuide}
 ${characterBlock}
 
-YOUR RULES:
-1. Each prompt MUST visually represent what the narration is saying at that exact moment
-2. Maintain VISUAL CONTINUITY between scenes (lighting, color palette, character consistency)
-3. Each prompt should be 30-60 words, highly detailed and specific
-4. Always include: subject, action, environment, lighting, camera angle, mood
-5. If characters were defined, use their EXACT descriptions every time they appear
-6. Vary camera angles between scenes for visual interest
-7. Match the emotional tone of the narration text
-8. Write ALL prompts in English for best AI generation results
-9. Include the video style "${videoStyle || 'cinematográfico'}" aesthetics in every prompt
-10. For transitions, suggest smooth visual connections between scenes`
+YOUR COMMANDMENTS:
+
+1. PROMPT LENGTH: Each visualPrompt MUST be 80-150 words. Short prompts = amateur results. Be EXHAUSTIVELY descriptive.
+
+2. PROMPT STRUCTURE (follow this order in EVERY prompt):
+   a) SUBJECT: Who/what is in frame, with COMPLETE physical description
+   b) ACTION: What they're doing, body language, micro-expressions
+   c) ENVIRONMENT: Specific location with architectural/natural details
+   d) LIGHTING: Exact light sources, direction, color temperature, shadows
+   e) CAMERA: Lens mm, aperture, focus distance, camera movement
+   f) ATMOSPHERE: Particles (dust, rain, fog), time of day, weather
+   g) COLOR PALETTE: Dominant and accent colors, grading style
+   h) MOOD KEYWORDS: 3-5 emotion/quality tags at the end
+
+3. CHARACTER CONSISTENCY: When characters appear, include their COMPLETE identity sheet description (skin, hair, eyes, face shape, outfit). NEVER abbreviate.
+
+4. VISUAL CONTINUITY: 
+   - Maintain consistent time-of-day lighting across consecutive scenes
+   - Keep color grading consistent (same LUT/palette throughout)
+   - Environment details must be geographically consistent
+   - Character clothing doesn't change unless narratively justified
+
+5. CINEMATOGRAPHIC VARIETY:
+   - NEVER repeat the same camera angle in consecutive scenes
+   - Alternate between: wide establishing → medium → close-up → detail → wide
+   - Use at least 5 different shot types across all scenes
+   - Include at least one dramatic low-angle and one high-angle shot
+
+6. TECHNICAL QUALITY TAGS: End every prompt with quality boosters:
+   "masterpiece, award-winning cinematography, 8K UHD, photorealistic, ray-traced global illumination, film grain"
+
+7. ANTI-AI-LOOK: Avoid these AI tells:
+   - No "glowing" skin or unrealistic smoothness
+   - No over-saturated neon colors unless style demands it
+   - No symmetrical compositions (break symmetry deliberately)
+   - Include imperfections: dust particles, lens aberration, motion blur
+   - Natural skin texture with pores, blemishes, subsurface scattering
+
+8. ALL PROMPTS IN ENGLISH for optimal AI image generation quality.`
           },
           {
             role: "user",
-            content: `Generate synchronized visual prompts for ${scenes.length} scenes.
+            content: `Generate ${scenes.length} CINEMA-QUALITY synchronized visual prompts.
 Total duration: ${totalDuration > 0 ? `${totalDuration}s (from audio)` : 'estimated from text'}
 Scene duration: ~${sceneLen}s each
 Video style: ${videoStyle || 'cinematográfico'}
 Language of narration: ${language || 'português'}
+
+IMPORTANT: Each prompt must be 80-150 words with EXHAUSTIVE detail. Think of each prompt as a shot list for a $200M film production.
 
 SCENES TO VISUALIZE:
 
