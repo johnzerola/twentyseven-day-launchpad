@@ -649,6 +649,7 @@ const Scripts = () => {
                         <div className="mt-1.5 space-y-1">
                           <p className="text-xs text-muted-foreground">
                             {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ⏱ {estimatedMinutesDisplay} min
+                            {scorecard && <span className="ml-2 text-primary font-medium">• Dual-AI ✓</span>}
                           </p>
                           <div className="flex items-center gap-2">
                             <Progress value={progressPercent} className="h-1.5 flex-1" />
@@ -661,6 +662,10 @@ const Scripts = () => {
                     </div>
                     {script && (
                       <div className="flex gap-1.5">
+                        <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-7 text-xs">
+                          {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                          {editMode ? 'Ler' : 'Editar'}
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
                           <Save className="w-3 h-3" /> Salvar
                         </Button>
@@ -672,7 +677,32 @@ const Scripts = () => {
                         </Button>
                       </div>
                     )}
+                    {!script && !loading && (
+                      <Button size="sm" variant="outline" onClick={() => { setEditMode(true); setScript(''); }} className="gap-1 h-7 text-xs">
+                        <ClipboardPaste className="w-3 h-3" /> Colar meu roteiro
+                      </Button>
+                    )}
                   </div>
+
+                  {/* Scorecard */}
+                  {scorecard && (
+                    <div className="grid grid-cols-5 gap-1.5 mb-3">
+                      {[
+                        { label: '🎯 Hook', score: scorecard.hook },
+                        { label: '📊 Retenção', score: scorecard.retention },
+                        { label: '💥 Emoção', score: scorecard.emotion },
+                        { label: '🌊 Fluidez', score: scorecard.flow },
+                        { label: '🏆 Payoff', score: scorecard.payoff },
+                      ].map(({ label, score }) => (
+                        <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-[9px] text-muted-foreground">{label}</p>
+                          <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>
+                            {score}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {loading && !script && (
                     <div className="text-center py-12">
                       <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
