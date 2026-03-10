@@ -707,7 +707,9 @@ const Scripts = () => {
                   {loading && !script && (
                     <div className="text-center py-12">
                       <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
-                      <p className="text-sm text-muted-foreground">Gerando com Gemini 2.5 Pro...</p>
+                      <p className="text-sm text-muted-foreground">Dual-AI: GPT-5 criando → Gemini Pro revisando...</p>
+                    </div>
+                  )}
                     </div>
                   )}
                   {script || editMode ? (
