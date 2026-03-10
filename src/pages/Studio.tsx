@@ -611,8 +611,10 @@ const Studio = () => {
                       <SegmentCard key={seg.index} seg={seg}
                         onUpdateSegment={updateSegment}
                         onGenerateImage={generateSegmentImage}
+                        onGenerateVideo={generateSegmentVideo}
                         generatingImage={generatingImage}
-                        batchRunning={batchRunning} />
+                        batchRunning={batchRunning}
+                        veo3Mode={veo3Mode} />
                     ))}
                   </AnimatePresence>
                 </div>
