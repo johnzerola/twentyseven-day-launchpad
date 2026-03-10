@@ -320,9 +320,13 @@ const Scripts = () => {
       if (data?.error) throw new Error(data.error);
       const extracted: Character[] = (data.characters || []).map((c: any) => ({
         name: c.name,
-        description: c.description,
-        appearance: c.appearance,
-        clothing: c.clothing,
+        gender: c.gender || 'male',
+        age: c.age || 30,
+        role: c.role || c.description || 'Personagem',
+        appearance: c.appearance || { skin_color: 'light', hair_color: 'dark', hair_style: 'short', eye_color: 'brown', body_type: 'average', height: '1.75m' },
+        facial_features: c.facial_features || { eyebrows: 'medium', nose: 'straight', mouth: 'medium', ears: 'normal', face_shape: 'oval' },
+        clothing: c.clothing || { shirt: 'casual shirt', pants: 'jeans', shoes: 'sneakers', accessories: 'none' },
+        personality: c.personality || ['determined'],
       }));
       if (extracted.length === 0) { toast.info('Nenhum personagem detectado no roteiro.'); return; }
       setCharacters(extracted);
