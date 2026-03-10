@@ -872,19 +872,26 @@ const Scripts = () => {
                           <Copy className="w-4 h-4" /> Copiar detalhado ({syncedScenes.length})
                         </Button>
                         <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                          const getCharDesc = (name: string) => {
-                            const c = characters.find(ch => ch.name.toLowerCase() === name.toLowerCase());
-                            return c ? `${c.name} (${c.appearance}, ${c.clothing})` : name;
-                          };
-                          const autoflowFormat = syncedScenes.map((scene) => {
+                          // Build character JSON block at top
+                          const charBlock = characters.length > 0
+                            ? `=== PERSONAGENS ===\n${characters.map(c => {
+                                const charJson = {
+                                  name: c.name, gender: c.gender, age: c.age,
+                                  appearance: c.appearance, facial_features: c.facial_features,
+                                  clothing: c.clothing, personality: c.personality,
+                                };
+                                return `${c.name}: ${JSON.stringify(charJson, null, 2)}`;
+                              }).join('\n\n')}\n\n=== CENAS ===\n`
+                            : '';
+                          const autoflowFormat = charBlock + syncedScenes.map((scene) => {
                             const dur = scene.endTime - scene.startTime;
                             const charsLine = scene.charactersInScene?.length 
-                              ? `\nPersonagens: ${scene.charactersInScene.map(getCharDesc).join('; ')}`
+                              ? ` | Personagens: ${scene.charactersInScene.join(', ')}`
                               : '';
                             return `Cena ${scene.sceneIndex + 1}: ${scene.visualPrompt} | Duração: ${dur}s${charsLine}`;
                           }).join('\n\n');
                           navigator.clipboard.writeText(autoflowFormat);
-                          toast.success('Copiado para AutoFlow! Cole na Prompt List.');
+                          toast.success('Copiado para AutoFlow com JSON de personagens!');
                         }}>
                           <Copy className="w-4 h-4" /> Copiar p/ AutoFlow ({syncedScenes.length})
                         </Button>
