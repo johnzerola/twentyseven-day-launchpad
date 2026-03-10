@@ -7,6 +7,20 @@ const corsHeaders = {
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status === 429 && attempt < maxRetries) {
+      const waitSec = Math.pow(2, attempt + 1) * 5; // 10s, 20s, 40s
+      console.log(`Rate limited, retrying in ${waitSec}s (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, waitSec * 1000));
+      continue;
+    }
+    return response;
+  }
+  throw new Error("Max retries exceeded");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
