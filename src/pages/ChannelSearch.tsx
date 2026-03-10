@@ -11,6 +11,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
+import { formatNumber } from '@/lib/formatters';
+import { NICHES, COUNTRIES, LANGUAGES, PERIODS } from '@/lib/constants';
 
 interface VideoResult {
   id: string; title: string; channelTitle: string; channelId: string;
