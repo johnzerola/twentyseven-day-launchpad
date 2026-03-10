@@ -321,10 +321,22 @@ const Studio = () => {
 
   const downloadAll = async () => {
     const segs = segmentsRef.current;
-    const hasContent = segs.some(s => s.generatedImage || s.audioBase64);
+    const hasContent = segs.some(s => s.generatedImage || s.audioBase64 || s.videoBase64 || s.videoUrl);
     if (!hasContent) return toast.error('Nenhum conteúdo para baixar');
     const zip = new JSZip();
     for (const seg of segs) {
+      if (seg.videoBase64) {
+        const binary = atob(seg.videoBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, bytes);
+      } else if (seg.videoUrl) {
+        try {
+          const resp = await fetch(seg.videoUrl);
+          const blob = await resp.blob();
+          zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, blob);
+        } catch { /* skip */ }
+      }
       if (seg.generatedImage) {
         try {
           const resp = await fetch(seg.generatedImage);
