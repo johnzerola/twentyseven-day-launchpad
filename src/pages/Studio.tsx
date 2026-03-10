@@ -457,7 +457,7 @@ const Studio = () => {
                 <Zap className="w-4 h-4 text-primary" /> Pipeline Completo (1 clique)
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Fatiar → Gerar Áudio (ElevenLabs) + Prompts {veo3Mode ? 'Veo3' : 'Visuais'} (IA) → Gerar Imagens em Lote
+                Fatiar → Áudio (ElevenLabs) + Prompts (IA) → Imagens em Lote {veo3Mode ? '→ Vídeos Veo3' : ''}
               </p>
             </div>
             <div className="flex gap-2 items-center">
