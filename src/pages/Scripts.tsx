@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
+import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
 
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
@@ -35,6 +36,12 @@ const Scripts = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [savedScripts, setSavedScripts] = useState<any[]>([]);
 
+  // Viral Database selections
+  const [showViralPanel, setShowViralPanel] = useState(false);
+  const [selectedHook, setSelectedHook] = useState<string | null>(null);
+  const [selectedCTA, setSelectedCTA] = useState<string | null>(null);
+  const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
+
   useEffect(() => { loadHistory(); }, []);
 
   const loadHistory = async () => {
@@ -44,19 +51,40 @@ const Scripts = () => {
     setSavedScripts(data || []);
   };
 
+  const getViralContext = () => {
+    const parts: string[] = [];
+    if (selectedHook) {
+      const hook = VIRAL_HOOKS.find(h => h.id === selectedHook);
+      if (hook) parts.push(`HOOK OBRIGATÓRIO (use como base/inspiração para os primeiros 5 segundos): ${hook.text}`);
+    }
+    if (selectedCTA) {
+      const cta = VIRAL_CTAS.find(c => c.id === selectedCTA);
+      if (cta) parts.push(`CTA OBRIGATÓRIO (insira no ${cta.placement} do roteiro, adaptado ao tema): ${cta.text}`);
+    }
+    if (selectedStructure) {
+      const structure = STORY_STRUCTURES.find(s => s.id === selectedStructure);
+      if (structure) {
+        const phases = structure.phases.map(p => `${p.name} (${p.duration}): ${p.tip}`).join('\n');
+        parts.push(`ESTRUTURA NARRATIVA OBRIGATÓRIA — Siga esta estrutura "${structure.name}":\n${phases}`);
+      }
+    }
+    return parts.join('\n\n');
+  };
+
   const generateScript = async () => {
     if (!topic.trim()) return;
     setLoading(true);
     setScript('');
 
     try {
+      const viralContext = getViralContext();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-script`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language }),
+        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext }),
       });
 
       if (resp.status === 402) {
@@ -155,6 +183,11 @@ const Scripts = () => {
   const targetWords = parseInt(duration) * 140;
   const progressPercent = Math.min(100, Math.round((wordCount / targetWords) * 100));
 
+  const activeHook = VIRAL_HOOKS.find(h => h.id === selectedHook);
+  const activeCTA = VIRAL_CTAS.find(c => c.id === selectedCTA);
+  const activeStructure = STORY_STRUCTURES.find(s => s.id === selectedStructure);
+  const viralCount = [selectedHook, selectedCTA, selectedStructure].filter(Boolean).length;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -190,56 +223,173 @@ const Scripts = () => {
         )}
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="glass rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold">Configurações</h3>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Tópico do vídeo *</label>
-              <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-secondary/50" />
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Duração (minutos)</label>
-              <select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                <option value="5">5 min (~700 palavras)</option>
-                <option value="10">10 min (~1.400 palavras)</option>
-                <option value="15">15 min (~2.100 palavras)</option>
-                <option value="20">20 min (~2.800 palavras)</option>
-                <option value="30">30 min (~4.200 palavras)</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">Estilo do roteiro</label>
-              <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1">
-                {STYLES.map(s => (
-                  <button key={s.value} onClick={() => setStyle(s.value)}
-                    className={`text-left p-2.5 rounded-lg border transition-all text-sm ${
-                      style === s.value 
-                        ? 'border-primary bg-primary/10 text-primary' 
-                        : 'border-border/50 bg-secondary/30 hover:border-primary/30'
-                    }`}>
-                    <span className="font-medium">{s.label}</span>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
-                  </button>
-                ))}
+          <div className="space-y-4">
+            <div className="glass rounded-xl p-6 space-y-4">
+              <h3 className="font-semibold">Configurações</h3>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Tópico do vídeo *</label>
+                <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-secondary/50" />
               </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Duração (minutos)</label>
+                <select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+                  <option value="5">5 min (~700 palavras)</option>
+                  <option value="10">10 min (~1.400 palavras)</option>
+                  <option value="15">15 min (~2.100 palavras)</option>
+                  <option value="20">20 min (~2.800 palavras)</option>
+                  <option value="30">30 min (~4.200 palavras)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Estilo do roteiro</label>
+                <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                  {STYLES.map(s => (
+                    <button key={s.value} onClick={() => setStyle(s.value)}
+                      className={`text-left p-2.5 rounded-lg border transition-all text-sm ${
+                        style === s.value 
+                          ? 'border-primary bg-primary/10 text-primary' 
+                          : 'border-border/50 bg-secondary/30 hover:border-primary/30'
+                      }`}>
+                      <span className="font-medium">{s.label}</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Nicho (opcional)</label>
+                <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Ex: finanças, tecnologia" className="bg-secondary/50" />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Idioma</label>
+                <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+                  <option value="português">Português</option>
+                  <option value="inglês">English</option>
+                  <option value="polonês">Polski</option>
+                  <option value="alemão">Deutsch</option>
+                  <option value="espanhol">Español</option>
+                </select>
+              </div>
+              <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gradient-hero border-0 gap-2">
+                <Sparkles className="w-4 h-4" />
+                {loading ? 'Gerando roteiro com IA...' : 'Gerar Roteiro Dopaminérgico'}
+              </Button>
             </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Nicho (opcional)</label>
-              <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Ex: finanças, tecnologia" className="bg-secondary/50" />
+
+            {/* Viral Database Panel */}
+            <div className="glass rounded-xl overflow-hidden">
+              <button onClick={() => setShowViralPanel(!showViralPanel)}
+                className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  <span className="font-semibold text-sm">Viral Database</span>
+                  {viralCount > 0 && (
+                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">
+                      {viralCount} selecionado{viralCount > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
+                {showViralPanel ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+
+              {showViralPanel && (
+                <div className="px-4 pb-4 space-y-4 border-t border-border/30 pt-3">
+                  {/* Hook Selector */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium flex items-center gap-1.5">
+                        <Zap className="w-3 h-3 text-primary" /> Hook (primeiros 5s)
+                      </label>
+                      {selectedHook && (
+                        <button onClick={() => setSelectedHook(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Limpar</button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                      {VIRAL_HOOKS.slice(0, 8).map(hook => (
+                        <button key={hook.id} onClick={() => setSelectedHook(selectedHook === hook.id ? null : hook.id)}
+                          className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
+                            selectedHook === hook.id
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border/30 bg-secondary/20 hover:border-primary/30 text-muted-foreground'
+                          }`}>
+                          <span className="line-clamp-2">{hook.text}</span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Badge variant="outline" className="text-[9px] px-1 py-0">{hook.style}</Badge>
+                            <span className="text-[9px] text-emerald-400">{hook.estimatedRetention}% ret.</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CTA Selector */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium flex items-center gap-1.5">
+                        <Target className="w-3 h-3 text-primary" /> Call-to-Action
+                      </label>
+                      {selectedCTA && (
+                        <button onClick={() => setSelectedCTA(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Limpar</button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                      {VIRAL_CTAS.slice(0, 6).map(cta => (
+                        <button key={cta.id} onClick={() => setSelectedCTA(selectedCTA === cta.id ? null : cta.id)}
+                          className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
+                            selectedCTA === cta.id
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border/30 bg-secondary/20 hover:border-primary/30 text-muted-foreground'
+                          }`}>
+                          <span className="line-clamp-2">{cta.text}</span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Badge variant="outline" className="text-[9px] px-1 py-0">{cta.type}</Badge>
+                            <Badge variant="outline" className="text-[9px] px-1 py-0">{cta.placement}</Badge>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Structure Selector */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium flex items-center gap-1.5">
+                        <BookOpen className="w-3 h-3 text-primary" /> Estrutura Narrativa
+                      </label>
+                      {selectedStructure && (
+                        <button onClick={() => setSelectedStructure(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Limpar</button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                      {STORY_STRUCTURES.map(s => (
+                        <button key={s.id} onClick={() => setSelectedStructure(selectedStructure === s.id ? null : s.id)}
+                          className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
+                            selectedStructure === s.id
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border/30 bg-secondary/20 hover:border-primary/30 text-muted-foreground'
+                          }`}>
+                          <span className="font-medium">{s.name}</span>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{s.description}</p>
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {s.bestFor.slice(0, 3).map(b => <Badge key={b} variant="outline" className="text-[8px] px-1 py-0">{b}</Badge>)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Active selections summary */}
+                  {viralCount > 0 && (
+                    <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/20 space-y-1">
+                      <p className="text-[10px] font-medium text-orange-400">Elementos virais ativos:</p>
+                      {activeHook && <p className="text-[10px] text-muted-foreground">⚡ Hook: {activeHook.text.slice(0, 50)}...</p>}
+                      {activeCTA && <p className="text-[10px] text-muted-foreground">🎯 CTA ({activeCTA.placement}): {activeCTA.text.slice(0, 50)}...</p>}
+                      {activeStructure && <p className="text-[10px] text-muted-foreground">📖 Estrutura: {activeStructure.name}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Idioma</label>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                <option value="português">Português</option>
-                <option value="inglês">English</option>
-                <option value="polonês">Polski</option>
-                <option value="alemão">Deutsch</option>
-                <option value="espanhol">Español</option>
-              </select>
-            </div>
-            <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gradient-hero border-0 gap-2">
-              <Sparkles className="w-4 h-4" />
-              {loading ? 'Gerando roteiro com IA...' : 'Gerar Roteiro Dopaminérgico'}
-            </Button>
           </div>
 
           <div className="lg:col-span-2 glass rounded-xl p-6">
@@ -280,6 +430,9 @@ const Scripts = () => {
                 <Zap className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
                 <p className="text-muted-foreground">Gerando roteiro com Gemini 2.5 Pro...</p>
                 <p className="text-xs text-muted-foreground mt-1">Estilo: {STYLES.find(s => s.value === style)?.label}</p>
+                {viralCount > 0 && (
+                  <p className="text-xs text-orange-400 mt-2">🔥 {viralCount} elemento{viralCount > 1 ? 's' : ''} viral injetado{viralCount > 1 ? 's' : ''}</p>
+                )}
               </div>
             )}
             {script ? (
@@ -291,6 +444,7 @@ const Scripts = () => {
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
                 <p>Selecione um estilo e gere roteiros de alta retenção</p>
                 <p className="text-xs mt-2">Open loops • Pattern interrupts • Curiosity gaps • Hooks magnéticos</p>
+                <p className="text-xs mt-3 text-orange-400/70">💡 Dica: Expanda o painel "Viral Database" para injetar hooks, CTAs e estruturas no roteiro</p>
               </div>
             )}
           </div>
