@@ -738,9 +738,11 @@ const Scripts = () => {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground">{c.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{c.description}</p>
-                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance} · 👕 {c.clothing}</p>
+                            <p className="text-sm font-medium text-foreground">{c.name} <span className="text-[10px] text-muted-foreground ml-1">({c.gender}, {c.age} anos)</span></p>
+                            <p className="text-[10px] text-muted-foreground">{c.role}</p>
+                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance.skin_color} skin, {c.appearance.hair_color} {c.appearance.hair_style} hair, {c.appearance.eye_color} eyes</p>
+                            <p className="text-[10px] text-muted-foreground">👕 {c.clothing.shirt}, {c.clothing.pants}, {c.clothing.shoes}</p>
+                            <p className="text-[10px] text-muted-foreground">🧠 {c.personality.join(', ')}</p>
                             <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 mt-1 px-2"
                               disabled={c.generatingImage}
                               onClick={() => generateCharacterImage(i)}>
