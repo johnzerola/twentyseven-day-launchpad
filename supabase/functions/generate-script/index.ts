@@ -142,9 +142,10 @@ REQUISITOS INEGOCIÁVEIS:
 - Mínimo ${targetWords} palavras (verifique antes de finalizar)
 - Cada seção totalmente escrita, sem placeholders
 - Hooks, open loops e pattern interrupts ao longo de TODO o roteiro
-- Marcações de tempo realistas
-- Indicações de B-roll e texto na tela
-- Ao final: títulos, thumbnails, tags SEO e descrição
+- Marcações de tempo realistas [00:00], [01:30], etc.
+- ROTEIRO LIMPO: APENAS texto falado. ZERO anotações técnicas ([B-ROLL], [MÚSICA], [EFEITO SONORO], [TRANSIÇÃO], [CORTE], etc.). O texto vai direto pro TTS.
+- Use valores em dólares ($), nunca R$
+- Ao final: títulos, thumbnails, tags SEO e descrição (essa parte pode ter formatação)
 
 Comece com o HOOK mais explosivo possível. Vamos lá!` }
         ],
