@@ -19,6 +19,7 @@ import Channels from "./pages/Channels";
 import Pricing from "./pages/Pricing";
 import Studio from "./pages/Studio";
 import Planner from "./pages/Planner";
+import Titles from "./pages/Titles";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
