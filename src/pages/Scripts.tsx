@@ -660,14 +660,23 @@ const Scripts = () => {
                     </Button>
                   </div>
 
+                  {/* Auto-detect button */}
+                  <Button onClick={autoDetectCharacters} disabled={detectingCharacters} className="w-full gap-2 mb-4" variant="default">
+                    {detectingCharacters ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    {detectingCharacters ? 'Detectando personagens e gerando imagens...' : '🪄 Detectar Personagens do Roteiro + Gerar Imagens'}
+                  </Button>
+
                   {/* Existing characters */}
                   {characters.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {characters.map((c, i) => (
                         <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                          {/* Character image or placeholder */}
                           <div className="shrink-0">
-                            {c.imageUrl ? (
+                            {c.generatingImage ? (
+                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center">
+                                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                              </div>
+                            ) : c.imageUrl ? (
                               <img src={c.imageUrl} alt={c.name} className="w-16 h-16 rounded-lg object-cover border border-border" />
                             ) : (
                               <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-lg font-bold">
@@ -718,14 +727,8 @@ const Scripts = () => {
                     </div>
                   </div>
                   <Button onClick={addCharacter} disabled={!newCharName.trim()} size="sm" variant="outline" className="mt-2 gap-1 text-xs">
-                    <Users className="w-3 h-3" /> Adicionar Personagem
+                    <Users className="w-3 h-3" /> Adicionar Manualmente
                   </Button>
-
-                  {characters.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-3 text-center py-4 border border-dashed border-border/50 rounded-lg">
-                      Sem personagens? Sem problema — pule para Prompts. A IA criará cenas genéricas.
-                    </p>
-                  )}
                 </motion.div>
               )}
 
