@@ -41,3 +41,24 @@ verify_jwt = false
 
 [functions.generate-veo3-prompts]
 verify_jwt = false
+
+[functions.monetization-coach]
+verify_jwt = false
+
+[functions.chat-assistant]
+verify_jwt = false
+
+[functions.dubspy-scan]
+verify_jwt = false
+
+[functions.generate-character-prompts]
+verify_jwt = false
+
+[functions.generate-veo3-video]
+verify_jwt = false
+
+[functions.generate-viral-db]
+verify_jwt = false
+
+[functions.deep-scan-video]
+verify_jwt = false
