@@ -1162,6 +1162,12 @@ const Scripts = () => {
                               <Badge variant="outline" className="text-[9px]">🎭 {scene.mood}</Badge>
                             </div>
                           </div>
+                          {scene.narrativeSummary && (
+                            <p className="text-[10px] text-accent italic mb-1.5">🎯 {scene.narrativeSummary}</p>
+                          )}
+                          {scene.narrativeText && (
+                            <p className="text-[10px] text-muted-foreground mb-1.5 border-l-2 border-primary/30 pl-2">"{scene.narrativeText}"</p>
+                          )}
                           <p className="text-xs text-foreground leading-relaxed">{scene.visualPrompt}</p>
                           {scene.charactersInScene && scene.charactersInScene.length > 0 && (
                             <div className="flex gap-1 mt-1.5">
