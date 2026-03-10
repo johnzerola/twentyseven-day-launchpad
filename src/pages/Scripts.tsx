@@ -746,6 +746,7 @@ const Scripts = () => {
                         </motion.div>
                       ))}
                     </div>
+                    </div>
                   )}
                 </motion.div>
               )}
