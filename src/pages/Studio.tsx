@@ -359,15 +359,21 @@ const Studio = () => {
     setShowLogs(true);
     setBatchLogs([]);
     addLog('🚀 Pipeline Completo Iniciado');
-    addLog('📝 Passo 1/3: Fatiando roteiro...');
+    addLog('📝 Passo 1/4: Fatiando roteiro...');
     const newSegs = sliceScript();
     if (!newSegs) { setPipelineRunning(false); return; }
     await new Promise(r => setTimeout(r, 300));
-    addLog('🎙️ Passo 2/3: Gerando áudio + prompts visuais...');
+    addLog('🎙️ Passo 2/4: Gerando áudio + prompts visuais...');
     await Promise.all([generateAllAudio(newSegs), autoGeneratePrompts(newSegs)]);
-    addLog('🎨 Passo 3/3: Gerando imagens em lote...');
+    addLog('🎨 Passo 3/4: Gerando imagens em lote...');
     await runBatchImages(newSegs);
-    addLog('🎉 Pipeline completo! Todos os assets foram gerados.');
+    if (veo3Mode) {
+      addLog('🎬 Passo 4/4: Gerando vídeos Veo3...');
+      await runBatchVideos(newSegs);
+      addLog('🎉 Pipeline completo! Vídeos Veo3 estão sendo processados em background.');
+    } else {
+      addLog('🎉 Pipeline completo! Todos os assets foram gerados.');
+    }
     setPipelineRunning(false);
     toast.success('Pipeline completo! 🎬');
   };
