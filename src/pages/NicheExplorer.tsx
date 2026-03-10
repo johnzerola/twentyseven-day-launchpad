@@ -420,8 +420,8 @@ const NicheExplorer = () => {
                     {a.revenueProjection.map((r: any) => (
                       <div key={r.month} className="bg-secondary/30 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-muted-foreground">Mês {r.month}</p>
-                        <p className="text-lg font-bold text-accent">${fmt(r.revenue)}</p>
-                        <p className="text-[9px] text-muted-foreground">{fmt(r.views)} views · {fmt(r.subs)} subs</p>
+                        <p className="text-lg font-bold text-accent">${formatNumber(r.revenue)}</p>
+                        <p className="text-[9px] text-muted-foreground">{formatNumber(r.views)} views · {formatNumber(r.subs)} subs</p>
                       </div>
                     ))}
                   </div>
