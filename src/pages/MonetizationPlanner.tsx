@@ -1,86 +1,57 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, Target, CheckCircle2, Circle, Zap, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DollarSign, Send, Loader2, CheckCircle2, Circle, Target, Calendar, Video, MessageSquare, Zap, TrendingUp, Users, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
-interface Milestone {
-  id: string;
-  day: number;
-  title: string;
-  description: string;
-  kpi: string;
+type Msg = { role: 'user' | 'assistant'; content: string };
+
+interface ActionPlan {
+  planName: string;
+  timeline: string;
+  weeklySchedule: { longForm: number; shorts: number; communityPosts: number };
+  phases: { name: string; duration: string; tasks: { task: string; type: string; frequency: string }[]; goal: string; expectedResults: string }[];
+  monetizationPath: { month: number; source: string; expectedRevenue: string }[];
+  communityPostIdeas: { type: string; example: string; timing: string }[];
+  shortVideoIdeas: { linkedTo: string; hookIdea: string }[];
 }
 
-const PLANS_TEMPLATE: Record<string, { label: string; milestones: Milestone[]; revenueEstimate: string }> = {
-  '30': {
-    label: '30 Dias',
-    revenueEstimate: '$0 - $50',
-    milestones: [
-      { id: 'm1', day: 1, title: 'Escolher nicho', description: 'Validar nicho com RPM > $8 e baixa saturação.', kpi: 'Nicho definido' },
-      { id: 'm2', day: 3, title: 'Criar canal', description: 'Nome, arte, descrição SEO, links.', kpi: 'Canal configurado' },
-      { id: 'm3', day: 5, title: 'Primeiro roteiro', description: 'Script de 10min com hooks de retenção.', kpi: '1 roteiro pronto' },
-      { id: 'm4', day: 8, title: 'Primeiro vídeo', description: 'Produzir e publicar primeiro vídeo.', kpi: '1 vídeo publicado' },
-      { id: 'm5', day: 12, title: '3 vídeos publicados', description: 'Manter cadência de 1 vídeo a cada 3-4 dias.', kpi: '3 vídeos' },
-      { id: 'm6', day: 18, title: 'Analisar métricas', description: 'Verificar retenção, CTR e impressões.', kpi: 'CTR > 4%' },
-      { id: 'm7', day: 25, title: '7 vídeos publicados', description: 'Catálogo inicial para o algoritmo indexar.', kpi: '7 vídeos' },
-      { id: 'm8', day: 30, title: 'Infoproduto', description: 'Criar guia/template de baixo custo para vender via link.', kpi: 'Primeira venda' },
-    ],
-  },
-  '60': {
-    label: '60 Dias',
-    revenueEstimate: '$50 - $300',
-    milestones: [
-      { id: 'm9', day: 35, title: '12 vídeos', description: 'Atingir massa crítica de conteúdo.', kpi: '12 vídeos' },
-      { id: 'm10', day: 40, title: '500 inscritos', description: 'Primeiro milestone de comunidade.', kpi: '500 subs' },
-      { id: 'm11', day: 45, title: 'Primeiro vídeo viral', description: 'Pelo menos 1 vídeo com 10x a média de views.', kpi: '1 outlier' },
-      { id: 'm12', day: 50, title: 'Afiliados ativos', description: 'Integrar links de afiliados nas descrições.', kpi: '3+ links ativos' },
-      { id: 'm13', day: 55, title: 'Shorts strategy', description: 'Publicar 5 Shorts derivados dos long-form.', kpi: '5 shorts' },
-      { id: 'm14', day: 60, title: '1.000 inscritos', description: 'Primeiro requisito para monetização YouTube.', kpi: '1K subs' },
-    ],
-  },
-  '90': {
-    label: '90 Dias',
-    revenueEstimate: '$300 - $2.000',
-    milestones: [
-      { id: 'm15', day: 65, title: '25 vídeos', description: 'Catálogo robusto com long-form + shorts.', kpi: '25 vídeos' },
-      { id: 'm16', day: 70, title: '4.000h watch time', description: 'Segundo requisito para monetização.', kpi: '4K horas' },
-      { id: 'm17', day: 75, title: 'Monetização aprovada', description: 'AdSense ativado no canal.', kpi: 'Partner Program' },
-      { id: 'm18', day: 80, title: 'Primeiro patrocínio', description: 'Negociar deal com marca relevante ao nicho.', kpi: '$100+ deal' },
-      { id: 'm19', day: 85, title: 'Segundo canal', description: 'Replicar o processo em nicho complementar.', kpi: '2º canal criado' },
-      { id: 'm20', day: 90, title: 'Revenue diversificado', description: 'AdSense + Afiliados + Infoproduto + Patrocínio.', kpi: '4 fontes de renda' },
-    ],
-  },
-};
+const MODULE_KEY = 'monetization';
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/monetization-coach`;
 
-const REVENUE_CHART = [
-  { day: 0, revenue: 0 }, { day: 15, revenue: 0 }, { day: 30, revenue: 25 },
-  { day: 45, revenue: 80 }, { day: 60, revenue: 200 }, { day: 75, revenue: 500 }, { day: 90, revenue: 1200 },
+const QUICK_STARTS = [
+  { label: '🚀 Quero monetizar do zero', message: 'Quero começar um canal do zero e monetizar o mais rápido possível. Me ajuda a criar um plano realista?' },
+  { label: '💰 Já tenho canal, quero escalar', message: 'Já tenho um canal com alguns vídeos mas não estou ganhando dinheiro. Como posso monetizar melhor?' },
+  { label: '🎯 Validar minha ideia de nicho', message: 'Tenho uma ideia de nicho e quero saber se vale a pena investir tempo nele. Posso te contar?' },
+  { label: '📊 Entender a regra dos 10-12 vídeos', message: 'Me explica essa história de que o YouTube só entende seu canal depois de 10-12 vídeos. Como furar essa bolha?' },
 ];
 
-const MODULE_KEY = 'monetization';
-
 const MonetizationPlanner = () => {
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
-  const [activePlan, setActivePlan] = useState('30');
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+  const [expandedPhase, setExpandedPhase] = useState<number>(0);
+  const [showPlan, setShowPlan] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const currentPlan = PLANS_TEMPLATE[activePlan];
-  const completedInPlan = currentPlan.milestones.filter(m => completedIds.includes(m.id)).length;
-  const totalCount = currentPlan.milestones.length;
-  const progress = Math.round((completedInPlan / totalCount) * 100);
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  // Load from DB
+  // Load progress
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+      if (!user) return;
       const { data } = await supabase
         .from('user_progress')
         .select('completed_items')
@@ -88,150 +59,372 @@ const MonetizationPlanner = () => {
         .eq('module', MODULE_KEY)
         .maybeSingle();
       if (data?.completed_items) {
-        setCompletedIds(data.completed_items as string[]);
+        setCompletedTasks(data.completed_items as string[]);
       }
-      setLoading(false);
     })();
   }, []);
 
-  const persist = useCallback(async (ids: string[]) => {
+  const persistProgress = useCallback(async (ids: string[]) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase
-      .from('user_progress')
-      .upsert({ user_id: user.id, module: MODULE_KEY, completed_items: ids, updated_at: new Date().toISOString() }, { onConflict: 'user_id,module' });
+    await supabase.from('user_progress').upsert(
+      { user_id: user.id, module: MODULE_KEY, completed_items: ids, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,module' }
+    );
   }, []);
 
-  const toggleMilestone = (id: string) => {
-    setCompletedIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      persist(next);
+  const toggleTask = (taskId: string) => {
+    setCompletedTasks(prev => {
+      const next = prev.includes(taskId) ? prev.filter(x => x !== taskId) : [...prev, taskId];
+      persistProgress(next);
       return next;
     });
   };
 
-  const generateAIPlan = async () => {
-    setGenerating(true);
+  // Parse action plan from message content
+  const extractActionPlan = (content: string): ActionPlan | null => {
+    const match = content.match(/```actionplan\s*([\s\S]*?)```/);
+    if (!match) return null;
     try {
-      const { data, error } = await supabase.functions.invoke('generate-plan', {
-        body: { niche: 'general', duration: parseInt(activePlan) },
-      });
-      if (error) throw error;
-      toast.success('Plano AI gerado!');
+      return JSON.parse(match[1]);
     } catch {
-      toast.error('Erro ao gerar plano AI');
-    } finally {
-      setGenerating(false);
+      return null;
     }
   };
 
-  const maxRev = Math.max(...REVENUE_CHART.map(d => d.revenue));
-  const svgW = 600;
-  const svgH = 120;
-  const points = REVENUE_CHART.map(d => {
-    const x = (d.day / 90) * svgW;
-    const y = svgH - (d.revenue / (maxRev || 1)) * (svgH - 10);
-    return `${x},${y}`;
-  }).join(' ');
+  const streamChat = async (userMessage: string) => {
+    const userMsg: Msg = { role: 'user', content: userMessage };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput('');
+    setIsStreaming(true);
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
-    );
-  }
+    let assistantContent = '';
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || 'Erro na comunicação');
+      }
+
+      if (!resp.body) throw new Error('No stream');
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantContent += delta;
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'assistant') {
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+                }
+                return [...prev, { role: 'assistant', content: assistantContent }];
+              });
+            }
+          } catch { /* partial */ }
+        }
+      }
+
+      // Check for action plan
+      const plan = extractActionPlan(assistantContent);
+      if (plan) {
+        setActionPlan(plan);
+        setShowPlan(true);
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao processar');
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  const handleSend = () => {
+    const trimmed = input.trim();
+    if (!trimmed || isStreaming) return;
+    streamChat(trimmed);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const removeActionPlanBlock = (content: string) => {
+    return content.replace(/```actionplan[\s\S]*?```/g, '').trim();
+  };
+
+  const totalPlanTasks = actionPlan?.phases.reduce((sum, p) => sum + p.tasks.length, 0) || 0;
+  const completedPlanTasks = actionPlan?.phases.reduce((sum, p) => sum + p.tasks.filter((_, i) => completedTasks.includes(`${p.name}-${i}`)).length, 0) || 0;
+  const planProgress = totalPlanTasks > 0 ? Math.round((completedPlanTasks / totalPlanTasks) * 100) : 0;
+
+  const typeIcon = (type: string) => {
+    switch (type) {
+      case 'video': return <Video className="w-3.5 h-3.5 text-red-400" />;
+      case 'short': return <Zap className="w-3.5 h-3.5 text-yellow-400" />;
+      case 'community': return <MessageSquare className="w-3.5 h-3.5 text-blue-400" />;
+      default: return <Target className="w-3.5 h-3.5 text-muted-foreground" />;
+    }
+  };
 
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-foreground flex items-center gap-2">
-              <DollarSign className="w-6 h-6 text-accent" /> Monetization Planner
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden">
+        {/* Chat Panel */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="p-4 border-b border-border bg-card/50">
+            <h1 className="text-xl font-bold font-['Space_Grotesk'] text-foreground flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-accent" /> Coach de Monetização
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">Plano de crescimento e monetização com milestones acionáveis</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Converse comigo — vou te ajudar a criar um plano realista baseado em dados reais
+            </p>
           </div>
-          <Button onClick={generateAIPlan} disabled={generating} size="sm" variant="secondary">
-            <Zap className="w-4 h-4 mr-1" />{generating ? 'Gerando...' : 'Gerar plano com AI'}
-          </Button>
-        </div>
 
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" /> Projeção de Receita (90 dias)
-            </h3>
-            <Badge variant="outline" className="text-emerald-400 border-emerald-400/30">Est. $1.200/mês</Badge>
-          </div>
-          <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-28">
-            <defs>
-              <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <polygon points={`0,${svgH} ${points} ${svgW},${svgH}`} fill="url(#revGrad)" />
-            <polyline points={points} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" />
-            {REVENUE_CHART.map((d, i) => {
-              const x = (d.day / 90) * svgW;
-              const y = svgH - (d.revenue / (maxRev || 1)) * (svgH - 10);
-              return (
-                <g key={i}>
-                  <circle cx={x} cy={y} r="3" fill="hsl(var(--primary))" />
-                  {d.revenue > 0 && <text x={x} y={y - 8} textAnchor="middle" className="text-[9px] fill-muted-foreground">${d.revenue}</text>}
-                </g>
-              );
-            })}
-            {[0, 30, 60, 90].map(d => (
-              <text key={d} x={(d / 90) * svgW} y={svgH + 12} textAnchor="middle" className="text-[9px] fill-muted-foreground">Dia {d}</text>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.length === 0 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <div className="bg-card border border-border rounded-xl p-5">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">💡 Antes de começar, saiba:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-start gap-2 bg-muted/30 rounded-lg p-3">
+                      <TrendingUp className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <span>O YouTube só entende seu canal após <strong className="text-foreground">10-12 vídeos</strong> consistentes no mesmo nicho</span>
+                    </div>
+                    <div className="flex items-start gap-2 bg-muted/30 rounded-lg p-3">
+                      <Clock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <span>Monetização real leva <strong className="text-foreground">3-6 meses</strong> com consistência (3+ vídeos/semana)</span>
+                    </div>
+                    <div className="flex items-start gap-2 bg-muted/30 rounded-lg p-3">
+                      <Users className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <span>Community posts e Shorts são <strong className="text-foreground">complementos</strong>, não substitutos do long-form</span>
+                    </div>
+                    <div className="flex items-start gap-2 bg-muted/30 rounded-lg p-3">
+                      <DollarSign className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <span>Comece vendendo infoprodutos <strong className="text-foreground">antes</strong> do AdSense — não espere a monetização oficial</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Comece por aqui:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {QUICK_STARTS.map((qs, i) => (
+                      <button key={i} onClick={() => streamChat(qs.message)}
+                        className="text-left text-sm p-3 rounded-lg border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-all">
+                        {qs.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {messages.map((msg, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm ${
+                  msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card border border-border text-foreground'
+                }`}>
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h3]:text-foreground [&>h3]:mt-3 [&>h3]:mb-1">
+                      <ReactMarkdown>{removeActionPlanBlock(msg.content)}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p>{msg.content}</p>
+                  )}
+                </div>
+              </motion.div>
             ))}
-          </svg>
-        </div>
 
-        <Tabs value={activePlan} onValueChange={setActivePlan}>
-          <div className="flex items-center justify-between">
-            <TabsList>
-              {Object.entries(PLANS_TEMPLATE).map(([key, plan]) => (
-                <TabsTrigger key={key} value={key}>{plan.label}</TabsTrigger>
-              ))}
-            </TabsList>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">{completedInPlan}/{totalCount}</span>
-              <Progress value={progress} className="w-24 h-2" />
-              <Badge className="bg-accent/20 text-accent border-accent/30">{currentPlan.revenueEstimate}</Badge>
+            {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
+              <div className="flex justify-start">
+                <div className="bg-card border border-border rounded-xl px-4 py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-border bg-card/50">
+            <div className="flex gap-2">
+              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                placeholder="Me conta seu nicho, país, expectativas..."
+                rows={1}
+                className="flex-1 resize-none rounded-lg bg-muted/50 border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <Button onClick={handleSend} disabled={isStreaming || !input.trim()} size="icon" className="shrink-0">
+                {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
             </div>
           </div>
+        </div>
 
-          {Object.entries(PLANS_TEMPLATE).map(([key, plan]) => (
-            <TabsContent key={key} value={key} className="mt-4">
-              <div className="space-y-2">
-                {plan.milestones.map((m, i) => {
-                  const done = completedIds.includes(m.id);
-                  return (
-                    <motion.div key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                      className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                        done ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-card border-border hover:border-primary/30'
-                      }`}
-                      onClick={() => toggleMilestone(m.id)}>
-                      {done ? <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" /> : <Circle className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{m.title}</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">Dia {m.day}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] shrink-0"><Target className="w-3 h-3 mr-1" />{m.kpi}</Badge>
-                    </motion.div>
-                  );
-                })}
+        {/* Action Plan Panel */}
+        <AnimatePresence>
+          {actionPlan && showPlan && (
+            <motion.div initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}
+              className="w-full lg:w-[420px] border-l border-border bg-card overflow-y-auto">
+              <div className="p-4 border-b border-border sticky top-0 bg-card z-10">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Target className="w-4 h-4 text-accent" /> {actionPlan.planName}
+                  </h2>
+                  <button onClick={() => setShowPlan(false)} className="text-xs text-muted-foreground hover:text-foreground">Fechar</button>
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <Progress value={planProgress} className="flex-1 h-2" />
+                  <span className="text-xs text-muted-foreground">{completedPlanTasks}/{totalPlanTasks}</span>
+                </div>
+
+                {/* Weekly Schedule */}
+                <div className="flex gap-2 mt-3">
+                  <Badge variant="outline" className="text-[10px] gap-1"><Video className="w-3 h-3 text-red-400" />{actionPlan.weeklySchedule.longForm} vídeos/sem</Badge>
+                  <Badge variant="outline" className="text-[10px] gap-1"><Zap className="w-3 h-3 text-yellow-400" />{actionPlan.weeklySchedule.shorts} shorts/sem</Badge>
+                  <Badge variant="outline" className="text-[10px] gap-1"><MessageSquare className="w-3 h-3 text-blue-400" />{actionPlan.weeklySchedule.communityPosts} posts/sem</Badge>
+                </div>
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+
+              <div className="p-4 space-y-4">
+                {/* Phases */}
+                {actionPlan.phases.map((phase, pi) => (
+                  <div key={pi} className="border border-border rounded-lg overflow-hidden">
+                    <button onClick={() => setExpandedPhase(expandedPhase === pi ? -1 : pi)}
+                      className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="text-left">
+                        <p className="text-xs font-semibold text-foreground">{phase.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{phase.duration} · {phase.expectedResults}</p>
+                      </div>
+                      {expandedPhase === pi ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    </button>
+                    <AnimatePresence>
+                      {expandedPhase === pi && (
+                        <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                          <div className="p-2 space-y-1">
+                            <p className="text-[10px] text-accent px-2 py-1 font-medium">🎯 {phase.goal}</p>
+                            {phase.tasks.map((task, ti) => {
+                              const taskId = `${phase.name}-${ti}`;
+                              const done = completedTasks.includes(taskId);
+                              return (
+                                <div key={ti} onClick={() => toggleTask(taskId)}
+                                  className={`flex items-start gap-2 p-2 rounded cursor-pointer transition-all ${done ? 'opacity-60' : 'hover:bg-muted/30'}`}>
+                                  {done ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <Circle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />}
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-xs ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.task}</p>
+                                    <div className="flex gap-1 mt-0.5">
+                                      <span className="flex items-center gap-0.5">{typeIcon(task.type)}</span>
+                                      <span className="text-[10px] text-muted-foreground">{task.frequency}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+
+                {/* Monetization Path */}
+                {actionPlan.monetizationPath.length > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1">
+                      <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Caminho de Receita
+                    </h4>
+                    <div className="space-y-1.5">
+                      {actionPlan.monetizationPath.map((mp, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Mês {mp.month}: {mp.source}</span>
+                          <Badge variant="secondary" className="text-[10px]">{mp.expectedRevenue}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Community Post Ideas */}
+                {actionPlan.communityPostIdeas?.length > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-blue-400" /> Ideias de Community Posts
+                    </h4>
+                    <div className="space-y-2">
+                      {actionPlan.communityPostIdeas.map((cp, i) => (
+                        <div key={i} className="bg-muted/30 rounded-lg p-2">
+                          <div className="flex items-center gap-1 mb-1">
+                            <Badge variant="outline" className="text-[9px]">{cp.type}</Badge>
+                            <span className="text-[10px] text-muted-foreground">{cp.timing}</span>
+                          </div>
+                          <p className="text-xs text-foreground">{cp.example}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Short Video Ideas */}
+                {actionPlan.shortVideoIdeas?.length > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5 text-yellow-400" /> Shorts Vinculados
+                    </h4>
+                    <div className="space-y-2">
+                      {actionPlan.shortVideoIdeas.map((sv, i) => (
+                        <div key={i} className="text-xs">
+                          <p className="text-muted-foreground">📹 {sv.linkedTo}</p>
+                          <p className="text-foreground ml-4">↳ Hook: {sv.hookIdea}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Toggle plan button when plan exists but hidden */}
+        {actionPlan && !showPlan && (
+          <button onClick={() => setShowPlan(true)}
+            className="fixed bottom-20 right-4 bg-primary text-primary-foreground rounded-full px-4 py-2 text-xs font-medium shadow-lg flex items-center gap-2 z-50 hover:opacity-90">
+            <Target className="w-4 h-4" /> Ver Plano de Ação
+          </button>
+        )}
       </div>
     </DashboardLayout>
   );
