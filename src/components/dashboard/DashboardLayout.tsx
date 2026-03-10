@@ -9,7 +9,7 @@ import { APP_NAME } from '@/lib/constants';
 
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { key: 'TubeSpy', icon: Search, path: '/search' },
+  { key: 'DubSpy', icon: Search, path: '/search' },
   { key: 'HacksLab', icon: Palette, path: '/branding' },
   { key: 'Dotti Studio', icon: Film, path: '/studio' },
   { key: 'Dotti Planner', icon: Kanban, path: '/planner' },

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2 } from 'lucide-react';
+import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
+import { EmergingChannelsTab } from '@/components/dubspy/EmergingChannelsTab';
+import { ClusterTab } from '@/components/dubspy/ClusterTab';
 import { formatNumber } from '@/lib/formatters';
 import { NICHES, COUNTRIES, LANGUAGES, PERIODS } from '@/lib/constants';
 
@@ -37,20 +39,22 @@ const calcOutlierScore = (views: number, medianViews: number) => {
   return Math.round((views / medianViews) * 10) / 10;
 };
 
-const SEARCH_TYPES = [
-  { value: 'video', label: 'Vídeos', icon: Video, desc: 'Buscar vídeos por palavra-chave' },
-  { value: 'channel', label: 'Canais', icon: Tv, desc: 'Espionar canal específico' },
+const TABS = [
+  { id: 'videos', label: 'Vídeos', icon: Video, desc: 'Buscar vídeos virais por palavra-chave' },
+  { id: 'channel', label: 'Canais', icon: Tv, desc: 'Espionar canal específico' },
+  { id: 'emerging', label: 'Emergentes', icon: Rocket, desc: 'Canais novos com crescimento rápido' },
+  { id: 'escapees', label: 'Algorithm Escapees', icon: Zap, desc: 'Canais que escaparam da bolha' },
+  { id: 'cluster', label: 'Micro-Nichos', icon: Network, desc: 'Clustering de canais por IA' },
 ];
 
 const ChannelSearch = () => {
+  const [activeTab, setActiveTab] = useState('videos');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VideoResult[]>([]);
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Pre-search filter questions
-  const [searchType, setSearchType] = useState('video');
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('');
@@ -66,6 +70,7 @@ const ChannelSearch = () => {
   const [deepScanResult, setDeepScanResult] = useState<any>(null);
 
   const medianViews = channelInfo?.avgViews || 156_000;
+  const searchType = activeTab === 'channel' ? 'channel' : 'video';
 
   const searchVideos = async () => {
     if (!query.trim()) return;
@@ -135,321 +140,311 @@ const ChannelSearch = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center glow-accent">
             <Search className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk']">TubeSpy — Deep Scan & Engenharia Reversa</h1>
-            <p className="text-sm text-muted-foreground">Espione, analise hooks, retenção, clone vídeos virais — fique 10 passos à frente</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk']">DubSpy — Inteligência YouTube Avançada</h1>
+            <p className="text-sm text-muted-foreground">Descubra canais emergentes, algorithm escapees, micro-nichos e engenharia reversa de virais</p>
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* PRE-SEARCH QUESTIONNAIRE                    */}
-        {/* ═══════════════════════════════════════════ */}
-        <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-xl p-5 space-y-5 border-primary/10">
-          
-          {/* Q1: Search Type */}
-          <div>
-            <label className="text-sm font-medium flex items-center gap-2 mb-3">
-              <HelpCircle className="w-4 h-4 text-primary" /> O que você quer buscar?
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {SEARCH_TYPES.map(t => (
-                <button key={t.value} onClick={() => setSearchType(t.value)}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-                    searchType === t.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border/50 bg-secondary/30 hover:border-primary/30'
-                  }`}>
-                  <t.icon className="w-5 h-5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">{t.label}</p>
-                    <p className="text-[10px] text-muted-foreground">{t.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Q2 + Q3: Niche + Country side by side */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium flex items-center gap-2 mb-2">
-                <Flame className="w-4 h-4 text-accent" /> Qual nicho?
-              </label>
-              <select value={niche} onChange={e => setNiche(e.target.value)}
-                className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                {NICHES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium flex items-center gap-2 mb-2">
-                <MapPin className="w-4 h-4 text-accent" /> Qual país?
-              </label>
-              <select value={country} onChange={e => setCountry(e.target.value)}
-                className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Search bar */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              {searchType === 'channel' ? '🔗 Cole o link, @handle ou nome do canal' : '🔍 Palavra-chave, link ou tema'}
-            </label>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={searchType === 'channel'
-                    ? 'Ex: youtube.com/@MrBeast, @Fazendo_Milhoes, Fazendo Milhões'
-                    : 'Ex: como ganhar dinheiro online, renda passiva 2026'}
-                  value={query} onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchVideos()}
-                  className="pl-10 bg-secondary/50 h-12 text-base" />
-              </div>
-              <Button onClick={searchVideos} disabled={loading} className="gradient-hero border-0 gap-2 h-12 px-6">
-                <Search className="w-4 h-4" /> {loading ? 'Buscando...' : 'Espionar'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Advanced Filters Toggle */}
-          <div>
-            <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
-              <Filter className="w-3 h-3" /> {showAdvancedFilters ? 'Esconder' : 'Mostrar'} filtros avançados
+        {/* Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {TABS.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all border ${
+                activeTab === tab.id
+                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                  : 'border-border/50 bg-secondary/30 hover:border-primary/30 text-muted-foreground'
+              }`}>
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
             </button>
-            <AnimatePresence>
-              {showAdvancedFilters && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden">
-                  <div className="flex gap-3 flex-wrap mt-3 pt-3 border-t border-border/30">
-                    <select value={language} onChange={e => setLanguage(e.target.value)}
-                      className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                      {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                    </select>
-                    <select value={period} onChange={e => setPeriod(e.target.value)}
-                      className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
-                      {PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </select>
-                    <Input placeholder="Min views" value={minViews} onChange={e => setMinViews(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
-                    <Input placeholder="Min subs" value={minSubs} onChange={e => setMinSubs(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
-                    <Input placeholder="Max subs" value={maxSubs} onChange={e => setMaxSubs(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {(activeTab === 'videos' || activeTab === 'channel') && (
+          <>
+            {/* Search Form */}
+            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+              className="glass rounded-xl p-5 space-y-4 border-primary/10">
+              
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium flex items-center gap-2 mb-2">
+                    <Flame className="w-4 h-4 text-accent" /> Qual nicho?
+                  </label>
+                  <select value={niche} onChange={e => setNiche(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+                    {NICHES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium flex items-center gap-2 mb-2">
+                    <MapPin className="w-4 h-4 text-accent" /> Qual país?
+                  </label>
+                  <select value={country} onChange={e => setCountry(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+                    {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {activeTab === 'channel' ? '🔗 Cole o link, @handle ou nome do canal' : '🔍 Palavra-chave, link ou tema'}
+                </label>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder={activeTab === 'channel'
+                        ? 'Ex: youtube.com/@MrBeast, @Fazendo_Milhoes'
+                        : 'Ex: como ganhar dinheiro online, renda passiva 2026'}
+                      value={query} onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && searchVideos()}
+                      className="pl-10 bg-secondary/50 h-12 text-base" />
                   </div>
-                </motion.div>
+                  <Button onClick={searchVideos} disabled={loading} className="gradient-hero border-0 gap-2 h-12 px-6">
+                    <Search className="w-4 h-4" /> {loading ? 'Buscando...' : 'Espionar'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Advanced Filters */}
+              <div>
+                <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                  <Filter className="w-3 h-3" /> {showAdvancedFilters ? 'Esconder' : 'Mostrar'} filtros avançados
+                </button>
+                <AnimatePresence>
+                  {showAdvancedFilters && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden">
+                      <div className="flex gap-3 flex-wrap mt-3 pt-3 border-t border-border/30">
+                        <select value={language} onChange={e => setLanguage(e.target.value)}
+                          className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+                          {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                        </select>
+                        <select value={period} onChange={e => setPeriod(e.target.value)}
+                          className="h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm">
+                          {PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        </select>
+                        <Input placeholder="Min views" value={minViews} onChange={e => setMinViews(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
+                        <Input placeholder="Min subs" value={minSubs} onChange={e => setMinSubs(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
+                        <Input placeholder="Max subs" value={maxSubs} onChange={e => setMaxSubs(e.target.value)} className="h-9 w-28 bg-secondary/50 text-sm" type="number" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+
+            {/* Channel Card */}
+            {channelInfo && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-xl p-5">
+                <div className="flex items-center gap-5 flex-wrap">
+                  {channelInfo.thumbnail && (
+                    <img src={channelInfo.thumbnail} alt={channelInfo.name} className="w-16 h-16 rounded-full object-cover border-2 border-primary/30" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-lg">{channelInfo.name}</h3>
+                      {channelInfo.isMonetized ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
+                          <Shield className="w-3 h-3" /> Monetização: ATIVADA
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="gap-1">
+                          <ShieldOff className="w-3 h-3" /> Monetização: DESATIVADA
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{channelInfo.description}</p>
+                  </div>
+                  <div className="flex gap-6 text-center flex-wrap">
+                    <div>
+                      <p className="text-lg font-bold">{formatNumber(channelInfo.subscribers)}</p>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" /> Inscritos</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">{formatNumber(channelInfo.totalViews)}</p>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Eye className="w-3 h-3" /> Views Total</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">{channelInfo.videoCount}</p>
+                      <p className="text-[10px] text-muted-foreground">Vídeos</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">{formatNumber(channelInfo.avgViews)}</p>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Média</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant="outline" className="gap-1 text-xs"
+                    onClick={() => emulateChannel(channelInfo.id)} disabled={!!emulating}>
+                    <Copy className="w-3 h-3" /> Modelar Canal
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1 text-xs">
+                    <TrendingUp className="w-3 h-3" /> Canais Similares
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Emulation Result */}
+            {emulationResult && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="glass rounded-xl p-6 border border-primary/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Roadmap de Emulação</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setEmulationResult(null)}>✕</Button>
+                </div>
+                <p className="text-sm text-muted-foreground">{emulationResult.roadmap?.strategy}</p>
+              </motion.div>
+            )}
+
+            {/* Results info */}
+            {results.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{results.length} vídeos encontrados</Badge>
+                <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
+                  {results.filter(v => calcOutlierScore(v.views, medianViews) >= 3).length} outliers detectados
+                </Badge>
+              </div>
+            )}
+
+            {/* Data Table */}
+            {results.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border/50">
+                        <TableHead className="w-16">Thumb</TableHead>
+                        <TableHead>Título</TableHead>
+                        <TableHead className="text-right">VPH</TableHead>
+                        <TableHead className="text-right">Views</TableHead>
+                        <TableHead className="text-right">Publicado</TableHead>
+                        <TableHead className="text-right">Outlier Score</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((v) => {
+                        const vph = calcVPH(v.views, v.publishedAt);
+                        const outlierScore = calcOutlierScore(v.views, medianViews);
+                        const isHot = outlierScore >= 3;
+                        return (
+                          <TableRow key={v.id} className={`border-border/30 transition-colors ${isHot ? 'bg-accent/5 hover:bg-accent/10' : 'hover:bg-secondary/30'}`}>
+                            <TableCell>
+                              <div className="relative w-16 h-10 rounded overflow-hidden">
+                                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                                  <Eye className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                                {isHot && (
+                                  <span className="absolute -top-1 -right-1 bg-accent text-[8px] font-bold text-accent-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    <Flame className="w-2 h-2" /> {Math.round(outlierScore)}x
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium line-clamp-1">{v.title}</p>
+                                <p className="text-xs text-muted-foreground">{v.channelTitle} • {formatNumber(v.subscribers)} subs • {v.duration}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`text-sm font-mono ${vph >= 1000 ? 'text-accent font-bold' : ''}`}>
+                                {formatNumber(vph)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-sm">
+                              {formatNumber(v.views)}
+                            </TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">
+                              {new Date(v.publishedAt).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {isHot ? (
+                                <Badge className="bg-accent/20 text-accent border-accent/30 gap-1">
+                                  <Flame className="w-3 h-3" /> Outlier {Math.round(outlierScore)}x
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{outlierScore}x</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Button size="icon" variant="ghost" className="h-7 w-7" 
+                                  onClick={() => deepScanVideo(v.id)} 
+                                  disabled={deepScanning === v.id}
+                                  title="Deep Scan — Engenharia Reversa">
+                                  {deepScanning === v.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3 text-primary" />}
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => trackChannel(v)} title="Rastrear canal">
+                                  <Star className="w-3 h-3" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7"
+                                  onClick={() => window.open(`https://youtube.com/watch?v=${v.id}`, '_blank')} title="Abrir no YouTube">
+                                  <ExternalLink className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Deep Scan Result Panel */}
+            <AnimatePresence>
+              {deepScanResult && (
+                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} />
               )}
             </AnimatePresence>
-          </div>
-        </motion.div>
 
-        {/* Channel Card with Monetization Badge */}
-        {channelInfo && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-xl p-5">
-            <div className="flex items-center gap-5 flex-wrap">
-              {channelInfo.thumbnail && (
-                <img src={channelInfo.thumbnail} alt={channelInfo.name} className="w-16 h-16 rounded-full object-cover border-2 border-primary/30" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-lg">{channelInfo.name}</h3>
-                  {/* TODO: Real monetization check via web scraping — search for key:"is_monetization_enabled",value:"true" in YouTube page source */}
-                  {channelInfo.isMonetized ? (
-                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
-                      <Shield className="w-3 h-3" /> Monetização: ATIVADA
+            {/* Deep Scanning Loader */}
+            {deepScanning && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="glass rounded-xl p-8 text-center border border-primary/20">
+                <Brain className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
+                <h3 className="font-bold text-lg">Deep Scan em Andamento...</h3>
+                <p className="text-sm text-muted-foreground mt-1">Analisando hooks, retenção, DNA do conteúdo e gerando template de clonagem</p>
+                <div className="flex justify-center gap-2 mt-4">
+                  {['Hook', 'Retenção', 'DNA', 'CTR', 'Clone'].map((step, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px] animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
+                      {step}
                     </Badge>
-                  ) : (
-                    <Badge variant="destructive" className="gap-1">
-                      <ShieldOff className="w-3 h-3" /> Monetização: DESATIVADA
-                    </Badge>
-                  )}
+                  ))}
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{channelInfo.description}</p>
+              </motion.div>
+            )}
+
+            {/* Empty state */}
+            {hasSearched && !loading && results.length === 0 && !channelInfo && (
+              <div className="glass rounded-xl p-12 text-center text-muted-foreground">
+                <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p>Nenhum resultado encontrado. Tente outra busca.</p>
               </div>
-              <div className="flex gap-6 text-center flex-wrap">
-                <div>
-                  <p className="text-lg font-bold">{formatNumber(channelInfo.subscribers)}</p>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" /> Inscritos</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold">{formatNumber(channelInfo.totalViews)}</p>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Eye className="w-3 h-3" /> Views Total</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold">{channelInfo.videoCount}</p>
-                  <p className="text-[10px] text-muted-foreground">Vídeos</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold">{formatNumber(channelInfo.avgViews)}</p>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Média</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-accent">$15.00</p>
-                  <p className="text-[10px] text-muted-foreground">RPM Est.</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" className="gap-1 text-xs"
-                onClick={() => emulateChannel(channelInfo.id)} disabled={!!emulating}>
-                <Copy className="w-3 h-3" /> Modelar Canal
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1 text-xs">
-                <TrendingUp className="w-3 h-3" /> Canais Similares
-              </Button>
-            </div>
-          </motion.div>
+            )}
+          </>
         )}
 
-        {/* Emulation Result */}
-        {emulationResult && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="glass rounded-xl p-6 border border-primary/30 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Roadmap de Emulação</h3>
-              <Button variant="ghost" size="sm" onClick={() => setEmulationResult(null)}>✕</Button>
-            </div>
-            <p className="text-sm text-muted-foreground">{emulationResult.roadmap?.strategy}</p>
-          </motion.div>
-        )}
-
-        {/* Results info */}
-        {results.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">{results.length} vídeos encontrados</Badge>
-            <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
-              {results.filter(v => calcOutlierScore(v.views, medianViews) >= 3).length} outliers detectados
-            </Badge>
-          </div>
-        )}
-
-        {/* Data Table — Outlier Radar */}
-        {results.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border/50">
-                    <TableHead className="w-16">Thumb</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead className="text-right">VPH</TableHead>
-                    <TableHead className="text-right">Views</TableHead>
-                    <TableHead className="text-right">Publicado</TableHead>
-                    <TableHead className="text-right">Outlier Score</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results.map((v) => {
-                    const vph = calcVPH(v.views, v.publishedAt);
-                    const outlierScore = calcOutlierScore(v.views, medianViews);
-                    const isHot = outlierScore >= 3;
-                    return (
-                      <TableRow key={v.id} className={`border-border/30 transition-colors ${isHot ? 'bg-accent/5 hover:bg-accent/10' : 'hover:bg-secondary/30'}`}>
-                        <TableCell>
-                          <div className="relative w-16 h-10 rounded overflow-hidden">
-                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                              <Eye className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                            {isHot && (
-                              <span className="absolute -top-1 -right-1 bg-accent text-[8px] font-bold text-accent-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                                <Flame className="w-2 h-2" /> {Math.round(outlierScore)}x
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm font-medium line-clamp-1">{v.title}</p>
-                            <p className="text-xs text-muted-foreground">{v.channelTitle} • {formatNumber(v.subscribers)} subs • {v.duration}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className={`text-sm font-mono ${vph >= 1000 ? 'text-accent font-bold' : ''}`}>
-                            {formatNumber(vph)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-sm">
-                          {formatNumber(v.views)}
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">
-                          {new Date(v.publishedAt).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {isHot ? (
-                            <Badge className="bg-accent/20 text-accent border-accent/30 gap-1">
-                              <Flame className="w-3 h-3" /> Outlier {Math.round(outlierScore)}x
-                            </Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">{outlierScore}x</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
-                            <Button size="icon" variant="ghost" className="h-7 w-7" 
-                              onClick={() => deepScanVideo(v.id)} 
-                              disabled={deepScanning === v.id}
-                              title="Deep Scan — Engenharia Reversa">
-                              {deepScanning === v.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3 text-primary" />}
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => trackChannel(v)} title="Rastrear canal">
-                              <Star className="w-3 h-3" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7"
-                              onClick={() => window.open(`https://youtube.com/watch?v=${v.id}`, '_blank')} title="Abrir no YouTube">
-                              <ExternalLink className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Deep Scan Result Panel */}
-        <AnimatePresence>
-          {deepScanResult && (
-            <DeepScanPanel
-              result={deepScanResult}
-              onClose={() => setDeepScanResult(null)}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Deep Scanning Loader */}
-        {deepScanning && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="glass rounded-xl p-8 text-center border border-primary/20">
-            <Brain className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
-            <h3 className="font-bold text-lg">Deep Scan em Andamento...</h3>
-            <p className="text-sm text-muted-foreground mt-1">Analisando hooks, retenção, DNA do conteúdo e gerando template de clonagem</p>
-            <div className="flex justify-center gap-2 mt-4">
-              {['Hook', 'Retenção', 'DNA', 'CTR', 'Clone'].map((step, i) => (
-                <Badge key={i} variant="outline" className="text-[10px] animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
-                  {step}
-                </Badge>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Empty state */}
-        {hasSearched && !loading && results.length === 0 && !channelInfo && (
-          <div className="glass rounded-xl p-12 text-center text-muted-foreground">
-            <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
-            <p>Nenhum resultado encontrado. Tente outra busca.</p>
-          </div>
-        )}
+        {activeTab === 'emerging' && <EmergingChannelsTab mode="emerging" />}
+        {activeTab === 'escapees' && <EmergingChannelsTab mode="escapees" />}
+        {activeTab === 'cluster' && <ClusterTab />}
       </div>
     </DashboardLayout>
   );
