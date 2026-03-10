@@ -10,7 +10,7 @@ import { APP_NAME } from '@/lib/constants';
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'DubSpy', icon: Search, path: '/search' },
-  { key: 'HacksLab', icon: Palette, path: '/branding' },
+  { key: 'Growth Center', icon: Palette, path: '/branding' },
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
