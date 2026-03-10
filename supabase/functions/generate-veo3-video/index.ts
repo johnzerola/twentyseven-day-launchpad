@@ -64,11 +64,6 @@ serve(async (req) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Veo3 generate error:", response.status, errorText);
-        if (response.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit. Aguarde e tente novamente." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
         if (response.status === 402 || response.status === 403) {
           return new Response(JSON.stringify({ error: "Sem créditos ou acesso negado. Verifique sua API Key e billing." }), {
             status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
