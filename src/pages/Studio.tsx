@@ -318,7 +318,6 @@ const Studio = () => {
     }
     toast.success(`${withPrompts.length} vídeos Veo3 enviados para geração!`);
   };
-  };
 
   const downloadAll = async () => {
     const segs = segmentsRef.current;
