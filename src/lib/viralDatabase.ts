@@ -3,7 +3,7 @@
 export interface ViralHook {
   id: string;
   text: string;
-  style: 'curiosidade' | 'urgência' | 'polêmica' | 'storytelling' | 'choque' | 'empatia';
+  style: string;
   niches: string[];
   estimatedRetention: number; // % retention at 30s
 }
