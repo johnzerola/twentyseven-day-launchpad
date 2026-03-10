@@ -15,7 +15,7 @@ import { VOICES } from '@/lib/constants';
 
 const Studio = () => {
   const [script, setScript] = useState('');
-  const [voice, setVoice] = useState(VOICES[0].id);
+  const [voice, setVoice] = useState<string>(VOICES[0].id);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
