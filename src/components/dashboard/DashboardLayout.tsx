@@ -18,6 +18,8 @@ const navItems = [
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Narração', icon: Mic, path: '/narration' },
+  { key: 'Workflow', icon: GitBranch, path: '/workflow' },
+  { key: 'Monetização', icon: DollarSign, path: '/monetization' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Plano 27 Dias', icon: Calendar, path: '/plan' },
 ];
