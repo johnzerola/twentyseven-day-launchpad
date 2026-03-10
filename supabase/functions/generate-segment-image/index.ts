@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { visualPrompt, textContent, segmentIndex } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     if (!visualPrompt?.trim() && !textContent?.trim()) {
       throw new Error("Visual prompt or text content required");
@@ -21,23 +21,22 @@ serve(async (req) => {
       ? visualPrompt
       : `Cinematic scene for a YouTube video narration. Scene description based on this script segment: "${textContent}". High quality, 16:9 aspect ratio, dramatic lighting, professional cinematography.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: `Generate a cinematic, high-quality image for a YouTube video scene. ${prompt}. Style: ultra-realistic, dramatic lighting, 16:9 composition, movie-quality.`
-          }
-        ],
-        modalities: ["image", "text"]
-      }),
-    });
+    const fullPrompt = `Generate a cinematic, high-quality image for a YouTube video scene. ${prompt}. Style: ultra-realistic, dramatic lighting, 16:9 composition, movie-quality.`;
+
+    // Use Gemini 2.0 Flash with image generation via Imagen
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const t = await response.text();
@@ -51,11 +50,17 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageUrl) {
+    
+    // Extract image from Gemini response
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+    
+    if (!imagePart) {
+      console.error("No image in response. Parts:", JSON.stringify(parts.map((p: any) => Object.keys(p))));
       throw new Error("No image generated");
     }
+
+    const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 
     return new Response(JSON.stringify({ imageUrl, segmentIndex }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
