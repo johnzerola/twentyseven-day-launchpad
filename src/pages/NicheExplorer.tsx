@@ -500,8 +500,8 @@ const NicheExplorer = () => {
                         <h4 className="text-xs font-medium line-clamp-2 mb-2">{v.title}</h4>
                         <p className="text-[10px] text-muted-foreground mb-1">{v.channelTitle}</p>
                         <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
-                          <span>{fmt(v.views)} views</span>
-                          <span>{fmt(v.vph)} v/h</span>
+                          <span>{formatNumber(v.views)} views</span>
+                          <span>{formatNumber(v.vph)} v/h</span>
                           <span>{v.engagementRate}% eng</span>
                           {v.viewsPerSub > 1 && <span className="text-accent">{v.viewsPerSub}x subs</span>}
                         </div>
