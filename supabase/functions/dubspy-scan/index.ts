@@ -10,15 +10,16 @@ interface ScanParams {
   niche: string;
   country?: string;
   language?: string;
-  // Emerging filters
-  maxVideos?: number;       // e.g. 5, 10
-  maxChannelAgeDays?: number; // e.g. 30, 90
-  minSubGrowthPercent?: number; // for escapees
-  // Common filters
+  maxVideos?: number;
+  maxChannelAgeDays?: number;
+  minSubGrowthPercent?: number;
   minViews?: number;
   maxViews?: number;
   minSubs?: number;
   maxSubs?: number;
+  // New expanded filters
+  maxChannelVideos?: number;    // e.g. 50
+  minVideoViews?: number;       // e.g. 100000
 }
 
 async function fetchJSON(url: string) {
@@ -41,7 +42,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
 
-    const { mode, niche, country = "", language = "", maxVideos, maxChannelAgeDays, minSubs = 0, maxSubs, minViews = 0, maxViews } = params;
+    const { mode, niche, country = "", language = "", maxVideos, maxChannelAgeDays, minSubs = 0, maxSubs, minViews = 0, maxViews, maxChannelVideos, minVideoViews } = params;
 
     if (!niche?.trim()) throw new Error("Niche is required");
 
@@ -69,7 +70,7 @@ serve(async (req) => {
     const channelIds = [...new Set((vData.items || []).map((v: any) => v.snippet.channelId))] as string[];
     const cData = await fetchJSON(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings,contentDetails&id=${channelIds.slice(0, 50).join(",")}&key=${YOUTUBE_API_KEY}`);
 
-    // Build channel map with full details
+    // Build channel map
     const channelMap: Record<string, any> = {};
     for (const ch of (cData.items || [])) {
       const subs = parseInt(ch.statistics.subscriberCount || "0");
@@ -95,7 +96,7 @@ serve(async (req) => {
       };
     }
 
-    // Step 4: Map videos to channels
+    // Step 4: Map videos to channels and compute enhanced metrics
     const channelVideos: Record<string, any[]> = {};
     for (const v of (vData.items || [])) {
       const chId = v.snippet.channelId;
@@ -105,6 +106,12 @@ serve(async (req) => {
       const comments = parseInt(v.statistics?.commentCount || "0");
       const publishedMs = new Date(v.snippet.publishedAt).getTime();
       const hoursAge = Math.max(1, (Date.now() - publishedMs) / 3600000);
+
+      // View velocity in first 72 hours (estimated)
+      const hoursAgeActual = (Date.now() - publishedMs) / 3600000;
+      const viewVelocity72h = hoursAgeActual <= 72
+        ? views
+        : Math.round(views * (72 / hoursAgeActual));
 
       channelVideos[chId].push({
         id: v.id,
@@ -117,10 +124,13 @@ serve(async (req) => {
         duration: v.contentDetails?.duration || "",
         vph: Math.round(views / hoursAge),
         engagementRate: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
+        commentEngagement: views > 0 ? parseFloat(((comments / views) * 100).toFixed(3)) : 0,
+        likeRatio: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
+        viewVelocity72h,
       });
     }
 
-    // Step 5: Build enriched channel list with filters
+    // Step 5: Build enriched channel list with VIRAL SCORE
     let channels = Object.entries(channelMap).map(([chId, ch]) => {
       const videos = (channelVideos[chId] || []).sort((a: any, b: any) => b.views - a.views);
       const totalVideoViews = videos.reduce((s: number, v: any) => s + v.views, 0);
@@ -128,21 +138,47 @@ serve(async (req) => {
       const maxVideoViews = videos.length > 0 ? Math.max(...videos.map((v: any) => v.views)) : 0;
       const avgVph = videos.length > 0 ? Math.round(videos.reduce((s: number, v: any) => s + v.vph, 0) / videos.length) : 0;
 
-      // Growth indicator: views per subscriber ratio (higher = growing fast)
+      // Enhanced metrics
       const viewsPerSub = ch.subscribers > 0 ? parseFloat((totalVideoViews / ch.subscribers).toFixed(2)) : 0;
-      
-      // Efficiency score: how much views relative to channel size
+      const avgEngagement = videos.length > 0 ? parseFloat((videos.reduce((s: number, v: any) => s + v.engagementRate, 0) / videos.length).toFixed(2)) : 0;
+      const avgCommentEngagement = videos.length > 0 ? parseFloat((videos.reduce((s: number, v: any) => s + v.commentEngagement, 0) / videos.length).toFixed(3)) : 0;
+      const avgLikeRatio = videos.length > 0 ? parseFloat((videos.reduce((s: number, v: any) => s + v.likeRatio, 0) / videos.length).toFixed(2)) : 0;
+      const avgViewVelocity72h = videos.length > 0 ? Math.round(videos.reduce((s: number, v: any) => s + v.viewVelocity72h, 0) / videos.length) : 0;
+
+      // Upload frequency (days between uploads)
+      const publishDates = videos.map((v: any) => new Date(v.publishedAt).getTime()).sort((a: number, b: number) => b - a);
+      let uploadFrequencyDays = 0;
+      if (publishDates.length >= 2) {
+        const intervals = [];
+        for (let i = 0; i < publishDates.length - 1; i++) {
+          intervals.push((publishDates[i] - publishDates[i + 1]) / 86400000);
+        }
+        uploadFrequencyDays = parseFloat((intervals.reduce((a, b) => a + b, 0) / intervals.length).toFixed(1));
+      }
+
+      // Efficiency score
       const efficiencyScore = ch.subscribers > 0 
         ? Math.min(100, Math.round((maxVideoViews / Math.max(ch.subscribers, 1)) * 10))
         : 0;
 
-      // Outlier videos from this channel
-      const outlierVideos = videos.filter((v: any) => ch.avgViews > 0 && v.views >= ch.avgViews * 3);
-
-      // Growth velocity: estimated % growth based on recent video performance
+      // Growth velocity
       const growthVelocity = ch.subscribers > 0 
         ? Math.round((avgVideoViews / ch.subscribers) * 100)
         : 0;
+
+      // VIRAL SCORE (0-100) — composite score
+      const vsViewsPerSub = Math.min(30, viewsPerSub * 3);                           // max 30 pts
+      const vsVelocity = Math.min(20, (avgViewVelocity72h / 10000) * 20);             // max 20 pts
+      const vsEngagement = Math.min(20, avgCommentEngagement * 200);                   // max 20 pts
+      const vsLikeRatio = Math.min(15, avgLikeRatio * 3);                              // max 15 pts
+      const vsUploadFreq = uploadFrequencyDays > 0 && uploadFrequencyDays <= 7         // max 15 pts
+        ? 15 : uploadFrequencyDays <= 14 ? 10 : uploadFrequencyDays <= 30 ? 5 : 0;
+
+      const viralScore = Math.min(100, Math.round(vsViewsPerSub + vsVelocity + vsEngagement + vsLikeRatio + vsUploadFreq));
+      const growthPotentialScore = Math.min(100, Math.round((efficiencyScore * 0.4) + (viralScore * 0.4) + (growthVelocity > 200 ? 20 : growthVelocity > 100 ? 10 : 0)));
+      const algorithmBoostProbability = Math.min(100, Math.round(viralScore * 0.6 + (avgViewVelocity72h > 50000 ? 40 : avgViewVelocity72h > 10000 ? 20 : 0)));
+
+      const outlierVideos = videos.filter((v: any) => ch.avgViews > 0 && v.views >= ch.avgViews * 3);
 
       return {
         ...ch,
@@ -155,6 +191,15 @@ serve(async (req) => {
         efficiencyScore,
         outlierCount: outlierVideos.length,
         growthVelocity,
+        // New viral metrics
+        avgEngagement,
+        avgCommentEngagement,
+        avgLikeRatio,
+        avgViewVelocity72h,
+        uploadFrequencyDays,
+        viralScore,
+        growthPotentialScore,
+        algorithmBoostProbability,
         isEmerging: ch.videoCount <= 10 && ch.ageDays <= 90,
         isAlgorithmEscapee: growthVelocity >= 500 && ch.videoCount <= 20,
       };
@@ -177,14 +222,17 @@ serve(async (req) => {
     if (maxSubs) channels = channels.filter(ch => ch.subscribers <= maxSubs);
     if (minViews > 0) channels = channels.filter(ch => ch.maxVideoViews >= minViews);
     if (maxViews) channels = channels.filter(ch => ch.maxVideoViews <= maxViews);
+    // New expanded filters
+    if (maxChannelVideos) channels = channels.filter(ch => ch.videoCount <= maxChannelVideos);
+    if (minVideoViews) channels = channels.filter(ch => ch.maxVideoViews >= minVideoViews);
 
-    // Step 7: Sort by relevance
+    // Step 7: Sort by viral score (primary)
     if (mode === "emerging") {
-      channels.sort((a, b) => b.efficiencyScore - a.efficiencyScore);
+      channels.sort((a, b) => b.viralScore - a.viralScore);
     } else if (mode === "escapees") {
       channels.sort((a, b) => b.growthVelocity - a.growthVelocity);
     } else {
-      channels.sort((a, b) => b.maxVideoViews - a.maxVideoViews);
+      channels.sort((a, b) => b.viralScore - a.viralScore);
     }
 
     // Step 8: AI clustering (only in cluster mode)
@@ -192,7 +240,7 @@ serve(async (req) => {
     if (mode === "cluster" && LOVABLE_API_KEY && channels.length >= 3) {
       try {
         const channelSummary = channels.slice(0, 20).map(ch =>
-          `${ch.name} (${ch.subscribers} subs, ${ch.videoCount} vids, ${ch.avgViews} avg views, keywords: ${ch.keywords?.slice(0, 100)}). Top: ${ch.videos.slice(0, 2).map((v: any) => `"${v.title}"`).join(", ")}`
+          `${ch.name} (${ch.subscribers} subs, ${ch.videoCount} vids, ${ch.avgViews} avg views, viral:${ch.viralScore}, keywords: ${ch.keywords?.slice(0, 100)}). Top: ${ch.videos.slice(0, 2).map((v: any) => `"${v.title}"`).join(", ")}`
         ).join("\n");
 
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
