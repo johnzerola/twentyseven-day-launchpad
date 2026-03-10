@@ -688,7 +688,8 @@ const Studio = () => {
                         onGenerateVideo={generateSegmentVideo}
                         generatingImage={generatingImage}
                         batchRunning={batchRunning}
-                        veo3Mode={veo3Mode} />
+                        veo3Mode={veo3Mode}
+                        quotaCooldown={quotaCooldown} />
                     ))}
                   </AnimatePresence>
                 </div>
