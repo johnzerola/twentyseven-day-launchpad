@@ -709,10 +709,19 @@ const Scripts = () => {
                       <p className="text-sm text-muted-foreground">Gerando com Gemini 2.5 Pro...</p>
                     </div>
                   )}
-                  {script ? (
-                    <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
-                      <ReactMarkdown>{script}</ReactMarkdown>
-                    </div>
+                  {script || editMode ? (
+                    editMode ? (
+                      <textarea
+                        value={script}
+                        onChange={e => setScript(e.target.value)}
+                        placeholder="Cole seu roteiro aqui ou edite o roteiro gerado..."
+                        className="w-full min-h-[500px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto"
+                      />
+                    ) : (
+                      <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
+                        <ReactMarkdown>{script}</ReactMarkdown>
+                      </div>
+                    )
                   ) : !loading && (
                     <div className="text-center py-12 text-muted-foreground">
                       <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
