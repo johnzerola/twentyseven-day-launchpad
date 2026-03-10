@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { segments, characterDescription } = await req.json();
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const prompt = `Gere prompts otimizados para o Google Veo3 (gerador de vídeo IA) para cada segmento de narração.
 
