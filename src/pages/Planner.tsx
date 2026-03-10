@@ -97,15 +97,8 @@ const Planner = () => {
   };
 
   const deleteCard = async (cardId: string) => {
-    if (dbLoaded) {
-      await supabase.from('planner_cards').delete().eq('id', cardId);
-      await loadCards();
-    } else {
-      setColumns(prev => prev.map(col => ({
-        ...col,
-        cards: col.cards.filter(c => c.id !== cardId),
-      })));
-    }
+    await supabase.from('planner_cards').delete().eq('id', cardId);
+    await loadCards();
     toast.success('Card removido');
   };
 
