@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Palette, Sparkles, Tag, Image as ImageIcon, Copy, Check, Layers, BookOpen, Target, TrendingUp, Eye, Zap, Shield, Users, DollarSign, BarChart3, Crosshair, Globe, Crown, Lightbulb, Rocket, Video, FileText, Calendar, ArrowRight, Star, ExternalLink } from 'lucide-react';
+import { Palette, Sparkles, Tag, Image as ImageIcon, Copy, Check, Layers, Target, Zap, DollarSign, Crosshair, Crown, Lightbulb, Rocket, Video, FileText, Calendar, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -20,106 +20,122 @@ interface BrandIdentity {
   palette: { hex: string; usage: string }[];
 }
 
-const MOCK_IDENTITIES: BrandIdentity[] = [
+interface KeywordData {
+  keyword: string;
+  volume: string;
+  difficulty: string;
+  cpc: string;
+}
+
+interface WeekContent {
+  week: number;
+  videos: string[];
+}
+
+interface CompetitorData {
+  name: string;
+  subs: string;
+  rpm: string;
+  strengths: string[];
+  weaknesses: string[];
+}
+
+interface MonetizationPhase {
+  label: string;
+  description: string;
+  estimatedRevenue: string;
+}
+
+interface PillarData {
+  name: string;
+  percentage: number;
+  icon: string;
+  description: string;
+}
+
+// Fallback mock data
+const FALLBACK_IDENTITIES: BrandIdentity[] = [
   {
-    name: 'FinanceiraMente',
-    tagline: 'Liberdade financeira começa na mente.',
-    reason: 'Combina "financeira" com "mente", transmitindo inteligência e mentalidade de riqueza. Alta memorabilidade e SEO.',
-    logoPrompt: 'Minimalist brain icon merged with a rising bar chart, gradient from deep navy #0f172a to electric purple #7c3aed, clean vector style, dark background --ar 1:1 --v 6',
-    bannerPrompt: 'YouTube banner for "FinanceiraMente" finance channel, cinematic dark background with glowing purple and gold accents, abstract wealth symbols, 2560x1440 --ar 16:9 --v 6',
-    thumbnailPrompt: 'Shocked face looking at phone screen showing $50,000, dark moody background, bold yellow text "RENDA PASSIVA", dramatic lighting, photorealistic --ar 16:9 --v 6',
-    palette: [
-      { hex: '#0f172a', usage: 'Fundo' },
-      { hex: '#1e293b', usage: 'Card' },
-      { hex: '#7c3aed', usage: 'Accent' },
-      { hex: '#f59e0b', usage: 'CTA' },
-      { hex: '#f8fafc', usage: 'Texto' },
-    ],
+    name: 'FinanceiraMente', tagline: 'Liberdade financeira começa na mente.',
+    reason: 'Combina "financeira" com "mente", transmitindo inteligência e mentalidade de riqueza.',
+    logoPrompt: 'Minimalist brain icon merged with a rising bar chart, gradient from deep navy #0f172a to electric purple #7c3aed --ar 1:1 --v 6',
+    bannerPrompt: 'YouTube banner for "FinanceiraMente" finance channel, cinematic dark background with glowing purple and gold accents --ar 16:9 --v 6',
+    thumbnailPrompt: 'Shocked face looking at phone screen showing $50,000, dark moody background, bold yellow text --ar 16:9 --v 6',
+    palette: [{ hex: '#0f172a', usage: 'Fundo' }, { hex: '#1e293b', usage: 'Card' }, { hex: '#7c3aed', usage: 'Accent' }, { hex: '#f59e0b', usage: 'CTA' }, { hex: '#f8fafc', usage: 'Texto' }],
   },
   {
-    name: 'CashFlow Dark',
-    tagline: 'Seu dinheiro trabalhando enquanto você dorme.',
-    reason: 'Direto e poderoso. "Dark" indica canal faceless premium. Nome em inglês expande audiência global.',
-    logoPrompt: 'Neon green dollar sign morphing into flowing water streams, black background, cyberpunk aesthetic, sharp edges --ar 1:1 --v 6',
-    bannerPrompt: 'YouTube banner for "CashFlow Dark", matrix-style falling money symbols, green neon glow on black, futuristic and premium, 2560x1440 --ar 16:9 --v 6',
-    thumbnailPrompt: 'Split screen: left side showing empty wallet, right side showing stacked cash, dramatic green neon border, text "5 FONTES", black background --ar 16:9 --v 6',
-    palette: [
-      { hex: '#0a0a0a', usage: 'Fundo' },
-      { hex: '#171717', usage: 'Card' },
-      { hex: '#22c55e', usage: 'Accent' },
-      { hex: '#ef4444', usage: 'CTA' },
-      { hex: '#e5e5e5', usage: 'Texto' },
-    ],
+    name: 'CashFlow Dark', tagline: 'Seu dinheiro trabalhando enquanto você dorme.',
+    reason: 'Direto e poderoso. "Dark" indica canal faceless premium.',
+    logoPrompt: 'Neon green dollar sign morphing into flowing water streams, black background, cyberpunk aesthetic --ar 1:1 --v 6',
+    bannerPrompt: 'YouTube banner for "CashFlow Dark", matrix-style falling money symbols, green neon glow on black --ar 16:9 --v 6',
+    thumbnailPrompt: 'Split screen: left side showing empty wallet, right side showing stacked cash, dramatic green neon border --ar 16:9 --v 6',
+    palette: [{ hex: '#0a0a0a', usage: 'Fundo' }, { hex: '#171717', usage: 'Card' }, { hex: '#22c55e', usage: 'Accent' }, { hex: '#ef4444', usage: 'CTA' }, { hex: '#e5e5e5', usage: 'Texto' }],
   },
   {
-    name: 'Renda Automática',
-    tagline: 'Automatize seus ganhos. Libere seu tempo.',
-    reason: 'SEO forte — "renda" é keyword top no Brasil. "Automática" conecta com passive income trend.',
-    logoPrompt: 'Gear/cog icon with a money plant growing through center, warm orange and deep blue tones, modern flat design, clean background --ar 1:1 --v 6',
-    bannerPrompt: 'YouTube banner for "Renda Automática", robotic arm arranging money stacks, warm cinematic lighting, orange and blue color scheme, premium feel, 2560x1440 --ar 16:9 --v 6',
-    thumbnailPrompt: 'Robot arm counting cash bills, futuristic office background, orange glow, bold text "AUTOMÁTICO", cinematic composition --ar 16:9 --v 6',
-    palette: [
-      { hex: '#1a1a2e', usage: 'Fundo' },
-      { hex: '#16213e', usage: 'Card' },
-      { hex: '#e94560', usage: 'Accent' },
-      { hex: '#f97316', usage: 'CTA' },
-      { hex: '#ffffff', usage: 'Texto' },
-    ],
+    name: 'Renda Automática', tagline: 'Automatize seus ganhos. Libere seu tempo.',
+    reason: 'SEO forte — "renda" é keyword top no Brasil.',
+    logoPrompt: 'Gear/cog icon with a money plant growing through center, warm orange and deep blue tones --ar 1:1 --v 6',
+    bannerPrompt: 'YouTube banner for "Renda Automática", robotic arm arranging money stacks, warm cinematic lighting --ar 16:9 --v 6',
+    thumbnailPrompt: 'Robot arm counting cash bills, futuristic office background, orange glow, bold text --ar 16:9 --v 6',
+    palette: [{ hex: '#1a1a2e', usage: 'Fundo' }, { hex: '#16213e', usage: 'Card' }, { hex: '#e94560', usage: 'Accent' }, { hex: '#f97316', usage: 'CTA' }, { hex: '#ffffff', usage: 'Texto' }],
   },
 ];
 
-const MOCK_KEYWORDS = [
+const FALLBACK_KEYWORDS: KeywordData[] = [
   { keyword: 'renda passiva 2026', volume: '110K/mês', difficulty: 'Média', cpc: '$2.40' },
   { keyword: 'como ganhar dinheiro online', volume: '320K/mês', difficulty: 'Alta', cpc: '$3.10' },
   { keyword: 'investimentos para iniciantes', volume: '90K/mês', difficulty: 'Média', cpc: '$2.80' },
-  { keyword: 'finanças pessoais', volume: '74K/mês', difficulty: 'Alta', cpc: '$1.90' },
-  { keyword: 'independência financeira', volume: '45K/mês', difficulty: 'Baixa', cpc: '$2.50' },
-  { keyword: 'youtube sem aparecer', volume: '33K/mês', difficulty: 'Baixa', cpc: '$1.20' },
-  { keyword: 'renda extra', volume: '201K/mês', difficulty: 'Alta', cpc: '$2.70' },
-  { keyword: 'tesouro direto 2026', volume: '28K/mês', difficulty: 'Baixa', cpc: '$3.40' },
-  { keyword: 'passive income', volume: '550K/mês', difficulty: 'Muito Alta', cpc: '$4.20' },
-  { keyword: 'canal dark youtube', volume: '18K/mês', difficulty: 'Baixa', cpc: '$0.80' },
 ];
 
-const MOCK_CONTENT_CALENDAR = [
+const FALLBACK_CALENDAR: WeekContent[] = [
   { week: 1, videos: ['5 fontes de renda passiva em 2026', 'Como eu ganhei R$10.000 sem aparecer', 'O nicho SECRETO que paga $15 RPM'] },
   { week: 2, videos: ['Tesouro Direto: Guia Completo', 'Por que 90% dos canais MORREM', 'Montei um negócio com R$100'] },
   { week: 3, videos: ['O erro que te mantém POBRE', 'React vs Resultado: O que funciona', 'Automatizei minha renda (como)'] },
   { week: 4, videos: ['Resultados: 30 dias de canal dark', 'As 3 métricas que importam', 'Meu blueprint de R$50K/mês'] },
 ];
 
-const MOCK_MONETIZATION_STRATEGY = {
-  phase1: { label: 'Semana 1-2: Infoproduto', description: 'Criar template/guia de baixo custo ($7-$27) e promover via link na descrição. Monetização imediata sem depender do AdSense.', estimatedRevenue: '$200-$1000/mês' },
-  phase2: { label: 'Semana 3-4: Afiliados', description: 'Cadastrar em programas de afiliados do nicho (Hotmart, Amazon Associates). CTR esperado: 2-5% da audiência.', estimatedRevenue: '$500-$2000/mês' },
-  phase3: { label: 'Mês 2-3: AdSense', description: 'Atingir 1.000 inscritos + 4.000h de watch time para aprovação do programa de parceiros.', estimatedRevenue: '$1000-$5000/mês' },
-  phase4: { label: 'Mês 4+: Escala', description: 'Múltiplos canais no mesmo nicho. Cada canal gerando receita passiva com conteúdo automatizado.', estimatedRevenue: '$5000-$20000/mês' },
-};
-
-const MOCK_COMPETITOR_AUDIT = [
+const FALLBACK_COMPETITORS: CompetitorData[] = [
   { name: 'Primo Rico', subs: '7.2M', rpm: '$12', weaknesses: ['Conteúdo muito longo', 'Pouca frequência'], strengths: ['Brand forte', 'SEO excelente'] },
   { name: 'Me Poupe!', subs: '7.5M', rpm: '$10', weaknesses: ['Saturação de formato', 'Audiência dispersa'], strengths: ['Persona carismática', 'Diversificação'] },
   { name: 'O Primo Pobre', subs: '1.8M', rpm: '$14', weaknesses: ['Nicho restrito', 'Crescimento lento'], strengths: ['Engajamento alto', 'Comunidade fiel'] },
 ];
 
-const MOCK_PILLARS = [
-  { name: 'Investimentos para Iniciantes', percentage: 30, icon: '📊', description: 'CDB, Tesouro, FIIs explicados de forma simples. Atrai audiência nova.' },
-  { name: 'Renda Passiva', percentage: 30, icon: '💰', description: 'Estratégias reais para gerar dinheiro no piloto automático. Alta retenção.' },
-  { name: 'Mentalidade de Riqueza', percentage: 20, icon: '🧠', description: 'Hábitos e mindset dos milionários. Conteúdo viral com alto compartilhamento.' },
-  { name: 'YouTube Dark', percentage: 20, icon: '🎬', description: 'Como criar canais faceless lucrativos do zero. Cross-sell do seu infoproduto.' },
+const FALLBACK_MONETIZATION: Record<string, MonetizationPhase> = {
+  phase1: { label: 'Semana 1-2: Infoproduto', description: 'Criar template/guia de baixo custo ($7-$27) e promover via link na descrição.', estimatedRevenue: '$200-$1000/mês' },
+  phase2: { label: 'Semana 3-4: Afiliados', description: 'Cadastrar em programas de afiliados do nicho (Hotmart, Amazon Associates).', estimatedRevenue: '$500-$2000/mês' },
+  phase3: { label: 'Mês 2-3: AdSense', description: 'Atingir 1.000 inscritos + 4.000h de watch time para aprovação.', estimatedRevenue: '$1000-$5000/mês' },
+  phase4: { label: 'Mês 4+: Escala', description: 'Múltiplos canais no mesmo nicho gerando receita passiva.', estimatedRevenue: '$5000-$20000/mês' },
+};
+
+const FALLBACK_PILLARS: PillarData[] = [
+  { name: 'Investimentos para Iniciantes', percentage: 30, icon: '📊', description: 'CDB, Tesouro, FIIs explicados de forma simples.' },
+  { name: 'Renda Passiva', percentage: 30, icon: '💰', description: 'Estratégias reais para gerar dinheiro no piloto automático.' },
+  { name: 'Mentalidade de Riqueza', percentage: 20, icon: '🧠', description: 'Hábitos e mindset dos milionários.' },
+  { name: 'YouTube Dark', percentage: 20, icon: '🎬', description: 'Como criar canais faceless lucrativos do zero.' },
 ];
 
 const Branding = () => {
   const [niche, setNiche] = useState('Finanças Pessoais');
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(true);
-  const [identities, setIdentities] = useState<BrandIdentity[]>(MOCK_IDENTITIES);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('identity');
   const [selectedIdentity, setSelectedIdentity] = useState(0);
+  const [aiGenerated, setAiGenerated] = useState(false);
+
+  // Data states - start with fallback
+  const [identities, setIdentities] = useState<BrandIdentity[]>(FALLBACK_IDENTITIES);
+  const [keywords, setKeywords] = useState<KeywordData[]>(FALLBACK_KEYWORDS);
+  const [calendar, setCalendar] = useState<WeekContent[]>(FALLBACK_CALENDAR);
+  const [competitors, setCompetitors] = useState<CompetitorData[]>(FALLBACK_COMPETITORS);
+  const [monetization, setMonetization] = useState<Record<string, MonetizationPhase>>(FALLBACK_MONETIZATION);
+  const [pillars, setPillars] = useState<PillarData[]>(FALLBACK_PILLARS);
+  const [opportunityGap, setOpportunityGap] = useState('Nenhum concorrente de peso está produzindo conteúdo faceless de alta produção neste nicho.');
 
   const generate = async () => {
     if (!niche.trim()) return toast.error('Informe o nicho');
     setLoading(true);
+    setAiGenerated(false);
     try {
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-branding`, {
         method: 'POST',
@@ -137,24 +153,38 @@ const Branding = () => {
         throw new Error('Muitas requisições. Aguarde alguns segundos e tente novamente.');
       }
       if (!resp.ok) {
-        throw new Error('Erro ao gerar branding. Tente novamente.');
+        throw new Error('Erro ao gerar estratégia. Tente novamente.');
       }
       const data = await resp.json();
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (data?.error) throw new Error(data.error);
+
+      // Parse identities
       const names = data.channelNames || [];
       const palettes = data.colorPalettes || [];
-      setIdentities(names.slice(0, 3).map((cn: any, i: number) => ({
-        name: cn.name, tagline: cn.tagline, reason: cn.reason || '',
-        logoPrompt: cn.logoPrompt || `Logo for "${cn.name}" --ar 1:1 --v 6`,
-        bannerPrompt: cn.bannerPrompt || `Banner for "${cn.name}" --ar 16:9 --v 6`,
-        thumbnailPrompt: cn.thumbnailPrompt || `Thumbnail for "${cn.name}" --ar 16:9 --v 6`,
-        palette: palettes[i] || MOCK_IDENTITIES[0].palette,
-      })));
+      if (names.length > 0) {
+        setIdentities(names.slice(0, 3).map((cn: any, i: number) => ({
+          name: cn.name, tagline: cn.tagline, reason: cn.reason || '',
+          logoPrompt: cn.logoPrompt || `Logo for "${cn.name}" --ar 1:1 --v 6`,
+          bannerPrompt: cn.bannerPrompt || `Banner for "${cn.name}" --ar 16:9 --v 6`,
+          thumbnailPrompt: cn.thumbnailPrompt || `Thumbnail for "${cn.name}" --ar 16:9 --v 6`,
+          palette: palettes[i] || FALLBACK_IDENTITIES[0].palette,
+        })));
+      }
+
+      // Parse all strategy sections
+      if (data.keywords?.length) setKeywords(data.keywords);
+      if (data.contentCalendar?.length) setCalendar(data.contentCalendar);
+      if (data.competitorAudit?.length) setCompetitors(data.competitorAudit);
+      if (data.monetizationStrategy) setMonetization(data.monetizationStrategy);
+      if (data.contentPillars?.length) setPillars(data.contentPillars);
+      if (data.opportunityGap) setOpportunityGap(data.opportunityGap);
+
+      setSelectedIdentity(0);
       setShowResults(true);
+      setAiGenerated(true);
+      toast.success('🚀 Estratégia completa gerada com IA!');
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao gerar branding');
+      toast.error(err.message || 'Erro ao gerar estratégia');
     } finally {
       setLoading(false);
     }
@@ -184,6 +214,7 @@ const Branding = () => {
           <div>
             <h1 className="text-2xl font-bold font-['Space_Grotesk'] flex items-center gap-2">
               HacksLab <Badge className="bg-accent/20 text-accent text-[10px]">PRO</Badge>
+              {aiGenerated && <Badge className="bg-emerald-500/20 text-emerald-400 text-[10px]">IA ✓</Badge>}
             </h1>
             <p className="text-sm text-muted-foreground">Motor de Inteligência para Branding, Estratégia e Monetização de Canais</p>
           </div>
@@ -201,17 +232,23 @@ const Branding = () => {
                 className="bg-secondary/50 h-12 text-base" />
             </div>
             <Button onClick={generate} disabled={loading} className="gradient-hero border-0 gap-2 h-12 px-8 text-base">
-              <Sparkles className="w-5 h-5" /> {loading ? 'Analisando...' : 'Gerar Estratégia Completa'}
+              <Sparkles className="w-5 h-5" /> {loading ? 'Analisando com IA...' : 'Gerar Estratégia Completa'}
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {['Finanças Pessoais', 'True Crime', 'Horror Stories', 'Curiosidades', 'Motivacional', 'Tech Reviews', 'Crypto', 'Histórias Reais'].map(n => (
-              <button key={n} onClick={() => { setNiche(n); }}
+              <button key={n} onClick={() => setNiche(n)}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${niche === n ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/30 border-border hover:bg-primary/10 hover:text-primary'}`}>
                 {n}
               </button>
             ))}
           </div>
+          {loading && (
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              Analisando concorrentes, keywords e criando estratégia personalizada para "{niche}"...
+            </div>
+          )}
         </div>
 
         {showResults && identities.length > 0 && (
@@ -226,7 +263,6 @@ const Branding = () => {
 
             {/* TAB 1: Identidade Visual */}
             <TabsContent value="identity" className="space-y-4">
-              {/* Identity Selector */}
               <div className="flex gap-2">
                 {identities.map((id, i) => (
                   <button key={i} onClick={() => setSelectedIdentity(i)}
@@ -238,7 +274,6 @@ const Branding = () => {
                 ))}
               </div>
 
-              {/* Selected Identity Detail */}
               <motion.div key={selectedIdentity} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="glass rounded-2xl p-6 space-y-6">
                 <div className="flex items-start justify-between">
@@ -250,7 +285,6 @@ const Branding = () => {
                   <Crown className="w-8 h-8 text-accent shrink-0" />
                 </div>
 
-                {/* Palette */}
                 <div>
                   <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /> Paleta de Cores</h4>
                   <div className="flex gap-3">
@@ -267,7 +301,6 @@ const Branding = () => {
                   </div>
                 </div>
 
-                {/* Prompts Grid */}
                 <div className="grid md:grid-cols-3 gap-4">
                   {[
                     { label: 'Prompt do Logo', icon: ImageIcon, text: identities[selectedIdentity].logoPrompt, id: `logo-${selectedIdentity}` },
@@ -293,7 +326,7 @@ const Branding = () => {
                   <Layers className="w-5 h-5 text-primary" /> Pilares de Conteúdo — Distribuição Estratégica
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {MOCK_PILLARS.map((pillar, i) => (
+                  {pillars.map((pillar, i) => (
                     <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
                       className="bg-secondary/30 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-2">
@@ -318,7 +351,7 @@ const Branding = () => {
                 <p className="text-sm text-muted-foreground mb-6">Estratégia de 4 fases para monetizar ANTES do AdSense e escalar depois</p>
 
                 <div className="space-y-4">
-                  {Object.entries(MOCK_MONETIZATION_STRATEGY).map(([key, phase], i) => (
+                  {Object.entries(monetization).map(([key, phase], i) => (
                     <motion.div key={key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
                       className="flex gap-4 items-start">
                       <div className="flex flex-col items-center">
@@ -342,7 +375,6 @@ const Branding = () => {
                 </div>
               </div>
 
-              {/* Infoproduto Strategy */}
               <div className="glass rounded-2xl p-6 border-accent/20">
                 <div className="flex items-start gap-3">
                   <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
@@ -381,7 +413,7 @@ const Branding = () => {
                   <Calendar className="w-6 h-6 text-primary" /> Calendário de Conteúdo — Primeiro Mês
                 </h3>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {MOCK_CONTENT_CALENDAR.map((week, i) => (
+                  {calendar.map((week, i) => (
                     <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
                       className="bg-secondary/30 rounded-xl p-4">
                       <Badge variant="outline" className="mb-3">Semana {week.week}</Badge>
@@ -406,10 +438,12 @@ const Branding = () => {
                 <h3 className="text-xl font-bold font-['Space_Grotesk'] flex items-center gap-2 mb-4">
                   <Target className="w-6 h-6 text-destructive" /> Auditoria de Concorrentes — {niche}
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">Análise dos principais players para encontrar gaps de oportunidade</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {aiGenerated ? 'Análise gerada por IA dos principais players do nicho' : 'Análise dos principais players para encontrar gaps de oportunidade'}
+                </p>
 
                 <div className="space-y-4">
-                  {MOCK_COMPETITOR_AUDIT.map((comp, i) => (
+                  {competitors.map((comp, i) => (
                     <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.1 }}
                       className="bg-secondary/30 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
@@ -447,10 +481,7 @@ const Branding = () => {
 
                 <div className="mt-4 bg-accent/10 rounded-xl p-4 border border-accent/20">
                   <h4 className="font-semibold text-sm flex items-center gap-2"><Zap className="w-4 h-4 text-accent" /> Gap de Oportunidade Detectado</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Nenhum concorrente de peso está produzindo conteúdo <strong className="text-foreground">faceless de alta produção</strong> neste nicho.
-                    Um canal com narração profissional + edição cinematográfica pode capturar <strong className="text-accent">15-25%</strong> da audiência insatisfeita com formatos tradicionais.
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{opportunityGap}</p>
                 </div>
               </div>
             </TabsContent>
@@ -473,7 +504,7 @@ const Branding = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {MOCK_KEYWORDS.map((kw, i) => (
+                      {keywords.map((kw, i) => (
                         <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                           <td className="py-3 px-3 font-medium">{kw.keyword}</td>
                           <td className="py-3 px-3 text-center text-muted-foreground">{kw.volume}</td>

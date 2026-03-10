@@ -24,32 +24,33 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a world-class YouTube branding expert who has created brands for channels with 10M+ subscribers. You understand color psychology, typography, thumbnail design, and SEO. Generate creative, memorable, and SEO-optimized branding. Always include detailed Midjourney/Canva prompts.`
+            content: `You are a world-class YouTube strategist and branding expert who has built channels from 0 to 10M+ subscribers. You understand the YouTube algorithm (2025-2026), color psychology, typography, thumbnail design, SEO, and monetization. Generate actionable, data-driven strategies. Always respond with real competitor analysis, real keyword research, and actionable monetization roadmaps. Language: ${language || 'Portuguese'}.`
           },
           {
             role: "user",
-            content: `Create COMPLETE YouTube channel branding for:
-Niche: ${niche || 'general'}
+            content: `Create a COMPLETE YouTube channel strategy for the niche: "${niche || 'general'}"
 Style: ${style || 'modern/cinematic'}
-Language: ${language || 'Portuguese'}
 Target audience: ${targetAudience || 'general'}
 
-Requirements:
-- 3 unique channel name options with taglines and reasoning
-- 5 professional channel descriptions (SEO-optimized)
-- Detailed Midjourney prompts for LOGO and BANNER for each channel name
-- 5 color palettes with hex codes and usage (primary, secondary, accent, bg, text)
-- Thumbnail style guide with specific examples
-- 10 content pillars/series ideas
-- 20+ SEO tags
-- 3 sub-niche suggestions with potential`
+Generate ALL of the following:
+
+1. CHANNEL NAMES: 3 unique channel name options with taglines, reasoning, and detailed Midjourney prompts for logo, banner, and thumbnail
+2. COLOR PALETTES: 5 colors per name (primary bg, card, accent, CTA, text) with hex codes
+3. CONTENT PILLARS: 4 content pillar categories with percentage distribution, emoji icon, and description
+4. SEO KEYWORDS: 10 real keywords for this niche with estimated monthly search volume, SEO difficulty (Baixa/Média/Alta/Muito Alta), and estimated CPC in USD
+5. CONTENT CALENDAR: 4 weeks of content (3 video titles per week) optimized for the algorithm
+6. COMPETITOR AUDIT: 3 real YouTube competitors in this niche with subscriber count, estimated RPM, 2 strengths, 2 weaknesses, and 1 opportunity gap
+7. MONETIZATION STRATEGY: 4 phases (Infoproduto weeks 1-2, Afiliados weeks 3-4, AdSense month 2-3, Escala month 4+) with specific descriptions and revenue estimates
+8. OPPORTUNITY GAP: A specific gap analysis showing what competitors are NOT doing that a new channel could exploit
+
+Be specific, use REAL data where possible, and make everything actionable.`
           }
         ],
         tools: [{
           type: "function",
           function: {
-            name: "generate_branding",
-            description: "Generate complete YouTube channel branding",
+            name: "generate_full_strategy",
+            description: "Generate complete YouTube channel strategy with branding, SEO, competitors, calendar, and monetization",
             parameters: {
               type: "object",
               properties: {
@@ -61,23 +62,15 @@ Requirements:
                       name: { type: "string" },
                       tagline: { type: "string" },
                       reason: { type: "string" },
-                      logoPrompt: { type: "string", description: "Detailed Midjourney prompt for the logo" },
-                      bannerPrompt: { type: "string", description: "Detailed Midjourney prompt for the YouTube banner (2560x1440)" }
+                      logoPrompt: { type: "string" },
+                      bannerPrompt: { type: "string" },
+                      thumbnailPrompt: { type: "string" }
                     },
-                    required: ["name", "tagline", "reason", "logoPrompt", "bannerPrompt"]
+                    required: ["name", "tagline", "reason", "logoPrompt", "bannerPrompt", "thumbnailPrompt"]
                   }
-                },
-                descriptions: {
-                  type: "array",
-                  items: { type: "string" }
-                },
-                seoTags: {
-                  type: "array",
-                  items: { type: "string" }
                 },
                 colorPalettes: {
                   type: "array",
-                  description: "One palette per channel name option",
                   items: {
                     type: "array",
                     items: {
@@ -90,33 +83,90 @@ Requirements:
                     }
                   }
                 },
-                bannerConcepts: {
-                  type: "array",
-                  items: { type: "string" }
-                },
-                thumbnailStyle: { type: "string", description: "Detailed thumbnail style guide with specific examples" },
                 contentPillars: {
-                  type: "array",
-                  items: { type: "string" }
-                },
-                subNiches: {
                   type: "array",
                   items: {
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      potential: { type: "string" },
-                      competition: { type: "string" }
+                      percentage: { type: "number" },
+                      icon: { type: "string" },
+                      description: { type: "string" }
                     },
-                    required: ["name", "potential", "competition"]
+                    required: ["name", "percentage", "icon", "description"]
                   }
-                }
+                },
+                keywords: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      keyword: { type: "string" },
+                      volume: { type: "string" },
+                      difficulty: { type: "string" },
+                      cpc: { type: "string" }
+                    },
+                    required: ["keyword", "volume", "difficulty", "cpc"]
+                  }
+                },
+                contentCalendar: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      week: { type: "number" },
+                      videos: { type: "array", items: { type: "string" } }
+                    },
+                    required: ["week", "videos"]
+                  }
+                },
+                competitorAudit: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      subs: { type: "string" },
+                      rpm: { type: "string" },
+                      strengths: { type: "array", items: { type: "string" } },
+                      weaknesses: { type: "array", items: { type: "string" } }
+                    },
+                    required: ["name", "subs", "rpm", "strengths", "weaknesses"]
+                  }
+                },
+                monetizationStrategy: {
+                  type: "object",
+                  properties: {
+                    phase1: {
+                      type: "object",
+                      properties: { label: { type: "string" }, description: { type: "string" }, estimatedRevenue: { type: "string" } },
+                      required: ["label", "description", "estimatedRevenue"]
+                    },
+                    phase2: {
+                      type: "object",
+                      properties: { label: { type: "string" }, description: { type: "string" }, estimatedRevenue: { type: "string" } },
+                      required: ["label", "description", "estimatedRevenue"]
+                    },
+                    phase3: {
+                      type: "object",
+                      properties: { label: { type: "string" }, description: { type: "string" }, estimatedRevenue: { type: "string" } },
+                      required: ["label", "description", "estimatedRevenue"]
+                    },
+                    phase4: {
+                      type: "object",
+                      properties: { label: { type: "string" }, description: { type: "string" }, estimatedRevenue: { type: "string" } },
+                      required: ["label", "description", "estimatedRevenue"]
+                    }
+                  },
+                  required: ["phase1", "phase2", "phase3", "phase4"]
+                },
+                opportunityGap: { type: "string" }
               },
-              required: ["channelNames", "descriptions", "seoTags", "colorPalettes", "bannerConcepts", "thumbnailStyle", "contentPillars"]
+              required: ["channelNames", "colorPalettes", "contentPillars", "keywords", "contentCalendar", "competitorAudit", "monetizationStrategy", "opportunityGap"]
             }
           }
         }],
-        tool_choice: { type: "function", function: { name: "generate_branding" } }
+        tool_choice: { type: "function", function: { name: "generate_full_strategy" } }
       }),
     });
 
@@ -131,19 +181,19 @@ Requirements:
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error("AI branding generation failed");
+      throw new Error("AI strategy generation failed");
     }
 
     const aiData = await aiRes.json();
-    let branding;
+    let strategy;
     try {
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-      branding = JSON.parse(toolCall.function.arguments);
+      strategy = JSON.parse(toolCall.function.arguments);
     } catch {
-      throw new Error("Failed to parse branding response");
+      throw new Error("Failed to parse strategy response");
     }
 
-    return new Response(JSON.stringify(branding), {
+    return new Response(JSON.stringify(strategy), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
