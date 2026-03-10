@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
