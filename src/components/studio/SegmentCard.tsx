@@ -44,9 +44,10 @@ interface SegmentCardProps {
   generatingImage: number | null;
   batchRunning: boolean;
   veo3Mode?: boolean;
+  quotaCooldown?: number;
 }
 
-const SegmentCard = memo(({ seg, onUpdateSegment, onGenerateImage, onGenerateVideo, generatingImage, batchRunning, veo3Mode }: SegmentCardProps) => {
+const SegmentCard = memo(({ seg, onUpdateSegment, onGenerateImage, onGenerateVideo, generatingImage, batchRunning, veo3Mode, quotaCooldown = 0 }: SegmentCardProps) => {
   const statusCfg = STATUS_CONFIG[seg.status];
   const StatusIcon = statusCfg.icon;
   const videoStatus = seg.videoStatus || 'idle';
