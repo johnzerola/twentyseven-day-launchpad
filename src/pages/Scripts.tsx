@@ -406,11 +406,13 @@ const Scripts = () => {
 
   // Duration estimation - more accurate using speech rate per language
   const speechRates: Record<string, number> = {
-    'português': 150, // words per minute
+    'português': 150,
     'inglês': 160,
     'espanhol': 155,
     'polonês': 145,
     'alemão': 140,
+    'turco': 150,
+    'japonês': 130,
   };
   const wpm = speechRates[language] || 150;
   const wordCount = script.split(/\s+/).filter(Boolean).length;
