@@ -60,7 +60,7 @@ const Dashboard = () => {
       const [ch, sc, profile] = await Promise.all([
         supabase.from('user_channels').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('saved_scripts').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-        supabase.from('profiles').select('display_name').eq('user_id', uid).single(),
+        supabase.from('profiles').select('display_name').eq('user_id', uid).maybeSingle(),
       ]);
       setStats({ channels: ch.count ?? 0, scripts: sc.count ?? 0, projects: 0 });
       if (profile.data?.display_name) setDisplayName(profile.data.display_name);
