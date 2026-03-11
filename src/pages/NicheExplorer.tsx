@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock, ExternalLink, Swords, Timer, BadgeDollarSign, History, Trash2, FolderOpen } from 'lucide-react';
+import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock, ExternalLink, Swords, Timer, BadgeDollarSign, History, Trash2, FolderOpen, Database, Sparkles, Hash } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
