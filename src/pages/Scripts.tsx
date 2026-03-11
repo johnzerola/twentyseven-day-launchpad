@@ -245,7 +245,7 @@ const Scripts = () => {
         project_id: pid,
         name: c.name,
         visual_prompt: buildCharImagePrompt(c),
-        reference_image_url: c.imageUrl || null,
+        reference_image_url: null,
         visual_attributes: {
           gender: c.gender, age: c.age, role: c.role,
           appearance: c.appearance, facial_features: c.facial_features,
