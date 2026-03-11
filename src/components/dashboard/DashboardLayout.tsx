@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles, Flame, GitBranch, DollarSign } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles, Flame, GitBranch, DollarSign, CalendarDays } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ const navItems = [
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
   { key: 'Monetização', icon: DollarSign, path: '/monetization' },
+  { key: 'Playbook 27D', icon: CalendarDays, path: '/playbook' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
 ];
 
