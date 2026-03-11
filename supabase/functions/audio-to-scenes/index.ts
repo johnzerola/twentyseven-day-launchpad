@@ -117,10 +117,11 @@ serve(async (req) => {
     // ========== STEP 4: AI Semantic Scene Division + Contextual Prompts ==========
     console.log("Step 3: AI analyzing narrative for semantic scene division...");
 
-    // Build the transcript with timestamps for the AI
-    const timestampedTranscript = blocks.map((b, i) =>
+    // Build the transcript with timestamps for the AI (cap to avoid token overflow)
+    const maxBlocks = Math.min(blocks.length, 200);
+    const timestampedTranscript = blocks.slice(0, maxBlocks).map((b) =>
       `[${b.startTime.toFixed(1)}s - ${b.endTime.toFixed(1)}s] ${b.text}`
-    ).join("\n");
+    ).join("\n").slice(0, 30000);
 
     // Style guides
     const styleGuides: Record<string, string> = {
