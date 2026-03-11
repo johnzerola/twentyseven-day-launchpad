@@ -135,6 +135,45 @@ serve(async (req) => {
       ? `\n\n🔥 ELEMENTOS VIRAIS SELECIONADOS (OBRIGATÓRIO incorporar):\n${viralContext}\n`
       : '';
 
+    // ========== Intelligence Briefing Injection ==========
+    let intelligenceBlock = '';
+    if (intelligenceBriefing) {
+      const ib = intelligenceBriefing;
+      const ca = ib.competitive_analysis || {};
+      const hooks = (ib.recommended_hooks || []).map((h: any) => `  • "${h.hook_text}" (${h.hook_type}) — ${h.why_it_works}`).join('\n');
+      const vb = ib.visual_blueprint || {};
+      const retention = (ib.retention_techniques || []).map((r: any) => `  • ${r.technique}: ${r.when_to_use}`).join('\n');
+      const angle = ib.topic_angle || {};
+      
+      intelligenceBlock = `\n\n🧠 BRIEFING DE INTELIGÊNCIA (baseado em dados REAIS de ${ca.top_channels_analyzed || '?'} canais analisados):
+
+📊 ANÁLISE COMPETITIVA:
+- Estilos dominantes: ${(ca.dominant_styles || []).join(', ')}
+- Hooks que funcionam: ${(ca.common_hooks || []).join(', ')}
+- O que funciona: ${(ca.what_works || []).join('; ')}
+- O que EVITAR: ${(ca.what_to_avoid || []).join('; ')}
+- Gaps de conteúdo: ${(ca.content_gaps || []).join('; ')}
+
+🎣 HOOKS RECOMENDADOS (baseados em padrões virais REAIS):
+${hooks}
+
+🎨 BLUEPRINT VISUAL:
+- Estilo recomendado: ${vb.recommended_style || 'N/A'}
+- Iluminação: ${vb.lighting_mood || 'N/A'}
+- Câmera: ${(vb.camera_techniques || []).join(', ')}
+- Hook visual: ${vb.hook_visual_suggestion || 'N/A'}
+
+🧲 TÉCNICAS DE RETENÇÃO RECOMENDADAS:
+${retention}
+
+🎯 ÂNGULO DO TÓPICO:
+- Ângulo sugerido: ${angle.suggested_angle || 'N/A'}
+- Diferenciação: ${angle.differentiation || 'N/A'}
+- Core emocional: ${angle.emotional_core || 'N/A'}
+
+⚠️ USE ESTE BRIEFING como BASE OBRIGATÓRIA. O roteiro deve refletir os padrões que FUNCIONAM neste nicho.\n`; 
+    }
+
     // ========== PHASE 1: GPT-5 Creates the Draft ==========
     const phase1System = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. Seus roteiros têm 95%+ de retenção.
 
