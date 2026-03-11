@@ -210,15 +210,21 @@ ${intelligenceBlock}
 Nicho: ${niche || 'geral'}
 Idioma: ${language || 'português'}
 
-✍️ REGRAS:
-1. MÍNIMO ${targetWords} palavras (~${Math.round(targetChars)} chars) para ${duration} min
-2. ${wordsPerMinute} palavras/min. Para ${duration} min = ${targetWords} palavras MÍNIMO
-3. ESCREVA CADA PALAVRA. ZERO placeholders
-4. ROTEIRO LIMPO: APENAS texto falado. ZERO anotações técnicas, ZERO timestamps
-5. Parágrafos curtos (2-3 frases)
-6. Linguagem conversacional
-7. Valores em dólares ($), nunca R$
-8. PROIBIDO: "Narrador:", "Cena:", cabeçalhos, meta-texto
+✍️ REGRAS INEGOCIÁVEIS DE DURAÇÃO:
+1. O roteiro DEVE ter EXATAMENTE ${durationMinutes} minutos de narração
+2. Taxa de fala: ${wordsPerMinute} palavras/minuto
+3. MÍNIMO ABSOLUTO: ${minAcceptableWords} palavras (85% do alvo)
+4. ALVO EXATO: ${targetWords} palavras (~${Math.round(targetChars)} chars)
+5. Se o roteiro ficar curto, ADICIONE mais conteúdo, exemplos, detalhes e revelações
+6. CONTE suas palavras mentalmente. NÃO entregue menos que ${minAcceptableWords} palavras
+
+✍️ REGRAS GERAIS:
+1. ESCREVA CADA PALAVRA. ZERO placeholders
+2. ROTEIRO LIMPO: APENAS texto falado. ZERO anotações técnicas, ZERO timestamps
+3. Parágrafos curtos (2-3 frases)
+4. Linguagem conversacional
+5. Valores em dólares ($), nunca R$
+6. PROIBIDO: "Narrador:", "Cena:", cabeçalhos, meta-texto
 
 📝 NO FINAL, após "---EXTRAS---":
 - 5 títulos com CTR 30%+
@@ -226,7 +232,7 @@ Idioma: ${language || 'português'}
 - 15-20 tags SEO
 - Descrição otimizada (3 parágrafos + hashtags)
 
-⚠️ Escreva ABSOLUTAMENTE TUDO. ${targetWords}+ palavras.`;
+⚠️ CRÍTICO: O roteiro DEVE ter ${targetWords}+ palavras para preencher ${durationMinutes} minutos COMPLETOS.`;
 
     const phase1Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
