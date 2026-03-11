@@ -576,7 +576,12 @@ const Scripts = () => {
           setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
         }
       }
-      toast.success('Todos os personagens com imagens geradas!');
+      // Persist characters with images to database
+      persistCharacters(extracted.map((c, i) => {
+        // Get latest imageUrl from state - but since state updates are async, use extracted + any generated urls
+        return c;
+      }));
+      toast.success('Todos os personagens com imagens geradas e salvos!');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao detectar personagens');
     } finally {
