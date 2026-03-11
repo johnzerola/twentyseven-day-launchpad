@@ -19,6 +19,7 @@ import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
 import MonetizationPlanner from "./pages/MonetizationPlanner";
+import Playbook from "./pages/Playbook";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
