@@ -204,6 +204,7 @@ ${scriptKnowledge}
 
 ${selectedStyle}
 ${viralInjection}
+${intelligenceBlock}
 Nicho: ${niche || 'geral'}
 Idioma: ${language || 'português'}
 
