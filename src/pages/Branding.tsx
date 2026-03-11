@@ -333,10 +333,15 @@ const BrandKitGenerator = () => {
 
 // ─── Thumbnail Lab (IA) ──────────────────────────────────────────────
 const ThumbnailLab = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
   const [loading, setLoading] = useState(false);
   const [concepts, setConcepts] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (channelData?.niche && !niche) setNiche(channelData.niche);
+  }, [channelData]);
 
   const generate = async () => {
     if (!niche.trim()) return toast.error('Informe o nicho');
