@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb } from 'lucide-react';
+import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
+import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -384,6 +385,15 @@ const Dashboard = () => {
               <strong className="text-foreground"> antes</strong> do AdSense ser aprovado. Use o Growth Center para simular sua receita.
             </p>
           </div>
+        </motion.div>
+
+        {/* Infrastructure Monitoring */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+          className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" /> Infraestrutura & Monitoramento
+          </h3>
+          <ApiUsageDashboard />
         </motion.div>
       </div>
       
