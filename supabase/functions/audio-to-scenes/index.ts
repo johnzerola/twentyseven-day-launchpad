@@ -245,7 +245,7 @@ Quality tags for each prompt: "masterpiece, award-winning cinematography, 8K UHD
 
 ${timestampedTranscript}
 
-${script ? `\nFULL SCRIPT FOR CONTEXT:\n${script.slice(0, 2000)}` : ''}
+${script ? `\nFULL SCRIPT FOR CONTEXT:\n${script.slice(0, 1500)}` : ''}
 
 TASK: Analyze this narration semantically. Identify natural scene boundaries based on:
 - Topic/subject changes
