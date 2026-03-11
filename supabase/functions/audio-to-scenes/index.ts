@@ -10,9 +10,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    console.log("audio-to-scenes v3 — with token guards");
     const formData = await req.formData();
     const audioFile = formData.get("audio") as File;
-    const script = formData.get("script") as string || "";
+    const script = (formData.get("script") as string || "").slice(0, 3000);
     const videoStyle = formData.get("videoStyle") as string || "cinematográfico";
     const charactersJson = formData.get("characters") as string || "[]";
     const sceneDurationStr = formData.get("sceneDuration") as string || "8";
@@ -26,7 +27,16 @@ serve(async (req) => {
 
     const sceneDuration = parseInt(sceneDurationStr) || 8;
     let characters: any[] = [];
-    try { characters = JSON.parse(charactersJson); } catch { /* ignore */ }
+    try {
+      const parsed = JSON.parse(charactersJson);
+      // Strip base64 imageUrls from characters to avoid token overflow
+      characters = (Array.isArray(parsed) ? parsed : []).map((c: any) => {
+        const { imageUrl, ...rest } = c;
+        return rest;
+      });
+    } catch { /* ignore */ }
+    console.log(`Input sizes: script=${script.length} chars, characters=${characters.length}, audioFile=${audioFile.size} bytes`);
+
 
     // ========== STEP 1: Transcribe with ElevenLabs STT ==========
     console.log("Step 1: Transcribing audio with ElevenLabs Scribe v2...");
