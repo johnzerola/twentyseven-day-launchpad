@@ -241,7 +241,7 @@ Idioma: ${language || 'português'}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: phase1System },
           { role: "user", content: `Escreva um roteiro MAGNÉTICO de ${duration} minutos sobre: "${topic}"
@@ -274,7 +274,7 @@ Comece com o HOOK mais IMPOSSÍVEL DE IGNORAR. Vamos!` }
     const phase1Data = await phase1Response.json();
     const draftScript = phase1Data.choices?.[0]?.message?.content;
     if (!draftScript) throw new Error("No script generated in Phase 1");
-    console.log("Phase 1 (GPT-5) complete. Draft length:", draftScript.length, "chars");
+    console.log("Phase 1 (Gemini Flash) complete. Draft length:", draftScript.length, "chars");
 
     // ========== PHASE 2: Gemini Pro Reviews & Scores ==========
     const phase2System = `Você é um DIRETOR CRIATIVO IMPLACÁVEL que avalia roteiros para canais 10M+ inscritos.
