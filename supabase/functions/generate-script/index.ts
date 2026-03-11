@@ -31,6 +31,11 @@ serve(async (req) => {
       return `[${r.category.toUpperCase()}] ${r.title}: ${r.content}${examples ? `\nExemplos: ${examples}` : ""}`;
     }).join("\n\n");
 
+    const channelIntel = (channelRes.data || []).map((r: any) => {
+      const hooks = r.viral_patterns?.hooks ? (r.viral_patterns.hooks as string[]).join(", ") : "";
+      return `🎯 ${r.channel_name} (${r.style}, ${r.growth_rate}, avg ${r.avg_views} views): Hooks=[${hooks}] | Visual: ${r.visual_style_notes || "N/A"}`;
+    }).join("\n");
+
     // ========== Speech rate calculation ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160,
