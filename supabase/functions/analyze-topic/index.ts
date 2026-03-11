@@ -21,10 +21,39 @@ serve(async (req) => {
     const styleLC = (style || '').toLowerCase();
     const topicLC = topic.toLowerCase();
 
-    // ========== Parallel: DB queries + YouTube real-time search ==========
+    // ========== Parallel: DB queries + YouTube + Brave Search ==========
     const youtubeSearchPromise = YOUTUBE_API_KEY ? searchYouTubeVideos(YOUTUBE_API_KEY, topic, niche) : Promise.resolve([]);
+    
+    // Brave Search RAG - fetch real web context
+    const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
+    const braveSearchPromise = BRAVE_API_KEY ? (async () => {
+      // Check cache first
+      const cacheKey = `brave:analyze:${topic}:${niche || ''}`;
+      const { data: cached } = await sb.from("research_cache")
+        .select("result_json").eq("cache_key", cacheKey).eq("source", "brave")
+        .gt("expires_at", new Date().toISOString()).maybeSingle();
+      if (cached) return (cached.result_json as any)?.results || [];
+      
+      try {
+        const params = new URLSearchParams({ q: `${topic} ${niche || ''} YouTube`, count: "8" });
+        const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
+          headers: { Accept: "application/json", "X-Subscription-Token": BRAVE_API_KEY },
+        });
+        if (!res.ok) { console.warn("Brave Search failed:", res.status); return []; }
+        const data = await res.json();
+        const results = (data.web?.results || []).slice(0, 8).map((r: any) => ({
+          title: r.title, url: r.url, description: r.description,
+        }));
+        // Cache 24h
+        await sb.from("research_cache").upsert({
+          cache_key: cacheKey, source: "brave", result_json: { results },
+          expires_at: new Date(Date.now() + 24 * 3600000).toISOString(),
+        }, { onConflict: "cache_key,source" }).then(() => {});
+        return results;
+      } catch (e) { console.warn("Brave Search error:", e); return []; }
+    })() : Promise.resolve([]);
 
-    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos] = await Promise.all([
+    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos, braveResults] = await Promise.all([
       sb.from("channel_intelligence")
         .select("channel_name,style,niche,avg_views,subscribers,growth_rate,viral_patterns,top_videos,visual_style_notes,upload_frequency,rpm_estimate")
         .order("avg_views", { ascending: false })
@@ -42,6 +71,7 @@ serve(async (req) => {
         .order("priority", { ascending: false })
         .limit(20),
       youtubeSearchPromise,
+      braveSearchPromise,
     ]);
 
     // ========== Filter channels by niche relevance ==========
@@ -264,6 +294,11 @@ ${ytBlock}
 ═══ REAL-TIME YOUTUBE SEARCH RESULTS (${(youtubeVideos as any[]).length} videos with SIMILAR TOPICS found NOW) ═══
 ${ytVideosBlock}
 
+═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results) ═══
+${(braveResults as any[]).length > 0 
+  ? (braveResults as any[]).map((r: any, i: number) => `${i + 1}. "${r.title}" — ${r.description || ''} (${r.url})`).join('\n')
+  : 'No web results available'}
+
 CRITICAL RULES:
 - The REAL-TIME YOUTUBE section contains ACTUAL videos that exist RIGHT NOW on YouTube about this EXACT topic or similar topics
 - Analyze WHY the top-performing videos succeeded: title patterns, hooks, angles, duration, engagement
@@ -318,6 +353,7 @@ IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did 
         scriptTechniquesUsed: scriptKnowledgeRes.data?.length || 0,
         ytKnowledgeUsed: ytKnowledgeRes.data?.length || 0,
         youtubeVideosFound: (youtubeVideos as any[]).length,
+        braveResultsFound: (braveResults as any[]).length,
         topChannelNames: topChannels.slice(0, 5).map((c: any) => c.channel_name),
         topYoutubeVideos: (youtubeVideos as any[]).slice(0, 5).map((v: any) => ({
           title: v.title,
