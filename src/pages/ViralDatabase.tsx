@@ -476,14 +476,25 @@ const ViralDatabase = () => {
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {filteredChannels.map(ch => (
-                  <ChannelCard key={ch.id} channel={ch} onUsePatterns={usePatterns} />
-                ))}
-                {filteredChannels.length === 0 && (
-                  <p className="col-span-2 text-center text-muted-foreground py-8">Nenhum canal encontrado com esses filtros.</p>
-                )}
-              </div>
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {pagedChannels.map(ch => (
+                    <ChannelCard key={ch.id} channel={ch} onUsePatterns={usePatterns} />
+                  ))}
+                  {filteredChannels.length === 0 && (
+                    <p className="col-span-2 text-center text-muted-foreground py-8">Nenhum canal encontrado com esses filtros.</p>
+                  )}
+                </div>
+                <PaginationControls
+                  page={channelPage}
+                  totalCount={filteredChannels.length}
+                  pageSize={CHANNELS_PER_PAGE}
+                  hasMore={(channelPage + 1) * CHANNELS_PER_PAGE < filteredChannels.length}
+                  hasPrev={channelPage > 0}
+                  onNext={() => setChannelPage(p => p + 1)}
+                  onPrev={() => setChannelPage(p => p - 1)}
+                />
+              </>
             )}
           </TabsContent>
 
