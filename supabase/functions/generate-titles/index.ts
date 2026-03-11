@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
     const headers = {
       Authorization: `Bearer ${LOVABLE_API_KEY}`,
       "Content-Type": "application/json",
@@ -22,9 +25,22 @@ serve(async (req) => {
     // ========== GENERATE TITLES ==========
     if (type === "generate") {
       const { niche, topic } = body;
+
+      // Fetch reference titles from viral DB
+      let viralRefBlock = '';
+      try {
+        let query = sb.from('viral_titles_db').select('title,views,why_viral,title_pattern,niche').order('views', { ascending: false }).limit(30);
+        if (niche) query = query.ilike('niche', `%${niche}%`);
+        const { data: viralTitles } = await query;
+        if (viralTitles?.length) {
+          viralRefBlock = `\n\nTÍTULOS VIRAIS REAIS DE REFERÊNCIA (${viralTitles.length} títulos com 350k+ views):\n${viralTitles.map((t: any) => `• "${t.title}" (${t.views?.toLocaleString()} views) — Pattern: ${t.title_pattern || '?'} | Why: ${t.why_viral || 'N/A'}`).join('\n')}\n\nUse estes padrões REAIS como inspiração. Não copie, mas aplique as mesmas técnicas.`;
+        }
+      } catch { /* viral DB optional */ }
+
       const prompt = `Gere exatamente 20 títulos virais para YouTube.
 ${niche ? `Nicho: ${niche}` : ''}
 ${topic ? `Tema específico: ${topic}` : ''}
+${viralRefBlock}
 
 Use estas metodologias virais:
 - Curiosidade: perguntas abertas, "O que acontece quando...", "A verdade sobre..."

@@ -697,7 +697,7 @@ const Branding = () => {
             <h1 className="text-2xl font-bold font-['Space_Grotesk'] flex items-center gap-2">
               Growth Command Center <Badge className="bg-accent/20 text-accent text-[10px]">PRO</Badge>
             </h1>
-            <p className="text-sm text-muted-foreground">Simulador de receita, branding, thumbnails e estratégia — tudo em um hub</p>
+            <p className="text-sm text-muted-foreground">Simulador de receita, branding e estratégia — tudo em um hub</p>
           </div>
         </div>
 
@@ -709,9 +709,6 @@ const Branding = () => {
             <TabsTrigger value="brand" className="gap-2 data-[state=active]:bg-primary/20">
               <Palette className="w-4 h-4" /> Brand Kit
             </TabsTrigger>
-            <TabsTrigger value="thumbnails" className="gap-2 data-[state=active]:bg-primary/20">
-              <Lightbulb className="w-4 h-4" /> Thumbnail Lab
-            </TabsTrigger>
             <TabsTrigger value="checklist" className="gap-2 data-[state=active]:bg-primary/20">
               <CheckSquare className="w-4 h-4" /> Growth Checklist
             </TabsTrigger>
@@ -722,7 +719,6 @@ const Branding = () => {
 
           <TabsContent value="revenue"><RevenueSimulator /></TabsContent>
           <TabsContent value="brand"><BrandKitGenerator /></TabsContent>
-          <TabsContent value="thumbnails"><ThumbnailLab /></TabsContent>
           <TabsContent value="checklist"><GrowthChecklist /></TabsContent>
           <TabsContent value="matrix"><ContentMatrix /></TabsContent>
         </Tabs>

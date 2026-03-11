@@ -180,9 +180,12 @@ const Channels = () => {
     } catch { toast.error('Erro ao atualizar'); }
   };
 
+  const [competitorInsights, setCompetitorInsights] = useState<any>(null);
+
   const loadCompetitors = async (ch: Channel, country: string) => {
     setLoadingCompetitors(true);
     setCompetitors([]);
+    setCompetitorInsights(null);
     try {
       const analysis = ch.analysis_json;
       const topTitles = [
@@ -196,17 +199,20 @@ const Channels = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('find-competitors', {
+      const { data, error } = await supabase.functions.invoke('find-competitors-ai', {
         body: {
           channelId: ch.youtube_channel_id,
+          channelName: ch.channel_name,
           topVideoTitles: topTitles,
           subscribers: ch.subscribers,
+          niche: ch.niche || analysis?.niche_detected || '',
           country,
         },
       });
       if (error) throw error;
       setCompetitors(data?.competitors || []);
       setCompetitorKeywords(data?.keywords || []);
+      setCompetitorInsights(data?.insights || null);
     } catch (e: any) {
       toast.error('Erro ao buscar concorrentes');
     }
@@ -676,25 +682,58 @@ const Channels = () => {
 
                     {competitorKeywords.length > 0 && (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-muted-foreground">Keywords detectadas:</span>
+                        <span className="text-[10px] text-muted-foreground">Queries IA:</span>
                         {competitorKeywords.map((k, i) => (
                           <Badge key={i} variant="secondary" className="text-[10px]">{k}</Badge>
                         ))}
                       </div>
                     )}
 
+                    {/* AI Insights */}
+                    {competitorInsights && (
+                      <div className="glass rounded-xl p-4 border-primary/20 bg-primary/5 space-y-2">
+                        <h4 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Análise IA do Mercado</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[10px] text-muted-foreground uppercase">Saturação</p>
+                            <Badge variant="outline" className={`text-xs ${competitorInsights.market_saturation === 'high' ? 'text-red-400 border-red-500/30' : competitorInsights.market_saturation === 'medium' ? 'text-amber-400 border-amber-500/30' : 'text-emerald-400 border-emerald-500/30'}`}>
+                              {competitorInsights.market_saturation}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-muted-foreground uppercase">Maior Oportunidade</p>
+                            <p className="text-xs">{competitorInsights.biggest_opportunity}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Diferenciação Recomendada</p>
+                          <p className="text-xs text-muted-foreground">{competitorInsights.recommended_differentiation}</p>
+                        </div>
+                        {competitorInsights.content_gaps?.length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-muted-foreground uppercase mb-1">Gaps de Conteúdo</p>
+                            <div className="flex flex-wrap gap-1">
+                              {competitorInsights.content_gaps.map((g: string, i: number) => (
+                                <Badge key={i} variant="secondary" className="text-[10px]">{g}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {loadingCompetitors ? (
-                      <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">Buscando concorrentes reais via YouTube...</p></div>
+                      <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">IA analisando concorrentes reais...</p></div>
                     ) : competitors.length === 0 ? (
                       <div className="glass rounded-xl p-8 text-center">
                         <Search className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-40" />
                         <p className="text-sm text-muted-foreground">
-                          {analysis ? 'Clique em um país para buscar concorrentes reais.' : 'Atualize o canal primeiro para obter dados de vídeos.'}
+                          {analysis ? 'Clique em um país para buscar concorrentes com IA.' : 'Atualize o canal primeiro para obter dados de vídeos.'}
                         </p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {competitors.map((comp, i) => (
+                        {competitors.map((comp: any, i: number) => (
                           <motion.div key={comp.channelId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.04 }}
                             className="glass rounded-xl p-4 space-y-2 hover:border-primary/30 transition-colors">
@@ -709,14 +748,25 @@ const Channels = () => {
                               </div>
                               <div className="flex flex-col items-end gap-1">
                                 <Badge className={GROWTH_COLORS[comp.growthRate] || ''} variant="outline">{comp.growthRate}</Badge>
-                                {comp.multiplier > 1 && (
-                                  <span className="text-[10px] text-amber-400">{comp.multiplier}× outlier</span>
+                                {comp.threat_level && (
+                                  <Badge variant="outline" className={`text-[9px] ${comp.threat_level === 'high' ? 'text-red-400 border-red-500/30' : comp.threat_level === 'medium' ? 'text-amber-400 border-amber-500/30' : 'text-emerald-400 border-emerald-500/30'}`}>
+                                    {comp.threat_level} threat
+                                  </Badge>
                                 )}
                               </div>
                             </div>
+                            {comp.why_competitor && (
+                              <p className="text-[10px] text-primary/80 italic">💡 {comp.why_competitor}</p>
+                            )}
+                            {comp.what_they_do_better && (
+                              <p className="text-[10px] text-muted-foreground">✨ {comp.what_they_do_better}</p>
+                            )}
+                            {comp.content_gap && (
+                              <p className="text-[10px] text-emerald-400/80">🎯 Gap: {comp.content_gap}</p>
+                            )}
                             {comp.topVideos?.length > 0 && (
                               <div className="space-y-1 mt-2">
-                                {comp.topVideos.slice(0, 2).map((v, vi) => (
+                                {comp.topVideos.slice(0, 2).map((v: any, vi: number) => (
                                   <div key={vi} className="flex items-center gap-2 text-[10px] text-muted-foreground bg-secondary/20 rounded px-2 py-1">
                                     <span className="flex-1 truncate">{v.title}</span>
                                     <span>{formatNumber(v.views)} views</span>
