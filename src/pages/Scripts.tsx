@@ -694,6 +694,8 @@ const Scripts = () => {
           audioDurationSeconds: audioDuration || undefined,
           sceneDurationSeconds: sceneDuration,
           language,
+          niche,
+          sceneBlueprintFromScript: sceneBlueprintJson.length > 0 ? sceneBlueprintJson : undefined,
         },
       });
 
