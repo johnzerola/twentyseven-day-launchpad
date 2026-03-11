@@ -156,7 +156,15 @@ const Scripts = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-  useEffect(() => { loadHistory(); loadTemplates(); }, []);
+  useEffect(() => {
+    loadHistory(); loadTemplates();
+    const outlierTopic = sessionStorage.getItem('outlier_topic');
+    if (outlierTopic) {
+      setTopic(outlierTopic);
+      sessionStorage.removeItem('outlier_topic');
+      toast.success('Referência do Outlier Finder carregada!');
+    }
+  }, []);
 
   const loadHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
