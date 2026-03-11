@@ -256,6 +256,47 @@ const ChannelSearch = () => {
           ))}
         </div>
 
+        {/* Saved Searches Toggle + Panel */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowSaved(!showSaved)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+            <History className="w-3.5 h-3.5" />
+            {showSaved ? 'Esconder' : 'Ver'} pesquisas salvas
+            {savedSearches.length > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{savedSearches.length}</Badge>
+            )}
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {showSaved && savedSearches.length > 0 && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden">
+              <div className="glass rounded-xl p-4 space-y-2 border-primary/10">
+                <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Save className="w-3 h-3" /> Pesquisas salvas automaticamente
+                </p>
+                {savedSearches.map((s) => (
+                  <div key={s.id} className="flex items-center gap-3 bg-secondary/30 rounded-lg px-3 py-2 group">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => loadSearch(s)}>
+                      <p className="text-sm font-medium truncate">{s.query}</p>
+                      <div className="flex gap-2 text-[10px] text-muted-foreground">
+                        <span>{s.tab === 'channel' ? '📺 Canal' : '🎬 Vídeos'}</span>
+                        <span>{((s.results_json as any[]) || []).length} resultados</span>
+                        <span>{new Date(s.updated_at).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteSearch(s.id)}>
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Tab Content */}
         {(activeTab === 'videos' || activeTab === 'channel') && (
           <>
