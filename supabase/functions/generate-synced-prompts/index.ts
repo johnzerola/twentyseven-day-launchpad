@@ -161,6 +161,16 @@ OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'snea
 
     const sceneTexts = scenes.map(s => `Scene ${s.index + 1}: "${s.text}"`).join('\n\n');
 
+    // ========== Scene Blueprint from Script (narrative intent) ==========
+    let blueprintBlock = '';
+    if (sceneBlueprintFromScript && Array.isArray(sceneBlueprintFromScript) && sceneBlueprintFromScript.length > 0) {
+      blueprintBlock = `\n\n═══ SCENE BLUEPRINT FROM SCRIPT (NARRATIVE INTENT — ALIGN VISUALS TO THIS) ═══\n` +
+        sceneBlueprintFromScript.map((bp: any, i: number) => 
+          `Block ${bp.block || i+1}: ${bp.narrative_summary || ''} | Mood: ${bp.mood || 'neutral'} | Visual: ${bp.visual_hint || ''} | Camera: ${bp.camera_suggestion || ''} | Characters: ${(bp.characters_present || []).join(', ') || 'none'}`
+        ).join('\n') +
+        `\n⚠️ ALIGN each scene's mood, camera, and visual style to the corresponding blueprint block above.\n`;
+    }
+
     // ========== AI Generation — Veo3 Optimized ==========
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
