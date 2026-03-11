@@ -259,12 +259,25 @@ const NicheExplorer = () => {
 
         {/* Results */}
         {data && a && (
+          <div className="space-y-4">
+          {/* Data sources info */}
+          {data?.meta && (
+            <div className="flex gap-2 flex-wrap text-[10px]">
+              <Badge variant="outline" className="gap-1"><Search className="w-3 h-3" /> {searchQueries.length} buscas AI</Badge>
+              <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {data.meta.totalChannels} canais via API</Badge>
+              <Badge variant="outline" className="gap-1"><Flame className="w-3 h-3" /> {data.meta.totalVideos} vídeos</Badge>
+              {data.meta.viralTitlesInDb > 0 && <Badge variant="outline" className="gap-1 text-accent border-accent/30"><Database className="w-3 h-3" /> {data.meta.viralTitlesInDb} títulos virais do DB</Badge>}
+              {data.meta.intelChannelMatches > 0 && <Badge variant="outline" className="gap-1 text-primary border-primary/30"><Brain className="w-3 h-3" /> {data.meta.intelChannelMatches} canais internos</Badge>}
+            </div>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="bg-secondary/50 p-1 h-auto flex-wrap">
               <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary/20"><Target className="w-4 h-4" /> Inteligência</TabsTrigger>
+              <TabsTrigger value="viral-db" className="gap-2 data-[state=active]:bg-primary/20"><Database className="w-4 h-4" /> Viral Patterns {viralDbData?.totalInDb > 0 ? `(${viralDbData.totalInDb})` : ''}</TabsTrigger>
               <TabsTrigger value="strategy" className="gap-2 data-[state=active]:bg-primary/20"><Zap className="w-4 h-4" /> Estratégia</TabsTrigger>
               <TabsTrigger value="revenue" className="gap-2 data-[state=active]:bg-primary/20"><DollarSign className="w-4 h-4" /> Projeção $</TabsTrigger>
-              <TabsTrigger value="channels" className="gap-2 data-[state=active]:bg-primary/20"><Users className="w-4 h-4" /> Concorrentes ({filteredChannels.length})</TabsTrigger>
+              <TabsTrigger value="channels" className="gap-2 data-[state=active]:bg-primary/20"><Users className="w-4 h-4" /> Canais ({filteredChannels.length})</TabsTrigger>
               <TabsTrigger value="trending" className="gap-2 data-[state=active]:bg-primary/20"><Flame className="w-4 h-4" /> Trending</TabsTrigger>
             </TabsList>
 
