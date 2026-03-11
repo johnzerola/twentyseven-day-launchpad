@@ -40,6 +40,9 @@ serve(async (req) => {
     const month = now.toLocaleString("pt-BR", { month: "long" });
     const year = now.getFullYear();
 
+    const topicContext = topic ? `\nTÓPICO DO USUÁRIO: "${topic}" — gere temas que EXPANDEM, COMPLEMENTAM ou dão ângulos diferentes sobre este tópico específico. NÃO repita o tópico, mas crie variações e ramificações.` : '';
+    const narrativeContext = narrativeStyle ? `\nESTILO NARRATIVO PREFERIDO: ${narrativeStyle} — todos os temas devem ser adequados para este estilo de narração.` : '';
+
     const prompt = `Você é um estrategista de conteúdo YouTube com 15 anos de experiência em canais faceless/dark.
 
 DADOS DE CANAIS VIRAIS REAIS (use como referência):
@@ -47,6 +50,8 @@ ${channelContext}
 
 TENDÊNCIAS YOUTUBE ${year}:
 ${ytContext}
+${topicContext}
+${narrativeContext}
 
 Gere ${count || 10} ideias de vídeos ÚNICOS e VIRAIS para ${month} ${year}.
 
@@ -56,7 +61,7 @@ Requisitos:
 - Idioma: ${language || "português"}
 - Cada ideia deve ter potencial viral REAL baseado nos padrões dos canais analisados
 - NÃO repita temas genéricos. Seja ESPECÍFICO e ATUAL.
-- Pense em temas que ninguém está cobrindo ainda mas que têm DEMANDA.
+${topic ? `- TODOS os temas devem estar relacionados ao tópico "${topic}" — explore sub-temas, ângulos contrários, aprofundamentos, comparações e conexões surpreendentes.` : '- Pense em temas que ninguém está cobrindo ainda mas que têm DEMANDA.'}
 - Considere sazonalidade, notícias recentes, tendências emergentes.
 - Para cada ideia, sugira o estilo de roteiro ideal (documentário, listicle, storytelling, etc).
 
