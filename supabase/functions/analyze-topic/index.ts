@@ -353,6 +353,7 @@ IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did 
         scriptTechniquesUsed: scriptKnowledgeRes.data?.length || 0,
         ytKnowledgeUsed: ytKnowledgeRes.data?.length || 0,
         youtubeVideosFound: (youtubeVideos as any[]).length,
+        braveResultsFound: (braveResults as any[]).length,
         topChannelNames: topChannels.slice(0, 5).map((c: any) => c.channel_name),
         topYoutubeVideos: (youtubeVideos as any[]).slice(0, 5).map((v: any) => ({
           title: v.title,
