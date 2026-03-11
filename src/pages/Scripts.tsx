@@ -335,7 +335,7 @@ const Scripts = () => {
     setThemeSuggestions([]);
     try {
       const { data, error } = await supabase.functions.invoke('suggest-themes', {
-        body: { niche: niche || 'faceless dark', style: style || 'documentário', language, count: 10 },
+        body: { niche: niche || 'faceless dark', style: style || 'documentário', language, count: 10, topic: topic || '', narrativeStyle: style || '' },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
