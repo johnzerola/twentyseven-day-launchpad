@@ -31,6 +31,14 @@ const QUICK_STARTS = [
   { label: '📊 Entender a regra dos 10-12 vídeos', message: 'Me explica essa história de que o YouTube só entende seu canal depois de 10-12 vídeos. Como furar essa bolha?' },
 ];
 
+interface UserChannelData {
+  channel_name: string;
+  subscribers: number | null;
+  views: number | null;
+  videos: number | null;
+  niche: string | null;
+}
+
 const MonetizationPlanner = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -39,6 +47,7 @@ const MonetizationPlanner = () => {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [expandedPhase, setExpandedPhase] = useState<number>(0);
   const [showPlan, setShowPlan] = useState(false);
+  const [userChannels, setUserChannels] = useState<UserChannelData[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const savedPlanIdRef = useRef<string | null>(null);
@@ -48,12 +57,19 @@ const MonetizationPlanner = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load saved plan + chat + progress on mount
+  // Load saved plan + chat + progress + user channels on mount
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
+      // Load user channels for context
+      const { data: channels } = await supabase
+        .from('user_channels')
+        .select('channel_name, subscribers, views, videos, niche')
+        .eq('user_id', user.id);
+      if (channels?.length) setUserChannels(channels);
+
       // Load monetization plan
       const { data: saved } = await supabase
         .from('monetization_plans')
