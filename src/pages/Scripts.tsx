@@ -461,7 +461,7 @@ const Scripts = () => {
   // Add character manually
   const addCharacter = () => {
     if (!newCharName.trim()) return;
-    setCharacters(prev => [...prev, {
+    const newChar: Character = {
       name: newCharName.trim(),
       gender: 'male',
       age: 30,
@@ -479,7 +479,10 @@ const Scripts = () => {
         pants: 'dark jeans', shoes: 'sneakers', accessories: 'none',
       },
       personality: ['determined', 'curious'],
-    }]);
+    };
+    const updated = [...characters, newChar];
+    setCharacters(updated);
+    persistCharacters(updated);
     setNewCharName('');
     setNewCharDesc('');
     setNewCharAppearance('');
@@ -487,7 +490,9 @@ const Scripts = () => {
   };
 
   const removeCharacter = (idx: number) => {
-    setCharacters(prev => prev.filter((_, i) => i !== idx));
+    const updated = characters.filter((_, i) => i !== idx);
+    setCharacters(updated);
+    persistCharacters(updated);
   };
 
   // Build image prompt from structured character
