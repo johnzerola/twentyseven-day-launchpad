@@ -387,6 +387,22 @@ const Scripts = () => {
     return text.replace(/---SCORES---.*?---END_SCORES---\s*/s, '').trim();
   };
 
+  const parseSceneBlueprint = (text: string): any[] => {
+    const match = text.match(/---SCENE_BLUEPRINT---\s*([\s\S]*?)\s*---END_SCENE_BLUEPRINT---/);
+    if (!match) return [];
+    try {
+      // Try to find JSON array in the matched content
+      const jsonStr = match[1].trim();
+      const arrMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (arrMatch) return JSON.parse(arrMatch[0]);
+    } catch { /* ignore parse errors */ }
+    return [];
+  };
+
+  const cleanBlueprintFromScript = (text: string): string => {
+    return text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
+  };
+
   const generateScript = async () => {
     if (!topic.trim()) return;
     setLoading(true);
@@ -395,8 +411,28 @@ const Scripts = () => {
     setSyncedScenes([]);
     setScorecard(null);
     setEditMode(false);
+    setSceneBlueprintJson([]);
 
     try {
+      // ========== PHASE 0: Intelligence Analysis ==========
+      setAnalyzingTopic(true);
+      let briefing = null;
+      try {
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-topic', {
+          body: { topic, niche, style, language },
+        });
+        if (!analysisError && analysisData?.briefing) {
+          briefing = analysisData.briefing;
+          setIntelligenceBriefing(analysisData);
+          setShowIntelligence(true);
+          toast.success(`📊 Inteligência: ${analysisData.metadata?.channelsAnalyzed || 0} canais analisados`);
+        }
+      } catch (err) {
+        console.warn('Intelligence analysis failed, proceeding without:', err);
+      }
+      setAnalyzingTopic(false);
+
+      // ========== PHASE 1+2: Script Generation with Briefing ==========
       const viralContext = getViralContext();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-script`, {
         method: 'POST',
@@ -404,7 +440,7 @@ const Scripts = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext }),
+        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext, intelligenceBriefing: briefing }),
       });
 
       if (resp.status === 402) throw new Error('Créditos insuficientes.');
@@ -431,16 +467,34 @@ const Scripts = () => {
           try {
             const p = JSON.parse(json);
             const c = p.choices?.[0]?.delta?.content;
-            if (c) { fullScript += c; setScript(cleanScoresFromScript(fullScript)); }
+            if (c) { fullScript += c; setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullScript))); }
           } catch { buffer = line + '\n' + buffer; break; }
         }
       }
       parseScorecard(fullScript);
-      setScript(cleanScoresFromScript(fullScript));
+      
+      // Parse scene blueprint
+      const blueprint = parseSceneBlueprint(fullScript);
+      if (blueprint.length > 0) {
+        setSceneBlueprintJson(blueprint);
+        toast.success(`🎬 Blueprint: ${blueprint.length} blocos narrativos mapeados`);
+      }
+      
+      setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullScript)));
+
+      // Persist intelligence + blueprint to video_projects
+      try {
+        const pid = await getOrCreateProject();
+        await supabase.from('video_projects').update({
+          intelligence_json: briefing || {},
+          scene_blueprint_json: blueprint,
+        } as any).eq('id', pid);
+      } catch { /* non-critical */ }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
+      setAnalyzingTopic(false);
     }
   };
 
