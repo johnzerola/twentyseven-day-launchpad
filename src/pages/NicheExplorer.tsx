@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatNumber } from '@/lib/formatters';
-import { COUNTRIES } from '@/lib/constants';
+import { COUNTRIES, YPP_SUBS, YPP_HOURS } from '@/lib/constants';
+import { useNavigate } from 'react-router-dom';
 
 const QUICK_NICHES = [
   'finanças pessoais', 'true crime', 'horror stories', 'motivacional', 'curiosidades',

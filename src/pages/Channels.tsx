@@ -658,10 +658,10 @@ const Channels = () => {
                     <div className="flex items-center gap-3 flex-wrap">
                       <Globe className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">País:</span>
-                      {COUNTRIES.map(c => (
-                        <Badge key={c.code}
-                          className={`cursor-pointer text-[10px] ${competitorCountry === c.code ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/50 text-muted-foreground'}`}
-                          onClick={() => { setCompetitorCountry(c.code); loadCompetitors(selectedChannel, c.code); }}>
+                      {COUNTRIES.filter(c => c.value).map(c => (
+                        <Badge key={c.value}
+                          className={`cursor-pointer text-[10px] ${competitorCountry === c.value ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/50 text-muted-foreground'}`}
+                          onClick={() => { setCompetitorCountry(c.value); loadCompetitors(selectedChannel, c.value); }}>
                           {c.label}
                         </Badge>
                       ))}

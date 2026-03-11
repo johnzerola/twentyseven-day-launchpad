@@ -116,3 +116,7 @@ export const RPM_COUNTRY_MULTIPLIER: Record<string, number> = {
 
 /** Growth curve: monthly view multiplier for months 1-12 (faceless channel avg) */
 export const GROWTH_CURVE = [0.05, 0.1, 0.18, 0.3, 0.45, 0.6, 0.72, 0.82, 0.88, 0.93, 0.97, 1.0] as const;
+
+/** YouTube Partner Program thresholds (display strings) */
+export const YPP_SUBS = '1.000';
+export const YPP_HOURS = '4.000h';
