@@ -1526,52 +1526,6 @@ const Scripts = () => {
                   {/* Generated Scenes */}
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
-                      {/* Open in Studio Button */}
-                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-3">
-                        <Button className="w-full gap-2 gradient-hero border-0" onClick={async () => {
-                          try {
-                            const pid = await getOrCreateProject();
-                            // Save synced scenes to scenes table
-                            const { data: { user } } = await supabase.auth.getUser();
-                            if (!user) throw new Error('Login required');
-                            // Update project with latest script
-                            await supabase.from('video_projects').update({
-                              script: getCleanNarration(),
-                              title: topic || 'Script Project',
-                              niche: niche || undefined,
-                              status: 'scripted',
-                            } as any).eq('id', pid);
-                            // Delete old scenes and insert new
-                            await supabase.from('scenes').delete().eq('project_id', pid);
-                            if (syncedScenes.length > 0) {
-                              const rows = syncedScenes.map((s: any) => ({
-                                project_id: pid,
-                                sequence_order: s.sceneIndex,
-                                segment_index: s.sceneIndex,
-                                tts_text: s.narrativeText || '',
-                                veo3_prompt: s.visualPrompt,
-                                camera_movement: s.cameraAngle,
-                                lighting: s.lightingSetup || '',
-                                emotional_intent: s.mood,
-                                duration_sec: s.sceneDurationSeconds || sceneDuration,
-                                negative_prompt: s.negativePrompt || '',
-                                character_ref: s.charactersInScene?.join(', ') || '',
-                                status: 'pending',
-                              }));
-                              await supabase.from('scenes').insert(rows as any);
-                            }
-                            // Persist characters
-                            await persistCharacters(characters);
-                            // Navigate to Studio with project_id
-                            window.location.href = `/studio?project=${pid}`;
-                          } catch (err: any) {
-                            toast.error(err.message || 'Erro ao abrir no Studio');
-                          }
-                        }}>
-                          <Film className="w-4 h-4" /> 🎬 Abrir no Studio (Sincronizar Cenas)
-                        </Button>
-                        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">Salva roteiro, personagens e cenas no banco e abre o Studio pronto para produção</p>
-                      </div>
 
                       {/* AutoFlow Export Label */}
                       <div className="bg-muted/30 rounded-lg p-3 space-y-2">
