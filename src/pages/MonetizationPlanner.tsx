@@ -279,6 +279,15 @@ const MonetizationPlanner = () => {
             <p className="text-xs text-muted-foreground mt-0.5">
               Converse comigo — vou te ajudar a criar um plano realista baseado em dados reais
             </p>
+            {userChannels.length > 0 && (
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {userChannels.map((ch, i) => (
+                  <Badge key={i} variant="outline" className="text-[10px] gap-1">
+                    <Users className="w-3 h-3" /> {ch.channel_name} · {ch.subscribers ? `${(ch.subscribers / 1000).toFixed(1)}K` : '0'} subs
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Messages */}

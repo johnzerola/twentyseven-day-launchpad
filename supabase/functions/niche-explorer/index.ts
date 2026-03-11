@@ -438,10 +438,13 @@ Provide intelligence report with REALISTIC monetization projections for ${region
       channels,
       trending: trending.slice(0, 30),
       analysis,
+      directCompetitors,
       meta: {
         niche, country: region, baseRpm, totalChannels: channels.length,
         totalVideos: trending.length, timestamp: Date.now(),
         countryData: { ...countryData, ypp: YPP_REQUIREMENTS },
+        nicheDbMatches: nicheDbRows?.length || 0,
+        intelChannelMatches: intelChannels?.length || 0,
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
