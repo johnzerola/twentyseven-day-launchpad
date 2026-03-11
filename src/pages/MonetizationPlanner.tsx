@@ -41,27 +41,66 @@ const MonetizationPlanner = () => {
   const [showPlan, setShowPlan] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const savedPlanIdRef = useRef<string | null>(null);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load progress
+  // Load saved plan + chat + progress on mount
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
+      
+      // Load monetization plan
+      const { data: saved } = await supabase
+        .from('monetization_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (saved) {
+        savedPlanIdRef.current = saved.id;
+        if (saved.chat_history) setMessages((saved.chat_history as any) || []);
+        if (saved.plan_json && Object.keys(saved.plan_json as object).length > 0) {
+          setActionPlan(saved.plan_json as any);
+          setShowPlan(true);
+        }
+      }
+      
+      // Load progress
+      const { data: progress } = await supabase
         .from('user_progress')
         .select('completed_items')
         .eq('user_id', user.id)
         .eq('module', MODULE_KEY)
         .maybeSingle();
-      if (data?.completed_items) {
-        setCompletedTasks(data.completed_items as string[]);
+      if (progress?.completed_items) {
+        setCompletedTasks(progress.completed_items as string[]);
       }
     })();
+  }, []);
+
+  const persistPlan = useCallback(async (msgs: Msg[], plan: ActionPlan | null) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (savedPlanIdRef.current) {
+      await supabase.from('monetization_plans').update({
+        chat_history: msgs as any,
+        plan_json: (plan || {}) as any,
+        updated_at: new Date().toISOString(),
+      } as any).eq('id', savedPlanIdRef.current);
+    } else {
+      const { data: inserted } = await supabase.from('monetization_plans').insert({
+        user_id: user.id,
+        chat_history: msgs as any,
+        plan_json: (plan || {}) as any,
+      } as any).select('id').single();
+      if (inserted) savedPlanIdRef.current = inserted.id;
+    }
   }, []);
 
   const persistProgress = useCallback(async (ids: string[]) => {
