@@ -1578,12 +1578,6 @@ const Scripts = () => {
                           {scene.transitionNote && (
                             <p className="text-[10px] text-muted-foreground mt-1 italic">↗ {scene.transitionNote}</p>
                           )}
-                          <div className="mt-2">
-                            <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1"
-                              onClick={() => { navigator.clipboard.writeText(scene.visualPrompt); toast.success('Prompt copiado!'); }}>
-                              <Copy className="w-3 h-3" /> Copiar prompt
-                            </Button>
-                          </div>
                         </motion.div>
                       ))}
                     </div>
