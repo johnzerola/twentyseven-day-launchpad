@@ -17,10 +17,6 @@ const navItems = [
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
   { key: 'Monetização', icon: DollarSign, path: '/monetization' },
-  { key: 'Studio', icon: Video, path: '/studio' },
-  { key: 'Narração IA', icon: Mic, path: '/narration' },
-  { key: 'Playbook 27D', icon: CalendarDays, path: '/playbook' },
-  { key: 'Planner', icon: Kanban, path: '/planner' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
 ];
 
