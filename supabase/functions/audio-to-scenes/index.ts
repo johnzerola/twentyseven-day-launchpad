@@ -230,12 +230,11 @@ KNOWLEDGE: ${knowledgeBlock}
 PROMPT FORMULA: [Cinematography] + [Subject matching narration] + [Action] + [Environment] + [Style] + anti-text block
 Quality: masterpiece, award-winning, 8K UHD, photorealistic`;
 
-    const allScenes: any[] = [];
-
-    for (const chunk of chunks) {
+    // ========== Process ALL chunks in PARALLEL to avoid timeout ==========
+    const chunkPromises = chunks.map(async (chunk) => {
       const chunkTranscript = chunk.blocks
         .map(b => `[${b.startTime.toFixed(1)}s-${b.endTime.toFixed(1)}s] ${b.text}`)
-        .join("\n");
+        .join("\n").slice(0, 30000);
 
       const chunkDuration = chunk.endTime - chunk.startTime;
       const expectedScenes = Math.max(2, Math.ceil(chunkDuration / sceneDuration));
@@ -270,7 +269,7 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
         if (!response.ok) {
           const t = await response.text();
           console.error(`Chunk ${chunk.index + 1} AI error: ${response.status}`, t.slice(0, 200));
-          continue; // skip failed chunk, continue with others
+          return [];
         }
 
         const data = await response.json();
@@ -279,13 +278,17 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
           const parsed = JSON.parse(toolCall.function.arguments);
           const scenes = parsed.scenes || [];
           console.log(`Chunk ${chunk.index + 1}: generated ${scenes.length} scenes`);
-          allScenes.push(...scenes);
+          return scenes;
         }
+        return [];
       } catch (err) {
         console.error(`Chunk ${chunk.index + 1} failed:`, err);
-        continue;
+        return [];
       }
-    }
+    });
+
+    const chunkResults = await Promise.all(chunkPromises);
+    const allScenes: any[] = chunkResults.flat();
 
     // ========== STEP 7: Merge, validate timing & re-index ==========
     allScenes.sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
