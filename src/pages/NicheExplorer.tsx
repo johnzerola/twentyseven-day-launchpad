@@ -290,12 +290,26 @@ const NicheExplorer = () => {
                     <div><p className="text-2xl font-bold text-primary">{a.facelessViability}%</p><p className="text-[10px] text-muted-foreground">Faceless Viável</p></div>
                     <div><p className="text-2xl font-bold">{data.meta.totalChannels}</p><p className="text-[10px] text-muted-foreground">Canais analisados</p></div>
                   </div>
-                  {a.score >= 70 && (
-                    <Button onClick={() => navigate(`/scripts?niche=${encodeURIComponent(niche)}&style=${a.facelessViability > 50 ? 'faceless' : 'talking_head'}`)}
-                      className="gradient-hero border-0 gap-2 h-11 px-6 shrink-0">
-                      <Rocket className="w-4 h-4" /> Iniciar Pipeline de Roteiro
+                  <div className="flex gap-2 shrink-0">
+                    {a.score >= 70 && (
+                      <Button onClick={() => navigate(`/scripts?niche=${encodeURIComponent(niche)}&style=${a.facelessViability > 50 ? 'faceless' : 'talking_head'}`)}
+                        className="gradient-hero border-0 gap-2 h-11 px-6">
+                        <Rocket className="w-4 h-4" /> Pipeline de Roteiro
+                      </Button>
+                    )}
+                    <Button variant="outline" className="gap-2 h-11" onClick={async () => {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return toast.error('Faça login');
+                      const { data: proj, error } = await supabase.from('video_projects').insert({
+                        user_id: user.id, title: `Projeto: ${niche}`, niche: niche, status: 'draft',
+                      }).select().single();
+                      if (error) return toast.error('Erro ao criar projeto');
+                      toast.success('Projeto criado!');
+                      navigate('/workflow');
+                    }}>
+                      <FolderOpen className="w-4 h-4" /> Salvar como Projeto
                     </Button>
-                  )}
+                  </div>
                 </div>
               </motion.div>
 
