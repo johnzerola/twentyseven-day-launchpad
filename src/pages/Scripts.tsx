@@ -131,6 +131,7 @@ const Scripts = () => {
   const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts'>('script');
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [newCharName, setNewCharName] = useState('');
   const [newCharDesc, setNewCharDesc] = useState('');
   const [newCharAppearance, setNewCharAppearance] = useState('');
