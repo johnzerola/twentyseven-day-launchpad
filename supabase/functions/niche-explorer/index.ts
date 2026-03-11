@@ -38,13 +38,59 @@ serve(async (req) => {
     const { niche, country, language } = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const region = country || "BR";
     const lang = language || "pt";
     const countryData = RPM_BY_COUNTRY[region] || RPM_BY_COUNTRY.BR;
-    const baseRpm = countryData.rpm;
+    let baseRpm = countryData.rpm;
+
+    // === DEEP IA: Query channel_intelligence + niche_database ===
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.4");
+    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get real RPM/saturation from niche_database
+    const { data: nicheDbRows } = await sb.from("niche_database")
+      .select("*")
+      .ilike("name", `%${niche}%`)
+      .limit(5);
+    
+    let nicheDbContext = "";
+    if (nicheDbRows?.length) {
+      const bestMatch = nicheDbRows[0];
+      if (bestMatch.rpm_estimate && bestMatch.rpm_estimate > 0) baseRpm = bestMatch.rpm_estimate;
+      nicheDbContext = nicheDbRows.map((n: any) => 
+        `Nicho "${n.name}": RPM=$${n.rpm_estimate}, saturação=${n.saturation}, dificuldade=${n.difficulty}, faceless=${n.faceless_friendly}, sub-nichos=${JSON.stringify(n.sub_niches)}`
+      ).join("\n");
+    }
+
+    // Get top channels from channel_intelligence for this niche
+    const { data: intelChannels } = await sb.from("channel_intelligence")
+      .select("channel_name, youtube_channel_id, subscribers, avg_views, niche, style, growth_rate, rpm_estimate, language, country, viral_patterns, upload_frequency")
+      .or(`niche.ilike.%${niche}%,sub_niche.ilike.%${niche}%`)
+      .order("avg_views", { ascending: false })
+      .limit(10);
+
+    let intelContext = "";
+    let directCompetitors: any[] = [];
+    if (intelChannels?.length) {
+      directCompetitors = intelChannels.slice(0, 5).map((c: any) => ({
+        id: c.youtube_channel_id,
+        name: c.channel_name,
+        subscribers: c.subscribers,
+        avgViews: c.avg_views,
+        style: c.style,
+        growthRate: c.growth_rate,
+        rpmEstimate: c.rpm_estimate,
+        uploadFrequency: c.upload_frequency,
+      }));
+      intelContext = intelChannels.map((c: any) =>
+        `[DB] ${c.channel_name}: ${c.subscribers} subs, avg ${c.avg_views} views, style=${c.style}, growth=${c.growth_rate}, RPM=$${c.rpm_estimate}, freq=${c.upload_frequency}`
+      ).join("\n");
+    }
 
     // Use random order parameter to get different results each time
     const orderOptions = ["viewCount", "relevance", "date"];
