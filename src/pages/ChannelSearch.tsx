@@ -484,9 +484,13 @@ const ChannelSearch = () => {
                           <TableRow key={v.id} className={`border-border/30 transition-colors ${isHot ? 'bg-accent/5 hover:bg-accent/10' : 'hover:bg-secondary/30'}`}>
                             <TableCell>
                               <div className="relative w-16 h-10 rounded overflow-hidden">
-                                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                                  <Eye className="w-4 h-4 text-muted-foreground" />
-                                </div>
+                                {v.thumbnail ? (
+                                  <img src={v.thumbnail} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                                    <Eye className="w-4 h-4 text-muted-foreground" />
+                                  </div>
+                                )}
                                 {isHot && (
                                   <span className="absolute -top-1 -right-1 bg-accent text-[8px] font-bold text-accent-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                                     <Flame className="w-2 h-2" /> {Math.round(outlierScore)}x

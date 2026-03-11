@@ -345,6 +345,11 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           <Badge variant="outline" className="text-accent border-accent/30">
             {meta.escapeeCount} algorithm escapees
           </Badge>
+          {meta.uniqueVideosAnalyzed && (
+            <Badge variant="outline" className="text-muted-foreground">
+              {meta.uniqueVideosAnalyzed} vídeos analisados • {meta.uniqueChannelsAnalyzed} canais escaneados
+            </Badge>
+          )}
         </div>
       )}
 
