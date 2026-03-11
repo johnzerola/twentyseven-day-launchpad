@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  Treemap, PieChart, Pie
+  Treemap
 } from 'recharts';
 import { DollarSign, TrendingUp, Globe, Target, Flame, Users, Eye, Zap } from 'lucide-react';
 
