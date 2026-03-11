@@ -174,22 +174,48 @@ const Scripts = () => {
 
   const applyTemplate = (tmpl: any) => {
     const examples = Array.isArray(tmpl.examples) ? tmpl.examples : [];
-    // Set the template content as a starting point and extract a suggested topic
     const firstExample = examples[0] || '';
     if (firstExample && !topic) setTopic(firstExample);
-    // Map template title to style
-    const styleMap: Record<string, string> = {
-      'documentário': 'documentário', 'true crime': 'narração', 'finanças': 'educativo',
-      'motivacional': 'storytelling', 'listicle': 'listicle', 'tutorial': 'tutorial',
-      'horror': 'narração', 'educativo': 'educativo', 'storytelling': 'storytelling',
-      'shorts': 'dopaminérgico', 'comparação': 'educativo', 'desafio': 'mrbeast',
-      'mistério': 'cinematográfico', 'conspiração': 'cinematográfico',
-    };
+    
     const titleLower = tmpl.title.toLowerCase();
-    for (const [key, val] of Object.entries(styleMap)) {
-      if (titleLower.includes(key)) { setStyle(val); break; }
+    
+    // HVM Templates: auto-configure style, duration, niche and video style
+    const hvmConfigs: Record<string, { style: string; duration: string; niche: string; videoStyle: string }> = {
+      'histórias emocionais': { style: 'storytelling', duration: '12', niche: 'histórias emocionais', videoStyle: 'cinematográfico' },
+      'jornada do herói': { style: 'storytelling', duration: '12', niche: 'histórias emocionais', videoStyle: 'cinematográfico' },
+      'documentário curto': { style: 'documentário', duration: '15', niche: 'documentário histórico', videoStyle: 'dark' },
+      'mistério/histórico': { style: 'cinematográfico', duration: '15', niche: 'mistério histórico', videoStyle: 'dark' },
+      'true crime pov': { style: 'narração', duration: '10', niche: 'true crime', videoStyle: 'dark' },
+      'primeira pessoa': { style: 'narração', duration: '10', niche: 'true crime', videoStyle: 'dark' },
+    };
+    
+    let applied = false;
+    for (const [key, config] of Object.entries(hvmConfigs)) {
+      if (titleLower.includes(key)) {
+        setStyle(config.style);
+        setDuration(config.duration);
+        setNiche(config.niche);
+        setVideoStyle(config.videoStyle);
+        applied = true;
+        break;
+      }
     }
-    toast.success(`Template "${tmpl.title}" aplicado!`);
+    
+    // Fallback to generic style mapping
+    if (!applied) {
+      const styleMap: Record<string, string> = {
+        'documentário': 'documentário', 'true crime': 'narração', 'finanças': 'educativo',
+        'motivacional': 'storytelling', 'listicle': 'listicle', 'tutorial': 'tutorial',
+        'horror': 'narração', 'educativo': 'educativo', 'storytelling': 'storytelling',
+        'shorts': 'dopaminérgico', 'comparação': 'educativo', 'desafio': 'mrbeast',
+        'mistério': 'cinematográfico', 'conspiração': 'cinematográfico',
+      };
+      for (const [key, val] of Object.entries(styleMap)) {
+        if (titleLower.includes(key)) { setStyle(val); break; }
+      }
+    }
+    
+    toast.success(`Template "${tmpl.title}" aplicado! Estilo: ${style}, Duração: ${duration}min`);
     setShowTemplates(false);
   };
 
