@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_groups: {
+        Row: {
+          channels: Json | null
+          color: string | null
+          created_at: string | null
+          default_country: string | null
+          default_language: string | null
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          channels?: Json | null
+          color?: string | null
+          created_at?: string | null
+          default_country?: string | null
+          default_language?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          channels?: Json | null
+          color?: string | null
+          created_at?: string | null
+          default_country?: string | null
+          default_language?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       channel_intelligence: {
         Row: {
           analyzed_at: string | null
@@ -156,6 +192,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_queue: {
+        Row: {
+          channel_id: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          language: string | null
+          metadata_json: Json | null
+          niche: string | null
+          notes: string | null
+          priority: string | null
+          project_id: string | null
+          published_url: string | null
+          scheduled_date: string | null
+          script_id: string | null
+          status: string
+          tags: Json | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          metadata_json?: Json | null
+          niche?: string | null
+          notes?: string | null
+          priority?: string | null
+          project_id?: string | null
+          published_url?: string | null
+          scheduled_date?: string | null
+          script_id?: string | null
+          status?: string
+          tags?: Json | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          metadata_json?: Json | null
+          niche?: string | null
+          notes?: string | null
+          priority?: string | null
+          project_id?: string | null
+          published_url?: string | null
+          scheduled_date?: string | null
+          script_id?: string | null
+          status?: string
+          tags?: Json | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_queue_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_queue_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          language: string | null
+          name: string
+          niche: string | null
+          template_json: Json
+          updated_at: string | null
+          use_count: number | null
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          name: string
+          niche?: string | null
+          template_json?: Json
+          updated_at?: string | null
+          use_count?: number | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          name?: string
+          niche?: string | null
+          template_json?: Json
+          updated_at?: string | null
+          use_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
       generated_branding: {
         Row: {
