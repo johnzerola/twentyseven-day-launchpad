@@ -103,7 +103,11 @@ const Titles = () => {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setTitles(data?.titles || []);
-      if (!data?.titles?.length) toast.info('Nenhum título gerado');
+      if (data?.titles?.length) {
+        await saveTitles(data.titles, topic, niche);
+      } else {
+        toast.info('Nenhum título gerado');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar títulos');
     } finally {
