@@ -279,7 +279,21 @@ YOUR COMMANDMENTS:
 
 11. DOPAMINERGIC VISUALS: Apply retention techniques to visuals — first 3 seconds of EACH scene must trigger curiosity or dopamine. Use visual "pattern interrupts" (unexpected angle changes, dramatic reveals, contrast shifts).
 
-12. MAGNETIC HOOK FORMULA: Scene 1 must combine: MYSTERY (what is this?) + SCALE (epic/impossible) + MOTION (dynamic camera) + DETAIL (micro-textures that prove quality).`
+12. MAGNETIC HOOK FORMULA: Scene 1 must combine: MYSTERY (what is this?) + SCALE (epic/impossible) + MOTION (dynamic camera) + DETAIL (micro-textures that prove quality).
+
+═══ AUTOFLOW FORMAT RULES ═══
+The output will be used in the AutoFlow extension (Frame-to-Video). The visualPrompt becomes the IMAGE prompt (left side of |||) and cameraAngle+lensSpec+lightingSetup+mood become the VIDEO prompt (right side of |||).
+
+FORMAT: [V1-S#] {visualPrompt} ||| [V1-S#] {camera movement}, {lens}, {lighting} lighting, {mood} mood
+- One prompt per line, one line per scene
+- Tags: [V#-S#] where V=video number, S=scene number
+- LEFT of ||| = image generation prompt (the visualPrompt field — describe the STILL frame)
+- RIGHT of ||| = video animation prompt (camera movement, lens spec, lighting, mood — describe HOW to animate the still)
+- The VIDEO prompt (right side) must be CAMERA MOTION focused: dolly-in, tracking shot, crane-up, slow pan, orbit, push-in, pull-out, rack focus, handheld, tilt, steadicam
+- NEVER put scene descriptions in the video prompt — only camera/motion/lighting/mood
+- Example: [V1-S1] Neon city skyline in rain, reflective rooftops, dramatic clouds ||| [V1-S1] Cinematic tilt from skyline to street with rainfall streaking across lens.
+- Example: [V1-S2] Close-up data chip in gloved hand, water droplets, amber glow ||| [V1-S2] Macro rack-focus from droplets to glowing chip core.
+═══════════════════════════════════════`
           },
           {
             role: "user",
