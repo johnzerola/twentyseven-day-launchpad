@@ -262,8 +262,9 @@ const Scripts = () => {
   const loadHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from('saved_scripts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20) as any;
-    setSavedScripts(data || []);
+    const { data, count } = await supabase.from('saved_scripts').select('*', { count: 'exact' }).eq('user_id', user.id).order('created_at', { ascending: false }).range(scriptsPag.rangeFrom, scriptsPag.rangeTo) as any;
+    scriptsPag.setItems(data || []);
+    scriptsPag.setTotalCount(count || 0);
   };
 
   const loadTemplates = async () => {
