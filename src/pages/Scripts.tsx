@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste, Mic } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste, Mic, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -148,13 +148,87 @@ const Scripts = () => {
   const [showTranscription, setShowTranscription] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  useEffect(() => { loadHistory(); }, []);
+  // Templates & Theme Suggestions
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showThemeSuggestions, setShowThemeSuggestions] = useState(false);
+  const [themeSuggestions, setThemeSuggestions] = useState<any[]>([]);
+  const [loadingThemes, setLoadingThemes] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  useEffect(() => { loadHistory(); loadTemplates(); }, []);
 
   const loadHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase.from('saved_scripts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20) as any;
     setSavedScripts(data || []);
+  };
+
+  const loadTemplates = async () => {
+    setLoadingTemplates(true);
+    const { data } = await supabase.from('script_knowledge').select('*').eq('category', 'template').order('effectiveness_score', { ascending: false }) as any;
+    setTemplates(data || []);
+    setLoadingTemplates(false);
+  };
+
+  const applyTemplate = (tmpl: any) => {
+    const examples = Array.isArray(tmpl.examples) ? tmpl.examples : [];
+    // Set the template content as a starting point and extract a suggested topic
+    const firstExample = examples[0] || '';
+    if (firstExample && !topic) setTopic(firstExample);
+    // Map template title to style
+    const styleMap: Record<string, string> = {
+      'documentário': 'documentário', 'true crime': 'narração', 'finanças': 'educativo',
+      'motivacional': 'storytelling', 'listicle': 'listicle', 'tutorial': 'tutorial',
+      'horror': 'narração', 'educativo': 'educativo', 'storytelling': 'storytelling',
+      'shorts': 'dopaminérgico', 'comparação': 'educativo', 'desafio': 'mrbeast',
+      'mistério': 'cinematográfico', 'conspiração': 'cinematográfico',
+    };
+    const titleLower = tmpl.title.toLowerCase();
+    for (const [key, val] of Object.entries(styleMap)) {
+      if (titleLower.includes(key)) { setStyle(val); break; }
+    }
+    toast.success(`Template "${tmpl.title}" aplicado!`);
+    setShowTemplates(false);
+  };
+
+  const generateThemeSuggestions = async () => {
+    setLoadingThemes(true);
+    setThemeSuggestions([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-themes', {
+        body: { niche: niche || 'faceless dark', style: style || 'documentário', language, count: 10 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setThemeSuggestions(data?.themes || []);
+      toast.success(`${data?.themes?.length || 0} temas gerados!`);
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('402')) toast.error('Créditos insuficientes.');
+      else if (msg.includes('429')) toast.error('Rate limit. Tente novamente.');
+      else toast.error(msg || 'Erro ao gerar temas');
+    } finally {
+      setLoadingThemes(false);
+    }
+  };
+
+  const useTheme = (theme: any) => {
+    setTopic(theme.title);
+    if (theme.estimated_duration) {
+      const dur = parseInt(theme.estimated_duration);
+      if (dur) setDuration(String(dur));
+    }
+    const styleMap: Record<string, string> = {
+      'documentário': 'documentário', 'listicle': 'listicle', 'tutorial': 'tutorial',
+      'true crime': 'narração', 'motivacional': 'storytelling', 'storytelling': 'storytelling',
+      'educativo': 'educativo', 'horror': 'narração', 'comparação': 'educativo',
+      'desafio': 'mrbeast', 'shorts': 'dopaminérgico',
+    };
+    if (theme.style && styleMap[theme.style]) setStyle(styleMap[theme.style]);
+    toast.success('Tema aplicado! Clique em Gerar Roteiro.');
+    setShowThemeSuggestions(false);
   };
 
   const getViralContext = () => {
@@ -641,6 +715,92 @@ const Scripts = () => {
                 <Sparkles className="w-4 h-4" />
                 {loading ? 'Gerando...' : 'Gerar Roteiro'}
               </Button>
+            </div>
+
+            {/* Templates Panel */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <button onClick={() => setShowTemplates(!showTemplates)}
+                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <LayoutTemplate className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-xs">Templates de Roteiro</span>
+                  <Badge variant="secondary" className="text-[10px]">{templates.length}</Badge>
+                </div>
+                {showTemplates ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showTemplates && (
+                <div className="px-3 pb-3 space-y-1.5 border-t border-border/30 pt-2 max-h-[300px] overflow-y-auto">
+                  {loadingTemplates ? (
+                    <div className="flex items-center justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+                  ) : templates.map((tmpl: any) => {
+                    const examples = Array.isArray(tmpl.examples) ? tmpl.examples : [];
+                    return (
+                      <button key={tmpl.id} onClick={() => applyTemplate(tmpl)}
+                        className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-xs">{tmpl.title}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        {examples.length > 0 && (
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {examples.slice(0, 2).map((ex: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[9px] font-normal">{ex}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
+                          {tmpl.content.split('\n')[0]?.replace(/\[.*?\]/g, '').trim()}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Theme Suggestions Panel */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <button onClick={() => setShowThemeSuggestions(!showThemeSuggestions)}
+                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold text-xs">Sugestão de Temas</span>
+                  {themeSuggestions.length > 0 && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">{themeSuggestions.length}</Badge>}
+                </div>
+                {showThemeSuggestions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showThemeSuggestions && (
+                <div className="px-3 pb-3 space-y-2 border-t border-border/30 pt-2">
+                  <Button onClick={generateThemeSuggestions} disabled={loadingThemes} size="sm" className="w-full gap-2 text-xs">
+                    {loadingThemes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TrendingUp className="w-3.5 h-3.5" />}
+                    {loadingThemes ? 'Analisando tendências...' : 'Gerar Temas Virais com IA'}
+                  </Button>
+                  <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
+                    {themeSuggestions.map((theme: any, i: number) => (
+                      <button key={i} onClick={() => useTheme(theme)}
+                        className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium text-xs flex-1">{theme.title}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className={`text-[10px] font-bold ${theme.viral_score >= 8 ? 'text-emerald-400' : theme.viral_score >= 6 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                              🔥 {theme.viral_score}/10
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{theme.description}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <Badge variant="outline" className="text-[9px]">{theme.style}</Badge>
+                          <Badge variant="secondary" className="text-[9px]">{theme.estimated_duration}</Badge>
+                          {(theme.niche_tags || []).slice(0, 2).map((tag: string, j: number) => (
+                            <Badge key={j} variant="outline" className="text-[9px] font-normal">{tag}</Badge>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-primary/70 mt-1 italic">{theme.why_viral}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Viral Database Panel */}
