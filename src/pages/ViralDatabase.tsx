@@ -213,6 +213,7 @@ const ViralDatabase = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [patternFilter, setPatternFilter] = useState('');
   const [patternStyleFilter, setPatternStyleFilter] = useState('');
+  const [nicheFilter, setNicheFilter] = useState('');
 
   // Load channels from DB
   useEffect(() => {
@@ -237,9 +238,17 @@ const ViralDatabase = () => {
   };
 
   // Filter channels
+  // Niches for filter
+  const niches = useMemo(() => {
+    const map = new Map<string, number>();
+    channels.forEach(c => map.set(c.niche, (map.get(c.niche) || 0) + 1));
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [channels]);
+
   const filteredChannels = useMemo(() => {
     return channels.filter(ch => {
       if (styleFilter !== 'all' && ch.style !== styleFilter) return false;
+      if (nicheFilter && ch.niche !== nicheFilter) return false;
       if (facelessOnly && !ch.is_faceless) return false;
       if (countryFilter && ch.country !== countryFilter) return false;
       if (searchFilter) {
@@ -250,7 +259,7 @@ const ViralDatabase = () => {
       }
       return true;
     });
-  }, [channels, styleFilter, searchFilter, countryFilter, facelessOnly]);
+  }, [channels, styleFilter, nicheFilter, searchFilter, countryFilter, facelessOnly]);
 
   // Extract patterns from all channels
   const allPatterns = useMemo(() => {
@@ -407,6 +416,13 @@ const ViralDatabase = () => {
                     {countries.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 )}
+                {niches.length > 0 && (
+                  <select className="text-[10px] bg-secondary/50 border border-border/50 rounded px-2 py-1 text-foreground"
+                    value={nicheFilter} onChange={e => setNicheFilter(e.target.value)}>
+                    <option value="">🎯 Todos nichos</option>
+                    {niches.map(([n, count]) => <option key={n} value={n}>{n} ({count})</option>)}
+                  </select>
+                )}
               </div>
             </div>
 
@@ -414,9 +430,9 @@ const ViralDatabase = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: 'Total Canais', value: channels.length, icon: Tv },
-                { label: 'Faceless', value: channels.filter(c => c.is_faceless).length, icon: Users },
+                { label: 'Filtrados', value: filteredChannels.length, icon: Filter },
+                { label: 'Nichos', value: niches.length, icon: Target },
                 { label: 'Crescimento Explosivo', value: channels.filter(c => c.growth_rate === 'explosive').length, icon: TrendingUp },
-                { label: 'Estilos', value: new Set(channels.map(c => c.style)).size, icon: Palette },
               ].map((stat, i) => (
                 <div key={i} className="glass rounded-xl p-3 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
