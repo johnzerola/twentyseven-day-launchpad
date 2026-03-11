@@ -22,6 +22,10 @@ const STYLES = [
   { value: 'tutorial', label: '🛠️ Tutorial', desc: 'Passo a passo com resultado visível' },
   { value: 'documentário', label: '📹 Documentário', desc: 'Profundidade, dados e investigação' },
   { value: 'listicle', label: '📋 Listicle', desc: 'Top N com escalada de impacto' },
+  { value: 'reddit', label: '🗣️ Reddit Stories', desc: 'Narração 1ª pessoa, tom confessional, animação 2D' },
+  { value: 'conspiração', label: '🔍 Conspiração/Mistério', desc: 'Investigação profunda, evidências progressivas' },
+  { value: 'mitologia', label: '⚡ Mitologia Épica', desc: 'Mitos gregos, nórdicos, egípcios — tom grandioso' },
+  { value: 'teorias', label: '🌊 Teorias & Mistérios', desc: 'Pirâmides, oceano, civilizações perdidas' },
 ];
 
 const VIDEO_STYLES = [
@@ -267,6 +271,14 @@ const Scripts = () => {
       'mistério/histórico': { style: 'cinematográfico', duration: '15', niche: 'mistério histórico', videoStyle: 'dark' },
       'true crime pov': { style: 'narração', duration: '10', niche: 'true crime', videoStyle: 'dark' },
       'primeira pessoa': { style: 'narração', duration: '10', niche: 'true crime', videoStyle: 'dark' },
+      'reddit': { style: 'reddit', duration: '10', niche: 'reddit stories', videoStyle: '2d' },
+      'conspiração': { style: 'conspiração', duration: '15', niche: 'conspiração', videoStyle: 'dark' },
+      'conspiracy': { style: 'conspiração', duration: '15', niche: 'conspiração', videoStyle: 'dark' },
+      'mitologia': { style: 'mitologia', duration: '15', niche: 'mitologia', videoStyle: 'cinematográfico' },
+      'mythology': { style: 'mitologia', duration: '15', niche: 'mitologia', videoStyle: 'cinematográfico' },
+      'teorias': { style: 'teorias', duration: '12', niche: 'teorias e mistérios', videoStyle: 'dark' },
+      'pirâmide': { style: 'teorias', duration: '12', niche: 'teorias e mistérios', videoStyle: 'dark' },
+      'oceano': { style: 'teorias', duration: '12', niche: 'teorias e mistérios', videoStyle: 'dark' },
     };
     
     let applied = false;
@@ -288,7 +300,8 @@ const Scripts = () => {
         'motivacional': 'storytelling', 'listicle': 'listicle', 'tutorial': 'tutorial',
         'horror': 'narração', 'educativo': 'educativo', 'storytelling': 'storytelling',
         'shorts': 'dopaminérgico', 'comparação': 'educativo', 'desafio': 'mrbeast',
-        'mistério': 'cinematográfico', 'conspiração': 'cinematográfico',
+        'mistério': 'cinematográfico', 'conspiração': 'conspiração',
+        'reddit': 'reddit', 'mitologia': 'mitologia', 'teorias': 'teorias',
       };
       for (const [key, val] of Object.entries(styleMap)) {
         if (titleLower.includes(key)) { setStyle(val); break; }

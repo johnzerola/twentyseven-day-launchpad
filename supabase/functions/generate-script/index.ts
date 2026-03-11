@@ -98,6 +98,35 @@ serve(async (req) => {
 - Preview explosiva do #1
 - Cada item escalando em impacto
 - "Mas o número X vai te deixar de queixo caído"`,
+      'reddit': `ESTILO REDDIT STORIES — Narração confessional + animação 2D:
+- Tom de primeira pessoa íntimo e vulnerável
+- "Eu nunca contei isso pra ninguém, mas..."
+- Detalhes sensoriais que criam imagens mentais
+- Plot twists genuínos que surpreendem
+- Escalada progressiva de tensão
+- Final que muda perspectiva sobre tudo`,
+      'conspiração': `ESTILO CONSPIRAÇÃO/MISTÉRIO — Investigação profunda:
+- Abra com fato oficial inquestionável
+- Apresente 1-2 inconsistências que ninguém explica
+- Evidências alternativas apresentadas progressivamente
+- Tom sério e respeitoso — nunca piada
+- "A versão oficial diz X. Mas quando olhamos Y..."
+- Inclua contra-argumentos para credibilidade
+- Final aberto: "Tire suas próprias conclusões"`,
+      'mitologia': `ESTILO MITOLOGIA ÉPICA — Grandiosidade cinematográfica:
+- Tom de narrador épico, como abertura de Senhor dos Anéis
+- Personagens míticos com motivações HUMANAS
+- Batalhas descritas com detalhes visuais cinematográficos
+- Conexões surpreendentes entre mitos e mundo moderno
+- "Antes do tempo, antes da memória, existia..."
+- Escala grandiosa: deuses, titãs, forças primordiais`,
+      'teorias': `ESTILO TEORIAS & MISTÉRIOS — Exploração fascinante:
+- Abra com dado real impressionante + pergunta
+- "95% do oceano não foi explorado. O que achamos nos 5% deveria te assustar"
+- Misture ciência real com perguntas sem resposta
+- Múltiplas teorias apresentadas progressivamente
+- Tom de investigador curioso, não conspiracionista
+- Deixe o espectador PENSANDO após o vídeo`,
     };
 
     const selectedStyle = styleGuides[style?.toLowerCase()] || styleGuides['narração'];
