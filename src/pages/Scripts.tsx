@@ -168,7 +168,11 @@ const Scripts = () => {
   const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
 
   useEffect(() => {
-    loadHistory(); loadTemplates();
+    loadHistory();
+  }, [scriptsPag.page]);
+
+  useEffect(() => {
+    loadTemplates();
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) {
       setTopic(outlierTopic);
