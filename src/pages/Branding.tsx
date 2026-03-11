@@ -565,9 +565,14 @@ const GrowthChecklist = () => {
 
 // ─── Content Matrix (IA) ─────────────────────────────────────────────
 const ContentMatrix = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
   const [loading, setLoading] = useState(false);
   const [matrix, setMatrix] = useState<any>(null);
+
+  useEffect(() => {
+    if (channelData?.niche && !niche) setNiche(channelData.niche);
+  }, [channelData]);
 
   const generate = async () => {
     if (!niche.trim()) return toast.error('Informe o nicho');
