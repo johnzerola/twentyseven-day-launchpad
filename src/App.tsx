@@ -18,6 +18,7 @@ import Pricing from "./pages/Pricing";
 import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
+import MultiChannel from "./pages/MultiChannel";
 
 import NotFound from "./pages/NotFound";
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/titles" element={<P><Titles /></P>} />
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/workflow" element={<P><Workflow /></P>} />
+            <Route path="/multichannel" element={<P><MultiChannel /></P>} />
             
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
