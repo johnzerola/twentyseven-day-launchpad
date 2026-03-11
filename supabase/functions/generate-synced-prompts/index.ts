@@ -249,6 +249,7 @@ ${knowledgeBlock}
 📖 RETENTION TECHNIQUES (apply to visual storytelling):
 ${retentionBlock}
 ${viralPatternsBlock}
+${blueprintBlock}
 
 YOUR COMMANDMENTS:
 
