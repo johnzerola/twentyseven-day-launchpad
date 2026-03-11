@@ -134,7 +134,7 @@ const Channels = () => {
       const niche = ch.niche || 'geral';
       const { data } = await supabase.from('channel_intelligence' as any)
         .select('*').eq('country', country).limit(500);
-      const allChannels = (data || []) as Competitor[];
+      const allChannels = ((data as any[]) || []) as Competitor[];
       // Filter by similar niche, prioritize small fast-growing channels
       const scored = allChannels
         .filter(c => c.channel_name !== ch.channel_name)
