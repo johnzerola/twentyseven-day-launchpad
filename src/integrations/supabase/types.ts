@@ -664,12 +664,17 @@ export type Database = {
           id: string
           lighting: string | null
           media_url: string | null
+          negative_prompt: string | null
           project_id: string
+          reference_image_url: string | null
+          segment_index: number | null
           sequence_order: number
           status: string | null
           style_tags: Json | null
+          text_content: string | null
           tts_text: string | null
           veo3_prompt: string | null
+          video_clip_url: string | null
         }
         Insert: {
           audio_url?: string | null
@@ -681,12 +686,17 @@ export type Database = {
           id?: string
           lighting?: string | null
           media_url?: string | null
+          negative_prompt?: string | null
           project_id: string
+          reference_image_url?: string | null
+          segment_index?: number | null
           sequence_order: number
           status?: string | null
           style_tags?: Json | null
+          text_content?: string | null
           tts_text?: string | null
           veo3_prompt?: string | null
+          video_clip_url?: string | null
         }
         Update: {
           audio_url?: string | null
@@ -698,12 +708,17 @@ export type Database = {
           id?: string
           lighting?: string | null
           media_url?: string | null
+          negative_prompt?: string | null
           project_id?: string
+          reference_image_url?: string | null
+          segment_index?: number | null
           sequence_order?: number
           status?: string | null
           style_tags?: Json | null
+          text_content?: string | null
           tts_text?: string | null
           veo3_prompt?: string | null
+          video_clip_url?: string | null
         }
         Relationships: [
           {
@@ -882,56 +897,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      video_segments: {
-        Row: {
-          audio_url: string | null
-          created_at: string | null
-          duration_ms: number | null
-          id: string
-          project_id: string
-          reference_image_url: string | null
-          segment_index: number
-          status: string | null
-          text_content: string | null
-          video_clip_url: string | null
-          visual_prompt: string | null
-        }
-        Insert: {
-          audio_url?: string | null
-          created_at?: string | null
-          duration_ms?: number | null
-          id?: string
-          project_id: string
-          reference_image_url?: string | null
-          segment_index: number
-          status?: string | null
-          text_content?: string | null
-          video_clip_url?: string | null
-          visual_prompt?: string | null
-        }
-        Update: {
-          audio_url?: string | null
-          created_at?: string | null
-          duration_ms?: number | null
-          id?: string
-          project_id?: string
-          reference_image_url?: string | null
-          segment_index?: number
-          status?: string | null
-          text_content?: string | null
-          video_clip_url?: string | null
-          visual_prompt?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "video_segments_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "video_projects"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       youtube_knowledge: {
         Row: {

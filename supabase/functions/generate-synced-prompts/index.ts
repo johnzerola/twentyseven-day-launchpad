@@ -10,20 +10,94 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { script, videoStyle, characters, audioDurationSeconds, sceneDurationSeconds, language } = await req.json();
+    const { script, videoStyle, characters, audioDurationSeconds, sceneDurationSeconds, language, niche } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!script?.trim()) throw new Error("Script text required");
 
-    // ========== Fetch Scene Knowledge ==========
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // ========== Fetch Scene Knowledge — FILTERED by style/niche ==========
+    const styleLC = (videoStyle || 'cinematográfico').toLowerCase();
+    const nicheLC = (niche || '').toLowerCase();
+
+    // Build tag-based filter for relevant knowledge
+    const relevantCategories = ['hook', 'transition', 'anti-ai', 'consistency', 'policy', 'veo3-policy', 'veo3-consistency'];
+    
+    // Map style/niche to relevant categories
+    const styleCategories: Record<string, string[]> = {
+      'cinematográfico': ['cinematography', 'lighting', 'camera'],
+      '2d': ['animation', '2d-animation'],
+      '3d': ['3d-animation', 'animation'],
+      'anime': ['anime', 'animation'],
+      'dark': ['dark', 'noir', 'horror'],
+      'realista': ['photorealistic', 'documentary'],
+      'whiteboard': ['whiteboard', 'educational'],
+      'comic': ['comic', 'graphic-novel'],
+    };
+    const nicheCategories: Record<string, string[]> = {
+      'mitologia': ['mythology', 'epic', 'ancient'],
+      'guerra': ['war', 'documentary', 'military'],
+      'oceano': ['underwater', 'ocean', 'deep-sea'],
+      'conspiração': ['conspiracy', 'mystery', 'dark'],
+      'história': ['historical', 'documentary', 'ancient'],
+      'reddit': ['reddit', 'animation', '2d'],
+      'horror': ['dark', 'horror', 'noir'],
+      'documentário': ['documentary', 'war', 'historical'],
+    };
+
+    const extraCats = [
+      ...(styleCategories[styleLC] || []),
+      ...Object.entries(nicheCategories).filter(([k]) => nicheLC.includes(k)).flatMap(([, v]) => v),
+    ];
+    const allCategories = [...new Set([...relevantCategories, ...extraCats])];
+
+    // Fetch filtered knowledge (up to 40 relevant records instead of generic top 20)
     const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
       .select("category,title,prompt_template,tags")
-      .order("viral_score", { ascending: false }).limit(20);
+      .order("viral_score", { ascending: false }).limit(150);
 
-    const knowledgeBlock = (sceneKnowledge || []).map((r: any) =>
+    // Score and rank knowledge by relevance
+    const scored = (sceneKnowledge || []).map((r: any) => {
+      let score = 0;
+      const cat = r.category.toLowerCase();
+      const tags = Array.isArray(r.tags) ? r.tags.map((t: string) => t.toLowerCase()) : [];
+      if (allCategories.some(c => cat.includes(c))) score += 10;
+      if (allCategories.some(c => tags.some((t: string) => t.includes(c)))) score += 5;
+      if (relevantCategories.includes(cat)) score += 8; // Always include core categories
+      return { ...r, relevanceScore: score };
+    });
+    scored.sort((a: any, b: any) => b.relevanceScore - a.relevanceScore);
+    const topKnowledge = scored.slice(0, 40);
+
+    const knowledgeBlock = topKnowledge.map((r: any) =>
       `[${r.category.toUpperCase()}] ${r.title}:\n${r.prompt_template}`
     ).join("\n\n");
+
+    // ========== Fetch Script Knowledge — Retention techniques ==========
+    const { data: scriptKnowledge } = await sb.from("script_knowledge")
+      .select("category,title,content")
+      .order("effectiveness_score", { ascending: false }).limit(15);
+
+    const retentionBlock = (scriptKnowledge || []).map((r: any) =>
+      `[${r.category.toUpperCase()}] ${r.title}: ${r.content.slice(0, 200)}`
+    ).join("\n\n");
+
+    // ========== Fetch Viral Patterns from channel_intelligence ==========
+    let viralPatternsBlock = '';
+    if (nicheLC) {
+      const { data: channels } = await sb.from("channel_intelligence")
+        .select("channel_name,visual_style_notes,viral_patterns,style")
+        .ilike("niche", `%${nicheLC}%`)
+        .order("avg_views", { ascending: false }).limit(5);
+      if (channels?.length) {
+        viralPatternsBlock = `\n\nVIRAL PATTERNS FROM TOP CHANNELS IN "${nicheLC}":\n` +
+          channels.map((c: any) => {
+            const patterns = typeof c.viral_patterns === 'object' ? JSON.stringify(c.viral_patterns) : '';
+            return `${c.channel_name} (${c.style}): ${c.visual_style_notes || ''} ${patterns}`;
+          }).join('\n');
+      }
+    }
 
     // ========== Parse script into sentences ==========
     const defaultSceneLen = sceneDurationSeconds || 8;
@@ -66,9 +140,9 @@ serve(async (req) => {
       'whiteboard': 'Whiteboard explainer animation. Hand-drawn black ink on clean white surface. Strategic color highlights for emphasis. Educational clarity, smooth drawing reveal.',
       'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, rich saturated colors, dramatic perspective.',
     };
-    const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
+    const selectedStyleGuide = styleGuides[styleLC] || styleGuides['cinematográfico'];
 
-    // ========== Character identity block with image refs ==========
+    // ========== Character identity block ==========
     const characterBlock = characters?.length > 0
       ? `\n\nCHARACTER IDENTITY SHEETS — COPY THIS TEXT VERBATIM INTO EVERY PROMPT WHERE CHARACTER APPEARS:\n${characters.map((c: any, i: number) => {
           const a = c.appearance || {};
@@ -159,8 +233,12 @@ MASTER VISUAL STYLE:
 ${selectedStyleGuide}
 ${characterBlock}
 
-🎓 CINEMATIC & VEO3 KNOWLEDGE BASE:
+🎓 CINEMATIC & VEO3 KNOWLEDGE BASE (FILTERED FOR THIS STYLE/NICHE):
 ${knowledgeBlock}
+
+📖 RETENTION TECHNIQUES (apply to visual storytelling):
+${retentionBlock}
+${viralPatternsBlock}
 
 YOUR COMMANDMENTS:
 
@@ -186,7 +264,11 @@ YOUR COMMANDMENTS:
 
 9. ALL PROMPTS IN ENGLISH.
 
-10. QUALITY TAGS: End every visualPrompt (before anti-text block) with: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain, ACES color science"`
+10. QUALITY TAGS: End every visualPrompt (before anti-text block) with: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain, ACES color science"
+
+11. DOPAMINERGIC VISUALS: Apply retention techniques to visuals — first 3 seconds of EACH scene must trigger curiosity or dopamine. Use visual "pattern interrupts" (unexpected angle changes, dramatic reveals, contrast shifts).
+
+12. MAGNETIC HOOK FORMULA: Scene 1 must combine: MYSTERY (what is this?) + SCALE (epic/impossible) + MOTION (dynamic camera) + DETAIL (micro-textures that prove quality).`
           },
           {
             role: "user",
@@ -194,6 +276,7 @@ YOUR COMMANDMENTS:
 Total audio: ${totalDuration > 0 ? `${totalDuration}s` : 'estimate from text'}
 Default scene: ~${defaultSceneLen}s (vary 5-8s based on content)
 Style: ${videoStyle || 'cinematográfico'}
+Niche: ${niche || 'general'}
 Language context: ${language || 'português'}
 
 CRITICAL RULES:
@@ -201,6 +284,8 @@ CRITICAL RULES:
 2. ZERO text/subtitles/captions in ANY prompt
 3. Every prompt ends with "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
 4. Use Veo3 formula: [Cinematography] + [Subject] + [Action] + [Context] + [Style]
+5. Apply RETENTION TECHNIQUES from knowledge base to visual storytelling
+6. Reference VIRAL PATTERNS from top channels in this niche
 
 SCENES:\n\n${sceneTexts}`
           }
@@ -228,6 +313,9 @@ SCENES:\n\n${sceneTexts}`
         totalDuration: totalDuration || parsed.scenes.reduce((s: number, sc: any) => s + (sc.sceneDurationSeconds || defaultSceneLen), 0),
         videoStyle: videoStyle || 'cinematográfico',
         charactersCount: characters?.length || 0,
+        knowledgeRecordsUsed: topKnowledge.length,
+        retentionTechniquesUsed: scriptKnowledge?.length || 0,
+        viralPatternsUsed: viralPatternsBlock ? true : false,
         dynamicTiming: true,
         veo3Optimized: true,
         antiTextEnforced: true,
