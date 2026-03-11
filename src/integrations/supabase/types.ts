@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      channel_intelligence: {
+        Row: {
+          analyzed_at: string | null
+          avg_views: number
+          channel_name: string
+          country: string
+          created_at: string | null
+          growth_rate: string
+          id: string
+          is_faceless: boolean
+          is_monetized: boolean
+          language: string
+          niche: string
+          rpm_estimate: number | null
+          style: string
+          sub_niche: string | null
+          subscribers: number
+          top_videos: Json
+          upload_frequency: string | null
+          viral_patterns: Json
+          visual_style_notes: string | null
+          youtube_channel_id: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          avg_views?: number
+          channel_name: string
+          country?: string
+          created_at?: string | null
+          growth_rate?: string
+          id?: string
+          is_faceless?: boolean
+          is_monetized?: boolean
+          language?: string
+          niche?: string
+          rpm_estimate?: number | null
+          style?: string
+          sub_niche?: string | null
+          subscribers?: number
+          top_videos?: Json
+          upload_frequency?: string | null
+          viral_patterns?: Json
+          visual_style_notes?: string | null
+          youtube_channel_id?: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          avg_views?: number
+          channel_name?: string
+          country?: string
+          created_at?: string | null
+          growth_rate?: string
+          id?: string
+          is_faceless?: boolean
+          is_monetized?: boolean
+          language?: string
+          niche?: string
+          rpm_estimate?: number | null
+          style?: string
+          sub_niche?: string | null
+          subscribers?: number
+          top_videos?: Json
+          upload_frequency?: string | null
+          viral_patterns?: Json
+          visual_style_notes?: string | null
+          youtube_channel_id?: string
+        }
+        Relationships: []
+      }
       generated_branding: {
         Row: {
           branding_data: Json | null
