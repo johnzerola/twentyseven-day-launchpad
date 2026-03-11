@@ -780,9 +780,10 @@ const Scripts = () => {
         </div>
 
         {/* History */}
-        {showHistory && savedScripts.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-4 space-y-1.5 max-h-48 overflow-y-auto">
-            {savedScripts.map((s: any) => (
+        {showHistory && scriptsPag.items.length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-4 space-y-1.5">
+            <div className="max-h-48 overflow-y-auto space-y-1.5">
+            {scriptsPag.items.map((s: any) => (
               <div key={s.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5">
                 <button onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); setActiveStep('style'); }}
                   className="text-sm text-left flex-1 truncate hover:text-primary transition-colors">
@@ -793,6 +794,9 @@ const Scripts = () => {
                 </Button>
               </div>
             ))}
+            </div>
+            <PaginationControls page={scriptsPag.page} totalCount={scriptsPag.totalCount} pageSize={PAGE_SIZE}
+              hasMore={scriptsPag.hasMore} hasPrev={scriptsPag.hasPrev} onNext={scriptsPag.nextPage} onPrev={scriptsPag.prevPage} />
           </div>
         )}
 
