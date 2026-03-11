@@ -157,13 +157,25 @@ const MonetizationPlanner = () => {
     let assistantContent = '';
 
     try {
+      // Build user context from channels
+      const userContext = userChannels.length > 0 ? {
+        channels: userChannels.map(c => ({
+          name: c.channel_name,
+          subscribers: c.subscribers,
+          views: c.views,
+          videos: c.videos,
+          niche: c.niche,
+        })),
+        hasChannel: true,
+      } : { hasChannel: false };
+
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, userContext }),
       });
 
       if (!resp.ok) {
