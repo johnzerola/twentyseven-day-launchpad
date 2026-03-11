@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { 
   TrendingUp, Sparkles, Palette, Lightbulb, CheckSquare, LayoutGrid,
-  DollarSign, Globe, Upload, Clock, Play, Copy, Check, Loader2, ChevronRight
+  DollarSign, Globe, Upload, Clock, Play, Copy, Check, Loader2, ChevronRight, Zap, Users
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,13 +20,42 @@ import {
   RPM_BY_NICHE, RPM_COUNTRY_MULTIPLIER, GROWTH_CURVE, COUNTRIES, NICHES 
 } from '@/lib/constants';
 
-// ─── Revenue Simulator (100% client-side) ────────────────────────────
+// Hook to load user's linked channel data for auto-fill
+const useUserChannel = () => {
+  const [channelData, setChannelData] = useState<any>(null);
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('user_channels').select('*').eq('user_id', user.id).order('linked_at', { ascending: false }).limit(1).maybeSingle();
+      if (data) setChannelData(data);
+    })();
+  }, []);
+  return channelData;
+};
+// ─── Revenue Simulator (auto-fills from user channel) ────────────────
 const RevenueSimulator = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('finanças');
   const [country, setCountry] = useState('BR');
   const [uploadsPerWeek, setUploadsPerWeek] = useState(3);
   const [avgDuration, setAvgDuration] = useState(10);
   const [avgViews, setAvgViews] = useState(5000);
+  const [autoFilled, setAutoFilled] = useState(false);
+
+  // Auto-fill when channel data loads
+  useEffect(() => {
+    if (channelData && !autoFilled) {
+      const detectedNiche = (channelData.niche || '').toLowerCase();
+      const matched = Object.keys(RPM_BY_NICHE).find(k => detectedNiche.includes(k));
+      if (matched) setNiche(matched);
+      if (channelData.views && channelData.videos && channelData.videos > 0) {
+        setAvgViews(Math.round(channelData.views / channelData.videos));
+      }
+      setAutoFilled(true);
+      toast.info('📊 Dados do seu canal aplicados ao simulador');
+    }
+  }, [channelData, autoFilled]);
 
   const projection = useMemo(() => {
     const nicheRpm = RPM_BY_NICHE[niche] || { min: 3, max: 10, avg: 5 };
@@ -164,8 +193,14 @@ const RevenueSimulator = () => {
 
 // ─── Brand Kit Generator (IA) ────────────────────────────────────────
 const BrandKitGenerator = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-fill niche from user channel
+  useEffect(() => {
+    if (channelData?.niche && !niche) setNiche(channelData.niche);
+  }, [channelData]);
   const [result, setResult] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -298,10 +333,15 @@ const BrandKitGenerator = () => {
 
 // ─── Thumbnail Lab (IA) ──────────────────────────────────────────────
 const ThumbnailLab = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
   const [loading, setLoading] = useState(false);
   const [concepts, setConcepts] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (channelData?.niche && !niche) setNiche(channelData.niche);
+  }, [channelData]);
 
   const generate = async () => {
     if (!niche.trim()) return toast.error('Informe o nicho');
@@ -525,9 +565,14 @@ const GrowthChecklist = () => {
 
 // ─── Content Matrix (IA) ─────────────────────────────────────────────
 const ContentMatrix = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
   const [loading, setLoading] = useState(false);
   const [matrix, setMatrix] = useState<any>(null);
+
+  useEffect(() => {
+    if (channelData?.niche && !niche) setNiche(channelData.niche);
+  }, [channelData]);
 
   const generate = async () => {
     if (!niche.trim()) return toast.error('Informe o nicho');

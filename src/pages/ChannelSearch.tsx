@@ -422,7 +422,14 @@ const ChannelSearch = () => {
                     onClick={() => emulateChannel(channelInfo.id)} disabled={!!emulating}>
                     <Copy className="w-3 h-3" /> Modelar Canal
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-1 text-xs">
+                  <Button size="sm" variant="outline" className="gap-1 text-xs"
+                    onClick={() => {
+                      if (channelInfo) {
+                        setQuery(channelInfo.name);
+                        setActiveTab('emerging');
+                        toast.info(`Buscando canais similares a ${channelInfo.name}...`);
+                      }
+                    }}>
                     <TrendingUp className="w-3 h-3" /> Canais Similares
                   </Button>
                 </div>

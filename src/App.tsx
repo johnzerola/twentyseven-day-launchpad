@@ -20,6 +20,7 @@ import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
 import MonetizationPlanner from "./pages/MonetizationPlanner";
 import Playbook from "./pages/Playbook";
+import Planner from "./pages/Planner";
 import Narration from "./pages/Narration";
 import Studio from "./pages/Studio";
 import NotFound from "./pages/NotFound";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/monetization" element={<P><MonetizationPlanner /></P>} />
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/playbook" element={<P><Playbook /></P>} />
+            <Route path="/planner" element={<P><Planner /></P>} />
             <Route path="/narration" element={<P><Narration /></P>} />
             <Route path="/studio" element={<P><Studio /></P>} />
             <Route path="/pricing" element={<Pricing />} />

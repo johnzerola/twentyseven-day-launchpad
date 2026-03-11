@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatters';
+import { COUNTRIES } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -44,14 +45,7 @@ interface ChatMsg {
   content: string;
 }
 
-const COUNTRIES = [
-  { code: 'US', label: '🇺🇸 EUA' }, { code: 'ES', label: '🇪🇸 Espanha' },
-  { code: 'BR', label: '🇧🇷 Brasil' }, { code: 'DE', label: '🇩🇪 Alemanha' },
-  { code: 'FR', label: '🇫🇷 França' }, { code: 'GB', label: '🇬🇧 Reino Unido' },
-  { code: 'JP', label: '🇯🇵 Japão' }, { code: 'KR', label: '🇰🇷 Coreia' },
-  { code: 'MX', label: '🇲🇽 México' }, { code: 'IT', label: '🇮🇹 Itália' },
-  { code: 'CA', label: '🇨🇦 Canadá' }, { code: 'AU', label: '🇦🇺 Austrália' },
-];
+// Use COUNTRIES from constants (property: .value instead of .code)
 
 const GROWTH_COLORS: Record<string, string> = {
   explosive: 'bg-red-500/20 text-red-400',
@@ -664,10 +658,10 @@ const Channels = () => {
                     <div className="flex items-center gap-3 flex-wrap">
                       <Globe className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">País:</span>
-                      {COUNTRIES.map(c => (
-                        <Badge key={c.code}
-                          className={`cursor-pointer text-[10px] ${competitorCountry === c.code ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/50 text-muted-foreground'}`}
-                          onClick={() => { setCompetitorCountry(c.code); loadCompetitors(selectedChannel, c.code); }}>
+                      {COUNTRIES.filter(c => c.value).map(c => (
+                        <Badge key={c.value}
+                          className={`cursor-pointer text-[10px] ${competitorCountry === c.value ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/50 text-muted-foreground'}`}
+                          onClick={() => { setCompetitorCountry(c.value); loadCompetitors(selectedChannel, c.value); }}>
                           {c.label}
                         </Badge>
                       ))}

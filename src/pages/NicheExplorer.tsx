@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatNumber } from '@/lib/formatters';
-import { COUNTRIES } from '@/lib/constants';
+import { COUNTRIES, YPP_SUBS, YPP_HOURS } from '@/lib/constants';
+import { useNavigate } from 'react-router-dom';
 
 const QUICK_NICHES = [
   'finanças pessoais', 'true crime', 'horror stories', 'motivacional', 'curiosidades',
@@ -22,6 +23,7 @@ const QUICK_NICHES = [
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(142,76%,36%)', 'hsl(210,100%,56%)', 'hsl(45,93%,47%)'];
 
 const NicheExplorer = () => {
+  const navigate = useNavigate();
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('BR');
   const [loading, setLoading] = useState(false);
@@ -288,6 +290,12 @@ const NicheExplorer = () => {
                     <div><p className="text-2xl font-bold text-primary">{a.facelessViability}%</p><p className="text-[10px] text-muted-foreground">Faceless Viável</p></div>
                     <div><p className="text-2xl font-bold">{data.meta.totalChannels}</p><p className="text-[10px] text-muted-foreground">Canais analisados</p></div>
                   </div>
+                  {a.score >= 70 && (
+                    <Button onClick={() => navigate(`/scripts?niche=${encodeURIComponent(niche)}&style=${a.facelessViability > 50 ? 'faceless' : 'talking_head'}`)}
+                      className="gradient-hero border-0 gap-2 h-11 px-6 shrink-0">
+                      <Rocket className="w-4 h-4" /> Iniciar Pipeline de Roteiro
+                    </Button>
+                  )}
                 </div>
               </motion.div>
 
@@ -751,9 +759,5 @@ const NicheExplorer = () => {
     </DashboardLayout>
   );
 };
-
-// Constants for display
-const YPP_SUBS = '1.000';
-const YPP_HOURS = '4.000h';
 
 export default NicheExplorer;
