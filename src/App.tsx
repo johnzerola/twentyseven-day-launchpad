@@ -20,6 +20,7 @@ import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
 import MonetizationPlanner from "./pages/MonetizationPlanner";
 import Playbook from "./pages/Playbook";
+import Narration from "./pages/Narration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
