@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
