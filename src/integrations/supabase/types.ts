@@ -491,6 +491,33 @@ export type Database = {
           },
         ]
       }
+      research_cache: {
+        Row: {
+          cache_key: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          result_json: Json
+          source: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          result_json?: Json
+          source?: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          result_json?: Json
+          source?: string
+        }
+        Relationships: []
+      }
       saved_niche_analyses: {
         Row: {
           analysis_json: Json
@@ -904,6 +931,39 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      viral_content_library: {
+        Row: {
+          category: string
+          content_json: Json
+          created_at: string | null
+          effectiveness_score: number | null
+          id: string
+          language: string
+          niches: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          content_json?: Json
+          created_at?: string | null
+          effectiveness_score?: number | null
+          id?: string
+          language?: string
+          niches?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content_json?: Json
+          created_at?: string | null
+          effectiveness_score?: number | null
+          id?: string
+          language?: string
+          niches?: string[] | null
+          updated_at?: string | null
         }
         Relationships: []
       }
