@@ -425,7 +425,7 @@ const ChannelSearch = () => {
                   <Button size="sm" variant="outline" className="gap-1 text-xs"
                     onClick={() => {
                       if (channelInfo) {
-                        setSearchQuery(channelInfo.name);
+                        setQuery(channelInfo.name);
                         setActiveTab('emerging');
                         toast.info(`Buscando canais similares a ${channelInfo.name}...`);
                       }
