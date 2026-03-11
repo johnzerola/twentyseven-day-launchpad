@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Network, Loader2, Users, Eye, TrendingUp, Search as SearchIcon, Lightbulb, ExternalLink, Star, SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

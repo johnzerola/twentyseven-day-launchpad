@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Rocket, Loader2, Filter, ExternalLink, Star, Users, Eye, Video, Clock, TrendingUp, Flame, Zap, Search as SearchIcon, BarChart3, MessageSquare, ThumbsUp, Activity, Upload, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
