@@ -21,6 +21,8 @@ import {
   type ViralHook, type CallToAction, type TitlePattern, type StoryStructure,
   HOOK_STYLES, CTA_TYPES, TITLE_STYLES,
 } from '@/lib/viralDatabase';
+import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
+import { PaginationControls } from '@/components/PaginationControls';
 
 // ========== Types ==========
 interface ChannelIntelligence {
