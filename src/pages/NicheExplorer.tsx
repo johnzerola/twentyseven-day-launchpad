@@ -196,21 +196,21 @@ const NicheExplorer = () => {
             <Button onClick={() => explore()} disabled={loading} className="gradient-hero border-0 gap-2 h-11 px-6">
               <Brain className="w-4 h-4" /> {loading ? 'Analisando...' : 'Analisar'}
             </Button>
-            {savedAnalyses.length > 0 && (
+            {analysesPag.totalCount > 0 && (
               <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="h-11 gap-2">
-                <History className="w-4 h-4" /> {savedAnalyses.length}
+                <History className="w-4 h-4" /> {analysesPag.totalCount}
               </Button>
             )}
           </div>
 
           {/* History dropdown */}
           <AnimatePresence>
-            {showHistory && savedAnalyses.length > 0 && (
+            {showHistory && analysesPag.items.length > 0 && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                 className="space-y-2 border-t border-border pt-3">
                 <p className="text-xs text-muted-foreground font-medium">Análises salvas:</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                  {savedAnalyses.map((s: any) => (
+                  {analysesPag.items.map((s: any) => (
                     <div key={s.id} className="flex items-center gap-2 bg-secondary/30 rounded-lg p-2 hover:bg-secondary/50 transition-all cursor-pointer group"
                       onClick={() => loadAnalysis(s)}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
@@ -226,6 +226,8 @@ const NicheExplorer = () => {
                     </div>
                   ))}
                 </div>
+                <PaginationControls page={analysesPag.page} totalCount={analysesPag.totalCount} pageSize={PAGE_SIZE}
+                  hasMore={analysesPag.hasMore} hasPrev={analysesPag.hasPrev} onNext={analysesPag.nextPage} onPrev={analysesPag.prevPage} />
               </motion.div>
             )}
           </AnimatePresence>
