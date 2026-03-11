@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_config: {
+        Row: {
+          api_name: string
+          daily_limit: number | null
+          env_var_key: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          api_name: string
+          daily_limit?: number | null
+          env_var_key: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          api_name?: string
+          daily_limit?: number | null
+          env_var_key?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       api_logs: {
         Row: {
           cost: number | null
@@ -44,6 +68,33 @@ export type Database = {
           service?: string
           tokens_used?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          api_name: string
+          daily_limit: number
+          date: string
+          id: string
+          requests_used: number
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          daily_limit?: number
+          date?: string
+          id?: string
+          requests_used?: number
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          daily_limit?: number
+          date?: string
+          id?: string
+          requests_used?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -310,6 +361,78 @@ export type Database = {
           updated_at?: string | null
           use_count?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      emerging_channels: {
+        Row: {
+          channel_id: string
+          channel_title: string | null
+          detected_at: string | null
+          id: string
+          last_checked: string | null
+          meta: Json | null
+          niche: string | null
+          sample_video_id: string | null
+          viral_score: number | null
+        }
+        Insert: {
+          channel_id: string
+          channel_title?: string | null
+          detected_at?: string | null
+          id?: string
+          last_checked?: string | null
+          meta?: Json | null
+          niche?: string | null
+          sample_video_id?: string | null
+          viral_score?: number | null
+        }
+        Update: {
+          channel_id?: string
+          channel_title?: string | null
+          detected_at?: string | null
+          id?: string
+          last_checked?: string | null
+          meta?: Json | null
+          niche?: string | null
+          sample_video_id?: string | null
+          viral_score?: number | null
+        }
+        Relationships: []
+      }
+      execution_logs: {
+        Row: {
+          api_calls_made: number | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          function_name: string
+          id: string
+          metadata: Json | null
+          payload_size: number | null
+          success: boolean
+        }
+        Insert: {
+          api_calls_made?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          function_name: string
+          id?: string
+          metadata?: Json | null
+          payload_size?: number | null
+          success?: boolean
+        }
+        Update: {
+          api_calls_made?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          metadata?: Json | null
+          payload_size?: number | null
+          success?: boolean
         }
         Relationships: []
       }
@@ -653,24 +776,33 @@ export type Database = {
           created_at: string | null
           expires_at: string
           id: string
+          params: Json | null
+          query: string | null
           result_json: Json
           source: string
+          ttl: string | null
         }
         Insert: {
           cache_key: string
           created_at?: string | null
           expires_at?: string
           id?: string
+          params?: Json | null
+          query?: string | null
           result_json?: Json
           source?: string
+          ttl?: string | null
         }
         Update: {
           cache_key?: string
           created_at?: string | null
           expires_at?: string
           id?: string
+          params?: Json | null
+          query?: string | null
           result_json?: Json
           source?: string
+          ttl?: string | null
         }
         Relationships: []
       }
@@ -940,6 +1072,54 @@ export type Database = {
           examples?: Json | null
           id?: string
           title?: string
+        }
+        Relationships: []
+      }
+      task_queue: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          max_attempts: number
+          payload: Json | null
+          result: Json | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          task_type: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          max_attempts?: number
+          payload?: Json | null
+          result?: Json | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          task_type: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          max_attempts?: number
+          payload?: Json | null
+          result?: Json | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          task_type?: string
         }
         Relationships: []
       }
@@ -1260,6 +1440,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_increment_api_usage: {
+        Args: { _api_name: string }
+        Returns: boolean
+      }
       consume_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: boolean
