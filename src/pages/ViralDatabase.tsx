@@ -416,6 +416,13 @@ const ViralDatabase = () => {
                     {countries.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 )}
+                {niches.length > 0 && (
+                  <select className="text-[10px] bg-secondary/50 border border-border/50 rounded px-2 py-1 text-foreground"
+                    value={nicheFilter} onChange={e => setNicheFilter(e.target.value)}>
+                    <option value="">🎯 Todos nichos</option>
+                    {niches.map(([n, count]) => <option key={n} value={n}>{n} ({count})</option>)}
+                  </select>
+                )}
               </div>
             </div>
 
