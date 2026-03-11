@@ -180,9 +180,12 @@ const Channels = () => {
     } catch { toast.error('Erro ao atualizar'); }
   };
 
+  const [competitorInsights, setCompetitorInsights] = useState<any>(null);
+
   const loadCompetitors = async (ch: Channel, country: string) => {
     setLoadingCompetitors(true);
     setCompetitors([]);
+    setCompetitorInsights(null);
     try {
       const analysis = ch.analysis_json;
       const topTitles = [
@@ -196,17 +199,20 @@ const Channels = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('find-competitors', {
+      const { data, error } = await supabase.functions.invoke('find-competitors-ai', {
         body: {
           channelId: ch.youtube_channel_id,
+          channelName: ch.channel_name,
           topVideoTitles: topTitles,
           subscribers: ch.subscribers,
+          niche: ch.niche || analysis?.niche_detected || '',
           country,
         },
       });
       if (error) throw error;
       setCompetitors(data?.competitors || []);
       setCompetitorKeywords(data?.keywords || []);
+      setCompetitorInsights(data?.insights || null);
     } catch (e: any) {
       toast.error('Erro ao buscar concorrentes');
     }
