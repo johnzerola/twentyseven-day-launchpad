@@ -195,6 +195,12 @@ const RevenueSimulator = () => {
 const BrandKitGenerator = () => {
   const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Auto-fill niche from user channel
+  useEffect(() => {
+    if (channelData?.niche && !niche) setNiche(channelData.niche);
+  }, [channelData]);
   const [result, setResult] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
