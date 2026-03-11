@@ -23,6 +23,7 @@ const QUICK_NICHES = [
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(142,76%,36%)', 'hsl(210,100%,56%)', 'hsl(45,93%,47%)'];
 
 const NicheExplorer = () => {
+  const navigate = useNavigate();
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('BR');
   const [loading, setLoading] = useState(false);
