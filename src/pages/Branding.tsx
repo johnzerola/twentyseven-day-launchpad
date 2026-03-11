@@ -33,12 +33,29 @@ const useUserChannel = () => {
   }, []);
   return channelData;
 };
+// ─── Revenue Simulator (auto-fills from user channel) ────────────────
 const RevenueSimulator = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('finanças');
   const [country, setCountry] = useState('BR');
   const [uploadsPerWeek, setUploadsPerWeek] = useState(3);
   const [avgDuration, setAvgDuration] = useState(10);
   const [avgViews, setAvgViews] = useState(5000);
+  const [autoFilled, setAutoFilled] = useState(false);
+
+  // Auto-fill when channel data loads
+  useEffect(() => {
+    if (channelData && !autoFilled) {
+      const detectedNiche = (channelData.niche || '').toLowerCase();
+      const matched = Object.keys(RPM_BY_NICHE).find(k => detectedNiche.includes(k));
+      if (matched) setNiche(matched);
+      if (channelData.views && channelData.videos && channelData.videos > 0) {
+        setAvgViews(Math.round(channelData.views / channelData.videos));
+      }
+      setAutoFilled(true);
+      toast.info('📊 Dados do seu canal aplicados ao simulador');
+    }
+  }, [channelData, autoFilled]);
 
   const projection = useMemo(() => {
     const nicheRpm = RPM_BY_NICHE[niche] || { min: 3, max: 10, avg: 5 };
