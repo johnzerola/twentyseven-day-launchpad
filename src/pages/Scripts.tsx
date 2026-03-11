@@ -1507,93 +1507,26 @@ const Scripts = () => {
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
 
-                      {/* AutoFlow Export Label */}
-                      <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                      {/* AutoFlow Export */}
+                      <div className="bg-muted/30 rounded-lg p-3 space-y-3">
                         <p className="text-xs font-medium text-foreground">🚀 Exportar para AutoFlow</p>
-                        <p className="text-[10px] text-muted-foreground">Cada modo gera o formato exato que o AutoFlow espera. Cole na Prompt List e clique Add to Queue.</p>
+                        <p className="text-[10px] text-muted-foreground">Gera prompts no formato AutoFlow (1 por linha com tags [V1-S#]). Cole na Prompt List e clique Add to Queue.</p>
                         
-                        <div className="grid grid-cols-2 gap-2">
-                          {/* Text-to-Video: one prompt per line */}
-                          <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                            const lines = syncedScenes.map((scene) => 
-                              `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
-                            ).join('\n');
-                            navigator.clipboard.writeText(lines);
-                            toast.success(`${syncedScenes.length} prompts copiados para Text-to-Video!`);
-                          }}>
-                            <Copy className="w-4 h-4" /> 🎬 Text-to-Video ({syncedScenes.length})
-                          </Button>
-
-                          {/* Image → Video pipeline */}
-                          <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                            const lines = syncedScenes.map((scene) => {
-                              const tag = `[V1-S${scene.sceneIndex + 1}]`;
-                              const imagePrompt = scene.visualPrompt;
-                              const videoPrompt = `${scene.cameraAngle} shot, ${scene.mood} mood, cinematic motion, ${scene.visualPrompt.slice(0, 120)}`;
-                              return `${tag} ${imagePrompt} ||| ${tag} ${videoPrompt}`;
-                            }).join('\n');
-                            navigator.clipboard.writeText(lines);
-                            toast.success(`${syncedScenes.length} prompts Image→Video copiados!`);
-                          }}>
-                            <Copy className="w-4 h-4" /> 🖼️→🎬 Image→Video ({syncedScenes.length})
-                          </Button>
-
-                          {/* JSON AutoFlow Export */}
-                          <Button variant="default" className="gap-2 text-xs col-span-2 bg-accent hover:bg-accent/90" onClick={() => {
-                            const autoflowJson = {
-                              version: "1.0",
-                              videoStyle,
-                              totalScenes: syncedScenes.length,
-                              totalDuration: syncedScenes.length > 0 
-                                ? syncedScenes[syncedScenes.length - 1].endTime - syncedScenes[0].startTime 
-                                : 0,
-                              generatedAt: new Date().toISOString(),
-                              scenes: syncedScenes.map((scene) => ({
-                                scene: `Cena ${scene.sceneIndex + 1}`,
-                                sceneIndex: scene.sceneIndex + 1,
-                                prompt: scene.visualPrompt,
-                                quality: "8K UHD, masterpiece, award-winning, photorealistic",
-                                duration: `${Math.round(scene.endTime - scene.startTime)}s`,
-                                durationSeconds: Math.round(scene.endTime - scene.startTime),
-                                startTime: Math.round(scene.startTime * 10) / 10,
-                                endTime: Math.round(scene.endTime * 10) / 10,
-                                camera: scene.cameraAngle,
-                                mood: scene.mood,
-                                lighting: scene.lightingSetup || "cinematic",
-                                negativePrompt: scene.negativePrompt || "no text, no subtitles, no watermarks, no logos",
-                                characters: scene.charactersInScene || [],
-                                narrativeText: scene.narrativeText || "",
-                                transition: scene.transitionNote || "smooth cut",
-                              })),
-                            };
-                            navigator.clipboard.writeText(JSON.stringify(autoflowJson, null, 2));
-                            toast.success(`📋 JSON AutoFlow (${syncedScenes.length} cenas) copiado!`);
-                          }}>
-                            <Copy className="w-4 h-4" /> 📋 JSON AutoFlow ({syncedScenes.length} cenas)
-                          </Button>
-
-                          {/* Create Image only */}
-                          <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                            const lines = syncedScenes.map((scene) => 
-                              `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
-                            ).join('\n');
-                            navigator.clipboard.writeText(lines);
-                            toast.success(`${syncedScenes.length} prompts de imagem copiados!`);
-                          }}>
-                            <Copy className="w-4 h-4" /> 🖼️ Create Image ({syncedScenes.length})
-                          </Button>
-
-                          {/* Ingredients mode */}
-                          <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                            const lines = syncedScenes.map((scene) => 
-                              `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
-                            ).join('\n');
-                            navigator.clipboard.writeText(lines);
-                            toast.success(`${syncedScenes.length} prompts para Ingredients copiados!`);
-                          }}>
-                            <Copy className="w-4 h-4" /> 🧩 Ingredients ({syncedScenes.length})
-                          </Button>
-                        </div>
+                        <Button className="w-full gap-2 gradient-hero border-0" onClick={() => {
+                          const lines = syncedScenes.map((scene) => {
+                            const tag = `[V1-S${scene.sceneIndex + 1}]`;
+                            const imagePrompt = scene.visualPrompt;
+                            const cameraMove = scene.cameraAngle || 'cinematic';
+                            const moodStr = scene.mood || 'dramatic';
+                            const videoPrompt = `${cameraMove} shot, ${moodStr} mood, cinematic motion, smooth transition`;
+                            return `${tag} ${imagePrompt} ||| ${tag} ${videoPrompt}`;
+                          }).join('\n');
+                          navigator.clipboard.writeText(lines);
+                          toast.success(`📋 ${syncedScenes.length} prompts AutoFlow copiados! Cole na Prompt List do AutoFlow.`);
+                        }}>
+                          <Copy className="w-4 h-4" /> 📋 Copiar Prompts AutoFlow ({syncedScenes.length} cenas)
+                        </Button>
+                        <p className="text-[9px] text-muted-foreground text-center">Formato: [V1-S#] image prompt ||| [V1-S#] video prompt — 1 linha por cena</p>
                       </div>
 
                       {/* Other exports */}
