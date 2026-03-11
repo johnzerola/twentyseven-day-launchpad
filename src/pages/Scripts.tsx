@@ -1542,7 +1542,7 @@ const Scripts = () => {
                         </Button>
                         <p className="text-[9px] text-muted-foreground text-center">Formato: [V1-S#] image prompt ||| [V1-S#] video prompt — 1 linha por cena + JSON completo</p>
                       </div>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-[800px] overflow-y-auto pr-1">
                       {syncedScenes.map((scene, i) => (
                         <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                           className="border border-border rounded-lg p-3 hover:border-primary/20 transition-all">
@@ -1578,12 +1578,6 @@ const Scripts = () => {
                           {scene.transitionNote && (
                             <p className="text-[10px] text-muted-foreground mt-1 italic">↗ {scene.transitionNote}</p>
                           )}
-                          <div className="mt-2">
-                            <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1"
-                              onClick={() => { navigator.clipboard.writeText(scene.visualPrompt); toast.success('Prompt copiado!'); }}>
-                              <Copy className="w-3 h-3" /> Copiar prompt
-                            </Button>
-                          </div>
                         </motion.div>
                       ))}
                     </div>
