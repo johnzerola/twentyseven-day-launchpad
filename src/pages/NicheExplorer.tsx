@@ -75,7 +75,8 @@ const NicheExplorer = () => {
 
   const deleteAnalysis = async (id: string) => {
     await supabase.from('saved_niche_analyses').delete().eq('id', id);
-    setSavedAnalyses(prev => prev.filter(a => a.id !== id));
+    analysesPag.setItems(analysesPag.items.filter((a: any) => a.id !== id));
+    analysesPag.setTotalCount(analysesPag.totalCount - 1);
     toast.success('Análise removida');
   };
 
