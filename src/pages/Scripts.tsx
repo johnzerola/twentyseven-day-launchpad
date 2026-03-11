@@ -1505,81 +1505,71 @@ const Scripts = () => {
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
 
-                      {/* AutoFlow Export */}
-                      <div className="bg-muted/30 rounded-lg p-3 space-y-3">
-                        <p className="text-xs font-medium text-foreground">🚀 Exportar para AutoFlow</p>
-                        <p className="text-[10px] text-muted-foreground">Gera prompts no formato AutoFlow (1 por linha com tags [V1-S#]). Cole na Prompt List e clique Add to Queue.</p>
+                      {/* AutoFlow Export — Single Button */}
+                      <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-foreground">🚀 Exportar para AutoFlow</span>
+                          <Badge className="bg-primary/20 text-primary text-[10px]">{syncedScenes.length} cenas</Badge>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Copia prompts sincronizados com áudio no formato AutoFlow + JSON detalhado. Cole na Prompt List do AutoFlow e clique Add to Queue.</p>
                         
-                        <Button className="w-full gap-2 gradient-hero border-0" onClick={() => {
-                          const lines = syncedScenes.map((scene) => {
+                        <Button className="w-full gap-2 h-11 text-sm gradient-hero border-0" onClick={() => {
+                          // === PART 1: AutoFlow lines ===
+                          const autoflowLines = syncedScenes.map((scene) => {
                             const tag = `[V1-S${scene.sceneIndex + 1}]`;
                             const imagePrompt = scene.visualPrompt;
-                            const cameraMove = scene.cameraAngle || 'cinematic';
+                            // Build rich video prompt from real scene data
+                            const camera = scene.cameraAngle || 'cinematic';
+                            const lens = scene.lensSpec || '';
+                            const lighting = scene.lightingSetup || '';
                             const moodStr = scene.mood || 'dramatic';
-                            const videoPrompt = `${cameraMove} shot, ${moodStr} mood, cinematic motion, smooth transition`;
+                            const videoParts = [camera];
+                            if (lens) videoParts.push(lens);
+                            if (lighting) videoParts.push(`${lighting} lighting`);
+                            videoParts.push(`${moodStr} mood`);
+                            if (scene.transitionNote) videoParts.push(scene.transitionNote);
+                            const videoPrompt = videoParts.join(', ');
                             return `${tag} ${imagePrompt} ||| ${tag} ${videoPrompt}`;
                           }).join('\n');
-                          navigator.clipboard.writeText(lines);
-                          toast.success(`📋 ${syncedScenes.length} prompts AutoFlow copiados! Cole na Prompt List do AutoFlow.`);
-                        }}>
-                          <Copy className="w-4 h-4" /> 📋 Copiar Prompts AutoFlow ({syncedScenes.length} cenas)
-                        </Button>
-                        <p className="text-[9px] text-muted-foreground text-center">Formato: [V1-S#] image prompt ||| [V1-S#] video prompt — 1 linha por cena</p>
-                      </div>
 
-                      {/* Other exports */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                          const fullJson = {
+                          // === PART 2: Detailed JSON ===
+                          const detailedJson = {
                             project: {
-                              topic, duration: parseInt(duration), language, style, videoStyle,
+                              topic, videoStyle, language,
                               totalScenes: syncedScenes.length,
-                              estimatedDuration: audioDuration > 0 ? audioDuration : syncedScenes.length * sceneDuration,
-                              sceneDuration, wordCount, generatedAt: new Date().toISOString(),
+                              generatedAt: new Date().toISOString(),
                             },
-                            script: { fullText: getCleanNarration(), wordCount, estimatedMinutes: estimatedMinutesDisplay },
                             characters: characters.map(c => ({
                               name: c.name, gender: c.gender, age: c.age, role: c.role,
                               appearance: c.appearance, facial_features: c.facial_features,
-                              clothing: c.clothing, personality: c.personality,
-                              referenceImageUrl: c.imageUrl || null,
+                              clothing: c.clothing,
                             })),
                             scenes: syncedScenes.map(scene => ({
-                              sceneIndex: scene.sceneIndex + 1, startTime: scene.startTime, endTime: scene.endTime,
-                              duration: scene.endTime - scene.startTime,
+                              scene: scene.sceneIndex + 1,
+                              startTime: scene.startTime,
+                              endTime: scene.endTime,
+                              duration: scene.sceneDurationSeconds || (scene.endTime - scene.startTime),
                               timestamp: `${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}`,
-                              visualPrompt: scene.visualPrompt, cameraAngle: scene.cameraAngle,
-                              mood: scene.mood, charactersInScene: scene.charactersInScene || [],
-                              transitionNote: scene.transitionNote || null,
+                              imagePrompt: scene.visualPrompt,
+                              videoPrompt: [scene.cameraAngle, scene.lensSpec, scene.lightingSetup ? `${scene.lightingSetup} lighting` : '', `${scene.mood} mood`].filter(Boolean).join(', '),
+                              camera: scene.cameraAngle,
+                              lens: scene.lensSpec || null,
+                              lighting: scene.lightingSetup || null,
+                              mood: scene.mood,
+                              characters: scene.charactersInScene || [],
+                              transition: scene.transitionNote || null,
+                              audioDirection: scene.audioDirection || null,
+                              negativePrompt: scene.negativePrompt || null,
                             })),
                           };
-                          navigator.clipboard.writeText(JSON.stringify(fullJson, null, 2));
-                          toast.success(`JSON completo copiado!`);
-                        }}>
-                          <Copy className="w-4 h-4" /> JSON Completo
-                        </Button>
 
-                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                          const allPrompts = syncedScenes.map((scene) => 
-                            `Cena ${scene.sceneIndex + 1} [${formatTime(scene.startTime)} - ${formatTime(scene.endTime)}] (${scene.cameraAngle} | ${scene.mood}):\n${scene.visualPrompt}${scene.charactersInScene?.length ? `\nPersonagens: ${scene.charactersInScene.join(', ')}` : ''}`
-                          ).join('\n\n---\n\n');
-                          navigator.clipboard.writeText(allPrompts);
-                          toast.success('Prompts detalhados copiados!');
+                          const fullText = autoflowLines + '\n\n=== JSON DETALHADO ===\n\n' + JSON.stringify(detailedJson, null, 2);
+                          navigator.clipboard.writeText(fullText);
+                          toast.success(`📋 ${syncedScenes.length} cenas copiadas! AutoFlow + JSON detalhado. Cole na Prompt List do AutoFlow.`);
                         }}>
-                          <Copy className="w-4 h-4" /> Detalhado
+                          <Copy className="w-4 h-4" /> 📋 Copiar Cenas ({syncedScenes.length})
                         </Button>
-
-                        <Button variant="outline" className="gap-2 text-xs" onClick={() => {
-                          const charsJson = characters.map(c => ({
-                            name: c.name, gender: c.gender, age: c.age, role: c.role,
-                            appearance: c.appearance, facial_features: c.facial_features,
-                            clothing: c.clothing, personality: c.personality,
-                          }));
-                          navigator.clipboard.writeText(JSON.stringify(charsJson, null, 2));
-                          toast.success(`JSON de ${characters.length} personagens copiado!`);
-                        }}>
-                          <Copy className="w-4 h-4" /> Personagens JSON
-                        </Button>
+                        <p className="text-[9px] text-muted-foreground text-center">Formato: [V1-S#] image prompt ||| [V1-S#] video prompt — 1 linha por cena + JSON completo</p>
                       </div>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                       {syncedScenes.map((scene, i) => (
