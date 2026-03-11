@@ -210,11 +210,16 @@ serve(async (req) => {
 
     const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating Netflix-grade video scenes from narrated audio.
 
-RULES:
-- EVERY visual prompt MUST directly illustrate what the narrator says at that moment
-- NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
+CRITICAL TIMING RULES:
+- Each scene MUST be between 5 and 10 seconds long. NEVER shorter than 5s or longer than 10s.
+- Target approximately ${sceneDuration} seconds per scene, but adjust between 5-10s based on narrative pacing
 - You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio. Do NOT skip any portion.
 - Cover the ENTIRE transcript chunk — from first word to last word
+- startTime and endTime MUST match actual transcript timestamps precisely
+
+VISUAL RULES:
+- EVERY visual prompt MUST directly illustrate what the narrator says at that moment
+- NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
 - End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 - Use 5+ different camera angles — never repeat consecutively
 
