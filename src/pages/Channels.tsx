@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatters';
@@ -26,16 +25,18 @@ interface Channel {
 }
 
 interface Competitor {
-  channel_name: string;
+  channelId: string;
+  channelName: string;
+  thumbnail: string;
   subscribers: number;
-  avg_views: number;
-  growth_rate: string;
-  niche: string;
+  totalViews: number;
+  videoCount: number;
+  avgViews: number;
+  growthRate: string;
+  multiplier: number;
   country: string;
-  style: string;
-  rpm_estimate: number;
-  viral_patterns: any;
-  top_videos: any[];
+  topVideos: { title: string; views: number; videoId: string }[];
+  relevanceScore: number;
 }
 
 interface ChatMsg {
@@ -44,24 +45,25 @@ interface ChatMsg {
 }
 
 const COUNTRIES = [
-  { code: 'US', label: '🇺🇸 Estados Unidos' }, { code: 'ES', label: '🇪🇸 Espanha' },
+  { code: 'US', label: '🇺🇸 EUA' }, { code: 'ES', label: '🇪🇸 Espanha' },
   { code: 'BR', label: '🇧🇷 Brasil' }, { code: 'DE', label: '🇩🇪 Alemanha' },
   { code: 'FR', label: '🇫🇷 França' }, { code: 'GB', label: '🇬🇧 Reino Unido' },
   { code: 'JP', label: '🇯🇵 Japão' }, { code: 'KR', label: '🇰🇷 Coreia' },
-  { code: 'MX', label: '🇲🇽 México' }, { code: 'PL', label: '🇵🇱 Polônia' },
-  { code: 'TR', label: '🇹🇷 Turquia' }, { code: 'NL', label: '🇳🇱 Holanda' },
-  { code: 'IT', label: '🇮🇹 Itália' }, { code: 'CA', label: '🇨🇦 Canadá' },
-  { code: 'AU', label: '🇦🇺 Austrália' }, { code: 'AR', label: '🇦🇷 Argentina' },
+  { code: 'MX', label: '🇲🇽 México' }, { code: 'IT', label: '🇮🇹 Itália' },
+  { code: 'CA', label: '🇨🇦 Canadá' }, { code: 'AU', label: '🇦🇺 Austrália' },
 ];
 
 const GROWTH_COLORS: Record<string, string> = {
-  explosive: 'bg-red-500/20 text-red-400', fast: 'bg-amber-500/20 text-amber-400', steady: 'bg-emerald-500/20 text-emerald-400',
+  explosive: 'bg-red-500/20 text-red-400',
+  fast: 'bg-amber-500/20 text-amber-400',
+  steady: 'bg-emerald-500/20 text-emerald-400',
 };
 
 const Channels = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingChannel, setAddingChannel] = useState(false);
+  const [analyzingChannel, setAnalyzingChannel] = useState(false);
   const [channelInput, setChannelInput] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -69,6 +71,7 @@ const Channels = () => {
 
   // Competitors
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [competitorKeywords, setCompetitorKeywords] = useState<string[]>([]);
   const [loadingCompetitors, setLoadingCompetitors] = useState(false);
   const [competitorCountry, setCompetitorCountry] = useState('US');
 
@@ -100,14 +103,49 @@ const Channels = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Faça login');
+
+      // Step 1: Resolve channel
+      toast.info('Buscando canal...');
       const { data: chData, error } = await supabase.functions.invoke('resolve-channel', { body: { channelInput: channelInput.trim() } });
       if (error || chData?.error) throw new Error(chData?.error || error?.message);
-      await supabase.from('user_channels').insert({
+
+      // Step 2: Insert channel
+      const { data: inserted } = await supabase.from('user_channels').insert({
         user_id: user.id, youtube_channel_id: chData.channelId, channel_name: chData.name,
         thumbnail: chData.thumbnail, subscribers: chData.subscribers, views: chData.views, videos: chData.videos,
-      } as any);
-      toast.success('Canal adicionado!');
-      setChannelInput(''); setShowAdd(false); loadChannels();
+      } as any).select().single() as any;
+
+      toast.success('Canal adicionado! Analisando...');
+      setChannelInput('');
+      setShowAdd(false);
+      await loadChannels();
+
+      // Step 3: Auto-analyze with AI
+      if (inserted) {
+        setAnalyzingChannel(true);
+        try {
+          const { data: analysisData, error: analysisErr } = await supabase.functions.invoke('analyze-channel', {
+            body: { channelInput: chData.channelId },
+          });
+          if (!analysisErr && analysisData && !analysisData.error) {
+            const niche = analysisData.analysis?.niche_detected || null;
+            await supabase.from('user_channels').update({
+              analysis_json: {
+                ...analysisData.analysis,
+                recentVideos: analysisData.recentVideos,
+                topVideos: analysisData.topVideos,
+                avgRecentViews: analysisData.avgRecentViews,
+              },
+              niche: niche,
+            } as any).eq('id', inserted.id);
+            toast.success('Análise completa!');
+            await loadChannels();
+          }
+        } catch {
+          toast.warning('Análise automática falhou. Use o botão de atualizar.');
+        }
+        setAnalyzingChannel(false);
+      }
     } catch (err: any) { toast.error(err.message || 'Erro'); }
     finally { setAddingChannel(false); }
   };
@@ -121,44 +159,73 @@ const Channels = () => {
 
   const refreshChannel = async (ch: Channel) => {
     try {
-      const { data, error } = await supabase.functions.invoke('resolve-channel', { body: { channelInput: ch.youtube_channel_id } });
+      toast.info('Atualizando e analisando...');
+      const { data, error } = await supabase.functions.invoke('analyze-channel', { body: { channelInput: ch.youtube_channel_id } });
       if (error || data?.error) throw new Error(data?.error || 'Erro');
-      await supabase.from('user_channels').update({ subscribers: data.subscribers, views: data.views, videos: data.videos } as any).eq('id', ch.id);
-      toast.success('Atualizado!'); loadChannels();
+      await supabase.from('user_channels').update({
+        subscribers: data.channel?.subscribers || ch.subscribers,
+        views: data.channel?.views || ch.views,
+        videos: data.channel?.videos || ch.videos,
+        niche: data.analysis?.niche_detected || ch.niche,
+        analysis_json: {
+          ...data.analysis,
+          recentVideos: data.recentVideos,
+          topVideos: data.topVideos,
+          avgRecentViews: data.avgRecentViews,
+        },
+      } as any).eq('id', ch.id);
+      toast.success('Canal atualizado com análise completa!');
+      loadChannels();
     } catch { toast.error('Erro ao atualizar'); }
   };
 
   const loadCompetitors = async (ch: Channel, country: string) => {
     setLoadingCompetitors(true);
+    setCompetitors([]);
     try {
-      const niche = ch.niche || 'geral';
-      const { data } = await supabase.from('channel_intelligence' as any)
-        .select('*').eq('country', country).limit(500);
-      const allChannels = ((data as any[]) || []) as Competitor[];
-      // Filter by similar niche, prioritize small fast-growing channels
-      const scored = allChannels
-        .filter(c => c.channel_name !== ch.channel_name)
-        .map(c => {
-          let score = 0;
-          if (c.niche.toLowerCase().includes(niche.toLowerCase()) || niche.toLowerCase().includes(c.niche.toLowerCase())) score += 50;
-          if (c.growth_rate === 'explosive') score += 40;
-          else if (c.growth_rate === 'fast') score += 25;
-          if (c.subscribers < 100000 && c.subscribers > 1000) score += 30; // small channels
-          score += Math.min(c.rpm_estimate * 2, 30);
-          return { ...c, _score: score };
-        })
-        .sort((a, b) => b._score - a._score)
-        .slice(0, 12);
-      setCompetitors(scored);
-    } catch (e) { toast.error('Erro ao buscar concorrentes'); }
+      const analysis = ch.analysis_json;
+      const topTitles = [
+        ...(analysis?.topVideos || []).map((v: any) => v.title),
+        ...(analysis?.recentVideos || []).map((v: any) => v.title),
+      ].slice(0, 10);
+
+      if (topTitles.length === 0) {
+        toast.warning('Atualize o canal primeiro para obter dados de vídeos.');
+        setLoadingCompetitors(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('find-competitors', {
+        body: {
+          channelId: ch.youtube_channel_id,
+          topVideoTitles: topTitles,
+          subscribers: ch.subscribers,
+          country,
+        },
+      });
+      if (error) throw error;
+      setCompetitors(data?.competitors || []);
+      setCompetitorKeywords(data?.keywords || []);
+    } catch (e: any) {
+      toast.error('Erro ao buscar concorrentes');
+    }
     setLoadingCompetitors(false);
   };
 
   const loadVideoSuggestions = async (ch: Channel) => {
     setLoadingSuggestions(true);
     try {
+      const analysis = ch.analysis_json;
+      const topTitles = (analysis?.topVideos || []).map((v: any) => v.title).slice(0, 5);
+      const compTitles = competitors.flatMap(c => c.topVideos?.map(v => v.title) || []).slice(0, 10);
+
       const { data, error } = await supabase.functions.invoke('suggest-themes', {
-        body: { niche: ch.niche || 'faceless dark', style: 'documentário', language: 'português', count: 8 },
+        body: {
+          niche: ch.niche || analysis?.niche_detected || 'faceless',
+          style: analysis?.content_strategy ? 'baseado na estratégia: ' + analysis.content_strategy : 'documentário',
+          language: 'português',
+          count: 8,
+        },
       });
       if (error) throw error;
       setVideoSuggestions(data?.themes || []);
@@ -173,11 +240,11 @@ const Channels = () => {
   const selectChannel = (ch: Channel) => {
     setSelectedChannel(ch);
     setActiveTab('overview');
-    loadCompetitors(ch, competitorCountry);
-    // Init chat with channel context
+    setCompetitors([]);
+    setVideoSuggestions([]);
     setChatMessages([{
       role: 'assistant',
-      content: `👋 Olá! Sou seu assistente especializado no canal **${ch.channel_name}**.\n\n📊 **Stats:** ${formatNumber(ch.subscribers)} subs · ${formatNumber(ch.views)} views · ${ch.videos} vídeos${ch.niche ? `\n🎯 **Nicho:** ${ch.niche}` : ''}\n\nPergunte sobre estratégias de crescimento, análise de concorrentes, sugestões de vídeos ou qualquer coisa sobre seu canal!`
+      content: `👋 Olá! Sou seu assistente especializado no canal **${ch.channel_name}**.\n\n📊 **Stats:** ${formatNumber(ch.subscribers)} subs · ${formatNumber(ch.views)} views · ${ch.videos} vídeos${ch.niche ? `\n🎯 **Nicho:** ${ch.niche}` : ''}${ch.analysis_json?.content_strategy ? `\n📋 **Estratégia:** ${ch.analysis_json.content_strategy}` : ''}\n\nPergunte sobre estratégias, concorrentes, ou ideias de vídeos!`
     }]);
   };
 
@@ -190,16 +257,29 @@ const Channels = () => {
     setChatLoading(true);
 
     try {
-      // Build context from channel data + competitors
-      const channelContext = selectedChannel ? `Canal: ${selectedChannel.channel_name}, ${formatNumber(selectedChannel.subscribers)} subs, ${formatNumber(selectedChannel.views)} views, ${selectedChannel.videos} videos, nicho: ${selectedChannel.niche || 'não definido'}` : '';
-      const compContext = competitors.length > 0 ? `Concorrentes encontrados: ${competitors.slice(0, 5).map(c => `${c.channel_name} (${formatNumber(c.subscribers)} subs, ${c.growth_rate}, RPM $${c.rpm_estimate})`).join('; ')}` : '';
+      const analysis = selectedChannel?.analysis_json;
+      const channelContext = selectedChannel ? [
+        `Canal: ${selectedChannel.channel_name}`,
+        `${formatNumber(selectedChannel.subscribers)} subs, ${formatNumber(selectedChannel.views)} views, ${selectedChannel.videos} vídeos`,
+        `Nicho: ${selectedChannel.niche || analysis?.niche_detected || 'não definido'}`,
+        analysis?.seo_score ? `SEO Score: ${analysis.seo_score}/100` : '',
+        analysis?.strengths ? `Forças: ${analysis.strengths.join(', ')}` : '',
+        analysis?.weaknesses ? `Fraquezas: ${analysis.weaknesses.join(', ')}` : '',
+        analysis?.content_strategy ? `Estratégia: ${analysis.content_strategy}` : '',
+        analysis?.estimated_monthly_revenue ? `Receita estimada: ${analysis.estimated_monthly_revenue}` : '',
+        analysis?.topVideos ? `Top vídeos: ${analysis.topVideos.slice(0, 3).map((v: any) => `${v.title} (${formatNumber(v.views)} views)`).join('; ')}` : '',
+      ].filter(Boolean).join('. ') : '';
+
+      const compContext = competitors.length > 0
+        ? `Concorrentes reais (via YouTube): ${competitors.slice(0, 5).map(c => `${c.channelName} (${formatNumber(c.subscribers)} subs, growth: ${c.growthRate}, melhor vídeo: ${c.topVideos[0]?.title || 'N/A'})`).join('; ')}`
+        : '';
 
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           messages: [
-            { role: 'user', content: `[CONTEXTO DO CANAL] ${channelContext}. ${compContext}. Foque as respostas neste canal e em estratégias de vídeos longos (long-form).` },
+            { role: 'user', content: `[CONTEXTO COMPLETO DO CANAL] ${channelContext}. ${compContext}. Foque em estratégias de vídeos LONGOS (long-form). Seja específico e use os dados reais do canal.` },
             ...newMessages.slice(1).map(m => ({ role: m.role, content: m.content })),
           ],
         }),
@@ -244,10 +324,11 @@ const Channels = () => {
     finally { setChatLoading(false); }
   };
 
-  // Compare stats
   const totalSubs = channels.reduce((s, c) => s + c.subscribers, 0);
   const totalViews = channels.reduce((s, c) => s + c.views, 0);
   const totalVideos = channels.reduce((s, c) => s + c.videos, 0);
+
+  const analysis = selectedChannel?.analysis_json;
 
   return (
     <DashboardLayout>
@@ -285,7 +366,14 @@ const Channels = () => {
           </div>
         )}
 
-        {/* Aggregate stats if multiple channels */}
+        {analyzingChannel && (
+          <div className="glass rounded-xl p-4 flex items-center gap-3 border-primary/30">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Analisando canal com IA... SEO, concorrentes, estratégias...</p>
+          </div>
+        )}
+
+        {/* Aggregate stats */}
         {channels.length > 1 && (
           <div className="grid grid-cols-4 gap-3">
             <div className="glass rounded-xl p-4 text-center">
@@ -328,6 +416,7 @@ const Channels = () => {
                       <p className="text-sm font-semibold truncate">{ch.channel_name}</p>
                       <p className="text-[10px] text-muted-foreground">{formatNumber(ch.subscribers)} subs</p>
                     </div>
+                    {ch.analysis_json && <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
                   </div>
                 </button>
               ))
@@ -340,7 +429,7 @@ const Channels = () => {
               <div className="glass rounded-2xl p-12 text-center">
                 <Youtube className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-20" />
                 <h3 className="text-lg font-semibold mb-2">Selecione um canal</h3>
-                <p className="text-sm text-muted-foreground">Clique em um canal à esquerda para ver estatísticas, concorrentes e sugestões.</p>
+                <p className="text-sm text-muted-foreground">Clique em um canal à esquerda para ver análise completa, concorrentes reais e sugestões.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -352,6 +441,7 @@ const Channels = () => {
                       <div className="flex items-center gap-2">
                         <h2 className="text-xl font-bold">{selectedChannel.channel_name}</h2>
                         {selectedChannel.niche && <Badge variant="outline">{selectedChannel.niche}</Badge>}
+                        {!analysis && <Badge variant="outline" className="text-amber-400 border-amber-500/30">Sem análise</Badge>}
                       </div>
                       <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1"><Users className="w-4 h-4" />{formatNumber(selectedChannel.subscribers)}</span>
@@ -360,7 +450,9 @@ const Channels = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => refreshChannel(selectedChannel)}><RefreshCw className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => refreshChannel(selectedChannel)} title="Atualizar e re-analisar">
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
                       <a href={`https://youtube.com/channel/${selectedChannel.youtube_channel_id}`} target="_blank" rel="noopener noreferrer">
                         <Button size="sm" variant="outline" className="gap-1"><ExternalLink className="w-3 h-3" /> YouTube</Button>
                       </a>
@@ -368,75 +460,202 @@ const Channels = () => {
                     </div>
                   </div>
 
-                  {/* Quick stats */}
-                  <div className="grid grid-cols-4 gap-3 mt-4">
-                    <div className="bg-secondary/30 rounded-lg p-3 text-center">
-                      <p className="text-lg font-bold">{formatNumber(selectedChannel.subscribers)}</p>
-                      <p className="text-[10px] text-muted-foreground">Inscritos</p>
+                  {/* Quick scores from analysis */}
+                  {analysis && (
+                    <div className="grid grid-cols-5 gap-3 mt-4">
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold">{analysis.seo_score || '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">SEO Score</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold">{analysis.title_quality_score || '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">Títulos</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold">{analysis.monetization_readiness || '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">Monetização</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold">${analysis.estimated_rpm || '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">RPM Est.</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-lg font-bold">{analysis.avgRecentViews ? formatNumber(analysis.avgRecentViews) : '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">Avg Views</p>
+                      </div>
                     </div>
-                    <div className="bg-secondary/30 rounded-lg p-3 text-center">
-                      <p className="text-lg font-bold">{formatNumber(selectedChannel.views)}</p>
-                      <p className="text-[10px] text-muted-foreground">Views Totais</p>
-                    </div>
-                    <div className="bg-secondary/30 rounded-lg p-3 text-center">
-                      <p className="text-lg font-bold">{selectedChannel.videos}</p>
-                      <p className="text-[10px] text-muted-foreground">Vídeos</p>
-                    </div>
-                    <div className="bg-secondary/30 rounded-lg p-3 text-center">
-                      <p className="text-lg font-bold">{selectedChannel.views && selectedChannel.videos ? formatNumber(Math.round(selectedChannel.views / selectedChannel.videos)) : '—'}</p>
-                      <p className="text-[10px] text-muted-foreground">Views/Vídeo</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <Tabs value={activeTab} onValueChange={v => {
+                  setActiveTab(v);
+                  if (v === 'competitors' && competitors.length === 0 && selectedChannel) {
+                    loadCompetitors(selectedChannel, competitorCountry);
+                  }
+                }}>
                   <TabsList className="bg-secondary/50 border border-border/50">
                     <TabsTrigger value="overview" className="gap-1"><BarChart3 className="w-4 h-4" />Visão Geral</TabsTrigger>
                     <TabsTrigger value="competitors" className="gap-1"><Trophy className="w-4 h-4" />Concorrentes</TabsTrigger>
                     <TabsTrigger value="suggestions" className="gap-1"><Lightbulb className="w-4 h-4" />Sugestões</TabsTrigger>
                   </TabsList>
 
-                  {/* Overview: comparison if multiple channels */}
+                  {/* Overview */}
                   <TabsContent value="overview" className="space-y-4">
-                    {channels.length > 1 && (
-                      <div className="glass rounded-xl p-5">
-                        <h3 className="font-semibold mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Comparação entre Canais</h3>
-                        <div className="space-y-2">
-                          {channels.map(ch => {
-                            const maxSubs = Math.max(...channels.map(c => c.subscribers));
-                            const pct = maxSubs > 0 ? (ch.subscribers / maxSubs) * 100 : 0;
-                            return (
-                              <div key={ch.id} className={`flex items-center gap-3 p-2 rounded-lg ${ch.id === selectedChannel.id ? 'bg-primary/10' : 'bg-secondary/20'}`}>
-                                {ch.thumbnail && <img src={ch.thumbnail} alt="" className="w-6 h-6 rounded-full" />}
-                                <span className="text-sm font-medium w-32 truncate">{ch.channel_name}</span>
-                                <div className="flex-1 h-3 rounded-full bg-secondary/40 overflow-hidden">
-                                  <div className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all" style={{ width: `${pct}%` }} />
-                                </div>
-                                <span className="text-xs text-muted-foreground w-20 text-right">{formatNumber(ch.subscribers)} subs</span>
-                                <span className="text-xs text-muted-foreground w-20 text-right">{formatNumber(ch.views)} views</span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                    {!analysis ? (
+                      <div className="glass rounded-xl p-8 text-center">
+                        <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-400" />
+                        <p className="text-sm text-muted-foreground mb-3">Este canal ainda não foi analisado.</p>
+                        <Button onClick={() => refreshChannel(selectedChannel)} className="gradient-hero border-0 gap-2">
+                          <Sparkles className="w-4 h-4" /> Analisar Agora
+                        </Button>
                       </div>
-                    )}
+                    ) : (
+                      <>
+                        {/* Strengths & Weaknesses */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Pontos Fortes
+                            </h4>
+                            <ul className="space-y-1.5">
+                              {(analysis.strengths || []).map((s: string, i: number) => (
+                                <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                  <span className="text-emerald-400 mt-0.5">✓</span> {s}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                              <AlertTriangle className="w-4 h-4 text-amber-400" /> Pontos Fracos
+                            </h4>
+                            <ul className="space-y-1.5">
+                              {(analysis.weaknesses || []).map((w: string, i: number) => (
+                                <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                  <span className="text-amber-400 mt-0.5">!</span> {w}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
 
-                    {/* Analysis data if available */}
-                    {selectedChannel.analysis_json && (
-                      <div className="glass rounded-xl p-5 space-y-3">
-                        <h3 className="font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4" /> Análise IA</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {Object.entries(selectedChannel.analysis_json as Record<string, any>)
-                            .filter(([k]) => ['seo_score', 'title_quality_score', 'niche_fit_score', 'monetization_readiness'].includes(k))
-                            .map(([key, val]) => (
-                              <div key={key} className="bg-secondary/30 rounded-lg p-3">
-                                <p className="text-[10px] text-muted-foreground uppercase">{key.replace(/_/g, ' ')}</p>
-                                <p className="text-lg font-bold">{String(val)}</p>
-                              </div>
-                            ))}
+                        {/* Strategy & Revenue */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                              <Target className="w-4 h-4 text-primary" /> Estratégia de Conteúdo
+                            </h4>
+                            <p className="text-xs text-muted-foreground">{analysis.content_strategy || '—'}</p>
+                          </div>
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                              <DollarSign className="w-4 h-4 text-emerald-400" /> Monetização
+                            </h4>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              <p>Receita estimada: <span className="text-foreground font-medium">{analysis.estimated_monthly_revenue || '—'}</span></p>
+                              <p>RPM: <span className="text-foreground font-medium">${analysis.estimated_rpm || '—'}</span></p>
+                              <p>Frequência ideal: <span className="text-foreground font-medium">{analysis.upload_frequency_recommendation || '—'}</span></p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+
+                        {/* SEO & Title Improvements */}
+                        {(analysis.seo_improvements?.length > 0 || analysis.title_improvements?.length > 0) && (
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                              <Zap className="w-4 h-4 text-primary" /> Melhorias Recomendadas
+                            </h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              {analysis.seo_improvements?.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground uppercase mb-1">SEO</p>
+                                  <ul className="space-y-1">
+                                    {analysis.seo_improvements.map((s: string, i: number) => (
+                                      <li key={i} className="text-xs text-muted-foreground">• {s}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {analysis.title_improvements?.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground uppercase mb-1">Títulos</p>
+                                  <ul className="space-y-1">
+                                    {analysis.title_improvements.map((t: string, i: number) => (
+                                      <li key={i} className="text-xs text-muted-foreground">• {t}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Growth & Competitor Insights */}
+                        {(analysis.growth_potential || analysis.competitor_insights) && (
+                          <div className="grid grid-cols-2 gap-4">
+                            {analysis.growth_potential && (
+                              <div className="glass rounded-xl p-4">
+                                <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                                  <TrendingUp className="w-4 h-4 text-emerald-400" /> Potencial de Crescimento
+                                </h4>
+                                <p className="text-xs text-muted-foreground">{analysis.growth_potential}</p>
+                              </div>
+                            )}
+                            {analysis.competitor_insights && (
+                              <div className="glass rounded-xl p-4">
+                                <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                                  <Trophy className="w-4 h-4 text-amber-400" /> Insights de Concorrência
+                                </h4>
+                                <p className="text-xs text-muted-foreground">{analysis.competitor_insights}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Top Videos */}
+                        {analysis.topVideos?.length > 0 && (
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                              <TrendingUp className="w-4 h-4 text-primary" /> Top Vídeos
+                            </h4>
+                            <div className="space-y-2">
+                              {analysis.topVideos.slice(0, 5).map((v: any, i: number) => (
+                                <div key={i} className="flex items-center gap-3 bg-secondary/20 rounded-lg p-2">
+                                  <span className="text-xs text-muted-foreground w-5">#{i + 1}</span>
+                                  <span className="text-sm flex-1 truncate">{v.title}</span>
+                                  <span className="text-xs text-muted-foreground">{formatNumber(v.views)} views</span>
+                                  {v.likes && <span className="text-xs text-muted-foreground">{formatNumber(v.likes)} likes</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Channel Comparison */}
+                        {channels.length > 1 && (
+                          <div className="glass rounded-xl p-5">
+                            <h3 className="font-semibold mb-3 flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Comparação entre Canais</h3>
+                            <div className="space-y-2">
+                              {channels.map(ch => {
+                                const maxSubs = Math.max(...channels.map(c => c.subscribers));
+                                const pct = maxSubs > 0 ? (ch.subscribers / maxSubs) * 100 : 0;
+                                return (
+                                  <div key={ch.id} className={`flex items-center gap-3 p-2 rounded-lg ${ch.id === selectedChannel.id ? 'bg-primary/10' : 'bg-secondary/20'}`}>
+                                    {ch.thumbnail && <img src={ch.thumbnail} alt="" className="w-6 h-6 rounded-full" />}
+                                    <span className="text-sm font-medium w-32 truncate">{ch.channel_name}</span>
+                                    <div className="flex-1 h-3 rounded-full bg-secondary/40 overflow-hidden">
+                                      <div className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all" style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <span className="text-xs text-muted-foreground w-20 text-right">{formatNumber(ch.subscribers)} subs</span>
+                                    <span className="text-xs text-muted-foreground w-20 text-right">{formatNumber(ch.views)} views</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </TabsContent>
 
@@ -454,38 +673,72 @@ const Channels = () => {
                       ))}
                     </div>
 
+                    {competitorKeywords.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground">Keywords detectadas:</span>
+                        {competitorKeywords.map((k, i) => (
+                          <Badge key={i} variant="secondary" className="text-[10px]">{k}</Badge>
+                        ))}
+                      </div>
+                    )}
+
                     {loadingCompetitors ? (
-                      <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">Buscando concorrentes...</p></div>
+                      <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">Buscando concorrentes reais via YouTube...</p></div>
                     ) : competitors.length === 0 ? (
                       <div className="glass rounded-xl p-8 text-center">
                         <Search className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-40" />
-                        <p className="text-sm text-muted-foreground">Nenhum concorrente encontrado para {competitorCountry}.</p>
+                        <p className="text-sm text-muted-foreground">
+                          {analysis ? 'Clique em um país para buscar concorrentes reais.' : 'Atualize o canal primeiro para obter dados de vídeos.'}
+                        </p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {competitors.map((comp, i) => (
-                          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                          <motion.div key={comp.channelId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.04 }}
                             className="glass rounded-xl p-4 space-y-2 hover:border-primary/30 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-sm">{comp.channel_name}</h4>
-                              <Badge className={GROWTH_COLORS[comp.growth_rate] || ''} variant="outline">{comp.growth_rate}</Badge>
+                            <div className="flex items-center gap-3">
+                              {comp.thumbnail && <img src={comp.thumbnail} alt="" className="w-8 h-8 rounded-full" />}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm truncate">{comp.channelName}</h4>
+                                <div className="flex gap-2 text-[10px] text-muted-foreground">
+                                  <span>{formatNumber(comp.subscribers)} subs</span>
+                                  <span>{formatNumber(comp.avgViews)} avg views</span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <Badge className={GROWTH_COLORS[comp.growthRate] || ''} variant="outline">{comp.growthRate}</Badge>
+                                {comp.multiplier > 1 && (
+                                  <span className="text-[10px] text-amber-400">{comp.multiplier}× outlier</span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex gap-3 text-xs text-muted-foreground">
-                              <span><Users className="w-3 h-3 inline mr-1" />{formatNumber(comp.subscribers)}</span>
-                              <span><Eye className="w-3 h-3 inline mr-1" />{formatNumber(comp.avg_views)} avg</span>
-                              <span>RPM ${comp.rpm_estimate}</span>
-                            </div>
-                            <div className="flex gap-1 flex-wrap">
-                              <Badge variant="secondary" className="text-[10px]">{comp.niche}</Badge>
-                              <Badge variant="outline" className="text-[10px]">{comp.style}</Badge>
-                              <Badge variant="outline" className="text-[10px]">{comp.country}</Badge>
-                            </div>
-                            {comp.viral_patterns?.hooks?.length > 0 && (
-                              <div className="text-[10px] text-muted-foreground italic truncate">
-                                Hook: "{comp.viral_patterns.hooks[0]}"
+                            {comp.topVideos?.length > 0 && (
+                              <div className="space-y-1 mt-2">
+                                {comp.topVideos.slice(0, 2).map((v, vi) => (
+                                  <div key={vi} className="flex items-center gap-2 text-[10px] text-muted-foreground bg-secondary/20 rounded px-2 py-1">
+                                    <span className="flex-1 truncate">{v.title}</span>
+                                    <span>{formatNumber(v.views)} views</span>
+                                  </div>
+                                ))}
                               </div>
                             )}
+                            <div className="flex gap-2 mt-1">
+                              <a href={`https://youtube.com/channel/${comp.channelId}`} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1">
+                                  <ExternalLink className="w-3 h-3" /> Ver Canal
+                                </Button>
+                              </a>
+                              {comp.topVideos?.[0] && (
+                                <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-primary/30 text-primary"
+                                  onClick={() => {
+                                    sessionStorage.setItem('outlier_topic', comp.topVideos[0].title);
+                                    window.location.href = '/scripts';
+                                  }}>
+                                  <Sparkles className="w-3 h-3" /> Criar Similar
+                                </Button>
+                              )}
+                            </div>
                           </motion.div>
                         ))}
                       </div>
@@ -495,7 +748,7 @@ const Channels = () => {
                   {/* Video Suggestions */}
                   <TabsContent value="suggestions" className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">Sugestões de vídeos longos baseados em tendências e concorrentes</p>
+                      <p className="text-sm text-muted-foreground">Sugestões contextuais baseadas nos seus vídeos e concorrentes</p>
                       <Button onClick={() => loadVideoSuggestions(selectedChannel)} disabled={loadingSuggestions} className="gradient-hero border-0 gap-2">
                         {loadingSuggestions ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                         Gerar Sugestões
@@ -507,7 +760,7 @@ const Channels = () => {
                     ) : videoSuggestions.length === 0 ? (
                       <div className="glass rounded-xl p-8 text-center">
                         <Lightbulb className="w-8 h-8 mx-auto mb-2 text-amber-400 opacity-40" />
-                        <p className="text-sm text-muted-foreground">Clique em "Gerar Sugestões" para receber ideias de vídeos.</p>
+                        <p className="text-sm text-muted-foreground">Clique em "Gerar Sugestões" para ideias baseadas no seu canal.</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -519,14 +772,20 @@ const Channels = () => {
                               <div className="flex-1">
                                 <h4 className="font-semibold text-sm">{theme.title}</h4>
                                 {theme.hook && <p className="text-xs text-primary mt-1">🪝 {theme.hook}</p>}
-                                {theme.why_viral && <p className="text-xs text-muted-foreground mt-1">{theme.why_viral}</p>}
+                                {theme.description && <p className="text-xs text-muted-foreground mt-1">{theme.description}</p>}
+                                {theme.why_viral && <p className="text-xs text-muted-foreground/70 mt-1 italic">{theme.why_viral}</p>}
                               </div>
                               <div className="flex flex-col items-end gap-1">
                                 {theme.viral_score && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">🔥 {theme.viral_score}/10</Badge>}
+                                {theme.style && <Badge variant="outline" className="text-[10px]">{theme.style}</Badge>}
                                 {theme.estimated_duration && <span className="text-[10px] text-muted-foreground">{theme.estimated_duration}</span>}
                               </div>
                             </div>
                             <div className="flex gap-2 mt-2">
+                              {theme.niche_tags?.map((t: string, ti: number) => (
+                                <Badge key={ti} variant="secondary" className="text-[10px]">{t}</Badge>
+                              ))}
+                              <div className="flex-1" />
                               <Button size="sm" variant="outline" className="h-7 text-xs gap-1 border-primary/30 text-primary"
                                 onClick={() => {
                                   sessionStorage.setItem('outlier_topic', theme.title);
@@ -557,7 +816,7 @@ const Channels = () => {
                   <Bot className="w-5 h-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold">Assistente — {selectedChannel.channel_name}</p>
-                    <p className="text-[10px] text-emerald-400">● Conectado ao canal</p>
+                    <p className="text-[10px] text-emerald-400">● Conectado ao canal{analysis ? ' (com análise)' : ''}</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setChatOpen(false)}><X className="w-4 h-4" /></Button>

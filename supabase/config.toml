@@ -84,3 +84,6 @@ verify_jwt = false
 [functions.find-outliers]
 verify_jwt = false
 
+[functions.find-competitors]
+verify_jwt = false
+
