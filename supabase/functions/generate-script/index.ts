@@ -241,7 +241,7 @@ Idioma: ${language || 'português'}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: phase1System },
           { role: "user", content: `Escreva um roteiro MAGNÉTICO de ${duration} minutos sobre: "${topic}"
