@@ -386,6 +386,15 @@ const Dashboard = () => {
             </p>
           </div>
         </motion.div>
+
+        {/* Infrastructure Monitoring */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+          className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" /> Infraestrutura & Monitoramento
+          </h3>
+          <ApiUsageDashboard />
+        </motion.div>
       </div>
       
     </DashboardLayout>
