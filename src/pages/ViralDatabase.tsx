@@ -12,7 +12,7 @@ import {
   Flame, Copy, Zap, Target, BookOpen, Search as SearchIcon, Sparkles, Loader2,
   MessageSquare, ThumbsUp, Share2, Bell, ListOrdered, Lightbulb, TrendingUp, Hash,
   Globe, Eye, Users, Play, ChevronDown, ChevronUp, Palette, Brain, ExternalLink,
-  Filter, BarChart3, Tv, ScanSearch, PieChart
+  Filter, BarChart3, Tv, ScanSearch, PieChart, Trophy
 } from 'lucide-react';
 import { AnalyticsPanel } from '@/components/viral-db/AnalyticsPanel';
 import { OutlierFinderPanel } from '@/components/viral-db/OutlierFinderPanel';
