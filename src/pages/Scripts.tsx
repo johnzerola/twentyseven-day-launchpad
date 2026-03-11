@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste, Mic, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight } from 'lucide-react';
