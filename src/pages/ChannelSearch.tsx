@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network } from 'lucide-react';
+import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network, History, Trash2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -69,8 +69,94 @@ const ChannelSearch = () => {
   const [deepScanning, setDeepScanning] = useState<string | null>(null);
   const [deepScanResult, setDeepScanResult] = useState<any>(null);
 
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
+
   const medianViews = channelInfo?.avgViews || 156_000;
   const searchType = activeTab === 'channel' ? 'channel' : 'video';
+
+  // Load saved searches on mount
+  useEffect(() => {
+    const loadSaved = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('saved_searches')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      if (data) setSavedSearches(data);
+    };
+    loadSaved();
+  }, []);
+
+  const saveSearch = useCallback(async (q: string, tab: string, res: VideoResult[], ch: ChannelInfo | null) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !q.trim()) return;
+    const filters = { niche, country, language, period, minViews, minSubs, maxSubs };
+    
+    // Upsert by query+tab
+    const { data: existing } = await supabase
+      .from('saved_searches')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('query', q)
+      .eq('tab', tab)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from('saved_searches').update({
+        results_json: res as any,
+        channel_info_json: ch as any,
+        filters_json: filters as any,
+        updated_at: new Date().toISOString(),
+      }).eq('id', existing.id);
+    } else {
+      await supabase.from('saved_searches').insert({
+        user_id: user.id,
+        query: q,
+        tab,
+        results_json: res as any,
+        channel_info_json: ch as any,
+        filters_json: filters as any,
+      });
+    }
+
+    // Refresh list
+    const { data: refreshed } = await supabase
+      .from('saved_searches')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    if (refreshed) setSavedSearches(refreshed);
+  }, [niche, country, language, period, minViews, minSubs, maxSubs]);
+
+  const loadSearch = (saved: any) => {
+    setQuery(saved.query);
+    setActiveTab(saved.tab);
+    setResults((saved.results_json as VideoResult[]) || []);
+    setChannelInfo((saved.channel_info_json as ChannelInfo) || null);
+    const f = (saved.filters_json as any) || {};
+    setNiche(f.niche || '');
+    setCountry(f.country || '');
+    setLanguage(f.language || '');
+    setPeriod(f.period || '');
+    setMinViews(f.minViews || '');
+    setMinSubs(f.minSubs || '');
+    setMaxSubs(f.maxSubs || '');
+    setHasSearched(true);
+    setShowSaved(false);
+    toast.success('Pesquisa carregada!');
+  };
+
+  const deleteSearch = async (id: string) => {
+    await supabase.from('saved_searches').delete().eq('id', id);
+    setSavedSearches(prev => prev.filter(s => s.id !== id));
+    toast.success('Pesquisa removida');
+  };
 
   const searchVideos = async () => {
     if (!query.trim()) return;
@@ -84,9 +170,13 @@ const ChannelSearch = () => {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setResults(data?.results || []);
-      setChannelInfo(data?.channel || null);
-      if (!data?.results?.length) toast.info('Nenhum vídeo encontrado');
+      const r = data?.results || [];
+      const ch = data?.channel || null;
+      setResults(r);
+      setChannelInfo(ch);
+      if (!r.length) toast.info('Nenhum vídeo encontrado');
+      // Auto-save
+      await saveSearch(query, activeTab, r, ch);
     } catch (err: any) {
       toast.error(err.message || 'Erro na busca');
     } finally {
@@ -165,6 +255,47 @@ const ChannelSearch = () => {
             </button>
           ))}
         </div>
+
+        {/* Saved Searches Toggle + Panel */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowSaved(!showSaved)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+            <History className="w-3.5 h-3.5" />
+            {showSaved ? 'Esconder' : 'Ver'} pesquisas salvas
+            {savedSearches.length > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{savedSearches.length}</Badge>
+            )}
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {showSaved && savedSearches.length > 0 && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden">
+              <div className="glass rounded-xl p-4 space-y-2 border-primary/10">
+                <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Save className="w-3 h-3" /> Pesquisas salvas automaticamente
+                </p>
+                {savedSearches.map((s) => (
+                  <div key={s.id} className="flex items-center gap-3 bg-secondary/30 rounded-lg px-3 py-2 group">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => loadSearch(s)}>
+                      <p className="text-sm font-medium truncate">{s.query}</p>
+                      <div className="flex gap-2 text-[10px] text-muted-foreground">
+                        <span>{s.tab === 'channel' ? '📺 Canal' : '🎬 Vídeos'}</span>
+                        <span>{((s.results_json as any[]) || []).length} resultados</span>
+                        <span>{new Date(s.updated_at).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteSearch(s.id)}>
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Tab Content */}
         {(activeTab === 'videos' || activeTab === 'channel') && (
