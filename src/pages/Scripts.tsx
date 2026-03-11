@@ -123,7 +123,7 @@ const Scripts = () => {
   const [scorecard, setScorecard] = useState<{hook:number,retention:number,emotion:number,flow:number,payoff:number} | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [savedScripts, setSavedScripts] = useState<any[]>([]);
+  const scriptsPag = usePagination<any>();
 
   // Viral Database
   const [showViralPanel, setShowViralPanel] = useState(false);
