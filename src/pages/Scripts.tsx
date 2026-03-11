@@ -1472,23 +1472,10 @@ const Scripts = () => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <label className="text-[10px] text-muted-foreground mb-1 block">⏱️ Duração por cena</label>
-                        <select value={sceneDuration} onChange={e => setSceneDuration(parseInt(e.target.value))} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-                          <option value={6}>6 segundos</option>
-                          <option value={7}>7 segundos</option>
-                          <option value={8}>8 segundos (padrão)</option>
-                          <option value={9}>9 segundos</option>
-                          <option value={10}>10 segundos</option>
-                        </select>
-                      </div>
-                      <div className="flex items-end">
-                        <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground w-full">
-                          🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong>
-                          {characters.length > 0 && <> • 👥 {characters.length} personagens</>}
-                        </div>
-                      </div>
+                    <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground mb-3">
+                      🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong>
+                      {characters.length > 0 && <> • 👥 {characters.length} personagens</>}
+                      <span className="ml-2">• ⏱ Duração automática pela IA</span>
                     </div>
 
                     {/* Primary action: Audio Intelligence */}
