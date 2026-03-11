@@ -20,6 +20,7 @@ const navItems = [
   { key: 'Studio', icon: Video, path: '/studio' },
   { key: 'Narração IA', icon: Mic, path: '/narration' },
   { key: 'Playbook 27D', icon: CalendarDays, path: '/playbook' },
+  { key: 'Planner', icon: Kanban, path: '/planner' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
 ];
 
