@@ -46,7 +46,9 @@ serve(async (req) => {
       'japonês': 130, '日本語': 130,
     };
     const wordsPerMinute = speechRates[language?.toLowerCase()] || 150;
-    const targetWords = (duration || 15) * wordsPerMinute;
+    const durationMinutes = parseInt(duration) || 15;
+    const targetWords = durationMinutes * wordsPerMinute;
+    const minAcceptableWords = Math.round(targetWords * 0.85);
     const targetChars = targetWords * 5.5;
 
     // ========== Style guides ==========
