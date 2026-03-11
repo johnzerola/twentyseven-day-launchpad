@@ -29,6 +29,64 @@ const NicheExplorer = () => {
   const [data, setData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [filterFaceless, setFilterFaceless] = useState(false);
+  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Load saved analyses on mount
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: saved } = await supabase
+        .from('saved_niche_analyses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (saved?.length) {
+        setSavedAnalyses(saved);
+        // Load most recent analysis
+        const latest = saved[0];
+        setNiche(latest.niche);
+        setCountry(latest.country || 'BR');
+        setData(latest.analysis_json as any);
+      }
+    })();
+  }, []);
+
+  const saveAnalysis = async (nicheStr: string, countryStr: string, result: any) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('saved_niche_analyses').insert({
+      user_id: user.id,
+      niche: nicheStr,
+      country: countryStr,
+      analysis_json: result,
+      score: result?.analysis?.score || 0,
+    } as any);
+    // Refresh list
+    const { data: saved } = await supabase
+      .from('saved_niche_analyses')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (saved) setSavedAnalyses(saved);
+  };
+
+  const deleteAnalysis = async (id: string) => {
+    await supabase.from('saved_niche_analyses').delete().eq('id', id);
+    setSavedAnalyses(prev => prev.filter(a => a.id !== id));
+    toast.success('Análise removida');
+  };
+
+  const loadAnalysis = (saved: any) => {
+    setNiche(saved.niche);
+    setCountry(saved.country || 'BR');
+    setData(saved.analysis_json);
+    setShowHistory(false);
+    setActiveTab('overview');
+  };
 
   const explore = async (nicheOverride?: string) => {
     const q = (nicheOverride || niche).trim();
@@ -53,7 +111,8 @@ const NicheExplorer = () => {
       if (error) throw new Error(error.message);
       if (result?.error) throw new Error(result.error);
       setData(result);
-      toast.success('Análise completa!');
+      await saveAnalysis(q, country, result);
+      toast.success('Análise completa e salva!');
     } catch (err: any) {
       toast.error(err.message || 'Erro na análise');
     } finally {
