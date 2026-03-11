@@ -60,6 +60,39 @@ const Titles = () => {
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoResult, setSeoResult] = useState<SEODescription | null>(null);
 
+  // Load saved data on mount
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: saved } = await supabase
+        .from('saved_titles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (saved) {
+        if (saved.titles_json) setTitles((saved.titles_json as any) || []);
+        if (saved.topic) setTopic(saved.topic);
+        if (saved.niche) setNiche(saved.niche);
+        if (saved.ab_test_json) setAbResult(saved.ab_test_json as any);
+        if (saved.seo_json) setSeoResult(saved.seo_json as any);
+      }
+    })();
+  }, []);
+
+  const saveTitles = async (titlesData: TitleSuggestion[], topicStr?: string, nicheStr?: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('saved_titles').insert({
+      user_id: user.id,
+      topic: topicStr || topic,
+      niche: nicheStr || niche,
+      titles_json: titlesData as any,
+    } as any);
+  };
+
   const generateTitles = async () => {
     if (!niche.trim() && !topic.trim()) return toast.error('Preencha nicho ou tema');
     setLoading(true);
