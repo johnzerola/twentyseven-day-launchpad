@@ -22,6 +22,10 @@ const STYLES = [
   { value: 'tutorial', label: '🛠️ Tutorial', desc: 'Passo a passo com resultado visível' },
   { value: 'documentário', label: '📹 Documentário', desc: 'Profundidade, dados e investigação' },
   { value: 'listicle', label: '📋 Listicle', desc: 'Top N com escalada de impacto' },
+  { value: 'reddit', label: '🗣️ Reddit Stories', desc: 'Narração 1ª pessoa, tom confessional, animação 2D' },
+  { value: 'conspiração', label: '🔍 Conspiração/Mistério', desc: 'Investigação profunda, evidências progressivas' },
+  { value: 'mitologia', label: '⚡ Mitologia Épica', desc: 'Mitos gregos, nórdicos, egípcios — tom grandioso' },
+  { value: 'teorias', label: '🌊 Teorias & Mistérios', desc: 'Pirâmides, oceano, civilizações perdidas' },
 ];
 
 const VIDEO_STYLES = [
