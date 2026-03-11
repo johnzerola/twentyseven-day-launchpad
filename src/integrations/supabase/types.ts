@@ -551,6 +551,45 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_searches: {
+        Row: {
+          channel_info_json: Json | null
+          created_at: string
+          filters_json: Json | null
+          id: string
+          notes: string | null
+          query: string
+          results_json: Json | null
+          tab: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_info_json?: Json | null
+          created_at?: string
+          filters_json?: Json | null
+          id?: string
+          notes?: string | null
+          query: string
+          results_json?: Json | null
+          tab?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_info_json?: Json | null
+          created_at?: string
+          filters_json?: Json | null
+          id?: string
+          notes?: string | null
+          query?: string
+          results_json?: Json | null
+          tab?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_titles: {
         Row: {
           ab_test_json: Json | null
