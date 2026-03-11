@@ -12,8 +12,9 @@ import {
   Flame, Copy, Zap, Target, BookOpen, Search as SearchIcon, Sparkles, Loader2,
   MessageSquare, ThumbsUp, Share2, Bell, ListOrdered, Lightbulb, TrendingUp, Hash,
   Globe, Eye, Users, Play, ChevronDown, ChevronUp, Palette, Brain, ExternalLink,
-  Filter, BarChart3, Tv, ScanSearch
+  Filter, BarChart3, Tv, ScanSearch, PieChart
 } from 'lucide-react';
+import { AnalyticsPanel } from '@/components/viral-db/AnalyticsPanel';
 import {
   VIRAL_HOOKS, VIRAL_CTAS, VIRAL_TITLE_PATTERNS, STORY_STRUCTURES, SEO_KEYWORD_PATTERNS,
   type ViralHook, type CallToAction, type TitlePattern, type StoryStructure,
