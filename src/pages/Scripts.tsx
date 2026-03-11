@@ -1534,9 +1534,9 @@ const Scripts = () => {
                             })),
                           };
 
-                          const fullText = autoflowLines + '\n\n=== JSON DETALHADO ===\n\n' + JSON.stringify(detailedJson, null, 2);
-                          navigator.clipboard.writeText(fullText);
-                          toast.success(`📋 ${syncedScenes.length} cenas copiadas! AutoFlow + JSON detalhado. Cole na Prompt List do AutoFlow.`);
+                          // Only copy AutoFlow lines — JSON was causing AutoFlow to parse thousands of extra prompts
+                          navigator.clipboard.writeText(autoflowLines);
+                          toast.success(`📋 ${syncedScenes.length} cenas copiadas! Cole na Prompt List do AutoFlow.`);
                         }}>
                           <Copy className="w-4 h-4" /> 📋 Copiar Cenas ({syncedScenes.length})
                         </Button>
