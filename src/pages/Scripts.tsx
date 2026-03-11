@@ -74,8 +74,6 @@ interface Character {
   facial_features: CharacterFacialFeatures;
   clothing: CharacterClothing;
   personality: string[];
-  imageUrl?: string;
-  generatingImage?: boolean;
 }
 
 interface SyncedScene {
