@@ -69,3 +69,12 @@ verify_jwt = false
 [functions.extract-characters]
 verify_jwt = false
 
+[functions.analyze-viral-channels]
+verify_jwt = false
+
+[functions.suggest-themes]
+verify_jwt = false
+
+[functions.audio-to-scenes]
+verify_jwt = false
+
