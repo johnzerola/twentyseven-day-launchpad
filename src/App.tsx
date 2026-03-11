@@ -18,8 +18,7 @@ import Pricing from "./pages/Pricing";
 import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
-import MonetizationPlanner from "./pages/MonetizationPlanner";
-// DEPRECATED: Playbook, Planner, Narration, Studio — removed from active routes
+// DEPRECATED: Playbook, Planner, Narration, Studio, MonetizationPlanner — removed from active routes
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,7 +46,7 @@ const App = () => (
             <Route path="/titles" element={<P><Titles /></P>} />
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/workflow" element={<P><Workflow /></P>} />
-            <Route path="/monetization" element={<P><MonetizationPlanner /></P>} />
+            
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
