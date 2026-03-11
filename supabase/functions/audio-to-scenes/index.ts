@@ -74,11 +74,11 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
       .select("category,title,prompt_template,tags")
-      .order("viral_score", { ascending: false }).limit(15);
+      .order("viral_score", { ascending: false }).limit(10);
 
     const knowledgeBlock = (sceneKnowledge || []).map((r: any) =>
-      `[${r.category.toUpperCase()}] ${r.title}:\n${r.prompt_template}`
-    ).join("\n\n");
+      `[${r.category.toUpperCase()}] ${r.title}:\n${r.prompt_template.slice(0, 300)}`
+    ).join("\n\n").slice(0, 4000);
 
     // ========== STEP 3: Build word-timestamped transcript blocks ==========
     // Group words into sentence-like blocks using punctuation and pauses
