@@ -179,6 +179,18 @@ const Scripts = () => {
     loadLastProjectCharacters();
   }, []);
 
+  // Auto-suggest themes when topic changes (debounced)
+  useEffect(() => {
+    if (topic.trim().length < 5 || !niche.trim()) return;
+    const timer = setTimeout(() => {
+      if (!loadingThemes && themeSuggestions.length === 0) {
+        generateThemeSuggestions();
+        setShowThemeSuggestions(true);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [topic, niche]);
+
   const loadLastProjectCharacters = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -1606,7 +1618,6 @@ const Scripts = () => {
                         <div className="grid grid-cols-2 gap-2">
                           {/* Text-to-Video: one prompt per line */}
                           <Button variant="default" className="gap-2 text-xs" onClick={() => {
-                            // AutoFlow Text-to-Video: one prompt per line with [V1-S#] tags
                             const lines = syncedScenes.map((scene) => 
                               `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`
                             ).join('\n');
@@ -1616,7 +1627,7 @@ const Scripts = () => {
                             <Copy className="w-4 h-4" /> 🎬 Text-to-Video ({syncedScenes.length})
                           </Button>
 
-                          {/* Image → Video pipeline: [V#-S#] image prompt ||| [V#-S#] video prompt */}
+                          {/* Image → Video pipeline */}
                           <Button variant="default" className="gap-2 text-xs" onClick={() => {
                             const lines = syncedScenes.map((scene) => {
                               const tag = `[V1-S${scene.sceneIndex + 1}]`;
@@ -1630,6 +1641,40 @@ const Scripts = () => {
                             <Copy className="w-4 h-4" /> 🖼️→🎬 Image→Video ({syncedScenes.length})
                           </Button>
 
+                          {/* JSON AutoFlow Export */}
+                          <Button variant="default" className="gap-2 text-xs col-span-2 bg-accent hover:bg-accent/90" onClick={() => {
+                            const autoflowJson = {
+                              version: "1.0",
+                              videoStyle,
+                              totalScenes: syncedScenes.length,
+                              totalDuration: syncedScenes.length > 0 
+                                ? syncedScenes[syncedScenes.length - 1].endTime - syncedScenes[0].startTime 
+                                : 0,
+                              generatedAt: new Date().toISOString(),
+                              scenes: syncedScenes.map((scene) => ({
+                                scene: `Cena ${scene.sceneIndex + 1}`,
+                                sceneIndex: scene.sceneIndex + 1,
+                                prompt: scene.visualPrompt,
+                                quality: "8K UHD, masterpiece, award-winning, photorealistic",
+                                duration: `${Math.round(scene.endTime - scene.startTime)}s`,
+                                durationSeconds: Math.round(scene.endTime - scene.startTime),
+                                startTime: Math.round(scene.startTime * 10) / 10,
+                                endTime: Math.round(scene.endTime * 10) / 10,
+                                camera: scene.cameraAngle,
+                                mood: scene.mood,
+                                lighting: scene.lightingSetup || "cinematic",
+                                negativePrompt: scene.negativePrompt || "no text, no subtitles, no watermarks, no logos",
+                                characters: scene.charactersInScene || [],
+                                narrativeText: scene.narrativeText || "",
+                                transition: scene.transitionNote || "smooth cut",
+                              })),
+                            };
+                            navigator.clipboard.writeText(JSON.stringify(autoflowJson, null, 2));
+                            toast.success(`📋 JSON AutoFlow (${syncedScenes.length} cenas) copiado!`);
+                          }}>
+                            <Copy className="w-4 h-4" /> 📋 JSON AutoFlow ({syncedScenes.length} cenas)
+                          </Button>
+
                           {/* Create Image only */}
                           <Button variant="outline" className="gap-2 text-xs" onClick={() => {
                             const lines = syncedScenes.map((scene) => 
@@ -1641,7 +1686,7 @@ const Scripts = () => {
                             <Copy className="w-4 h-4" /> 🖼️ Create Image ({syncedScenes.length})
                           </Button>
 
-                          {/* Ingredients mode - refs + prompts */}
+                          {/* Ingredients mode */}
                           <Button variant="outline" className="gap-2 text-xs" onClick={() => {
                             const lines = syncedScenes.map((scene) => 
                               `[V1-S${scene.sceneIndex + 1}] ${scene.visualPrompt}`

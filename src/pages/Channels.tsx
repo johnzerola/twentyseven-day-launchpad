@@ -87,7 +87,14 @@ const Channels = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
     const { data } = await supabase.from('user_channels').select('*').eq('user_id', user.id).order('linked_at', { ascending: false }) as any;
-    setChannels(data || []);
+    const freshChannels = data || [];
+    setChannels(freshChannels);
+    // Re-select the currently selected channel from fresh data
+    if (selectedChannel) {
+      const updated = freshChannels.find((c: Channel) => c.id === selectedChannel.id);
+      if (updated) setSelectedChannel(updated);
+      else setSelectedChannel(null);
+    }
     setLoading(false);
   };
 

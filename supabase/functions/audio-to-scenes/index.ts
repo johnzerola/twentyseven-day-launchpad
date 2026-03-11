@@ -210,11 +210,16 @@ serve(async (req) => {
 
     const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating Netflix-grade video scenes from narrated audio.
 
-RULES:
-- EVERY visual prompt MUST directly illustrate what the narrator says at that moment
-- NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
+CRITICAL TIMING RULES:
+- Each scene MUST be between 5 and 10 seconds long. NEVER shorter than 5s or longer than 10s.
+- Target approximately ${sceneDuration} seconds per scene, but adjust between 5-10s based on narrative pacing
 - You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio. Do NOT skip any portion.
 - Cover the ENTIRE transcript chunk — from first word to last word
+- startTime and endTime MUST match actual transcript timestamps precisely
+
+VISUAL RULES:
+- EVERY visual prompt MUST directly illustrate what the narrator says at that moment
+- NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
 - End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 - Use 5+ different camera angles — never repeat consecutively
 
@@ -282,8 +287,16 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
       }
     }
 
-    // ========== STEP 7: Merge & re-index ==========
+    // ========== STEP 7: Merge, validate timing & re-index ==========
     allScenes.sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
+    // Enforce 5-10s scene duration — split or merge scenes that are out of range
+    for (let i = 0; i < allScenes.length; i++) {
+      const s = allScenes[i];
+      const dur = (s.endTime || 0) - (s.startTime || 0);
+      if (dur < 5) s.sceneDurationSeconds = 5;
+      else if (dur > 10) s.sceneDurationSeconds = 10;
+      else s.sceneDurationSeconds = Math.round(dur);
+    }
     allScenes.forEach((s, i) => { s.sceneIndex = i + 1; });
 
     console.log(`TOTAL: ${allScenes.length} scenes covering ${audioDuration.toFixed(1)}s`);
