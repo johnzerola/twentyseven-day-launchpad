@@ -717,6 +717,92 @@ const Scripts = () => {
               </Button>
             </div>
 
+            {/* Templates Panel */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <button onClick={() => setShowTemplates(!showTemplates)}
+                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <LayoutTemplate className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-xs">Templates de Roteiro</span>
+                  <Badge variant="secondary" className="text-[10px]">{templates.length}</Badge>
+                </div>
+                {showTemplates ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showTemplates && (
+                <div className="px-3 pb-3 space-y-1.5 border-t border-border/30 pt-2 max-h-[300px] overflow-y-auto">
+                  {loadingTemplates ? (
+                    <div className="flex items-center justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+                  ) : templates.map((tmpl: any) => {
+                    const examples = Array.isArray(tmpl.examples) ? tmpl.examples : [];
+                    return (
+                      <button key={tmpl.id} onClick={() => applyTemplate(tmpl)}
+                        className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-xs">{tmpl.title}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        {examples.length > 0 && (
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {examples.slice(0, 2).map((ex: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[9px] font-normal">{ex}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
+                          {tmpl.content.split('\n')[0]?.replace(/\[.*?\]/g, '').trim()}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Theme Suggestions Panel */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <button onClick={() => setShowThemeSuggestions(!showThemeSuggestions)}
+                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold text-xs">Sugestão de Temas</span>
+                  {themeSuggestions.length > 0 && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">{themeSuggestions.length}</Badge>}
+                </div>
+                {showThemeSuggestions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showThemeSuggestions && (
+                <div className="px-3 pb-3 space-y-2 border-t border-border/30 pt-2">
+                  <Button onClick={generateThemeSuggestions} disabled={loadingThemes} size="sm" className="w-full gap-2 text-xs">
+                    {loadingThemes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TrendingUp className="w-3.5 h-3.5" />}
+                    {loadingThemes ? 'Analisando tendências...' : 'Gerar Temas Virais com IA'}
+                  </Button>
+                  <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
+                    {themeSuggestions.map((theme: any, i: number) => (
+                      <button key={i} onClick={() => useTheme(theme)}
+                        className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium text-xs flex-1">{theme.title}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className={`text-[10px] font-bold ${theme.viral_score >= 8 ? 'text-emerald-400' : theme.viral_score >= 6 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                              🔥 {theme.viral_score}/10
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{theme.description}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <Badge variant="outline" className="text-[9px]">{theme.style}</Badge>
+                          <Badge variant="secondary" className="text-[9px]">{theme.estimated_duration}</Badge>
+                          {(theme.niche_tags || []).slice(0, 2).map((tag: string, j: number) => (
+                            <Badge key={j} variant="outline" className="text-[9px] font-normal">{tag}</Badge>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-primary/70 mt-1 italic">{theme.why_viral}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Viral Database Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <button onClick={() => setShowViralPanel(!showViralPanel)}
