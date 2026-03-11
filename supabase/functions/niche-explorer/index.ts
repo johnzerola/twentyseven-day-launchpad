@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Real RPM averages by country (USD) — 2024/2025 updated values
 const RPM_BY_COUNTRY: Record<string, { rpm: number; minMonths: number; avgMonths: number; currency: string; minPayout: number }> = {
   US: { rpm: 7.5, minMonths: 3, avgMonths: 6, currency: "USD", minPayout: 100 },
   GB: { rpm: 6.0, minMonths: 3, avgMonths: 7, currency: "GBP", minPayout: 60 },
@@ -24,12 +24,7 @@ const RPM_BY_COUNTRY: Record<string, { rpm: number; minMonths: number; avgMonths
   MX: { rpm: 1.0, minMonths: 7, avgMonths: 14, currency: "MXN", minPayout: 1500 },
 };
 
-// YPP requirements by country (all same: 1000 subs + 4000 watch hours OR 10M Shorts views)
-const YPP_REQUIREMENTS = {
-  subs: 1000,
-  watchHours: 4000,
-  shortsViews: 10000000,
-};
+const YPP_REQUIREMENTS = { subs: 1000, watchHours: 4000, shortsViews: 10000000 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -38,28 +33,60 @@ serve(async (req) => {
     const { niche, country, language } = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const region = country || "BR";
     const lang = language || "pt";
     const countryData = RPM_BY_COUNTRY[region] || RPM_BY_COUNTRY.BR;
     let baseRpm = countryData.rpm;
 
-    // === DEEP IA: Query channel_intelligence + niche_database ===
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.4");
-    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Get real RPM/saturation from niche_database
-    const { data: nicheDbRows } = await sb.from("niche_database")
-      .select("*")
-      .ilike("name", `%${niche}%`)
-      .limit(5);
+    // === STEP 0: AI generates multiple search queries for deeper discovery ===
+    const queryGenRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: "Generate 4 different YouTube search queries to find channels and videos in a niche. Include the main query, a sub-niche query, a trending angle, and a competitor discovery query. Return JSON array of strings only." },
+          { role: "user", content: `Niche: "${niche}", region: ${region}, language: ${lang}. Return 4 search queries as JSON array.` },
+        ],
+      }),
+    });
     
+    let searchQueries = [niche];
+    if (queryGenRes.ok) {
+      try {
+        const qData = await queryGenRes.json();
+        const content = qData.choices?.[0]?.message?.content || "";
+        const parsed = JSON.parse(content.replace(/```json?\n?/g, "").replace(/```/g, "").trim());
+        if (Array.isArray(parsed) && parsed.length > 0) searchQueries = parsed.slice(0, 4);
+      } catch { /* use default */ }
+    }
+
+    // === STEP 1: Query internal databases in parallel ===
+    const [nicheDbRes, intelRes, viralRes] = await Promise.all([
+      sb.from("niche_database").select("*").ilike("name", `%${niche}%`).limit(5),
+      sb.from("channel_intelligence")
+        .select("channel_name, youtube_channel_id, subscribers, avg_views, niche, style, growth_rate, rpm_estimate, language, country, viral_patterns, upload_frequency, is_faceless, visual_style_notes")
+        .or(`niche.ilike.%${niche}%,sub_niche.ilike.%${niche}%`)
+        .order("avg_views", { ascending: false })
+        .limit(15),
+      sb.from("viral_titles_db")
+        .select("title, views, likes, channel_name, channel_id, niche, country, why_viral, title_pattern, emotional_triggers, seo_score, published_at")
+        .ilike("niche", `%${niche}%`)
+        .order("views", { ascending: false })
+        .limit(30),
+    ]);
+
+    const nicheDbRows = nicheDbRes.data || [];
+    const intelChannels = intelRes.data || [];
+    const viralTitles = viralRes.data || [];
+
     let nicheDbContext = "";
-    if (nicheDbRows?.length) {
+    if (nicheDbRows.length) {
       const bestMatch = nicheDbRows[0];
       if (bestMatch.rpm_estimate && bestMatch.rpm_estimate > 0) baseRpm = bestMatch.rpm_estimate;
       nicheDbContext = nicheDbRows.map((n: any) => 
@@ -67,57 +94,75 @@ serve(async (req) => {
       ).join("\n");
     }
 
-    // Get top channels from channel_intelligence for this niche
-    const { data: intelChannels } = await sb.from("channel_intelligence")
-      .select("channel_name, youtube_channel_id, subscribers, avg_views, niche, style, growth_rate, rpm_estimate, language, country, viral_patterns, upload_frequency")
-      .or(`niche.ilike.%${niche}%,sub_niche.ilike.%${niche}%`)
-      .order("avg_views", { ascending: false })
-      .limit(10);
-
     let intelContext = "";
     let directCompetitors: any[] = [];
-    if (intelChannels?.length) {
+    if (intelChannels.length) {
       directCompetitors = intelChannels.slice(0, 5).map((c: any) => ({
-        id: c.youtube_channel_id,
-        name: c.channel_name,
-        subscribers: c.subscribers,
-        avgViews: c.avg_views,
-        style: c.style,
-        growthRate: c.growth_rate,
-        rpmEstimate: c.rpm_estimate,
-        uploadFrequency: c.upload_frequency,
+        id: c.youtube_channel_id, name: c.channel_name, subscribers: c.subscribers,
+        avgViews: c.avg_views, style: c.style, growthRate: c.growth_rate,
+        rpmEstimate: c.rpm_estimate, uploadFrequency: c.upload_frequency, isFaceless: c.is_faceless,
       }));
       intelContext = intelChannels.map((c: any) =>
-        `[DB] ${c.channel_name}: ${c.subscribers} subs, avg ${c.avg_views} views, style=${c.style}, growth=${c.growth_rate}, RPM=$${c.rpm_estimate}, freq=${c.upload_frequency}`
+        `[DB] ${c.channel_name}: ${c.subscribers} subs, avg ${c.avg_views} views, style=${c.style}, growth=${c.growth_rate}, RPM=$${c.rpm_estimate}, freq=${c.upload_frequency}, faceless=${c.is_faceless}`
       ).join("\n");
     }
 
-    // Use random order parameter to get different results each time
-    const orderOptions = ["viewCount", "relevance", "date"];
-    const randomOrder = orderOptions[Math.floor(Math.random() * orderOptions.length)];
-    
-    // Vary the search window (14-60 days) for freshness
+    // Build viral titles context
+    const viralContext = viralTitles.length > 0 
+      ? viralTitles.map((t: any) => 
+          `"${t.title}" by ${t.channel_name} — ${t.views} views, pattern: ${t.title_pattern}, triggers: ${(t.emotional_triggers || []).join(",")} | why: ${t.why_viral || ''}`
+        ).join("\n")
+      : "";
+
+    // Viral pattern analysis
+    const viralPatterns: Record<string, number> = {};
+    const viralTriggers: Record<string, number> = {};
+    viralTitles.forEach((t: any) => {
+      if (t.title_pattern) viralPatterns[t.title_pattern] = (viralPatterns[t.title_pattern] || 0) + 1;
+      (t.emotional_triggers || []).forEach((tr: string) => {
+        viralTriggers[tr] = (viralTriggers[tr] || 0) + 1;
+      });
+    });
+    const topPatterns = Object.entries(viralPatterns).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topTriggers = Object.entries(viralTriggers).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+    // === STEP 2: Multiple YouTube searches in parallel ===
     const daysBack = 14 + Math.floor(Math.random() * 46);
     const after = new Date(Date.now() - daysBack * 86400000).toISOString();
 
-    // 1. Search videos
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(niche)}&maxResults=50&order=${randomOrder}&regionCode=${region}&relevanceLanguage=${lang}&publishedAfter=${after}&key=${YOUTUBE_API_KEY}`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    if (searchData.error) throw new Error(searchData.error.message);
+    const ytSearches = await Promise.all(
+      searchQueries.slice(0, 3).map((q: string, i: number) => {
+        const order = ["viewCount", "relevance", "date"][i % 3];
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(q)}&maxResults=40&order=${order}&regionCode=${region}&relevanceLanguage=${lang}&publishedAfter=${after}&key=${YOUTUBE_API_KEY}`;
+        return fetch(url).then(r => r.json()).catch(() => ({ items: [] }));
+      })
+    );
 
-    if (!searchData.items?.length) {
-      return new Response(JSON.stringify({ channels: [], trending: [], analysis: null }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Deduplicate videos
+    const seenVideoIds = new Set<string>();
+    const allSearchItems: any[] = [];
+    ytSearches.forEach((sd: any) => {
+      (sd.items || []).forEach((item: any) => {
+        const vid = item.id?.videoId;
+        if (vid && !seenVideoIds.has(vid)) {
+          seenVideoIds.add(vid);
+          allSearchItems.push(item);
+        }
       });
+    });
+
+    if (!allSearchItems.length) {
+      return new Response(JSON.stringify({ 
+        channels: [], trending: [], analysis: null, viralDbData: { titles: viralTitles, topPatterns, topTriggers },
+        directCompetitors, meta: { niche, country: region, baseRpm, totalChannels: 0, totalVideos: 0, timestamp: Date.now(), countryData: { ...countryData, ypp: YPP_REQUIREMENTS }, searchQueries },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 2. Get video stats
-    const videoIds = searchData.items.map((i: any) => i.id.videoId).filter(Boolean).join(",");
+    // === STEP 3: Get video + channel stats ===
+    const videoIds = allSearchItems.map((i: any) => i.id.videoId).filter(Boolean).join(",");
     const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`);
     const vData = await vRes.json();
 
-    // 3. Get channel stats
     const channelIds = [...new Set((vData.items || []).map((v: any) => v.snippet.channelId))] as string[];
     const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${channelIds.slice(0, 50).join(",")}&key=${YOUTUBE_API_KEY}`);
     const cData = await cRes.json();
@@ -128,13 +173,10 @@ serve(async (req) => {
       const totalViews = parseInt(ch.statistics.viewCount || "0");
       const videoCount = parseInt(ch.statistics.videoCount || "0");
       chMap[ch.id] = {
-        id: ch.id,
-        name: ch.snippet.title,
+        id: ch.id, name: ch.snippet.title,
         thumbnail: ch.snippet.thumbnails?.medium?.url,
         description: ch.snippet.description?.slice(0, 200) || "",
-        subscribers: subs,
-        totalViews,
-        videoCount,
+        subscribers: subs, totalViews, videoCount,
         avgViews: videoCount > 0 ? Math.floor(totalViews / videoCount) : 0,
         country: ch.snippet.country || "",
         keywords: ch.brandingSettings?.channel?.keywords || "",
@@ -142,7 +184,7 @@ serve(async (req) => {
       };
     });
 
-    // 4. Build trending videos
+    // Build trending videos
     const trending = (vData.items || []).map((v: any) => {
       const views = parseInt(v.statistics?.viewCount || "0");
       const likes = parseInt(v.statistics?.likeCount || "0");
@@ -153,16 +195,11 @@ serve(async (req) => {
       const daysAge = hoursAge / 24;
 
       return {
-        id: v.id,
-        title: v.snippet.title,
-        channelTitle: v.snippet.channelTitle,
-        channelId: v.snippet.channelId,
-        thumbnail: v.snippet.thumbnails?.medium?.url,
-        views, likes, comments,
-        publishedAt: v.snippet.publishedAt,
+        id: v.id, title: v.snippet.title, channelTitle: v.snippet.channelTitle,
+        channelId: v.snippet.channelId, thumbnail: v.snippet.thumbnails?.medium?.url,
+        views, likes, comments, publishedAt: v.snippet.publishedAt,
         duration: v.contentDetails?.duration || "",
-        vph: Math.round(views / hoursAge),
-        vpd: Math.round(views / Math.max(1, daysAge)),
+        vph: Math.round(views / hoursAge), vpd: Math.round(views / Math.max(1, daysAge)),
         engagementRate: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
         commentRate: views > 0 ? parseFloat(((comments / views) * 100).toFixed(3)) : 0,
         viewsPerSub: ch?.subscribers > 0 ? parseFloat((views / ch.subscribers).toFixed(2)) : 0,
@@ -172,7 +209,7 @@ serve(async (req) => {
       };
     });
 
-    // 5. Group by channel
+    // Group by channel
     const channelGroups: Record<string, any[]> = {};
     trending.forEach((v: any) => {
       if (!channelGroups[v.channelId]) channelGroups[v.channelId] = [];
@@ -193,7 +230,6 @@ serve(async (req) => {
         (avgEngagement * 5) + (Math.min(avgVph, 2000) / 20) +
         (ch.subscribers < 10000 ? 20 : ch.subscribers < 100000 ? 10 : 5)
       ));
-
       const isMonetized = ch.subscribers >= 1000 && ch.totalViews >= 240000;
 
       return {
@@ -204,9 +240,9 @@ serve(async (req) => {
       };
     }).filter(Boolean).sort((a: any, b: any) => b.viralScore - a.viralScore);
 
-    // 6. AI Analysis
+    // === STEP 4: AI Analysis with ALL data ===
     const topChannelsSummary = channels.slice(0, 15).map((c: any) => 
-      `${c.name} (${c.subscribers} subs, ${c.videoCount} vids, avg ${c.avgViews} views/vid, ${c.outlierCount} outliers, engagement ${c.avgEngagement}%, ${c.isMonetized ? 'monetized' : 'not monetized'}, country: ${c.country}). Top videos: ${c.videos.slice(0, 3).map((v: any) => `"${v.title}" (${v.views} views, ${v.vph} v/h)`).join("; ")}`
+      `${c.name} (${c.subscribers} subs, ${c.videoCount} vids, avg ${c.avgViews} views/vid, ${c.outlierCount} outliers, engagement ${c.avgEngagement}%, ${c.isMonetized ? 'monetized' : 'not monetized'}, country: ${c.country}). Top: ${c.videos.slice(0, 3).map((v: any) => `"${v.title}" (${v.views} views, ${v.vph} v/h)`).join("; ")}`
     ).join("\n");
 
     const topTrendingSummary = trending.slice(0, 20).map((v: any) => 
@@ -218,10 +254,7 @@ serve(async (req) => {
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
@@ -231,32 +264,39 @@ serve(async (req) => {
 
 CRITICAL RULES:
 - Revenue projections MUST be realistic for ${region} (RPM: $${baseRpm})
-- Monetization timeline MUST reflect that in ${region}, channels typically take ${countryData.avgMonths} months to monetize (range: ${countryData.minMonths}-${countryData.avgMonths * 1.5} months)
+- Monetization timeline MUST reflect that in ${region}, channels typically take ${countryData.avgMonths} months (range: ${countryData.minMonths}-${Math.round(countryData.avgMonths * 1.5)} months)
 - YPP requires ${YPP_REQUIREMENTS.subs} subscribers + ${YPP_REQUIREMENTS.watchHours} watch hours
 - Revenue projections: Month 1-3 should show $0 for most niches (not monetized yet)
-- Base your content strategy on ACTUAL patterns you see in the trending video titles provided
-- Cross-reference with our INTERNAL DATABASE of channels and niches when available
+- Base content strategy on ACTUAL patterns from trending videos AND viral database
+- Cross-reference with internal databases when available
 - All text in Portuguese (BR)`
           },
           {
             role: "user",
             content: `Analyze "${niche}" niche in ${region} (RPM: $${baseRpm}, avg monetization: ${countryData.avgMonths} months).
 
-REAL YOUTUBE API DATA (${new Date().toISOString()}):
-=== TOP CHANNELS ===
+REAL YOUTUBE API DATA (${new Date().toISOString()}, ${searchQueries.length} searches performed):
+=== TOP CHANNELS (${channels.length} found via API) ===
 ${topChannelsSummary || "No channels found"}
 
 === TRENDING VIDEOS (last ${daysBack} days) ===
 ${topTrendingSummary || "No trending"}
 
+=== VIRAL DATABASE — ${viralTitles.length} PROVEN VIRAL TITLES IN THIS NICHE ===
+${viralContext || "No viral titles in database for this niche"}
+
+Top viral patterns: ${topPatterns.map(([p, c]) => `${p} (${c}x)`).join(", ") || "none"}
+Top emotional triggers: ${topTriggers.map(([t, c]) => `${t} (${c}x)`).join(", ") || "none"}
+
 === INTERNAL DATABASE — NICHE DATA ===
 ${nicheDbContext || "No internal niche data"}
 
-=== INTERNAL DATABASE — CHANNELS IN THIS NICHE ===
-${intelContext || "No internal channel data for this niche"}
+=== INTERNAL DATABASE — ${intelChannels.length} ANALYZED CHANNELS ===
+${intelContext || "No internal channel data"}
 
 === STATS ===
-Channels: ${channels.length} | Videos: ${trending.length}
+Channels via API: ${channels.length} | Videos: ${trending.length}
+Channels in DB: ${intelChannels.length} | Viral titles in DB: ${viralTitles.length}
 Avg engagement: ${(trending.reduce((s: number, v: any) => s + v.engagementRate, 0) / Math.max(1, trending.length)).toFixed(2)}%
 Outliers (3x+): ${trending.filter((v: any) => v.isOutlier).length} | Super (10x+): ${trending.filter((v: any) => v.isSuperOutlier).length}
 Monetized: ${monetizedCount}/${channels.length} | Avg subs: ${avgSubs}
@@ -282,8 +322,8 @@ Provide intelligence report with REALISTIC monetization projections for ${region
                 facelessViability: { type: "number" },
                 monetizationSpeed: { type: "string", enum: ["Ultra Rápida", "Rápida", "Média", "Lenta"] },
                 audienceSize: { type: "string" },
-                monthsToMonetize: { type: "number", description: "Realistic months to reach YPP for this niche+country" },
-                monthsToFirstPayout: { type: "number", description: "Months until first AdSense payout" },
+                monthsToMonetize: { type: "number" },
+                monthsToFirstPayout: { type: "number" },
                 
                 radarMetrics: {
                   type: "object",
@@ -312,7 +352,7 @@ Provide intelligence report with REALISTIC monetization projections for ${region
                     properties: {
                       month: { type: "number" }, views: { type: "number" },
                       revenue: { type: "number" }, subs: { type: "number" },
-                      milestone: { type: "string", description: "Key milestone at this month, e.g. 'YPP eligible', 'First payout', empty if none" },
+                      milestone: { type: "string" },
                     },
                     required: ["month", "views", "revenue", "subs", "milestone"],
                     additionalProperties: false,
@@ -338,16 +378,15 @@ Provide intelligence report with REALISTIC monetization projections for ${region
                   items: {
                     type: "object",
                     properties: {
-                      type: { type: "string", description: "Strategy type: 'hook_pattern', 'title_formula', 'content_gap', 'viral_format'" },
+                      type: { type: "string" },
                       name: { type: "string" },
                       description: { type: "string" },
-                      example: { type: "string", description: "Real example from the data" },
-                      effectiveness: { type: "number", description: "0-100" },
+                      example: { type: "string" },
+                      effectiveness: { type: "number" },
                     },
                     required: ["type", "name", "description", "example", "effectiveness"],
                     additionalProperties: false,
                   },
-                  description: "Actionable content strategies based on real patterns in the data"
                 },
 
                 retentionBlueprint: {
@@ -380,14 +419,45 @@ Provide intelligence report with REALISTIC monetization projections for ${region
                     type: "object",
                     properties: {
                       channelId: { type: "string" },
-                      strength: { type: "string", description: "What this competitor does well" },
-                      weakness: { type: "string", description: "Where they leave opportunity" },
-                      strategyToCompete: { type: "string", description: "How to compete with this channel" },
+                      strength: { type: "string" },
+                      weakness: { type: "string" },
+                      strategyToCompete: { type: "string" },
                     },
                     required: ["channelId", "strength", "weakness", "strategyToCompete"],
                     additionalProperties: false,
                   },
-                  description: "Top 5 competitor analysis"
+                },
+
+                viralTitleFormulas: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      formula: { type: "string", description: "Title formula pattern e.g. 'Number + Shocking Fact + Niche'" },
+                      example: { type: "string" },
+                      avgViews: { type: "string" },
+                      emotionalTrigger: { type: "string" },
+                    },
+                    required: ["formula", "example", "avgViews", "emotionalTrigger"],
+                    additionalProperties: false,
+                  },
+                  description: "5-8 proven title formulas from the viral database and trending data"
+                },
+
+                hiddenChannels: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      whyInteresting: { type: "string" },
+                      whatToCopy: { type: "string" },
+                      estimatedRpm: { type: "number" },
+                    },
+                    required: ["name", "whyInteresting", "whatToCopy"],
+                    additionalProperties: false,
+                  },
+                  description: "Interesting channels discovered that are worth watching/copying strategies from"
                 },
 
                 warnings: { type: "array", items: { type: "string" } },
@@ -401,6 +471,7 @@ Provide intelligence report with REALISTIC monetization projections for ${region
                 "radarMetrics", "revenueSplit", "revenueProjection", "subNiches",
                 "contentStrategy", "retentionBlueprint",
                 "channelClassifications", "competitorInsights",
+                "viralTitleFormulas", "hiddenChannels",
                 "warnings", "opportunities", "deepInsight"
               ],
               additionalProperties: false,
@@ -439,12 +510,20 @@ Provide intelligence report with REALISTIC monetization projections for ${region
       trending: trending.slice(0, 30),
       analysis,
       directCompetitors,
+      viralDbData: {
+        titles: viralTitles.slice(0, 15),
+        topPatterns,
+        topTriggers,
+        totalInDb: viralTitles.length,
+      },
       meta: {
         niche, country: region, baseRpm, totalChannels: channels.length,
         totalVideos: trending.length, timestamp: Date.now(),
         countryData: { ...countryData, ypp: YPP_REQUIREMENTS },
-        nicheDbMatches: nicheDbRows?.length || 0,
-        intelChannelMatches: intelChannels?.length || 0,
+        nicheDbMatches: nicheDbRows.length,
+        intelChannelMatches: intelChannels.length,
+        searchQueries,
+        viralTitlesInDb: viralTitles.length,
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

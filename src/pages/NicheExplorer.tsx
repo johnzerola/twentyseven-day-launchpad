@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock, ExternalLink, Swords, Timer, BadgeDollarSign, History, Trash2, FolderOpen } from 'lucide-react';
+import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock, ExternalLink, Swords, Timer, BadgeDollarSign, History, Trash2, FolderOpen, Database, Sparkles, Hash } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -141,6 +141,8 @@ const NicheExplorer = () => {
   const channels = data?.channels || [];
   const trending = data?.trending || [];
   const countryMeta = data?.meta?.countryData;
+  const viralDbData = data?.viralDbData;
+  const searchQueries = data?.meta?.searchQueries || [];
   const filteredChannels = filterFaceless ? channels.filter((c: any) => c.faceless) : channels;
 
   const radarData = a?.radarMetrics ? [
@@ -257,12 +259,25 @@ const NicheExplorer = () => {
 
         {/* Results */}
         {data && a && (
+          <div className="space-y-4">
+          {/* Data sources info */}
+          {data?.meta && (
+            <div className="flex gap-2 flex-wrap text-[10px]">
+              <Badge variant="outline" className="gap-1"><Search className="w-3 h-3" /> {searchQueries.length} buscas AI</Badge>
+              <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {data.meta.totalChannels} canais via API</Badge>
+              <Badge variant="outline" className="gap-1"><Flame className="w-3 h-3" /> {data.meta.totalVideos} vídeos</Badge>
+              {data.meta.viralTitlesInDb > 0 && <Badge variant="outline" className="gap-1 text-accent border-accent/30"><Database className="w-3 h-3" /> {data.meta.viralTitlesInDb} títulos virais do DB</Badge>}
+              {data.meta.intelChannelMatches > 0 && <Badge variant="outline" className="gap-1 text-primary border-primary/30"><Brain className="w-3 h-3" /> {data.meta.intelChannelMatches} canais internos</Badge>}
+            </div>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="bg-secondary/50 p-1 h-auto flex-wrap">
               <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary/20"><Target className="w-4 h-4" /> Inteligência</TabsTrigger>
+              <TabsTrigger value="viral-db" className="gap-2 data-[state=active]:bg-primary/20"><Database className="w-4 h-4" /> Viral Patterns {viralDbData?.totalInDb > 0 ? `(${viralDbData.totalInDb})` : ''}</TabsTrigger>
               <TabsTrigger value="strategy" className="gap-2 data-[state=active]:bg-primary/20"><Zap className="w-4 h-4" /> Estratégia</TabsTrigger>
               <TabsTrigger value="revenue" className="gap-2 data-[state=active]:bg-primary/20"><DollarSign className="w-4 h-4" /> Projeção $</TabsTrigger>
-              <TabsTrigger value="channels" className="gap-2 data-[state=active]:bg-primary/20"><Users className="w-4 h-4" /> Concorrentes ({filteredChannels.length})</TabsTrigger>
+              <TabsTrigger value="channels" className="gap-2 data-[state=active]:bg-primary/20"><Users className="w-4 h-4" /> Canais ({filteredChannels.length})</TabsTrigger>
               <TabsTrigger value="trending" className="gap-2 data-[state=active]:bg-primary/20"><Flame className="w-4 h-4" /> Trending</TabsTrigger>
             </TabsList>
 
@@ -502,6 +517,129 @@ const NicheExplorer = () => {
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            {/* === TAB: VIRAL DB PATTERNS === */}
+            <TabsContent value="viral-db" className="space-y-4">
+              {/* Viral Title Formulas from AI */}
+              {a.viralTitleFormulas?.length > 0 && (
+                <div className="glass rounded-2xl p-5">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-accent" /> Fórmulas de Títulos Virais Comprovadas
+                  </h3>
+                  <div className="space-y-2">
+                    {a.viralTitleFormulas.map((f: any, i: number) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                        className="bg-secondary/30 rounded-xl p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{f.formula}</p>
+                            <div className="flex items-center gap-2 mt-1.5 bg-secondary/50 rounded-lg px-3 py-2">
+                              <span className="text-[10px] text-muted-foreground">Ex:</span>
+                              <p className="text-xs flex-1 italic">"{f.example}"</p>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0" onClick={() => copyText(f.example)}>
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <Badge variant="secondary" className="text-[10px]">{f.avgViews}</Badge>
+                            <p className="text-[9px] text-muted-foreground mt-1">{f.emotionalTrigger}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Real viral patterns from DB */}
+              {viralDbData?.topPatterns?.length > 0 && (
+                <div className="grid lg:grid-cols-2 gap-4">
+                  <div className="glass rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-primary" /> Padrões de Título Mais Usados
+                    </h3>
+                    <div className="space-y-2">
+                      {viralDbData.topPatterns.map(([pattern, count]: [string, number], i: number) => (
+                        <div key={i} className="flex items-center gap-3 bg-secondary/30 rounded-lg p-3">
+                          <span className="text-lg font-bold text-primary w-8 text-center">{count}x</span>
+                          <p className="text-xs flex-1">{pattern}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="glass rounded-2xl p-5">
+                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-accent" /> Gatilhos Emocionais Mais Eficazes
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {viralDbData.topTriggers.map(([trigger, count]: [string, number], i: number) => (
+                        <Badge key={i} variant="outline" className="text-xs gap-1.5 py-1.5 px-3">
+                          {trigger} <span className="text-primary font-bold">{count}x</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Top viral titles from DB */}
+              {viralDbData?.titles?.length > 0 && (
+                <div className="glass rounded-2xl p-5">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <Database className="w-4 h-4 text-accent" /> Top Títulos Virais do Banco de Dados ({viralDbData.totalInDb} total)
+                  </h3>
+                  <div className="space-y-2">
+                    {viralDbData.titles.slice(0, 10).map((t: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 bg-secondary/30 rounded-lg p-3 group">
+                        <span className="text-sm font-bold text-muted-foreground w-6 shrink-0">#{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{t.title}</p>
+                          <div className="flex gap-2 text-[10px] text-muted-foreground mt-0.5">
+                            <span>{t.channel_name}</span>
+                            <span>{formatNumber(t.views)} views</span>
+                            {t.title_pattern && <span className="text-primary">{t.title_pattern}</span>}
+                          </div>
+                        </div>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => copyText(t.title)}>
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden Channels from AI */}
+              {a.hiddenChannels?.length > 0 && (
+                <div className="glass rounded-2xl p-5 border border-primary/20">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" /> Canais Ocultos Descobertos pela IA
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {a.hiddenChannels.map((ch: any, i: number) => (
+                      <div key={i} className="bg-secondary/30 rounded-xl p-4">
+                        <p className="text-sm font-semibold">{ch.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">{ch.whyInteresting}</p>
+                        <div className="mt-2 bg-primary/5 rounded-lg p-2">
+                          <p className="text-[10px] text-primary">🎯 O que copiar: {ch.whatToCopy}</p>
+                        </div>
+                        {ch.estimatedRpm > 0 && <Badge variant="secondary" className="text-[9px] mt-2">${ch.estimatedRpm} RPM</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!viralDbData?.titles?.length && !a.viralTitleFormulas?.length) && (
+                <div className="glass rounded-2xl p-8 text-center text-muted-foreground">
+                  <Database className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p>Nenhum dado viral encontrado no banco para este nicho.</p>
+                  <p className="text-xs mt-1">Tente buscar com outro termo ou explore nichos populares.</p>
+                </div>
+              )}
             </TabsContent>
 
             {/* === TAB: STRATEGY (replaced Hooks & Titles) === */}
@@ -759,6 +897,7 @@ const NicheExplorer = () => {
               )}
             </TabsContent>
           </Tabs>
+          </div>
         )}
 
         {/* Empty state */}
