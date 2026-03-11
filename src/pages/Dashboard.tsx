@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChatbotWidget } from '@/components/dashboard/ChatbotWidget';
+
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatNumber } from '@/lib/formatters';
 
@@ -386,7 +386,7 @@ const Dashboard = () => {
           </div>
         </motion.div>
       </div>
-      <ChatbotWidget />
+      
     </DashboardLayout>
   );
 };
