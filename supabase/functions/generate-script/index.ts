@@ -112,6 +112,9 @@ serve(async (req) => {
 🧠 BASE DE CONHECIMENTO YOUTUBE (USE ATIVAMENTE):
 ${ytKnowledge}
 
+📡 INTELIGÊNCIA DE CANAIS VIRAIS FACELESS (REFERÊNCIAS REAIS):
+${channelIntel || "Sem dados de canais disponíveis"}
+
 📝 TÉCNICAS DE ROTEIRO COMPROVADAS (APLIQUE TODAS):
 ${scriptKnowledge}
 
