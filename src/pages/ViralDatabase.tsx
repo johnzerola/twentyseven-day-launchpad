@@ -226,7 +226,7 @@ const ViralDatabase = () => {
       .from('channel_intelligence' as any)
       .select('*')
       .order('subscribers', { ascending: false })
-      .limit(500);
+      .limit(1000);
 
     if (error) {
       console.error('Error loading channels:', error);
