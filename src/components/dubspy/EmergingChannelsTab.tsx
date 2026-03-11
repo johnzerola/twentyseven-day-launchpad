@@ -94,6 +94,60 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
 
   const activeFilterCount = [minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore].filter(v => v).length;
 
+  const tabKey = mode === 'emerging' ? 'emerging' : 'escapees';
+
+  // Load last saved search for this mode on mount
+  useEffect(() => {
+    const loadLast = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('saved_searches')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('tab', tabKey)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.results_json) {
+        setChannels((data.results_json as any) || []);
+        setMeta((data.channel_info_json as any) || null);
+        const f = (data.filters_json as any) || {};
+        if (f.niche) setNiche(f.niche);
+        if (f.country) setCountry(f.country);
+        if (f.language) setLanguage(f.language);
+        setHasSearched(true);
+      }
+    };
+    loadLast();
+  }, [tabKey]);
+
+  const persistSearch = useCallback(async (nicheQ: string, chs: ChannelResult[], metaData: any) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const filters = { niche: nicheQ, country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore };
+    const { data: existing } = await supabase
+      .from('saved_searches')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('query', nicheQ)
+      .eq('tab', tabKey)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from('saved_searches').update({
+        results_json: chs as any,
+        channel_info_json: metaData as any,
+        filters_json: filters as any,
+        updated_at: new Date().toISOString(),
+      }).eq('id', existing.id);
+    } else {
+      await supabase.from('saved_searches').insert({
+        user_id: user.id, query: nicheQ, tab: tabKey,
+        results_json: chs as any, channel_info_json: metaData as any, filters_json: filters as any,
+      });
+    }
+  }, [country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, tabKey]);
+
   const scan = async () => {
     const nicheQuery = niche || customNiche;
     if (!nicheQuery.trim()) { toast.error('Selecione ou digite um nicho'); return; }
@@ -119,9 +173,12 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setChannels(data?.channels || []);
-      setMeta(data?.meta || null);
-      if (!data?.channels?.length) toast.info('Nenhum canal encontrado. Tente ampliar os filtros.');
+      const chs = data?.channels || [];
+      const metaData = data?.meta || null;
+      setChannels(chs);
+      setMeta(metaData);
+      if (!chs.length) toast.info('Nenhum canal encontrado. Tente ampliar os filtros.');
+      await persistSearch(nicheQuery, chs, metaData);
     } catch (err: any) {
       toast.error(err.message || 'Erro na varredura');
     } finally {
