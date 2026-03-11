@@ -904,6 +904,63 @@ export type Database = {
         }
         Relationships: []
       }
+      viral_titles_db: {
+        Row: {
+          channel_id: string | null
+          channel_name: string | null
+          country: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          emotional_triggers: string[] | null
+          id: string
+          language: string | null
+          likes: number | null
+          niche: string | null
+          published_at: string | null
+          seo_score: number | null
+          title: string
+          title_pattern: string | null
+          views: number
+          why_viral: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          channel_name?: string | null
+          country?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          emotional_triggers?: string[] | null
+          id?: string
+          language?: string | null
+          likes?: number | null
+          niche?: string | null
+          published_at?: string | null
+          seo_score?: number | null
+          title: string
+          title_pattern?: string | null
+          views?: number
+          why_viral?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          channel_name?: string | null
+          country?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          emotional_triggers?: string[] | null
+          id?: string
+          language?: string | null
+          likes?: number | null
+          niche?: string | null
+          published_at?: string | null
+          seo_score?: number | null
+          title?: string
+          title_pattern?: string | null
+          views?: number
+          why_viral?: string | null
+        }
+        Relationships: []
+      }
       youtube_knowledge: {
         Row: {
           category: string
