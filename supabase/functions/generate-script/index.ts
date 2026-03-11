@@ -298,12 +298,17 @@ PRIMEIRO: Uma linha com scores no formato exato:
 
 DEPOIS: O roteiro COMPLETO reescrito (narração + ---EXTRAS---)
 
+DEPOIS DOS EXTRAS, adicione um bloco ---SCENE_BLUEPRINT--- com JSON array:
+[{"block": 1, "narrative_summary": "resumo do bloco", "mood": "tense/epic/mysterious/emotional/action", "visual_hint": "sugestão visual curta", "camera_suggestion": "tipo de câmera", "characters_present": ["nome1"]}, ...]
+Cada bloco = ~30-45 segundos de narração. O blueprint guia a geração visual posterior.
+---END_SCENE_BLUEPRINT---
+
 REGRAS:
-- ZERO anotações técnicas, ZERO timestamps
+- ZERO anotações técnicas, ZERO timestamps NO ROTEIRO (blueprint é separado)
 - Mínimo ${targetWords} palavras
 - Idioma: ${language || 'português'}
 - Valores em dólares ($)
-- SOMENTE texto falado`;
+- SOMENTE texto falado na parte de narração`;
 
     const phase2Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
