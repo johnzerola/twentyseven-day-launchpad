@@ -984,6 +984,86 @@ const Scripts = () => {
                             </div>
                           </div>
                         )}
+
+                        {/* YouTube Real-Time Analysis */}
+                        {intelligenceBriefing.briefing?.youtube_real_time_analysis && (
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">🔴 Pesquisa YouTube em Tempo Real</p>
+                            <div className="bg-muted/30 rounded-lg p-2 text-[10px] space-y-1">
+                              <p className="text-muted-foreground">{intelligenceBriefing.briefing.youtube_real_time_analysis.videos_found || 0} vídeos encontrados com tópico similar</p>
+                              {intelligenceBriefing.briefing.youtube_real_time_analysis.top_performing_video && (
+                                <p>🏆 Top: {intelligenceBriefing.briefing.youtube_real_time_analysis.top_performing_video}</p>
+                              )}
+                              {intelligenceBriefing.briefing.youtube_real_time_analysis.optimal_duration && (
+                                <p>⏱ Duração ideal: {intelligenceBriefing.briefing.youtube_real_time_analysis.optimal_duration}</p>
+                              )}
+                            </div>
+
+                            {/* Why top videos work */}
+                            {intelligenceBriefing.briefing.youtube_real_time_analysis.why_top_videos_work?.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] text-muted-foreground">Por que os top vídeos funcionam:</p>
+                                {intelligenceBriefing.briefing.youtube_real_time_analysis.why_top_videos_work.slice(0, 4).map((r: string, i: number) => (
+                                  <div key={i} className="text-[10px] bg-primary/5 rounded px-2 py-1">🎯 {r}</div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Successful angles */}
+                            {intelligenceBriefing.briefing.youtube_real_time_analysis.successful_angles?.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] text-muted-foreground">Ângulos que funcionam:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {intelligenceBriefing.briefing.youtube_real_time_analysis.successful_angles.slice(0, 5).map((a: string, i: number) => (
+                                    <Badge key={i} className="bg-primary/10 text-primary border-primary/20 text-[9px]">{a}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Underexplored angles */}
+                            {intelligenceBriefing.briefing.youtube_real_time_analysis.underexplored_angles?.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] text-muted-foreground">⚡ Ângulos inexplorados (sua oportunidade):</p>
+                                {intelligenceBriefing.briefing.youtube_real_time_analysis.underexplored_angles.slice(0, 4).map((a: string, i: number) => (
+                                  <div key={i} className="text-[10px] bg-accent/10 rounded px-2 py-1 text-accent-foreground">💡 {a}</div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Title patterns */}
+                            {intelligenceBriefing.briefing.youtube_real_time_analysis.common_title_patterns?.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] text-muted-foreground">Padrões de título que convertem:</p>
+                                {intelligenceBriefing.briefing.youtube_real_time_analysis.common_title_patterns.slice(0, 3).map((t: string, i: number) => (
+                                  <div key={i} className="text-[10px] text-muted-foreground">📝 {t}</div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Best tags */}
+                            {intelligenceBriefing.briefing.youtube_real_time_analysis.best_tags?.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {intelligenceBriefing.briefing.youtube_real_time_analysis.best_tags.slice(0, 8).map((tag: string, i: number) => (
+                                  <Badge key={i} variant="secondary" className="text-[8px]">#{tag}</Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Top YouTube Videos Found */}
+                        {intelligenceBriefing.metadata?.topYoutubeVideos?.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Vídeos Referência (YouTube)</p>
+                            {intelligenceBriefing.metadata.topYoutubeVideos.slice(0, 3).map((v: any, i: number) => (
+                              <div key={i} className="bg-muted/20 rounded px-2 py-1.5 text-[10px]">
+                                <p className="font-medium line-clamp-1">"{v.title}"</p>
+                                <p className="text-muted-foreground">{v.channelTitle} • {parseInt(v.views).toLocaleString()} views • {v.engagement} eng.</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
