@@ -69,14 +69,8 @@ const NicheExplorer = () => {
       analysis_json: result,
       score: result?.analysis?.score || 0,
     } as any);
-    // Refresh list
-    const { data: saved } = await supabase
-      .from('saved_niche_analyses')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    if (saved) setSavedAnalyses(saved);
+    analysesPag.resetPage();
+    loadAnalyses();
   };
 
   const deleteAnalysis = async (id: string) => {
