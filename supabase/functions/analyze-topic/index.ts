@@ -302,6 +302,14 @@ IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did 
     if (!toolCall) throw new Error("No tool call in AI response");
     const briefing = JSON.parse(toolCall.function.arguments);
 
+    // ========== AUTO-ENRICH: Save discovered patterns back to DB ==========
+    let enrichmentStats = { channelsSaved: 0, knowledgeSaved: 0 };
+    try {
+      await autoEnrichDatabase(sb, briefing, youtubeVideos as any[], topic, niche, style, enrichmentStats);
+    } catch (err) {
+      console.error("Auto-enrichment failed (non-critical):", err);
+    }
+
     return new Response(JSON.stringify({
       briefing,
       metadata: {
@@ -317,6 +325,7 @@ IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did 
           channelTitle: v.channelTitle,
           engagement: v.views > 0 ? (((parseInt(v.likes)||0) + (parseInt(v.comments)||0)) / parseInt(v.views) * 100).toFixed(1) + '%' : '0%',
         })),
+        enrichment: enrichmentStats,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
