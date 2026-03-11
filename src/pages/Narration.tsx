@@ -31,6 +31,26 @@ const Narration = () => {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       if (data?.audioBase64) {
+        // Upload to storage bucket instead of keeping base64 in memory
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const fileName = `audio/${user.id}/narration-${Date.now()}.mp3`;
+          const binaryStr = atob(data.audioBase64);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'audio/mpeg' });
+          
+          const { error: uploadError } = await supabase.storage.from('media').upload(fileName, blob, {
+            contentType: 'audio/mpeg', upsert: false,
+          });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('media').getPublicUrl(fileName);
+            setAudioUrl(urlData.publicUrl);
+            toast.success('Narração gerada e salva!');
+            return;
+          }
+        }
+        // Fallback to base64 if upload fails
         const url = `data:audio/mpeg;base64,${data.audioBase64}`;
         setAudioUrl(url);
         toast.success('Narração gerada com sucesso!');

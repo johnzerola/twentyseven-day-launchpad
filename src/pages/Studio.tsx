@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Film, Sparkles, Download, Send, Loader2, Volume2, Wand2, Zap, RefreshCcw, Play, Pause, SkipForward, ToggleLeft, ToggleRight, Terminal, Upload, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,9 @@ import JSZip from 'jszip';
 import { VOICES } from '@/lib/constants';
 
 const Studio = () => {
+  const [searchParams] = useSearchParams();
+  const projectParam = searchParams.get('project');
+
   const [script, setScript] = useState('');
   const [voice, setVoice] = useState<string>(VOICES[0].id);
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -33,12 +37,98 @@ const Studio = () => {
   const quotaCooldownRef = useRef<NodeJS.Timeout | null>(null);
   const batchAbortRef = useRef(false);
   const [characterDesc, setCharacterDesc] = useState('');
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [projectTitle, setProjectTitle] = useState('');
 
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const segmentsRef = useRef(segments);
   useEffect(() => { segmentsRef.current = segments; }, [segments]);
+
+  // Load project from URL parameter
+  useEffect(() => {
+    if (projectParam) {
+      loadProject(projectParam);
+    }
+  }, [projectParam]);
+
+  const loadProject = async (projectId: string) => {
+    try {
+      // Load project
+      const { data: project } = await supabase.from('video_projects')
+        .select('*').eq('id', projectId).maybeSingle();
+      if (!project) { toast.error('Projeto não encontrado'); return; }
+      
+      setCurrentProjectId(projectId);
+      setProjectTitle(project.title || '');
+      if (project.script) setScript(project.script);
+
+      // Load characters for character description
+      const { data: chars } = await supabase.from('characters')
+        .select('*').eq('project_id', projectId).order('created_at', { ascending: true });
+      if (chars?.length) {
+        const desc = chars.map((c: any) => {
+          const va = c.visual_attributes as any;
+          return `${c.name}: ${va?.gender || ''} ${va?.age || ''} years, ${va?.appearance?.skin_color || ''} skin, ${va?.appearance?.hair_color || ''} ${va?.appearance?.hair_style || ''} hair, ${va?.clothing?.shirt || ''}, ${va?.clothing?.pants || ''}`;
+        }).join('; ');
+        setCharacterDesc(desc);
+      }
+
+      // Load scenes and convert to segments
+      const { data: scenes } = await supabase.from('scenes')
+        .select('*').eq('project_id', projectId).order('sequence_order', { ascending: true });
+      if (scenes?.length) {
+        const loadedSegments: Segment[] = scenes.map((s: any, i: number) => ({
+          index: i,
+          text: s.tts_text || s.text_content || '',
+          visualPrompt: s.veo3_prompt || '',
+          referenceImage: s.reference_image_url || null,
+          generatedImage: s.media_url || null,
+          audioBase64: null, // Audio loaded from URL if available
+          audioUrl: s.audio_url || null,
+          status: s.media_url ? 'success' : (s.status === 'completed' ? 'success' : 'pending') as any,
+          videoUrl: s.video_clip_url || null,
+          videoBase64: null,
+          videoStatus: s.video_clip_url ? 'completed' : 'idle' as any,
+          videoOperationName: null,
+          sceneId: s.id,
+        }));
+        setSegments(loadedSegments);
+        toast.success(`Projeto "${project.title}" carregado com ${scenes.length} cenas`);
+      } else {
+        toast.success(`Projeto "${project.title}" carregado`);
+      }
+    } catch (err: any) {
+      toast.error('Erro ao carregar projeto: ' + err.message);
+    }
+  };
+
+  // Auto-save segment to scenes table
+  const persistSegment = useCallback(async (seg: Segment) => {
+    if (!currentProjectId) return;
+    const sceneData = {
+      project_id: currentProjectId,
+      sequence_order: seg.index,
+      segment_index: seg.index,
+      tts_text: seg.text,
+      veo3_prompt: seg.visualPrompt,
+      media_url: seg.generatedImage || null,
+      audio_url: (seg as any).audioUrl || null,
+      video_clip_url: seg.videoUrl || null,
+      reference_image_url: seg.referenceImage || null,
+      status: seg.status === 'success' ? 'completed' : seg.status,
+      duration_sec: 8,
+    };
+    if ((seg as any).sceneId) {
+      await supabase.from('scenes').update(sceneData as any).eq('id', (seg as any).sceneId);
+    } else {
+      const { data } = await supabase.from('scenes').insert(sceneData as any).select('id').maybeSingle();
+      if (data) {
+        setSegments(prev => prev.map(s => s.index === seg.index ? { ...s, sceneId: data.id } as any : s));
+      }
+    }
+  }, [currentProjectId]);
 
   // Cleanup polling timers and cooldown on unmount
   useEffect(() => {
@@ -79,8 +169,18 @@ const Studio = () => {
   };
 
   const updateSegment = useCallback((index: number, field: keyof Segment, value: any) => {
-    setSegments(prev => prev.map(s => s.index === index ? { ...s, [field]: value } : s));
-  }, []);
+    setSegments(prev => {
+      const updated = prev.map(s => s.index === index ? { ...s, [field]: value } : s);
+      // Auto-save on important field changes
+      if (['visualPrompt', 'generatedImage', 'videoUrl', 'status', 'videoStatus'].includes(field)) {
+        const seg = updated.find(s => s.index === index);
+        if (seg && currentProjectId) {
+          persistSegment(seg);
+        }
+      }
+      return updated;
+    });
+  }, [currentProjectId, persistSegment]);
 
   const autoGeneratePrompts = async (segs?: Segment[]) => {
     const targetSegs = segs || segmentsRef.current;
@@ -212,7 +312,6 @@ const Studio = () => {
     toast.success('Retry completo!');
   };
 
-  // Centralized sequential polling - polls one operation at a time with staggered timing
   const pollVideoOperation = (segIndex: number, operationName: string) => {
     const poll = async () => {
       try {
@@ -223,7 +322,6 @@ const Studio = () => {
         
         if (data?.status === 'COMPLETED') {
           setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
-          
           if (data.videoBase64) {
             updateSegment(segIndex, 'videoBase64', data.videoBase64);
           } else if (data.videoUrl) {
@@ -232,12 +330,12 @@ const Studio = () => {
           updateSegment(segIndex, 'videoStatus', 'completed');
           addLog(`✅ Vídeo Veo3 cena ${segIndex + 1} pronto!`);
           toast.success(`Vídeo #${segIndex + 1} gerado!`);
-          return; // Done
+          return;
         } else if (data?.status === 'FAILED') {
           setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
           updateSegment(segIndex, 'videoStatus', 'failed');
           addLog(`⚠️ Vídeo cena ${segIndex + 1} falhou: ${data.error}`);
-          return; // Done
+          return;
         } else {
           updateSegment(segIndex, 'videoStatus', 'polling');
         }
@@ -245,14 +343,11 @@ const Studio = () => {
         setVideoPollingMap(prev => { const n = { ...prev }; delete n[segIndex]; return n; });
         updateSegment(segIndex, 'videoStatus', 'failed');
         addLog(`⚠️ Poll vídeo ${segIndex + 1} erro: ${err.message}`);
-        return; // Done on error
+        return;
       }
-      // Schedule next poll with 20s delay (longer to avoid rate limits)
       const timeout = setTimeout(() => poll(), 20000);
       setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
     };
-    
-    // Stagger initial polls: each segment starts polling 5s apart
     const initialDelay = Object.keys(videoPollingMap).length * 5000;
     const timeout = setTimeout(() => poll(), initialDelay);
     setVideoPollingMap(prev => { const n = { ...prev }; n[segIndex] = timeout; return n; });
@@ -272,23 +367,13 @@ const Studio = () => {
   const generateSegmentVideo = async (seg: Segment): Promise<boolean> => {
     if (!seg.visualPrompt) { toast.error('Gere o prompt visual primeiro'); return false; }
     if (quotaCooldown > 0) { toast.error(`Aguarde ${quotaCooldown}s (cooldown de quota)`); return false; }
-    
     updateSegment(seg.index, 'videoStatus', 'generating');
     setGeneratingVideo(seg.index);
     addLog(`🎬 Gerando vídeo Veo3 cena ${seg.index + 1}...`);
-    
     try {
       const { data, error } = await supabase.functions.invoke('generate-veo3-video', {
-        body: {
-          action: 'generate',
-          prompt: seg.visualPrompt,
-          model: veo3Model,
-          aspectRatio: '16:9',
-          duration: 8,
-        },
+        body: { action: 'generate', prompt: seg.visualPrompt, model: veo3Model, aspectRatio: '16:9', duration: 8 },
       });
-      
-      // Handle quota/rate limit errors
       if (error) {
         const errMsg = error.message || '';
         if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('Quota')) {
@@ -296,7 +381,7 @@ const Studio = () => {
           updateSegment(seg.index, 'videoStatus', 'failed');
           addLog(`🚫 Quota esgotada — cooldown de 120s ativado`);
           toast.error('Quota da API esgotada. Cooldown de 2 min ativado.');
-          return false; // signal to stop batch
+          return false;
         }
         throw new Error(errMsg);
       }
@@ -308,19 +393,18 @@ const Studio = () => {
         return false;
       }
       if (data?.error) throw new Error(data.error);
-      
       if (data?.operationName) {
         updateSegment(seg.index, 'videoOperationName', data.operationName);
         updateSegment(seg.index, 'videoStatus', 'polling');
         addLog(`⏳ Vídeo cena ${seg.index + 1} em processamento...`);
         pollVideoOperation(seg.index, data.operationName);
       }
-      return true; // success
+      return true;
     } catch (err: any) {
       updateSegment(seg.index, 'videoStatus', 'failed');
       addLog(`⚠️ Vídeo cena ${seg.index + 1} falhou: ${err.message}`);
       toast.error(err.message);
-      return true; // non-quota error, can continue batch
+      return true;
     } finally {
       setGeneratingVideo(null);
     }
@@ -330,7 +414,6 @@ const Studio = () => {
     const segs = targetSegs || segmentsRef.current;
     const withPrompts = segs.filter(s => s.visualPrompt);
     if (!withPrompts.length) return toast.error('Gere os prompts visuais primeiro');
-    
     batchAbortRef.current = false;
     addLog(`🎬 Gerando ${withPrompts.length} vídeos Veo3 sequencialmente (30s entre cada)...`);
     for (let i = 0; i < withPrompts.length; i++) {
@@ -338,10 +421,7 @@ const Studio = () => {
       const seg = withPrompts[i];
       addLog(`🎬 Enviando vídeo ${i + 1}/${withPrompts.length} (cena #${seg.index + 1})...`);
       const canContinue = await generateSegmentVideo(seg);
-      if (!canContinue) {
-        addLog('🛑 Batch interrompido: quota esgotada');
-        break;
-      }
+      if (!canContinue) { addLog('🛑 Batch interrompido: quota esgotada'); break; }
       if (i < withPrompts.length - 1) {
         addLog(`⏳ Aguardando 30s antes do próximo vídeo...`);
         await new Promise(r => setTimeout(r, 30000));
@@ -362,18 +442,10 @@ const Studio = () => {
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, bytes);
       } else if (seg.videoUrl) {
-        try {
-          const resp = await fetch(seg.videoUrl);
-          const blob = await resp.blob();
-          zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, blob);
-        } catch { /* skip */ }
+        try { const resp = await fetch(seg.videoUrl); const blob = await resp.blob(); zip.file(`video-${String(seg.index + 1).padStart(2, '0')}.mp4`, blob); } catch { /* skip */ }
       }
       if (seg.generatedImage) {
-        try {
-          const resp = await fetch(seg.generatedImage);
-          const blob = await resp.blob();
-          zip.file(`cena-${String(seg.index + 1).padStart(2, '0')}.png`, blob);
-        } catch { /* skip */ }
+        try { const resp = await fetch(seg.generatedImage); const blob = await resp.blob(); zip.file(`cena-${String(seg.index + 1).padStart(2, '0')}.png`, blob); } catch { /* skip */ }
       }
       if (seg.audioBase64) {
         const binary = atob(seg.audioBase64);
@@ -386,77 +458,63 @@ const Studio = () => {
       const promptsTxt = segs.map(s => `[Cena ${s.index + 1}]\n${s.visualPrompt}\n`).join('\n');
       zip.file('veo3-prompts.txt', promptsTxt);
     }
-    // Autoflow structured prompts
     const autoflowJson = segs.map(s => ({
-      scene: s.index + 1,
-      narration: s.text,
-      visual_prompt: s.visualPrompt,
-      scene_description: s.visualPrompt,
-      visual_style: "cinematic, high quality, 4K",
+      scene: s.index + 1, narration: s.text, visual_prompt: s.visualPrompt,
+      scene_description: s.visualPrompt, visual_style: "cinematic, high quality, 4K",
       character_consistency: characterDesc || "maintain consistent character appearance across all scenes",
       lighting: "natural cinematic lighting with dramatic shadows",
-      camera_style: "smooth cinematic camera movement",
-      duration_seconds: 8,
-      aspect_ratio: "16:9",
+      camera_style: "smooth cinematic camera movement", duration_seconds: 8, aspect_ratio: "16:9",
     }));
     zip.file('autoflow-scenes.json', JSON.stringify(autoflowJson, null, 2));
-    
     const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'dotti-studio-assets.zip';
-    a.click();
+    a.href = url; a.download = 'dotti-studio-assets.zip'; a.click();
     URL.revokeObjectURL(url);
     toast.success('Download iniciado!');
   };
 
   const exportAutoflow = () => {
     const segs = segmentsRef.current;
-    if (!segs.length || !segs.some(s => s.visualPrompt)) {
-      return toast.error('Gere os prompts visuais primeiro');
-    }
+    if (!segs.length || !segs.some(s => s.visualPrompt)) return toast.error('Gere os prompts visuais primeiro');
     const autoflowData = {
-      project: {
-        total_scenes: segs.length,
-        total_duration_seconds: segs.length * 8,
-        character_description: characterDesc || "",
-        visual_style: "cinematic, high quality, 4K",
-      },
+      project: { total_scenes: segs.length, total_duration_seconds: segs.length * 8, character_description: characterDesc || "", visual_style: "cinematic, high quality, 4K" },
       scenes: segs.map(s => ({
-        scene_number: s.index + 1,
-        narration_text: s.text,
-        visual_prompt: s.visualPrompt,
-        scene_description: s.visualPrompt,
-        visual_style: "cinematic, high quality, 4K, photorealistic",
+        scene_number: s.index + 1, narration_text: s.text, visual_prompt: s.visualPrompt,
+        scene_description: s.visualPrompt, visual_style: "cinematic, high quality, 4K, photorealistic",
         character_consistency: characterDesc || "maintain consistent character appearance",
-        lighting: "natural cinematic lighting",
-        camera_style: "smooth cinematic camera movement, slight zoom",
-        duration_seconds: 8,
-        aspect_ratio: "16:9",
-        has_audio: !!s.audioBase64,
-        has_reference_image: !!s.referenceImage,
+        lighting: "natural cinematic lighting", camera_style: "smooth cinematic camera movement, slight zoom",
+        duration_seconds: 8, aspect_ratio: "16:9", has_audio: !!s.audioBase64, has_reference_image: !!s.referenceImage,
       })),
     };
     const blob = new Blob([JSON.stringify(autoflowData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'autoflow-scenes.json';
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = 'autoflow-scenes.json'; a.click();
     URL.revokeObjectURL(url);
     toast.success('Prompts Autoflow exportados!');
   };
 
   const runFullPipeline = async () => {
     if (!script.trim()) return toast.error('Cole ou digite o roteiro primeiro');
-    setPipelineRunning(true);
-    setShowLogs(true);
-    setBatchLogs([]);
+    setPipelineRunning(true); setShowLogs(true); setBatchLogs([]);
     addLog('🚀 Pipeline Completo Iniciado');
     addLog('📝 Passo 1/4: Fatiando roteiro...');
     const newSegs = sliceScript();
     if (!newSegs) { setPipelineRunning(false); return; }
+
+    // Auto-create project if needed
+    if (!currentProjectId) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: proj } = await supabase.from('video_projects').insert({
+            user_id: user.id, title: projectTitle || 'Studio Project', script: script.slice(0, 500),
+          } as any).select('id').single();
+          if (proj) setCurrentProjectId(proj.id);
+        }
+      } catch { /* continue without persistence */ }
+    }
+
     await new Promise(r => setTimeout(r, 300));
     addLog('🎙️ Passo 2/4: Gerando áudio + prompts visuais...');
     await Promise.all([generateAllAudio(newSegs), autoGeneratePrompts(newSegs)]);
@@ -475,9 +533,7 @@ const Studio = () => {
 
   const playPreview = () => {
     if (!segments.length) return;
-    setPreviewPlaying(true);
-    setPreviewIndex(0);
-    playSegmentAudio(0);
+    setPreviewPlaying(true); setPreviewIndex(0); playSegmentAudio(0);
   };
 
   const playSegmentAudio = (idx: number) => {
@@ -494,10 +550,7 @@ const Studio = () => {
     }
   };
 
-  const stopPreview = () => {
-    audioPreviewRef.current?.pause();
-    setPreviewPlaying(false);
-  };
+  const stopPreview = () => { audioPreviewRef.current?.pause(); setPreviewPlaying(false); };
 
   const successCount = segments.filter(s => s.status === 'success').length;
   const failedCount = segments.filter(s => s.status === 'failed').length;
@@ -517,12 +570,15 @@ const Studio = () => {
               <Film className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold font-['Space_Grotesk']">Dotti Sync & Studio</h1>
-              <p className="text-sm text-muted-foreground">Crie vídeos de até 30 min — Roteiro → Áudio → Imagens → Vídeo</p>
+              <h1 className="text-2xl font-bold font-['Space_Grotesk']">
+                {projectTitle ? `Studio — ${projectTitle}` : 'Dotti Sync & Studio'}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {currentProjectId ? 'Projeto carregado • Auto-save ativado' : 'Crie vídeos de até 30 min — Roteiro → Áudio → Imagens → Vídeo'}
+              </p>
             </div>
           </div>
 
-          {/* Dotti Sender & Grab — Master Buttons */}
           {segments.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {failedCount > 0 && (
@@ -542,8 +598,7 @@ const Studio = () => {
               <Button variant="outline" className="gap-2" onClick={downloadAll}>
                 <Download className="w-4 h-4" /> Baixar Assets
               </Button>
-              <Button variant="outline" className="gap-2 border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
-                onClick={exportAutoflow}>
+              <Button variant="outline" className="gap-2 border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={exportAutoflow}>
                 <Upload className="w-4 h-4" /> Autoflow Export
               </Button>
             </div>
@@ -566,8 +621,7 @@ const Studio = () => {
                 {veo3Mode ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
                 Modo Veo3
               </button>
-              <Button onClick={runFullPipeline} disabled={pipelineRunning || !script.trim()}
-                className="gradient-hero border-0 gap-2 px-6">
+              <Button onClick={runFullPipeline} disabled={pipelineRunning || !script.trim()} className="gradient-hero border-0 gap-2 px-6">
                 {pipelineRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                 {pipelineRunning ? 'Executando...' : 'Pipeline Completo'}
               </Button>
@@ -605,8 +659,7 @@ const Studio = () => {
         {segments.length > 0 && (
           <div className="glass rounded-xl p-4">
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="icon" onClick={previewPlaying ? stopPreview : playPreview}
-                className="h-10 w-10 rounded-full">
+              <Button variant="outline" size="icon" onClick={previewPlaying ? stopPreview : playPreview} className="h-10 w-10 rounded-full">
                 {previewPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </Button>
               <div className="flex-1">
@@ -634,10 +687,9 @@ const Studio = () => {
           </div>
         )}
 
-        {/* Terminal Log — Dotti Sender feedback */}
+        {/* Terminal Log */}
         {showLogs && batchLogs.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="rounded-xl overflow-hidden border border-border/50">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl overflow-hidden border border-border/50">
             <div className="bg-secondary/80 px-4 py-2 flex items-center justify-between border-b border-border/50">
               <span className="text-xs font-mono flex items-center gap-2 text-muted-foreground">
                 <Terminal className="w-3 h-3" /> Dotti Sender — Log de Execução
@@ -656,7 +708,6 @@ const Studio = () => {
 
         {/* Main Layout: Script + Voice | Timeline */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left: Script Editor + Voice */}
           <div className="glass rounded-xl p-5 space-y-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" /> Roteiro
@@ -666,12 +717,10 @@ const Studio = () => {
               className="bg-secondary/50 min-h-[200px] text-sm" />
             <p className="text-xs text-muted-foreground">{script.split(/\s+/).filter(Boolean).length} palavras • ~{Math.ceil(script.split(/\s+/).filter(Boolean).length / 20)} segmentos de 8s</p>
 
-            {/* ElevenLabs Voice Dropdown */}
             <div className="border-t border-border/50 pt-4">
               <h3 className="font-semibold flex items-center gap-2 mb-3">
                 <Volume2 className="w-4 h-4 text-emerald-400" /> Voz Neural (ElevenLabs)
               </h3>
-              {/* TODO: Integrate /v1/text-to-speech/{voice_id}/with-timestamps endpoint for millisecond-level word sync */}
               <select value={voice} onChange={e => setVoice(e.target.value)}
                 className="w-full h-9 rounded-md border border-input bg-secondary/50 px-3 text-sm mb-3">
                 {VOICES.map(v => <option key={v.id} value={v.id}>{v.name} ({v.lang})</option>)}
@@ -688,8 +737,7 @@ const Studio = () => {
                 <Film className="w-4 h-4" /> Fatiar Roteiro em Blocos de 8s
               </Button>
               {segments.length > 0 && (
-                <Button variant="outline" className="w-full gap-2" onClick={() => autoGeneratePrompts()}
-                  disabled={generatingPrompts}>
+                <Button variant="outline" className="w-full gap-2" onClick={() => autoGeneratePrompts()} disabled={generatingPrompts}>
                   <Wand2 className="w-4 h-4" />
                   {generatingPrompts ? 'Gerando Prompts...' : `Auto-gerar Prompts ${veo3Mode ? 'Veo3' : 'Visuais'}`}
                 </Button>
@@ -697,7 +745,6 @@ const Studio = () => {
             </div>
           </div>
 
-          {/* Right: 8-Second Timeline — THE STAR */}
           <div className="lg:col-span-2 space-y-3">
             {segments.length > 0 ? (
               <>
