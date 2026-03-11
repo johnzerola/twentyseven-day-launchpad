@@ -919,7 +919,7 @@ const Scripts = () => {
                     <TrendingUp className="w-4 h-4 text-primary" />
                     <span className="font-semibold text-xs">📊 Análise de Inteligência</span>
                     <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
-                      {intelligenceBriefing.metadata?.channelsAnalyzed || 0} canais
+                      {intelligenceBriefing.metadata?.channelsAnalyzed || 0} canais + {intelligenceBriefing.metadata?.youtubeVideosFound || 0} vídeos YT
                     </Badge>
                   </div>
                   {showIntelligence ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
