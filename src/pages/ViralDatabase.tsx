@@ -15,6 +15,7 @@ import {
   Filter, BarChart3, Tv, ScanSearch, PieChart
 } from 'lucide-react';
 import { AnalyticsPanel } from '@/components/viral-db/AnalyticsPanel';
+import { OutlierFinderPanel } from '@/components/viral-db/OutlierFinderPanel';
 import {
   VIRAL_HOOKS, VIRAL_CTAS, VIRAL_TITLE_PATTERNS, STORY_STRUCTURES, SEO_KEYWORD_PATTERNS,
   type ViralHook, type CallToAction, type TitlePattern, type StoryStructure,
