@@ -36,27 +36,28 @@ const NicheExplorer = () => {
   const analysesPag = usePagination<any>();
   const [showHistory, setShowHistory] = useState(false);
 
-  // Load saved analyses on mount
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: saved } = await supabase
-        .from('saved_niche_analyses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (saved?.length) {
-        setSavedAnalyses(saved);
-        // Load most recent analysis
+  const loadAnalyses = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: saved, count } = await supabase
+      .from('saved_niche_analyses')
+      .select('*', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(analysesPag.rangeFrom, analysesPag.rangeTo);
+    if (saved?.length) {
+      analysesPag.setItems(saved);
+      analysesPag.setTotalCount(count || 0);
+      if (analysesPag.page === 0) {
         const latest = saved[0];
         setNiche(latest.niche);
         setCountry(latest.country || 'BR');
         setData(latest.analysis_json as any);
       }
-    })();
-  }, []);
+    }
+  }, [analysesPag.page]);
+
+  useEffect(() => { loadAnalyses(); }, [loadAnalyses]);
 
   const saveAnalysis = async (nicheStr: string, countryStr: string, result: any) => {
     const { data: { user } } = await supabase.auth.getUser();
