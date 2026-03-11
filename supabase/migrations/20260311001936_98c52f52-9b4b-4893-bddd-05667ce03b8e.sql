@@ -1,0 +1,1 @@
+ALTER TABLE public.channel_intelligence ADD CONSTRAINT channel_intelligence_youtube_channel_id_key UNIQUE (youtube_channel_id);
