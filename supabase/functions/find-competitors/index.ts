@@ -5,6 +5,43 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const countryToLanguage: Record<string, string> = {
+  BR: "pt", PT: "pt", US: "en", GB: "en", CA: "en", AU: "en",
+  MX: "es", ES: "es", AR: "es", CO: "es", CL: "es",
+  FR: "fr", DE: "de", PL: "pl", IT: "it", JP: "ja",
+  KR: "ko", IN: "hi", RU: "ru", NL: "nl", SE: "sv",
+};
+
+async function translateKeywords(keywords: string[], targetLang: string): Promise<string[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY || keywords.length === 0) return keywords;
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [{
+          role: "user",
+          content: `Translate these YouTube search keywords to ${targetLang} language. Return ONLY a JSON array of translated strings, nothing else. If a keyword is already in the target language, keep it as-is. Keywords: ${JSON.stringify(keywords)}`
+        }],
+        temperature: 0.1,
+      }),
+    });
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    const match = content.match(/\[[\s\S]*?\]/);
+    if (match) {
+      const translated = JSON.parse(match[0]);
+      if (Array.isArray(translated) && translated.length > 0) return translated;
+    }
+  } catch (e) {
+    console.error("Translation failed, using original keywords:", e);
+  }
+  return keywords;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,7 +66,7 @@ serve(async (req) => {
     // Get top 5 most frequent keywords
     const freq: Record<string, number> = {};
     for (const w of keywords) freq[w] = (freq[w] || 0) + 1;
-    const topKeywords = Object.entries(freq)
+    let topKeywords = Object.entries(freq)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([w]) => w);
@@ -40,10 +77,15 @@ serve(async (req) => {
       });
     }
 
-    // Search YouTube for videos matching these keywords in the target country
+    // Translate keywords to the target country's language
+    const targetLang = countryToLanguage[regionCode] || "en";
+    const translatedKeywords = await translateKeywords(topKeywords, targetLang);
+    console.log(`Keywords: ${topKeywords.join(", ")} → Translated (${targetLang}): ${translatedKeywords.join(", ")}`);
+
+    // Search YouTube for videos matching translated keywords in the target country
     const searchQueries = [
-      topKeywords.slice(0, 3).join(" "),
-      topKeywords.slice(1, 4).join(" "),
+      translatedKeywords.slice(0, 3).join(" "),
+      translatedKeywords.slice(1, 4).join(" "),
     ];
 
     const channelMap: Record<string, {
@@ -56,14 +98,14 @@ serve(async (req) => {
 
     for (const query of searchQueries) {
       const searchRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&regionCode=${regionCode}&maxResults=25&order=viewCount&key=${YOUTUBE_API_KEY}`
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&regionCode=${regionCode}&relevanceLanguage=${targetLang}&maxResults=25&order=viewCount&key=${YOUTUBE_API_KEY}`
       );
       const searchData = await searchRes.json();
       if (!searchData.items) continue;
 
       for (const item of searchData.items) {
         const cId = item.snippet.channelId;
-        if (cId === channelId) continue; // skip user's own channel
+        if (cId === channelId) continue;
         if (!channelMap[cId]) {
           channelMap[cId] = {
             channelId: cId,
@@ -76,7 +118,7 @@ serve(async (req) => {
         channelMap[cId].videoCount++;
         channelMap[cId].topVideos.push({
           title: item.snippet.title,
-          views: 0, // will fill later
+          views: 0,
           videoId: item.id.videoId,
         });
       }
@@ -88,7 +130,6 @@ serve(async (req) => {
       .slice(0, 50);
 
     if (allVideoIds.length > 0) {
-      // Batch in groups of 50
       const vRes = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${allVideoIds.join(",")}&key=${YOUTUBE_API_KEY}`
       );
@@ -97,7 +138,6 @@ serve(async (req) => {
       for (const v of (vData.items || [])) {
         viewsMap[v.id] = parseInt(v.statistics?.viewCount || "0");
       }
-      // Apply views back
       for (const ch of Object.values(channelMap)) {
         for (const tv of ch.topVideos) {
           tv.views = viewsMap[tv.videoId] || 0;
@@ -106,7 +146,7 @@ serve(async (req) => {
       }
     }
 
-    // Get channel details for the discovered channels (batch)
+    // Get channel details for the discovered channels
     const discoveredIds = Object.keys(channelMap).slice(0, 25);
     const competitors: any[] = [];
 
@@ -122,15 +162,13 @@ serve(async (req) => {
         const videoCount = parseInt(ch.statistics?.videoCount || "0");
         const avgViews = videoCount > 0 ? Math.round(totalViews / videoCount) : 0;
 
-        // Filter: only channels smaller than threshold
         if (subs > maxSubsThreshold) continue;
-        if (subs < 100) continue; // too small
+        if (subs < 100) continue;
 
         const entry = channelMap[ch.id];
         const bestVideo = entry?.topVideos[0];
         const multiplier = avgViews > 0 && bestVideo ? +(bestVideo.views / avgViews).toFixed(1) : 0;
 
-        // Calculate growth indicator from best video vs avg
         let growthRate = "steady";
         if (multiplier >= 5) growthRate = "explosive";
         else if (multiplier >= 2) growthRate = "fast";
@@ -152,13 +190,14 @@ serve(async (req) => {
       }
     }
 
-    // Sort by relevance
     competitors.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     return new Response(JSON.stringify({
       competitors: competitors.slice(0, 15),
       keywords: topKeywords,
+      translatedKeywords,
       searchedCountry: regionCode,
+      searchLanguage: targetLang,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
