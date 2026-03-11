@@ -193,6 +193,33 @@ export type Database = {
         }
         Relationships: []
       }
+      monetization_plans: {
+        Row: {
+          chat_history: Json | null
+          created_at: string | null
+          id: string
+          plan_json: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_history?: Json | null
+          created_at?: string | null
+          id?: string
+          plan_json?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_history?: Json | null
+          created_at?: string | null
+          id?: string
+          plan_json?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       niche_database: {
         Row: {
           country: string | null
@@ -464,6 +491,36 @@ export type Database = {
           },
         ]
       }
+      saved_niche_analyses: {
+        Row: {
+          analysis_json: Json
+          country: string | null
+          created_at: string | null
+          id: string
+          niche: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          analysis_json?: Json
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          niche: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          analysis_json?: Json
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          niche?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_scripts: {
         Row: {
           created_at: string
@@ -490,6 +547,39 @@ export type Database = {
           script_content?: string
           style?: string | null
           topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_titles: {
+        Row: {
+          ab_test_json: Json | null
+          created_at: string | null
+          id: string
+          niche: string | null
+          seo_json: Json | null
+          titles_json: Json | null
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          ab_test_json?: Json | null
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          seo_json?: Json | null
+          titles_json?: Json | null
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          ab_test_json?: Json | null
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          seo_json?: Json | null
+          titles_json?: Json | null
+          topic?: string | null
           user_id?: string
         }
         Relationships: []

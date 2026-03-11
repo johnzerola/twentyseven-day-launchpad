@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -60,6 +60,39 @@ const Titles = () => {
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoResult, setSeoResult] = useState<SEODescription | null>(null);
 
+  // Load saved data on mount
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: saved } = await supabase
+        .from('saved_titles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (saved) {
+        if (saved.titles_json) setTitles((saved.titles_json as any) || []);
+        if (saved.topic) setTopic(saved.topic);
+        if (saved.niche) setNiche(saved.niche);
+        if (saved.ab_test_json) setAbResult(saved.ab_test_json as any);
+        if (saved.seo_json) setSeoResult(saved.seo_json as any);
+      }
+    })();
+  }, []);
+
+  const saveTitles = async (titlesData: TitleSuggestion[], topicStr?: string, nicheStr?: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('saved_titles').insert({
+      user_id: user.id,
+      topic: topicStr || topic,
+      niche: nicheStr || niche,
+      titles_json: titlesData as any,
+    } as any);
+  };
+
   const generateTitles = async () => {
     if (!niche.trim() && !topic.trim()) return toast.error('Preencha nicho ou tema');
     setLoading(true);
@@ -70,7 +103,11 @@ const Titles = () => {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setTitles(data?.titles || []);
-      if (!data?.titles?.length) toast.info('Nenhum título gerado');
+      if (data?.titles?.length) {
+        await saveTitles(data.titles, topic, niche);
+      } else {
+        toast.info('Nenhum título gerado');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar títulos');
     } finally {

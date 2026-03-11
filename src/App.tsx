@@ -20,6 +20,7 @@ import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
 import MonetizationPlanner from "./pages/MonetizationPlanner";
 import Playbook from "./pages/Playbook";
+import Narration from "./pages/Narration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/monetization" element={<P><MonetizationPlanner /></P>} />
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/playbook" element={<P><Playbook /></P>} />
+            <Route path="/narration" element={<P><Narration /></P>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
