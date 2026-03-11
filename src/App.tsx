@@ -18,8 +18,7 @@ import Pricing from "./pages/Pricing";
 import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
-import MonetizationPlanner from "./pages/MonetizationPlanner";
-// DEPRECATED: Playbook, Planner, Narration, Studio — removed from active routes
+// DEPRECATED: Playbook, Planner, Narration, Studio, MonetizationPlanner — removed from active routes
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
