@@ -34,6 +34,7 @@ const PRESET_NICHES = [
 ];
 
 export const OutlierFinderPanel = () => {
+  const navigate = useNavigate();
   const [keywords, setKeywords] = useState('');
   const [outliers, setOutliers] = useState<Outlier[]>([]);
   const [loading, setLoading] = useState(false);
