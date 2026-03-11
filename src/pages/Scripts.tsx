@@ -425,7 +425,8 @@ const Scripts = () => {
           briefing = analysisData.briefing;
           setIntelligenceBriefing(analysisData);
           setShowIntelligence(true);
-          toast.success(`📊 Inteligência: ${analysisData.metadata?.channelsAnalyzed || 0} canais analisados`);
+          const ytVids = analysisData.metadata?.youtubeVideosFound || 0;
+          toast.success(`📊 Inteligência: ${analysisData.metadata?.channelsAnalyzed || 0} canais + ${ytVids} vídeos YouTube analisados`);
         }
       } catch (err) {
         console.warn('Intelligence analysis failed, proceeding without:', err);
