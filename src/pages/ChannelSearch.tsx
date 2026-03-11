@@ -69,8 +69,94 @@ const ChannelSearch = () => {
   const [deepScanning, setDeepScanning] = useState<string | null>(null);
   const [deepScanResult, setDeepScanResult] = useState<any>(null);
 
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
+
   const medianViews = channelInfo?.avgViews || 156_000;
   const searchType = activeTab === 'channel' ? 'channel' : 'video';
+
+  // Load saved searches on mount
+  useEffect(() => {
+    const loadSaved = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('saved_searches')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      if (data) setSavedSearches(data);
+    };
+    loadSaved();
+  }, []);
+
+  const saveSearch = useCallback(async (q: string, tab: string, res: VideoResult[], ch: ChannelInfo | null) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !q.trim()) return;
+    const filters = { niche, country, language, period, minViews, minSubs, maxSubs };
+    
+    // Upsert by query+tab
+    const { data: existing } = await supabase
+      .from('saved_searches')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('query', q)
+      .eq('tab', tab)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from('saved_searches').update({
+        results_json: res as any,
+        channel_info_json: ch as any,
+        filters_json: filters as any,
+        updated_at: new Date().toISOString(),
+      }).eq('id', existing.id);
+    } else {
+      await supabase.from('saved_searches').insert({
+        user_id: user.id,
+        query: q,
+        tab,
+        results_json: res as any,
+        channel_info_json: ch as any,
+        filters_json: filters as any,
+      });
+    }
+
+    // Refresh list
+    const { data: refreshed } = await supabase
+      .from('saved_searches')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    if (refreshed) setSavedSearches(refreshed);
+  }, [niche, country, language, period, minViews, minSubs, maxSubs]);
+
+  const loadSearch = (saved: any) => {
+    setQuery(saved.query);
+    setActiveTab(saved.tab);
+    setResults((saved.results_json as VideoResult[]) || []);
+    setChannelInfo((saved.channel_info_json as ChannelInfo) || null);
+    const f = (saved.filters_json as any) || {};
+    setNiche(f.niche || '');
+    setCountry(f.country || '');
+    setLanguage(f.language || '');
+    setPeriod(f.period || '');
+    setMinViews(f.minViews || '');
+    setMinSubs(f.minSubs || '');
+    setMaxSubs(f.maxSubs || '');
+    setHasSearched(true);
+    setShowSaved(false);
+    toast.success('Pesquisa carregada!');
+  };
+
+  const deleteSearch = async (id: string) => {
+    await supabase.from('saved_searches').delete().eq('id', id);
+    setSavedSearches(prev => prev.filter(s => s.id !== id));
+    toast.success('Pesquisa removida');
+  };
 
   const searchVideos = async () => {
     if (!query.trim()) return;
@@ -84,9 +170,13 @@ const ChannelSearch = () => {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setResults(data?.results || []);
-      setChannelInfo(data?.channel || null);
-      if (!data?.results?.length) toast.info('Nenhum vídeo encontrado');
+      const r = data?.results || [];
+      const ch = data?.channel || null;
+      setResults(r);
+      setChannelInfo(ch);
+      if (!r.length) toast.info('Nenhum vídeo encontrado');
+      // Auto-save
+      await saveSearch(query, activeTab, r, ch);
     } catch (err: any) {
       toast.error(err.message || 'Erro na busca');
     } finally {
