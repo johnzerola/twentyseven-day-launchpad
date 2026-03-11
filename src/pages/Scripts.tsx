@@ -161,6 +161,12 @@ const Scripts = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
+  // Intelligence Pipeline
+  const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
+  const [analyzingTopic, setAnalyzingTopic] = useState(false);
+  const [showIntelligence, setShowIntelligence] = useState(false);
+  const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
+
   useEffect(() => {
     loadHistory(); loadTemplates();
     const outlierTopic = sessionStorage.getItem('outlier_topic');
