@@ -193,9 +193,13 @@ const MonetizationPlanner = () => {
 
       // Check for action plan
       const plan = extractActionPlan(assistantContent);
+      const finalMessages = [...newMessages, { role: 'assistant' as const, content: assistantContent }];
       if (plan) {
         setActionPlan(plan);
         setShowPlan(true);
+        await persistPlan(finalMessages, plan);
+      } else {
+        await persistPlan(finalMessages, actionPlan);
       }
     } catch (e: any) {
       toast.error(e.message || 'Erro ao processar');
