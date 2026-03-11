@@ -430,9 +430,9 @@ const ViralDatabase = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: 'Total Canais', value: channels.length, icon: Tv },
-                { label: 'Faceless', value: channels.filter(c => c.is_faceless).length, icon: Users },
+                { label: 'Filtrados', value: filteredChannels.length, icon: Filter },
+                { label: 'Nichos', value: niches.length, icon: Target },
                 { label: 'Crescimento Explosivo', value: channels.filter(c => c.growth_rate === 'explosive').length, icon: TrendingUp },
-                { label: 'Estilos', value: new Set(channels.map(c => c.style)).size, icon: Palette },
               ].map((stat, i) => (
                 <div key={i} className="glass rounded-xl p-3 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
