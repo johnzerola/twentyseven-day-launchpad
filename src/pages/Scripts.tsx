@@ -214,7 +214,6 @@ const Scripts = () => {
         facial_features: (c.visual_attributes as any)?.facial_features || { eyebrows: 'medium', nose: 'straight', mouth: 'medium', ears: 'normal', face_shape: 'oval' },
         clothing: (c.visual_attributes as any)?.clothing || { shirt: 'casual shirt', pants: 'jeans', shoes: 'sneakers', accessories: 'none' },
         personality: (c.visual_attributes as any)?.personality || ['determined'],
-        imageUrl: c.reference_image_url || undefined,
       })));
     }
   };
