@@ -12,6 +12,7 @@ serve(async (req) => {
   try {
     const { topic, niche, style, language } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!topic?.trim()) throw new Error("Topic is required");
 
@@ -20,28 +21,27 @@ serve(async (req) => {
     const styleLC = (style || '').toLowerCase();
     const topicLC = topic.toLowerCase();
 
-    // ========== Parallel DB queries ==========
-    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes] = await Promise.all([
-      // Channels matching niche — top 10 by views
+    // ========== Parallel: DB queries + YouTube real-time search ==========
+    const youtubeSearchPromise = YOUTUBE_API_KEY ? searchYouTubeVideos(YOUTUBE_API_KEY, topic, niche) : Promise.resolve([]);
+
+    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos] = await Promise.all([
       sb.from("channel_intelligence")
         .select("channel_name,style,niche,avg_views,subscribers,growth_rate,viral_patterns,top_videos,visual_style_notes,upload_frequency,rpm_estimate")
         .order("avg_views", { ascending: false })
         .limit(200),
-      // Scene prompt knowledge
       sb.from("scene_prompt_knowledge")
         .select("category,title,prompt_template,tags,viral_score")
         .order("viral_score", { ascending: false })
         .limit(100),
-      // Script knowledge
       sb.from("script_knowledge")
         .select("category,title,content,examples,effectiveness_score")
         .order("effectiveness_score", { ascending: false })
         .limit(50),
-      // YouTube algorithm knowledge
       sb.from("youtube_knowledge")
         .select("category,title,content,priority")
         .order("priority", { ascending: false })
         .limit(20),
+      youtubeSearchPromise,
     ]);
 
     // ========== Filter channels by niche relevance ==========
@@ -51,17 +51,14 @@ serve(async (req) => {
       const chNiche = (ch.niche || '').toLowerCase();
       const chStyle = (ch.style || '').toLowerCase();
       const chName = (ch.channel_name || '').toLowerCase();
-      
       if (nicheLC && chNiche.includes(nicheLC)) score += 20;
       if (nicheLC && nicheLC.includes(chNiche)) score += 15;
       if (styleLC && chStyle.includes(styleLC)) score += 10;
-      // Topic keyword matching
       const topicWords = topicLC.split(/\s+/).filter((w: string) => w.length > 3);
       for (const word of topicWords) {
         if (chNiche.includes(word)) score += 5;
         if (chName.includes(word)) score += 3;
       }
-      // Boost high-performance channels
       if (ch.avg_views > 1000000) score += 5;
       if (ch.growth_rate === 'explosive' || ch.growth_rate === 'rapid') score += 3;
       return { ...ch, relevanceScore: score };
@@ -69,7 +66,7 @@ serve(async (req) => {
     scoredChannels.sort((a: any, b: any) => b.relevanceScore - a.relevanceScore);
     const topChannels = scoredChannels.slice(0, 10);
 
-    // ========== Filter scene knowledge by style/niche ==========
+    // ========== Filter scene knowledge ==========
     const styleMap: Record<string, string[]> = {
       'cinematográfico': ['cinematography', 'lighting', 'camera', 'hook'],
       'dark': ['dark', 'noir', 'horror', 'mystery'],
@@ -87,13 +84,11 @@ serve(async (req) => {
       'horror': ['dark', 'horror', 'noir'],
       'documentário': ['documentary', 'historical'],
     };
-
     const relevantTags = [
       ...(styleMap[styleLC] || []),
       ...Object.entries(nicheMap).filter(([k]) => nicheLC.includes(k)).flatMap(([, v]) => v),
       'hook', 'transition', 'anti-ai', 'consistency', 'policy',
     ];
-
     const topSceneKnowledge = (sceneKnowledgeRes.data || [])
       .map((r: any) => {
         let score = r.viral_score || 0;
@@ -105,11 +100,11 @@ serve(async (req) => {
       .sort((a: any, b: any) => b.relScore - a.relScore)
       .slice(0, 20);
 
-    // ========== Format data for AI analysis ==========
+    // ========== Format data for AI ==========
     const channelsBlock = topChannels.map((ch: any) => {
       const vp = typeof ch.viral_patterns === 'object' ? ch.viral_patterns : {};
       const hooks = Array.isArray(vp.hooks) ? vp.hooks.slice(0, 3).join(', ') : '';
-      const topVids = Array.isArray(ch.top_videos) ? ch.top_videos.slice(0, 3).map((v: any) => 
+      const topVids = Array.isArray(ch.top_videos) ? ch.top_videos.slice(0, 3).map((v: any) =>
         typeof v === 'object' ? `"${v.title}" (${v.views} views)` : String(v)
       ).join('; ') : '';
       return `🎯 ${ch.channel_name} | ${ch.niche} | ${ch.style} | ${ch.avg_views} avg views | ${ch.subscribers} subs | Growth: ${ch.growth_rate} | RPM: $${ch.rpm_estimate || '?'}
@@ -129,7 +124,24 @@ serve(async (req) => {
       `[${r.category}] ${r.title}: ${r.content.slice(0, 200)}`
     ).join('\n\n');
 
-    // ========== AI Analysis with Gemini Flash ==========
+    // ========== Format YouTube real-time videos ==========
+    const ytVideosBlock = (youtubeVideos as any[]).length > 0
+      ? (youtubeVideos as any[]).map((v: any, i: number) => {
+        const viewsNum = parseInt(v.views) || 0;
+        const likesNum = parseInt(v.likes) || 0;
+        const commentsNum = parseInt(v.comments) || 0;
+        const engRate = viewsNum > 0 ? (((likesNum + commentsNum) / viewsNum) * 100).toFixed(2) : '0';
+        const daysAgo = v.publishedAt ? Math.floor((Date.now() - new Date(v.publishedAt).getTime()) / 86400000) : '?';
+        const viewsPerDay = viewsNum > 0 && typeof daysAgo === 'number' && daysAgo > 0 ? Math.floor(viewsNum / daysAgo) : 'N/A';
+        return `${i+1}. "${v.title}" by ${v.channelTitle}
+   ${viewsNum.toLocaleString()} views | ${likesNum.toLocaleString()} likes | ${commentsNum.toLocaleString()} comments | Engagement: ${engRate}%
+   Published: ${daysAgo} days ago | Views/day: ${viewsPerDay} | Duration: ${v.duration || '?'}
+   Tags: ${(v.tags || []).slice(0, 8).join(', ') || 'none'}
+   Description snippet: ${(v.description || '').slice(0, 150)}`;
+      }).join('\n\n')
+      : 'No real-time YouTube data available.';
+
+    // ========== AI Analysis ==========
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -159,6 +171,22 @@ serve(async (req) => {
                     what_to_avoid: { type: "array", items: { type: "string" } },
                   },
                   required: ["top_channels_analyzed", "dominant_styles", "common_hooks", "what_works", "what_to_avoid"],
+                },
+                youtube_real_time_analysis: {
+                  type: "object",
+                  properties: {
+                    videos_found: { type: "number" },
+                    top_performing_video: { type: "string" },
+                    avg_views: { type: "string" },
+                    avg_engagement_rate: { type: "string" },
+                    common_title_patterns: { type: "array", items: { type: "string" } },
+                    successful_angles: { type: "array", items: { type: "string" } },
+                    why_top_videos_work: { type: "array", items: { type: "string" } },
+                    underexplored_angles: { type: "array", items: { type: "string" } },
+                    optimal_duration: { type: "string" },
+                    best_tags: { type: "array", items: { type: "string" } },
+                  },
+                  required: ["videos_found", "common_title_patterns", "successful_angles", "why_top_videos_work", "underexplored_angles"],
                 },
                 recommended_hooks: {
                   type: "array",
@@ -208,7 +236,7 @@ serve(async (req) => {
                   required: ["suggested_angle", "differentiation", "emotional_core"],
                 },
               },
-              required: ["competitive_analysis", "recommended_hooks", "visual_blueprint", "retention_techniques", "topic_angle"],
+              required: ["competitive_analysis", "youtube_real_time_analysis", "recommended_hooks", "visual_blueprint", "retention_techniques", "topic_angle"],
               additionalProperties: false,
             },
           },
@@ -217,28 +245,33 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a YouTube VIRAL INTELLIGENCE ANALYST. You analyze real channel data, viral patterns, and proven techniques to create an intelligence briefing that will guide script and visual generation.
+            content: `You are a YouTube VIRAL INTELLIGENCE ANALYST. You analyze real channel data, viral patterns, proven techniques, AND real-time YouTube search results to create a comprehensive intelligence briefing.
 
-Your analysis must be DATA-DRIVEN — based on the actual channel performance data, viral patterns, and proven techniques provided below.
+Your analysis must be DATA-DRIVEN — based on actual performance data provided below.
 
-═══ REAL CHANNEL DATA (${topChannels.length} channels analyzed) ═══
-${channelsBlock || 'No matching channels found — use general best practices.'}
+═══ REAL CHANNEL DATABASE (${topChannels.length} channels) ═══
+${channelsBlock || 'No matching channels found.'}
 
-═══ SCENE/VISUAL TECHNIQUES (${topSceneKnowledge.length} proven templates) ═══
+═══ SCENE/VISUAL TECHNIQUES (${topSceneKnowledge.length} templates) ═══
 ${sceneBlock}
 
-═══ SCRIPT RETENTION TECHNIQUES (${scriptKnowledgeRes.data?.length || 0} proven methods) ═══
+═══ SCRIPT RETENTION TECHNIQUES (${scriptKnowledgeRes.data?.length || 0} methods) ═══
 ${scriptBlock}
 
 ═══ YOUTUBE ALGORITHM KNOWLEDGE ═══
 ${ytBlock}
 
-RULES:
-- Base ALL recommendations on the REAL data above
-- Hooks must be inspired by what actually works in this niche
-- Visual suggestions must match the niche's proven visual style
-- Identify content GAPS — topics the top channels haven't covered yet
-- Be specific, actionable, and data-backed
+═══ REAL-TIME YOUTUBE SEARCH RESULTS (${(youtubeVideos as any[]).length} videos with SIMILAR TOPICS found NOW) ═══
+${ytVideosBlock}
+
+CRITICAL RULES:
+- The REAL-TIME YOUTUBE section contains ACTUAL videos that exist RIGHT NOW on YouTube about this EXACT topic or similar topics
+- Analyze WHY the top-performing videos succeeded: title patterns, hooks, angles, duration, engagement
+- Identify what angles are SATURATED (many videos already cover) vs UNDEREXPLORED
+- Recommend differentiation strategies based on what's already out there
+- Extract the best title patterns and hooks from real successful videos
+- Base visual suggestions on what dominates this niche visually
+- Be specific, actionable, data-backed
 - Language: ${language || 'português'}`
           },
           {
@@ -250,7 +283,7 @@ NICHE: ${niche || 'general'}
 STYLE: ${style || 'cinematic'}
 LANGUAGE: ${language || 'português'}
 
-Create a detailed intelligence briefing based on the real channel data and viral patterns above. What works? What to avoid? What hooks are proven? What visual style dominates? Where are the content gaps?`
+IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did the top ones succeed? What angles are already covered? What's the gap I can exploit? What hooks and title patterns work best for THIS specific topic?`
           }
         ],
       }),
@@ -276,7 +309,14 @@ Create a detailed intelligence briefing based on the real channel data and viral
         sceneKnowledgeUsed: topSceneKnowledge.length,
         scriptTechniquesUsed: scriptKnowledgeRes.data?.length || 0,
         ytKnowledgeUsed: ytKnowledgeRes.data?.length || 0,
+        youtubeVideosFound: (youtubeVideos as any[]).length,
         topChannelNames: topChannels.slice(0, 5).map((c: any) => c.channel_name),
+        topYoutubeVideos: (youtubeVideos as any[]).slice(0, 5).map((v: any) => ({
+          title: v.title,
+          views: v.views,
+          channelTitle: v.channelTitle,
+          engagement: v.views > 0 ? (((parseInt(v.likes)||0) + (parseInt(v.comments)||0)) / parseInt(v.views) * 100).toFixed(1) + '%' : '0%',
+        })),
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -286,6 +326,45 @@ Create a detailed intelligence briefing based on the real channel data and viral
     return errResp(e instanceof Error ? e.message : "Unknown error", 500);
   }
 });
+
+// ========== YouTube Data API real-time search ==========
+async function searchYouTubeVideos(apiKey: string, topic: string, niche?: string): Promise<any[]> {
+  try {
+    const query = niche ? `${topic} ${niche}` : topic;
+    // Search for videos sorted by view count
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&order=viewCount&maxResults=15&relevanceLanguage=pt&key=${apiKey}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) {
+      console.error("YouTube search failed:", searchRes.status);
+      return [];
+    }
+    const searchData = await searchRes.json();
+    const videoIds = (searchData.items || []).map((item: any) => item.id.videoId).filter(Boolean);
+    if (videoIds.length === 0) return [];
+
+    // Get detailed stats for each video
+    const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${apiKey}`;
+    const statsRes = await fetch(statsUrl);
+    if (!statsRes.ok) return [];
+    const statsData = await statsRes.json();
+
+    return (statsData.items || []).map((v: any) => ({
+      videoId: v.id,
+      title: v.snippet?.title || '',
+      channelTitle: v.snippet?.channelTitle || '',
+      description: v.snippet?.description || '',
+      publishedAt: v.snippet?.publishedAt || '',
+      tags: v.snippet?.tags || [],
+      views: v.statistics?.viewCount || '0',
+      likes: v.statistics?.likeCount || '0',
+      comments: v.statistics?.commentCount || '0',
+      duration: v.contentDetails?.duration || '',
+    }));
+  } catch (err) {
+    console.error("YouTube search error:", err);
+    return [];
+  }
+}
 
 function errResp(msg: string, status: number) {
   return new Response(JSON.stringify({ error: msg }), {
