@@ -903,10 +903,92 @@ const Scripts = () => {
                 </div>
               </div>
               <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gap-2">
-                <Sparkles className="w-4 h-4" />
-                {loading ? 'Gerando...' : 'Gerar Roteiro'}
+                {analyzingTopic ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando inteligência...</> :
+                 loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando roteiro...</> :
+                 <><Sparkles className="w-4 h-4" /> 🧠 Analisar & Gerar Roteiro</>}
               </Button>
             </div>
+
+            {/* Intelligence Briefing Panel */}
+            {intelligenceBriefing && (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <button onClick={() => setShowIntelligence(!showIntelligence)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <span className="font-semibold text-xs">📊 Análise de Inteligência</span>
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
+                      {intelligenceBriefing.metadata?.channelsAnalyzed || 0} canais
+                    </Badge>
+                  </div>
+                  {showIntelligence ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+                <AnimatePresence>
+                  {showIntelligence && (
+                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                      <div className="px-3 pb-3 space-y-3 border-t border-border/30 pt-2 max-h-[400px] overflow-y-auto">
+                        {/* Competitive Analysis */}
+                        {intelligenceBriefing.briefing?.competitive_analysis && (
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Análise Competitiva</p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {(intelligenceBriefing.briefing.competitive_analysis.what_works || []).slice(0, 3).map((w: string, i: number) => (
+                                <div key={i} className="bg-primary/5 rounded px-2 py-1 text-[10px]">✅ {w}</div>
+                              ))}
+                              {(intelligenceBriefing.briefing.competitive_analysis.what_to_avoid || []).slice(0, 2).map((w: string, i: number) => (
+                                <div key={i} className="bg-destructive/5 rounded px-2 py-1 text-[10px]">❌ {w}</div>
+                              ))}
+                            </div>
+                            {intelligenceBriefing.briefing.competitive_analysis.content_gaps?.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] text-muted-foreground">Gaps de Conteúdo:</p>
+                                {intelligenceBriefing.briefing.competitive_analysis.content_gaps.slice(0, 3).map((g: string, i: number) => (
+                                  <div key={i} className="text-[10px] text-primary">💡 {g}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Recommended Hooks */}
+                        {intelligenceBriefing.briefing?.recommended_hooks?.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Hooks Recomendados</p>
+                            {intelligenceBriefing.briefing.recommended_hooks.slice(0, 3).map((h: any, i: number) => (
+                              <div key={i} className="bg-muted/30 rounded-lg p-2 text-[10px]">
+                                <p className="font-medium">🎣 "{h.hook_text}"</p>
+                                <p className="text-muted-foreground">{h.why_it_works}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Visual Blueprint */}
+                        {intelligenceBriefing.briefing?.visual_blueprint && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Blueprint Visual</p>
+                            <div className="bg-muted/30 rounded-lg p-2 text-[10px] space-y-0.5">
+                              <p>🎨 Estilo: {intelligenceBriefing.briefing.visual_blueprint.recommended_style}</p>
+                              <p>💡 Iluminação: {intelligenceBriefing.briefing.visual_blueprint.lighting_mood}</p>
+                              <p>🎬 Hook Visual: {intelligenceBriefing.briefing.visual_blueprint.hook_visual_suggestion}</p>
+                            </div>
+                          </div>
+                        )}
+                        {/* Reference Channels */}
+                        {intelligenceBriefing.metadata?.topChannelNames?.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Canais Referência</p>
+                            <div className="flex flex-wrap gap-1">
+                              {intelligenceBriefing.metadata.topChannelNames.map((name: string, i: number) => (
+                                <Badge key={i} variant="outline" className="text-[9px]">{name}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {/* Templates Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
