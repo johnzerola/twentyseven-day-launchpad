@@ -156,13 +156,79 @@ const Scripts = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-  useEffect(() => { loadHistory(); }, []);
+  useEffect(() => { loadHistory(); loadTemplates(); }, []);
 
   const loadHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase.from('saved_scripts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20) as any;
     setSavedScripts(data || []);
+  };
+
+  const loadTemplates = async () => {
+    setLoadingTemplates(true);
+    const { data } = await supabase.from('script_knowledge').select('*').eq('category', 'template').order('effectiveness_score', { ascending: false }) as any;
+    setTemplates(data || []);
+    setLoadingTemplates(false);
+  };
+
+  const applyTemplate = (tmpl: any) => {
+    const examples = Array.isArray(tmpl.examples) ? tmpl.examples : [];
+    // Set the template content as a starting point and extract a suggested topic
+    const firstExample = examples[0] || '';
+    if (firstExample && !topic) setTopic(firstExample);
+    // Map template title to style
+    const styleMap: Record<string, string> = {
+      'documentário': 'documentário', 'true crime': 'narração', 'finanças': 'educativo',
+      'motivacional': 'storytelling', 'listicle': 'listicle', 'tutorial': 'tutorial',
+      'horror': 'narração', 'educativo': 'educativo', 'storytelling': 'storytelling',
+      'shorts': 'dopaminérgico', 'comparação': 'educativo', 'desafio': 'mrbeast',
+      'mistério': 'cinematográfico', 'conspiração': 'cinematográfico',
+    };
+    const titleLower = tmpl.title.toLowerCase();
+    for (const [key, val] of Object.entries(styleMap)) {
+      if (titleLower.includes(key)) { setStyle(val); break; }
+    }
+    toast.success(`Template "${tmpl.title}" aplicado!`);
+    setShowTemplates(false);
+  };
+
+  const generateThemeSuggestions = async () => {
+    setLoadingThemes(true);
+    setThemeSuggestions([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-themes', {
+        body: { niche: niche || 'faceless dark', style: style || 'documentário', language, count: 10 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setThemeSuggestions(data?.themes || []);
+      toast.success(`${data?.themes?.length || 0} temas gerados!`);
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('402')) toast.error('Créditos insuficientes.');
+      else if (msg.includes('429')) toast.error('Rate limit. Tente novamente.');
+      else toast.error(msg || 'Erro ao gerar temas');
+    } finally {
+      setLoadingThemes(false);
+    }
+  };
+
+  const useTheme = (theme: any) => {
+    setTopic(theme.title);
+    if (theme.estimated_duration) {
+      const dur = parseInt(theme.estimated_duration);
+      if (dur) setDuration(String(dur));
+    }
+    const styleMap: Record<string, string> = {
+      'documentário': 'documentário', 'listicle': 'listicle', 'tutorial': 'tutorial',
+      'true crime': 'narração', 'motivacional': 'storytelling', 'storytelling': 'storytelling',
+      'educativo': 'educativo', 'horror': 'narração', 'comparação': 'educativo',
+      'desafio': 'mrbeast', 'shorts': 'dopaminérgico',
+    };
+    if (theme.style && styleMap[theme.style]) setStyle(styleMap[theme.style]);
+    toast.success('Tema aplicado! Clique em Gerar Roteiro.');
+    setShowThemeSuggestions(false);
   };
 
   const getViralContext = () => {
