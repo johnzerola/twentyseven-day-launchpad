@@ -194,7 +194,39 @@ const NicheExplorer = () => {
             <Button onClick={() => explore()} disabled={loading} className="gradient-hero border-0 gap-2 h-11 px-6">
               <Brain className="w-4 h-4" /> {loading ? 'Analisando...' : 'Analisar'}
             </Button>
+            {savedAnalyses.length > 0 && (
+              <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="h-11 gap-2">
+                <History className="w-4 h-4" /> {savedAnalyses.length}
+              </Button>
+            )}
           </div>
+
+          {/* History dropdown */}
+          <AnimatePresence>
+            {showHistory && savedAnalyses.length > 0 && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs text-muted-foreground font-medium">Análises salvas:</p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                  {savedAnalyses.map((s: any) => (
+                    <div key={s.id} className="flex items-center gap-2 bg-secondary/30 rounded-lg p-2 hover:bg-secondary/50 transition-all cursor-pointer group"
+                      onClick={() => loadAnalysis(s)}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                        s.score >= 75 ? 'bg-emerald-500/20 text-emerald-400' : s.score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-destructive/20 text-destructive'
+                      }`}>{s.score}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium capitalize truncate">{s.niche}</p>
+                        <p className="text-[10px] text-muted-foreground">{s.country} · {new Date(s.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); deleteAnalysis(s.id); }}>
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="flex flex-wrap gap-2">
             {QUICK_NICHES.map(n => (
