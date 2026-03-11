@@ -752,8 +752,4 @@ const NicheExplorer = () => {
   );
 };
 
-// Constants for display
-const YPP_SUBS = '1.000';
-const YPP_HOURS = '4.000h';
-
 export default NicheExplorer;
