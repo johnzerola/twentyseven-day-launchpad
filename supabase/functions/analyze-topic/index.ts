@@ -302,6 +302,14 @@ IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did 
     if (!toolCall) throw new Error("No tool call in AI response");
     const briefing = JSON.parse(toolCall.function.arguments);
 
+    // ========== AUTO-ENRICH: Save discovered patterns back to DB ==========
+    let enrichmentStats = { channelsSaved: 0, knowledgeSaved: 0 };
+    try {
+      await autoEnrichDatabase(sb, briefing, youtubeVideos as any[], topic, niche, style, enrichmentStats);
+    } catch (err) {
+      console.error("Auto-enrichment failed (non-critical):", err);
+    }
+
     return new Response(JSON.stringify({
       briefing,
       metadata: {
@@ -317,6 +325,7 @@ IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did 
           channelTitle: v.channelTitle,
           engagement: v.views > 0 ? (((parseInt(v.likes)||0) + (parseInt(v.comments)||0)) / parseInt(v.views) * 100).toFixed(1) + '%' : '0%',
         })),
+        enrichment: enrichmentStats,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -370,4 +379,95 @@ function errResp(msg: string, status: number) {
   return new Response(JSON.stringify({ error: msg }), {
     status, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// ========== Auto-enrich: save discovered patterns to DB ==========
+async function autoEnrichDatabase(
+  sb: any, briefing: any, youtubeVideos: any[],
+  topic: string, niche: string | undefined, style: string | undefined,
+  stats: { channelsSaved: number; knowledgeSaved: number }
+) {
+  // 1. Save high-performing YouTube channels not yet in channel_intelligence
+  const highPerformers = youtubeVideos.filter(v => parseInt(v.views) > 100000);
+  if (highPerformers.length > 0) {
+    const channelNames = [...new Set(highPerformers.map(v => v.channelTitle))];
+    for (const chName of channelNames.slice(0, 5)) {
+      // Check if already exists
+      const { data: existing } = await sb.from("channel_intelligence")
+        .select("id")
+        .eq("channel_name", chName)
+        .limit(1);
+      if (existing && existing.length > 0) continue;
+
+      const chVideos = highPerformers.filter(v => v.channelTitle === chName);
+      const avgViews = Math.floor(chVideos.reduce((s: number, v: any) => s + parseInt(v.views), 0) / chVideos.length);
+      const topTags = chVideos.flatMap((v: any) => v.tags || []).slice(0, 10);
+      const hooks = briefing.recommended_hooks?.slice(0, 3).map((h: any) => h.hook_text) || [];
+
+      await sb.from("channel_intelligence").insert({
+        channel_name: chName,
+        niche: niche || 'geral',
+        style: style || 'cinematic',
+        avg_views: avgViews,
+        subscribers: 0,
+        growth_rate: avgViews > 1000000 ? 'rapid' : avgViews > 500000 ? 'steady' : 'moderate',
+        viral_patterns: { hooks, tags: topTags, discovered_via: 'auto-enrich', topic_searched: topic },
+        top_videos: chVideos.slice(0, 5).map((v: any) => ({ title: v.title, views: parseInt(v.views) })),
+        visual_style_notes: briefing.visual_blueprint?.recommended_style || null,
+        is_faceless: true,
+        is_monetized: true,
+      });
+      stats.channelsSaved++;
+    }
+  }
+
+  // 2. Save successful visual/hook patterns as scene_prompt_knowledge
+  const ytAnalysis = briefing.youtube_real_time_analysis;
+  if (ytAnalysis?.why_top_videos_work?.length > 0) {
+    // Create a knowledge entry from the discovered patterns
+    const successPatterns = ytAnalysis.why_top_videos_work.join('. ');
+    const angles = (ytAnalysis.successful_angles || []).join(', ');
+    const titlePatterns = (ytAnalysis.common_title_patterns || []).join('; ');
+
+    // Check if we already have a similar entry (by topic)
+    const { data: existingKnowledge } = await sb.from("scene_prompt_knowledge")
+      .select("id")
+      .eq("category", `auto-discovered-${(niche || 'general').toLowerCase()}`)
+      .limit(5);
+
+    // Only add if we don't have too many auto-discovered entries for this niche
+    if (!existingKnowledge || existingKnowledge.length < 10) {
+      await sb.from("scene_prompt_knowledge").insert({
+        category: `auto-discovered-${(niche || 'general').toLowerCase()}`,
+        title: `Viral patterns: ${topic.slice(0, 50)}`,
+        prompt_template: `Based on analysis of ${youtubeVideos.length} real YouTube videos about "${topic}": SUCCESS FACTORS: ${successPatterns}. WINNING ANGLES: ${angles}. TITLE PATTERNS: ${titlePatterns}. VISUAL STYLE: ${briefing.visual_blueprint?.recommended_style || 'cinematic'}. LIGHTING: ${briefing.visual_blueprint?.lighting_mood || 'dramatic'}. Apply these patterns to generate visually magnetic scenes.`,
+        tags: JSON.stringify([niche || 'general', style || 'cinematic', 'auto-discovered', 'viral-pattern']),
+        viral_score: 8,
+      });
+      stats.knowledgeSaved++;
+    }
+  }
+
+  // 3. Save hook patterns to script_knowledge if novel
+  if (briefing.recommended_hooks?.length >= 2) {
+    const { data: existingScriptK } = await sb.from("script_knowledge")
+      .select("id")
+      .eq("category", `auto-discovered-hooks`)
+      .limit(20);
+
+    if (!existingScriptK || existingScriptK.length < 30) {
+      const hooksContent = briefing.recommended_hooks.map((h: any) =>
+        `[${h.hook_type}] "${h.hook_text}" — ${h.why_it_works}${h.inspired_by ? ` (inspired by: ${h.inspired_by})` : ''}`
+      ).join('\n');
+
+      await sb.from("script_knowledge").insert({
+        category: 'auto-discovered-hooks',
+        title: `Hooks: ${(niche || topic).slice(0, 40)} (${new Date().toISOString().slice(0, 10)})`,
+        content: `Hooks discovered from analyzing ${youtubeVideos.length} videos about "${topic}" in ${niche || 'general'} niche:\n${hooksContent}\n\nContent gaps identified: ${(briefing.competitive_analysis?.content_gaps || []).join('; ')}`,
+        examples: JSON.stringify(briefing.recommended_hooks.map((h: any) => h.hook_text)),
+        effectiveness_score: 8,
+      });
+      stats.knowledgeSaved++;
+    }
+  }
 }

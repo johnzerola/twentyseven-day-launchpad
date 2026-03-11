@@ -426,7 +426,11 @@ const Scripts = () => {
           setIntelligenceBriefing(analysisData);
           setShowIntelligence(true);
           const ytVids = analysisData.metadata?.youtubeVideosFound || 0;
-          toast.success(`📊 Inteligência: ${analysisData.metadata?.channelsAnalyzed || 0} canais + ${ytVids} vídeos YouTube analisados`);
+          const enrichment = analysisData.metadata?.enrichment;
+          const enrichMsg = enrichment && (enrichment.channelsSaved > 0 || enrichment.knowledgeSaved > 0)
+            ? ` | 🧠 +${enrichment.channelsSaved} canais +${enrichment.knowledgeSaved} padrões salvos`
+            : '';
+          toast.success(`📊 ${analysisData.metadata?.channelsAnalyzed || 0} canais + ${ytVids} vídeos YT analisados${enrichMsg}`);
         }
       } catch (err) {
         console.warn('Intelligence analysis failed, proceeding without:', err);
