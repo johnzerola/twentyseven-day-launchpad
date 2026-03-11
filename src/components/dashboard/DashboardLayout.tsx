@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle, Lock, CreditCard } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,9 @@ import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/constants';
 import { LogOut } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSubscription } from '@/hooks/use-subscription';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -23,17 +26,28 @@ const navItems = [
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
 ];
 
+const TIER_COLORS: Record<string, string> = {
+  starter: 'bg-muted text-muted-foreground',
+  pro: 'bg-primary/20 text-primary',
+  full: 'bg-chart-4/20 text-chart-4',
+};
+
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { subscription, hasAccess, getRequiredTier, tierLabel } = useSubscription();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success('Logout realizado!');
     navigate('/login');
   };
+
+  const creditsPercent = subscription.credits_monthly_limit > 0
+    ? (subscription.credits_remaining / subscription.credits_monthly_limit) * 100
+    : 0;
 
   const Sidebar = () => (
     <div className="flex flex-col h-full">
@@ -42,22 +56,44 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           <Zap className="w-5 h-5 text-primary-foreground" />
         </div>
         <span className="text-lg font-bold font-['Space_Grotesk'] text-sidebar-foreground">{APP_NAME}</span>
+        <Badge className={`ml-auto text-[10px] px-1.5 py-0 ${TIER_COLORS[subscription.tier]}`}>
+          {tierLabel(subscription.tier)}
+        </Badge>
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ key, icon: Icon, path }) => {
           const active = location.pathname === path;
           const tooltip = PAGE_TOOLTIPS[path];
+          const locked = !hasAccess(path);
+          const requiredTier = getRequiredTier(path);
+
           return (
             <div key={path} className="flex items-center group">
-              <Link to={path} onClick={() => setSidebarOpen(false)}
-                className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                  active ? 'bg-sidebar-accent text-sidebar-primary font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                }`}>
-                <Icon className="w-4 h-4" />
-                {key}
-              </Link>
-              {tooltip && (
+              {locked ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground/50 cursor-not-allowed relative select-none">
+                      <Icon className="w-4 h-4" />
+                      <span className="line-through decoration-muted-foreground/30">{key}</span>
+                      <Lock className="w-3 h-3 ml-auto text-muted-foreground/40" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[200px] text-xs">
+                    <p className="font-semibold text-primary">🔒 Plano {tierLabel(requiredTier)} necessário</p>
+                    <p className="text-muted-foreground mt-0.5">Faça upgrade para desbloquear esta funcionalidade.</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Link to={path} onClick={() => setSidebarOpen(false)}
+                  className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    active ? 'bg-sidebar-accent text-sidebar-primary font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  }`}>
+                  <Icon className="w-4 h-4" />
+                  {key}
+                </Link>
+              )}
+              {tooltip && !locked && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button className="p-1 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity">
@@ -74,6 +110,15 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           );
         })}
       </nav>
+
+      {/* Credits meter */}
+      <div className="px-4 py-2 border-t border-sidebar-border">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" /> Créditos</span>
+          <span>{subscription.credits_remaining}/{subscription.credits_monthly_limit}</span>
+        </div>
+        <Progress value={creditsPercent} className="h-1.5" />
+      </div>
 
       <div className="p-3 border-t border-sidebar-border space-y-2">
         <LanguageSwitcher />

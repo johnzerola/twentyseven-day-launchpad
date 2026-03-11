@@ -1045,6 +1045,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          active_devices: number
+          created_at: string
+          credits_monthly_limit: number
+          credits_remaining: number
+          expires_at: string | null
+          id: string
+          max_devices: number
+          started_at: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_devices?: number
+          created_at?: string
+          credits_monthly_limit?: number
+          credits_remaining?: number
+          expires_at?: string | null
+          id?: string
+          max_devices?: number
+          started_at?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_devices?: number
+          created_at?: string
+          credits_monthly_limit?: number
+          credits_remaining?: number
+          expires_at?: string | null
+          id?: string
+          max_devices?: number
+          started_at?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_projects: {
         Row: {
           channel_id: string | null
@@ -1218,10 +1260,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_credits: {
+        Args: { _amount: number; _user_id: string }
+        Returns: boolean
+      }
+      get_user_tier: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["subscription_tier"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      subscription_tier: "starter" | "pro" | "full"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1348,6 +1397,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_tier: ["starter", "pro", "full"],
+    },
   },
 } as const

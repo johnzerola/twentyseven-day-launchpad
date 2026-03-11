@@ -16,7 +16,7 @@ import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
 import { ScriptGenerator } from '@/components/scripts/ScriptGenerator';
 import { CharacterManager } from '@/components/scripts/CharacterManager';
 import { AudioProcessor } from '@/components/scripts/AudioProcessor';
-import { SceneViewer } from '@/components/scripts/SceneViewer';
+import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
 
@@ -580,7 +580,9 @@ const Scripts = () => {
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
                       <PromptExporter scenes={syncedScenes} characters={characters} topic={topic} videoStyle={videoStyle} language={language} />
-                      <SceneViewer scenes={syncedScenes} />
+                      <TimelineSyncLab scenes={syncedScenes} onUpdateScene={(index, updates) => {
+                        setSyncedScenes(prev => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
+                      }} />
                     </div>
                   )}
                 </motion.div>
