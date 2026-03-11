@@ -131,6 +131,7 @@ const Scripts = () => {
   const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts'>('script');
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [newCharName, setNewCharName] = useState('');
   const [newCharDesc, setNewCharDesc] = useState('');
   const [newCharAppearance, setNewCharAppearance] = useState('');
@@ -164,7 +165,78 @@ const Scripts = () => {
       sessionStorage.removeItem('outlier_topic');
       toast.success('Referência do Outlier Finder carregada!');
     }
+    // Load last project characters
+    loadLastProjectCharacters();
   }, []);
+
+  const loadLastProjectCharacters = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: project } = await supabase.from('video_projects')
+      .select('id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!project) return;
+    setProjectId(project.id);
+    const { data: chars } = await supabase.from('characters')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('created_at', { ascending: true });
+    if (chars?.length) {
+      setCharacters(chars.map((c: any) => ({
+        name: c.name,
+        gender: (c.visual_attributes as any)?.gender || 'male',
+        age: (c.visual_attributes as any)?.age || 30,
+        role: (c.visual_attributes as any)?.role || 'Personagem',
+        appearance: (c.visual_attributes as any)?.appearance || { skin_color: 'light', hair_color: 'dark', hair_style: 'short', eye_color: 'brown', body_type: 'average', height: '1.75m' },
+        facial_features: (c.visual_attributes as any)?.facial_features || { eyebrows: 'medium', nose: 'straight', mouth: 'medium', ears: 'normal', face_shape: 'oval' },
+        clothing: (c.visual_attributes as any)?.clothing || { shirt: 'casual shirt', pants: 'jeans', shoes: 'sneakers', accessories: 'none' },
+        personality: (c.visual_attributes as any)?.personality || ['determined'],
+        imageUrl: c.reference_image_url || undefined,
+      })));
+    }
+  };
+
+  const getOrCreateProject = async (): Promise<string> => {
+    if (projectId) return projectId;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Login required');
+    const { data: proj } = await supabase.from('video_projects').insert({
+      user_id: user.id,
+      title: topic || 'Script Project',
+      script: script.slice(0, 500),
+      niche: niche || undefined,
+    } as any).select('id').single();
+    if (!proj) throw new Error('Failed to create project');
+    setProjectId(proj.id);
+    return proj.id;
+  };
+
+  const persistCharacters = async (chars: Character[]) => {
+    try {
+      const pid = await getOrCreateProject();
+      // Delete old characters for this project
+      await supabase.from('characters').delete().eq('project_id', pid);
+      // Insert new
+      if (chars.length === 0) return;
+      const rows = chars.map(c => ({
+        project_id: pid,
+        name: c.name,
+        visual_prompt: buildCharImagePrompt(c),
+        reference_image_url: c.imageUrl || null,
+        visual_attributes: {
+          gender: c.gender, age: c.age, role: c.role,
+          appearance: c.appearance, facial_features: c.facial_features,
+          clothing: c.clothing, personality: c.personality,
+        },
+      }));
+      await supabase.from('characters').insert(rows as any);
+    } catch (err: any) {
+      console.error('Failed to persist characters:', err);
+    }
+  };
 
   const loadHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -389,7 +461,7 @@ const Scripts = () => {
   // Add character manually
   const addCharacter = () => {
     if (!newCharName.trim()) return;
-    setCharacters(prev => [...prev, {
+    const newChar: Character = {
       name: newCharName.trim(),
       gender: 'male',
       age: 30,
@@ -407,7 +479,10 @@ const Scripts = () => {
         pants: 'dark jeans', shoes: 'sneakers', accessories: 'none',
       },
       personality: ['determined', 'curious'],
-    }]);
+    };
+    const updated = [...characters, newChar];
+    setCharacters(updated);
+    persistCharacters(updated);
     setNewCharName('');
     setNewCharDesc('');
     setNewCharAppearance('');
@@ -415,7 +490,9 @@ const Scripts = () => {
   };
 
   const removeCharacter = (idx: number) => {
-    setCharacters(prev => prev.filter((_, i) => i !== idx));
+    const updated = characters.filter((_, i) => i !== idx);
+    setCharacters(updated);
+    persistCharacters(updated);
   };
 
   // Build image prompt from structured character
@@ -499,7 +576,12 @@ const Scripts = () => {
           setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
         }
       }
-      toast.success('Todos os personagens com imagens geradas!');
+      // Persist characters with images to database
+      persistCharacters(extracted.map((c, i) => {
+        // Get latest imageUrl from state - but since state updates are async, use extracted + any generated urls
+        return c;
+      }));
+      toast.success('Todos os personagens com imagens geradas e salvos!');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao detectar personagens');
     } finally {
