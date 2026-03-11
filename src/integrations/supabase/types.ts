@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_logs: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          endpoint: string | null
+          id: string
+          response_code: number | null
+          service: string
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string
+          response_code?: number | null
+          service: string
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string
+          response_code?: number | null
+          service?: string
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       channel_intelligence: {
         Row: {
           analyzed_at: string | null
@@ -82,6 +115,47 @@ export type Database = {
           youtube_channel_id?: string
         }
         Relationships: []
+      }
+      characters: {
+        Row: {
+          created_at: string | null
+          global_prompt_append: string | null
+          id: string
+          name: string
+          project_id: string
+          reference_image_url: string | null
+          visual_attributes: Json | null
+          visual_prompt: string
+        }
+        Insert: {
+          created_at?: string | null
+          global_prompt_append?: string | null
+          id?: string
+          name: string
+          project_id: string
+          reference_image_url?: string | null
+          visual_attributes?: Json | null
+          visual_prompt?: string
+        }
+        Update: {
+          created_at?: string | null
+          global_prompt_append?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          reference_image_url?: string | null
+          visual_attributes?: Json | null
+          visual_prompt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "characters_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       generated_branding: {
         Row: {
@@ -208,6 +282,54 @@ export type Database = {
           },
         ]
       }
+      outlier_channels: {
+        Row: {
+          channel_id: string | null
+          channel_name: string | null
+          found_at: string | null
+          id: string
+          multiplier: number | null
+          niche: string | null
+          published_at: string | null
+          subscribers: number | null
+          thumbnail_url: string | null
+          user_id: string
+          video_title: string
+          video_url: string | null
+          views: number | null
+        }
+        Insert: {
+          channel_id?: string | null
+          channel_name?: string | null
+          found_at?: string | null
+          id?: string
+          multiplier?: number | null
+          niche?: string | null
+          published_at?: string | null
+          subscribers?: number | null
+          thumbnail_url?: string | null
+          user_id: string
+          video_title: string
+          video_url?: string | null
+          views?: number | null
+        }
+        Update: {
+          channel_id?: string | null
+          channel_name?: string | null
+          found_at?: string | null
+          id?: string
+          multiplier?: number | null
+          niche?: string | null
+          published_at?: string | null
+          subscribers?: number | null
+          thumbnail_url?: string | null
+          user_id?: string
+          video_title?: string
+          video_url?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
       planner_cards: {
         Row: {
           column_id: string
@@ -247,6 +369,36 @@ export type Database = {
         }
         Relationships: []
       }
+      playbook_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          day_number: number
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          day_number: number
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          day_number?: number
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -267,6 +419,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      prompts: {
+        Row: {
+          ai_model: string | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          raw_prompt: string
+          result_url: string | null
+          scene_id: string
+          status: string | null
+        }
+        Insert: {
+          ai_model?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          raw_prompt: string
+          result_url?: string | null
+          scene_id: string
+          status?: string | null
+        }
+        Update: {
+          ai_model?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          raw_prompt?: string
+          result_url?: string | null
+          scene_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_scripts: {
         Row: {
@@ -327,6 +523,68 @@ export type Database = {
           viral_score?: number | null
         }
         Relationships: []
+      }
+      scenes: {
+        Row: {
+          audio_url: string | null
+          camera_movement: string | null
+          character_ref: string | null
+          created_at: string | null
+          duration_sec: number | null
+          emotional_intent: string | null
+          id: string
+          lighting: string | null
+          media_url: string | null
+          project_id: string
+          sequence_order: number
+          status: string | null
+          style_tags: Json | null
+          tts_text: string | null
+          veo3_prompt: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          camera_movement?: string | null
+          character_ref?: string | null
+          created_at?: string | null
+          duration_sec?: number | null
+          emotional_intent?: string | null
+          id?: string
+          lighting?: string | null
+          media_url?: string | null
+          project_id: string
+          sequence_order: number
+          status?: string | null
+          style_tags?: Json | null
+          tts_text?: string | null
+          veo3_prompt?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          camera_movement?: string | null
+          character_ref?: string | null
+          created_at?: string | null
+          duration_sec?: number | null
+          emotional_intent?: string | null
+          id?: string
+          lighting?: string | null
+          media_url?: string | null
+          project_id?: string
+          sequence_order?: number
+          status?: string | null
+          style_tags?: Json | null
+          tts_text?: string | null
+          veo3_prompt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       script_knowledge: {
         Row: {
