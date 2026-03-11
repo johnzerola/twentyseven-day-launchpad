@@ -294,6 +294,11 @@ ${ytBlock}
 ═══ REAL-TIME YOUTUBE SEARCH RESULTS (${(youtubeVideos as any[]).length} videos with SIMILAR TOPICS found NOW) ═══
 ${ytVideosBlock}
 
+═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results) ═══
+${(braveResults as any[]).length > 0 
+  ? (braveResults as any[]).map((r: any, i: number) => `${i + 1}. "${r.title}" — ${r.description || ''} (${r.url})`).join('\n')
+  : 'No web results available'}
+
 CRITICAL RULES:
 - The REAL-TIME YOUTUBE section contains ACTUAL videos that exist RIGHT NOW on YouTube about this EXACT topic or similar topics
 - Analyze WHY the top-performing videos succeeded: title patterns, hooks, angles, duration, engagement
