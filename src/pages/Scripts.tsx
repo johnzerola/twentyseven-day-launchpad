@@ -179,6 +179,18 @@ const Scripts = () => {
     loadLastProjectCharacters();
   }, []);
 
+  // Auto-suggest themes when topic changes (debounced)
+  useEffect(() => {
+    if (topic.trim().length < 5 || !niche.trim()) return;
+    const timer = setTimeout(() => {
+      if (!loadingThemes && themeSuggestions.length === 0) {
+        generateThemeSuggestions();
+        setShowThemeSuggestions(true);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [topic, niche]);
+
   const loadLastProjectCharacters = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
