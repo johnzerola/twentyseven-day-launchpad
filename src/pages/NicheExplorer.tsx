@@ -33,7 +33,7 @@ const NicheExplorer = () => {
   const [data, setData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [filterFaceless, setFilterFaceless] = useState(false);
-  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
+  const analysesPag = usePagination<any>();
   const [showHistory, setShowHistory] = useState(false);
 
   // Load saved analyses on mount
