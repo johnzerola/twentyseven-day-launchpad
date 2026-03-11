@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FileText, Sparkles, Copy, Check, Save, History, Trash2, Zap, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Upload, Clock, Image, Loader2, Play, Wand2, Edit3, Eye, ClipboardPaste, Mic, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight } from 'lucide-react';
@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
+import { PaginationControls } from '@/components/PaginationControls';
 
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
@@ -121,7 +123,7 @@ const Scripts = () => {
   const [scorecard, setScorecard] = useState<{hook:number,retention:number,emotion:number,flow:number,payoff:number} | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [savedScripts, setSavedScripts] = useState<any[]>([]);
+  const scriptsPag = usePagination<any>();
 
   // Viral Database
   const [showViralPanel, setShowViralPanel] = useState(false);
@@ -166,7 +168,11 @@ const Scripts = () => {
   const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
 
   useEffect(() => {
-    loadHistory(); loadTemplates();
+    loadHistory();
+  }, [scriptsPag.page]);
+
+  useEffect(() => {
+    loadTemplates();
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) {
       setTopic(outlierTopic);
@@ -260,8 +266,9 @@ const Scripts = () => {
   const loadHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from('saved_scripts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20) as any;
-    setSavedScripts(data || []);
+    const { data, count } = await supabase.from('saved_scripts').select('*', { count: 'exact' }).eq('user_id', user.id).order('created_at', { ascending: false }).range(scriptsPag.rangeFrom, scriptsPag.rangeTo) as any;
+    scriptsPag.setItems(data || []);
+    scriptsPag.setTotalCount(count || 0);
   };
 
   const loadTemplates = async () => {
@@ -772,14 +779,15 @@ const Scripts = () => {
             </div>
           </div>
           <Button variant="outline" onClick={() => setShowHistory(!showHistory)} size="sm" className="gap-2">
-            <History className="w-4 h-4" /> ({savedScripts.length})
+            <History className="w-4 h-4" /> ({scriptsPag.totalCount})
           </Button>
         </div>
 
         {/* History */}
-        {showHistory && savedScripts.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-4 space-y-1.5 max-h-48 overflow-y-auto">
-            {savedScripts.map((s: any) => (
+        {showHistory && scriptsPag.items.length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-4 space-y-1.5">
+            <div className="max-h-48 overflow-y-auto space-y-1.5">
+            {scriptsPag.items.map((s: any) => (
               <div key={s.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5">
                 <button onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); setActiveStep('style'); }}
                   className="text-sm text-left flex-1 truncate hover:text-primary transition-colors">
@@ -790,6 +798,9 @@ const Scripts = () => {
                 </Button>
               </div>
             ))}
+            </div>
+            <PaginationControls page={scriptsPag.page} totalCount={scriptsPag.totalCount} pageSize={PAGE_SIZE}
+              hasMore={scriptsPag.hasMore} hasPrev={scriptsPag.hasPrev} onNext={scriptsPag.nextPage} onPrev={scriptsPag.prevPage} />
           </div>
         )}
 

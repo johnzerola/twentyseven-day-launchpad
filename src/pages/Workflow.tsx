@@ -107,9 +107,9 @@ const Workflow = () => {
     if (!user) { setLoading(false); return; }
 
     const [projRes, channelRes, ideasRes] = await Promise.all([
-      supabase.from('video_projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+      supabase.from('video_projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }).range(0, 49),
       supabase.from('user_channels').select('id, channel_name, thumbnail, niche').eq('user_id', user.id),
-      supabase.from('planner_cards').select('*').eq('user_id', user.id).eq('column_id', 'ideas').order('created_at', { ascending: false }),
+      supabase.from('planner_cards').select('*').eq('user_id', user.id).eq('column_id', 'ideas').order('created_at', { ascending: false }).range(0, 49),
     ]);
 
     setChannels(channelRes.data || []);

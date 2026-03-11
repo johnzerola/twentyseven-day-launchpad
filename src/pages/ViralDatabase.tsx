@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ import {
   type ViralHook, type CallToAction, type TitlePattern, type StoryStructure,
   HOOK_STYLES, CTA_TYPES, TITLE_STYLES,
 } from '@/lib/viralDatabase';
+import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
+import { PaginationControls } from '@/components/PaginationControls';
 
 // ========== Types ==========
 interface ChannelIntelligence {
@@ -216,7 +218,8 @@ const ViralDatabase = () => {
   const [patternFilter, setPatternFilter] = useState('');
   const [patternStyleFilter, setPatternStyleFilter] = useState('');
   const [nicheFilter, setNicheFilter] = useState('');
-
+  const [channelPage, setChannelPage] = useState(0);
+  const CHANNELS_PER_PAGE = 24;
   // Load channels from DB
   useEffect(() => {
     loadChannels();
@@ -263,7 +266,14 @@ const ViralDatabase = () => {
     });
   }, [channels, styleFilter, nicheFilter, searchFilter, countryFilter, facelessOnly]);
 
-  // Extract patterns from all channels
+  // Reset page when filters change
+  useEffect(() => { setChannelPage(0); }, [styleFilter, nicheFilter, searchFilter, countryFilter, facelessOnly]);
+
+  const pagedChannels = useMemo(() => {
+    const from = channelPage * CHANNELS_PER_PAGE;
+    return filteredChannels.slice(from, from + CHANNELS_PER_PAGE);
+  }, [filteredChannels, channelPage]);
+
   const allPatterns = useMemo(() => {
     const hookMap = new Map<string, { text: string; count: number; avgViews: number; styles: Set<string> }>();
     channels.forEach(ch => {
@@ -466,14 +476,25 @@ const ViralDatabase = () => {
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {filteredChannels.map(ch => (
-                  <ChannelCard key={ch.id} channel={ch} onUsePatterns={usePatterns} />
-                ))}
-                {filteredChannels.length === 0 && (
-                  <p className="col-span-2 text-center text-muted-foreground py-8">Nenhum canal encontrado com esses filtros.</p>
-                )}
-              </div>
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {pagedChannels.map(ch => (
+                    <ChannelCard key={ch.id} channel={ch} onUsePatterns={usePatterns} />
+                  ))}
+                  {filteredChannels.length === 0 && (
+                    <p className="col-span-2 text-center text-muted-foreground py-8">Nenhum canal encontrado com esses filtros.</p>
+                  )}
+                </div>
+                <PaginationControls
+                  page={channelPage}
+                  totalCount={filteredChannels.length}
+                  pageSize={CHANNELS_PER_PAGE}
+                  hasMore={(channelPage + 1) * CHANNELS_PER_PAGE < filteredChannels.length}
+                  hasPrev={channelPage > 0}
+                  onNext={() => setChannelPage(p => p + 1)}
+                  onPrev={() => setChannelPage(p => p - 1)}
+                />
+              </>
             )}
           </TabsContent>
 
