@@ -218,7 +218,8 @@ const ViralDatabase = () => {
   const [patternFilter, setPatternFilter] = useState('');
   const [patternStyleFilter, setPatternStyleFilter] = useState('');
   const [nicheFilter, setNicheFilter] = useState('');
-
+  const [channelPage, setChannelPage] = useState(0);
+  const CHANNELS_PER_PAGE = 24;
   // Load channels from DB
   useEffect(() => {
     loadChannels();
