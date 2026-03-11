@@ -238,9 +238,17 @@ const ViralDatabase = () => {
   };
 
   // Filter channels
+  // Niches for filter
+  const niches = useMemo(() => {
+    const map = new Map<string, number>();
+    channels.forEach(c => map.set(c.niche, (map.get(c.niche) || 0) + 1));
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [channels]);
+
   const filteredChannels = useMemo(() => {
     return channels.filter(ch => {
       if (styleFilter !== 'all' && ch.style !== styleFilter) return false;
+      if (nicheFilter && ch.niche !== nicheFilter) return false;
       if (facelessOnly && !ch.is_faceless) return false;
       if (countryFilter && ch.country !== countryFilter) return false;
       if (searchFilter) {
@@ -251,7 +259,7 @@ const ViralDatabase = () => {
       }
       return true;
     });
-  }, [channels, styleFilter, searchFilter, countryFilter, facelessOnly]);
+  }, [channels, styleFilter, nicheFilter, searchFilter, countryFilter, facelessOnly]);
 
   // Extract patterns from all channels
   const allPatterns = useMemo(() => {
