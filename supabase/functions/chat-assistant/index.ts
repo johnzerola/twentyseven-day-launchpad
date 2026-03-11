@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, currentPage } = await req.json();
+    const { messages, currentPage, mode, onboardingData } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -19,8 +19,6 @@ serve(async (req) => {
     const sb = createClient(supabaseUrl, supabaseKey);
 
     // Fetch knowledge bases in parallel
-    const lastMsg = (messages[messages.length - 1]?.content || '').toLowerCase();
-
     const [ytKnowledge, scriptKnowledge, channelIntel, viralTitles, nicheDb] = await Promise.all([
       sb.from("youtube_knowledge").select("title, content, category").order("priority", { ascending: false }).limit(15),
       sb.from("script_knowledge").select("title, content, category").order("effectiveness_score", { ascending: false }).limit(10),
@@ -47,18 +45,116 @@ serve(async (req) => {
 
     // Page-aware context
     const pageHints: Record<string, string> = {
-      '/scripts': 'O usuário está na página de ROTEIROS. Ajude com estrutura de roteiro, hooks, retenção, técnicas narrativas.',
-      '/titles': 'O usuário está na página de TÍTULOS. Ajude com CTR, fórmulas de títulos virais, A/B testing.',
-      '/search': 'O usuário está no DubSpy (pesquisa de canais). Ajude a encontrar canais, analisar concorrência.',
-      '/niches': 'O usuário está no Niche Explorer. Ajude a escolher nichos, analisar oportunidades.',
-      '/branding': 'O usuário está no Growth Center. Ajude com branding, thumbnails, projeções de receita.',
-      '/workflow': 'O usuário está no Production Hub. Ajude a organizar projetos, priorizar ideias.',
-      '/channels': 'O usuário está em Meus Canais. Ajude a otimizar o canal, analisar performance.',
-      '/viral-db': 'O usuário está na Viral Database. Ajude a entender padrões virais.',
-      '/dashboard': 'O usuário está no Dashboard. Ajude com visão geral, próximos passos.',
+      '/scripts': 'O usuário está na página de ROTEIROS.',
+      '/titles': 'O usuário está na página de TÍTULOS.',
+      '/search': 'O usuário está no DubSpy (pesquisa de canais).',
+      '/niches': 'O usuário está no Niche Explorer.',
+      '/branding': 'O usuário está no Growth Center.',
+      '/workflow': 'O usuário está no Production Hub.',
+      '/channels': 'O usuário está em Meus Canais.',
+      '/viral-db': 'O usuário está na Viral Database.',
+      '/dashboard': 'O usuário está no Dashboard.',
+      '/multichannel': 'O usuário está no Multichannel Manager.',
     };
     const pageContext = pageHints[currentPage] || '';
 
+    // ========== ONBOARDING MODE ==========
+    if (mode === 'onboarding' && onboardingData) {
+      const od = onboardingData;
+      const onboardingPrompt = `Você é o **Dotti** — assistente de onboarding da plataforma.
+
+## MISSÃO
+Gere um PLANO PERSONALIZADO DE 30 DIAS para o usuário baseado nos dados abaixo.
+
+## DADOS DO USUÁRIO
+- Tem canal: ${od.hasChannel ? 'Sim' : 'Não'}
+${od.channelLink ? `- Canal: ${od.channelLink}` : ''}
+${od.hoursPerDay ? `- Horas disponíveis/dia: ${od.hoursPerDay}` : ''}
+${od.languages ? `- Idiomas: ${od.languages}` : ''}
+${od.niche ? `- Nicho de interesse: ${od.niche}` : ''}
+${od.budget ? `- Orçamento: ${od.budget === 'low' ? 'Baixo (~$0)' : od.budget === 'medium' ? 'Médio (~$50-100/mês)' : 'Alto ($200+/mês)'}` : ''}
+${od.preference ? `- Preferência: ${od.preference === 'passion' ? 'Fazer o que ama' : od.preference === 'money' ? 'Priorizar monetização' : 'Unir paixão e monetização'}` : ''}
+
+## BASE DE DADOS REAL
+
+### Nichos disponíveis com dados:
+${nicheContext}
+
+### Canais de referência (${channelIntel.data?.length || 0}):
+${channelContext.slice(0, 3000)}
+
+### Algoritmo YouTube:
+${ytContext.slice(0, 2000)}
+
+## FORMATO DO PLANO (OBRIGATÓRIO)
+
+### 🎯 Diagnóstico Inicial
+- Análise honesta da situação do usuário
+- Nicho recomendado (com justificativa baseada em RPM e saturação)
+${od.preference === 'both' ? '- Sugestão de como unir paixão com monetização neste nicho' : ''}
+
+### 📅 Semana 1 (Dias 1-7): Setup
+- Dia a dia com tarefas específicas e executáveis
+- Criação de canal, identidade visual, primeiros roteiros
+
+### 📅 Semana 2 (Dias 8-14): Primeiros Vídeos
+- Schedule de upload (baseado nas horas disponíveis)
+- Foco em SEO e títulos virais
+
+### 📅 Semana 3 (Dias 15-21): Otimização
+- Análise de métricas, ajustes de thumbnail e títulos
+- Estudar concorrentes no DubSpy
+
+### 📅 Semana 4 (Dias 22-30): Escala & Monetização
+- Estratégias de crescimento acelerado
+- Ativação de monetização (AdSense, afiliados, infoprodutos)
+
+### 💰 Projeção Financeira
+- Estimativa realista de views e receita ao final de 30 dias
+- RPM esperado baseado no nicho e país
+- Metas de inscritos realistas
+
+### 🛠️ Ferramentas da Plataforma Para Usar
+- Quais ferramentas usar em cada etapa (DubSpy, Niche Explorer, Roteiros, etc.)
+
+## REGRAS:
+1. Seja BRUTALMENTE HONESTO sobre expectativas
+2. Use DADOS REAIS da base de nichos
+3. Adapte o plano às horas disponíveis (não sugira 3 vídeos/dia para quem tem 1h)
+4. Se o orçamento é baixo, foque em estratégias gratuitas
+5. Responda em português brasileiro
+6. Use emojis para organizar visualmente
+7. Cada dia deve ter UMA tarefa principal clara`;
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: onboardingPrompt },
+            ...messages,
+          ],
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const status = response.status;
+        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        throw new Error("AI error");
+      }
+
+      return new Response(response.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // ========== REGULAR CHAT MODE ==========
     const systemPrompt = `Você é o **Dotti** — o assistente de IA da plataforma Dotti, especialista absoluto em YouTube.
 
 ## QUEM VOCÊ É
@@ -99,17 +195,33 @@ ${viralContext}
 ### Banco de Nichos:
 ${nicheContext}
 
+## FUNCIONALIDADES DA PLATAFORMA (sugira quando relevante):
+- **DubSpy** (/search): Encontrar canais emergentes e concorrentes com viral score
+- **Niche Explorer** (/niches): Analisar nichos com RPM, saturação e projeções financeiras
+- **Roteiros** (/scripts): Gerar roteiros com pipeline Ensemble AI (GPT-5 + Gemini + fact-check)
+- **Títulos Virais** (/titles): Gerar e comparar títulos A/B com CTR estimado
+- **Growth Center** (/branding): Branding, nomes de canal e identidade visual
+- **Viral Database** (/viral-db): 900+ títulos virais reais com padrões e gatilhos
+- **Workflow** (/workflow): Kanban para organizar projetos
+- **Multichannel** (/multichannel): Gerenciar 50+ canais com rollouts em escala
+- **Meus Canais** (/channels): Vincular, analisar e acompanhar canais
+
+## FOLLOW-UP SEMANAL
+Se o usuário mencionar que está na segunda semana ou mais, ofereça:
+- "Quer enviar suas métricas para eu avaliar o progresso?"
+- "Quer conectar seu canal para análise automática?"
+- Sugira ajustes no plano baseado nos resultados
+
 ## REGRAS IMPORTANTES:
-1. Responda SEMPRE em português brasileiro, de forma conversacional e amigável
-2. Seja BRUTALMENTE HONESTO — nunca engane sobre expectativas. Se uma ideia é ruim, diga com tato mas com honestidade
-3. Use DADOS REAIS da base de conhecimento acima — nunca invente números
+1. Responda SEMPRE em português brasileiro, conversacional e amigável
+2. Seja BRUTALMENTE HONESTO — nunca engane sobre expectativas
+3. Use DADOS REAIS da base de conhecimento — nunca invente números
 4. Dê conselhos ACIONÁVEIS — passos concretos, não teoria vaga
-5. Quando relevante, sugira como usar as ferramentas da plataforma (DubSpy, Niche Explorer, Growth Center, etc.)
-6. Para monetização: sempre mencione a regra dos 10-12 vídeos e expectativas realistas de RPM por país
-7. Para roteiros: use técnicas de hook de 5 segundos, loops abertos e cliffhangers a cada 15s
-8. Mantenha respostas focadas e úteis — não repita informações desnecessárias
-9. Quando o usuário perguntar sobre nichos, use os dados do banco de nichos e channel_intelligence
-10. Quando sugerir ideias de vídeo, baseie-se nos títulos virais reais do banco`;
+5. Sugira ferramentas da plataforma quando relevante
+6. Para monetização: mencione a regra dos 10-12 vídeos e RPM por país
+7. Mantenha respostas focadas e úteis
+8. Se o usuário perguntar sobre nichos, use dados do banco real
+9. Se sugerir ideias de vídeo, baseie nos títulos virais reais`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -128,16 +240,8 @@ ${nicheContext}
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit — tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos esgotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       throw new Error("AI gateway error");

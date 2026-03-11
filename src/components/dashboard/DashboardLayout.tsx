@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChatbotWidget } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles, Flame, GitBranch, DollarSign, CalendarDays, Video, Layers } from 'lucide-react';
+import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/constants';
+import { LogOut } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -17,7 +19,6 @@ const navItems = [
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
-  
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
 ];
@@ -46,14 +47,30 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ key, icon: Icon, path }) => {
           const active = location.pathname === path;
+          const tooltip = PAGE_TOOLTIPS[path];
           return (
-            <Link key={path} to={path} onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                active ? 'bg-sidebar-accent text-sidebar-primary font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-              }`}>
-              <Icon className="w-4 h-4" />
-              {key}
-            </Link>
+            <div key={path} className="flex items-center group">
+              <Link to={path} onClick={() => setSidebarOpen(false)}
+                className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                  active ? 'bg-sidebar-accent text-sidebar-primary font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                }`}>
+                <Icon className="w-4 h-4" />
+                {key}
+              </Link>
+              {tooltip && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="p-1 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity">
+                      <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[200px] text-xs">
+                    <p className="font-semibold mb-0.5">{tooltip.title}</p>
+                    <p className="text-muted-foreground">{tooltip.desc}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           );
         })}
       </nav>
