@@ -1359,51 +1359,31 @@ const Scripts = () => {
                   </div>
 
                   {/* Auto-detect button */}
-                  <Button onClick={autoDetectCharacters} disabled={detectingCharacters} className="w-full gap-2 mb-4" variant="default">
-                    {detectingCharacters ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                    {detectingCharacters ? 'Detectando personagens e gerando imagens...' : '🪄 Detectar Personagens do Roteiro + Gerar Imagens'}
+                  <Button onClick={autoDetectCharacters} disabled={detectingCharacters || !script} className="w-full gap-2 mb-2 gradient-hero border-0">
+                    {detectingCharacters ? <><Loader2 className="w-4 h-4 animate-spin" /> Detectando personagens...</>
+                      : <><Wand2 className="w-4 h-4" /> 🎭 Detectar Personagens do Roteiro</>}
                   </Button>
+                  <p className="text-[10px] text-muted-foreground text-center mb-4">As descrições serão injetadas automaticamente nos prompts visuais de cada cena</p>
 
                   {/* Existing characters */}
                   {characters.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {characters.map((c, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                          <div className="shrink-0">
-                            {c.generatingImage ? (
-                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center">
-                                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                              </div>
-                            ) : c.imageUrl ? (
-                              <img src={c.imageUrl} alt={c.name} className="w-16 h-16 rounded-lg object-cover border border-border" />
-                            ) : (
-                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-lg font-bold">
-                                {c.name.charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                            {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground">{c.name} <span className="text-[10px] text-muted-foreground ml-1">({c.gender}, {c.age} anos)</span></p>
                             <p className="text-[10px] text-muted-foreground">{c.role}</p>
-                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance.skin_color} skin, {c.appearance.hair_color} {c.appearance.hair_style} hair, {c.appearance.eye_color} eyes</p>
+                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance.skin_color} skin, {c.appearance.hair_color} {c.appearance.hair_style} hair, {c.appearance.eye_color} eyes, {c.appearance.height}</p>
                             <p className="text-[10px] text-muted-foreground">👕 {c.clothing.shirt}, {c.clothing.pants}, {c.clothing.shoes}</p>
-                            <p className="text-[10px] text-muted-foreground">🧠 {c.personality.join(', ')}</p>
-                            <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 mt-1 px-2"
-                              disabled={c.generatingImage}
-                              onClick={() => generateCharacterImage(i)}>
-                              {c.generatingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
-                              {c.imageUrl ? 'Regerar imagem' : 'Gerar imagem'}
-                            </Button>
                           </div>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeCharacter(i)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       ))}
-                      <Button onClick={generateAllCharacterImages} variant="outline" size="sm" className="w-full gap-2 text-xs"
-                        disabled={characters.some(c => c.generatingImage)}>
-                        <Image className="w-3 h-3" /> Gerar imagens de todos os personagens
-                      </Button>
                     </div>
                   )}
 
