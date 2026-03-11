@@ -235,6 +235,7 @@ CRITICAL RULES:
 - YPP requires ${YPP_REQUIREMENTS.subs} subscribers + ${YPP_REQUIREMENTS.watchHours} watch hours
 - Revenue projections: Month 1-3 should show $0 for most niches (not monetized yet)
 - Base your content strategy on ACTUAL patterns you see in the trending video titles provided
+- Cross-reference with our INTERNAL DATABASE of channels and niches when available
 - All text in Portuguese (BR)`
           },
           {
@@ -247,6 +248,12 @@ ${topChannelsSummary || "No channels found"}
 
 === TRENDING VIDEOS (last ${daysBack} days) ===
 ${topTrendingSummary || "No trending"}
+
+=== INTERNAL DATABASE — NICHE DATA ===
+${nicheDbContext || "No internal niche data"}
+
+=== INTERNAL DATABASE — CHANNELS IN THIS NICHE ===
+${intelContext || "No internal channel data for this niche"}
 
 === STATS ===
 Channels: ${channels.length} | Videos: ${trending.length}
