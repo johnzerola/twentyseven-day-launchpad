@@ -351,25 +351,11 @@ export const AnalyticsPanel = ({ channels }: AnalyticsPanelProps) => {
                 data={treemapData}
                 dataKey="size"
                 stroke="hsl(var(--border))"
-                content={({ x, y, width, height, name, rpm }: any) => {
-                  if (width < 40 || height < 30) return null;
-                  return (
-                    <g>
-                      <rect x={x} y={y} width={width} height={height} rx={6}
-                        fill={getRpmColor(rpm || 0)} fillOpacity={0.25}
-                        stroke="hsl(var(--border))" strokeWidth={1} />
-                      <text x={x + width / 2} y={y + height / 2 - 6} textAnchor="middle"
-                        fill="hsl(var(--foreground))" fontSize={width < 80 ? 9 : 11} fontWeight="bold">
-                        {name}
-                      </text>
-                      <text x={x + width / 2} y={y + height / 2 + 10} textAnchor="middle"
-                        fill="hsl(var(--muted-foreground))" fontSize={9}>
-                        ${rpm}
-                      </text>
-                    </g>
-                  );
-                }}
-              />
+              >
+                {treemapData.map((entry, i) => (
+                  <Cell key={i} fill={getRpmColor(entry.rpm)} fillOpacity={0.3} />
+                ))}
+              </Treemap>
             </ResponsiveContainer>
           </div>
         </CardContent>
