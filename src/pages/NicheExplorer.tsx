@@ -12,6 +12,8 @@ import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, Area
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatNumber } from '@/lib/formatters';
 import { COUNTRIES, YPP_SUBS, YPP_HOURS } from '@/lib/constants';
+import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
+import { PaginationControls } from '@/components/PaginationControls';
 import { useNavigate } from 'react-router-dom';
 
 const QUICK_NICHES = [
