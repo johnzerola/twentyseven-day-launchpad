@@ -81,3 +81,6 @@ verify_jwt = false
 [functions.auto-scan-channels]
 verify_jwt = false
 
+[functions.find-outliers]
+verify_jwt = false
+
