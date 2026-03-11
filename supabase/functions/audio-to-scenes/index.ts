@@ -135,13 +135,12 @@ serve(async (req) => {
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
 
-    // Character block
+    // Character block (exclude base64 image URLs to avoid token overflow)
     const characterBlock = characters.length > 0
-      ? `\nCHARACTER SHEETS:\n${characters.map((c: any, i: number) => {
+      ? `\nCHARACTER SHEETS:\n${characters.slice(0, 5).map((c: any, i: number) => {
           const a = c.appearance || {};
-          const f = c.facial_features || {};
           const cl = c.clothing || {};
-          return `CHARACTER ${i + 1} "${c.name}": ${c.gender || 'unknown'}, ${c.age || '?'} years, ${a.body_type || 'average'} build, ${a.skin_color || 'medium'} skin, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair, ${a.eye_color || 'brown'} eyes, wearing ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}${c.imageUrl ? `. REFERENCE IMAGE: ${c.imageUrl}` : ''}`;
+          return `CHARACTER ${i + 1} "${c.name}": ${c.gender || 'unknown'}, ${c.age || '?'} years, ${a.body_type || 'average'} build, ${a.skin_color || 'medium'} skin, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair, ${a.eye_color || 'brown'} eyes, wearing ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}`;
         }).join('\n')}\nINCLUDE FULL DESCRIPTION in every prompt where character appears.\n`
       : '';
 
