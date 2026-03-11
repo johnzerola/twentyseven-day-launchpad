@@ -148,6 +148,14 @@ const Scripts = () => {
   const [showTranscription, setShowTranscription] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Templates & Theme Suggestions
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showThemeSuggestions, setShowThemeSuggestions] = useState(false);
+  const [themeSuggestions, setThemeSuggestions] = useState<any[]>([]);
+  const [loadingThemes, setLoadingThemes] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
   useEffect(() => { loadHistory(); }, []);
 
   const loadHistory = async () => {
