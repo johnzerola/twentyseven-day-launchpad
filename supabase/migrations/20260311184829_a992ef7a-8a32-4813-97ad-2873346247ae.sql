@@ -1,0 +1,1 @@
+ALTER TABLE public.video_projects ADD COLUMN channel_id text DEFAULT NULL;

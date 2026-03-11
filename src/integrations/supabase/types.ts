@@ -864,6 +864,7 @@ export type Database = {
       }
       video_projects: {
         Row: {
+          channel_id: string | null
           created_at: string | null
           duration_seconds: number | null
           id: string
@@ -877,6 +878,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          channel_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           id?: string
@@ -890,6 +892,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          channel_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           id?: string
