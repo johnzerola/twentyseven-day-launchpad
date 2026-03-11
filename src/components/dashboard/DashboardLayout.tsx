@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles, Flame, GitBranch, DollarSign, CalendarDays, Video } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Mic, Calendar, LogOut, Menu, Compass, Palette, Film, Kanban, Sparkles, Flame, GitBranch, DollarSign, CalendarDays, Video, Layers } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
