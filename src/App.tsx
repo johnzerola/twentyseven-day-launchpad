@@ -18,6 +18,7 @@ import Pricing from "./pages/Pricing";
 import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
+import MultiChannel from "./pages/MultiChannel";
 
 import NotFound from "./pages/NotFound";
 
