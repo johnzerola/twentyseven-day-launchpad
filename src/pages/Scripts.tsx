@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
+import { PaginationControls } from '@/components/PaginationControls';
 
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
