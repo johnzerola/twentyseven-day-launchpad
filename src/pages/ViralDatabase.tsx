@@ -12,8 +12,9 @@ import {
   Flame, Copy, Zap, Target, BookOpen, Search as SearchIcon, Sparkles, Loader2,
   MessageSquare, ThumbsUp, Share2, Bell, ListOrdered, Lightbulb, TrendingUp, Hash,
   Globe, Eye, Users, Play, ChevronDown, ChevronUp, Palette, Brain, ExternalLink,
-  Filter, BarChart3, Tv, ScanSearch
+  Filter, BarChart3, Tv, ScanSearch, PieChart
 } from 'lucide-react';
+import { AnalyticsPanel } from '@/components/viral-db/AnalyticsPanel';
 import {
   VIRAL_HOOKS, VIRAL_CTAS, VIRAL_TITLE_PATTERNS, STORY_STRUCTURES, SEO_KEYWORD_PATTERNS,
   type ViralHook, type CallToAction, type TitlePattern, type StoryStructure,
@@ -370,9 +371,15 @@ const ViralDatabase = () => {
         <Tabs defaultValue="channels" className="space-y-4">
           <TabsList className="bg-secondary/50 border border-border/50">
             <TabsTrigger value="channels" className="gap-1.5"><Brain className="w-4 h-4" />Channel Intelligence</TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-1.5"><PieChart className="w-4 h-4" />Analytics</TabsTrigger>
             <TabsTrigger value="patterns" className="gap-1.5"><Zap className="w-4 h-4" />Patterns Library</TabsTrigger>
             <TabsTrigger value="styles" className="gap-1.5"><Palette className="w-4 h-4" />Visual Style Guide</TabsTrigger>
           </TabsList>
+
+          {/* ========== TAB: Analytics ========== */}
+          <TabsContent value="analytics">
+            <AnalyticsPanel channels={channels} />
+          </TabsContent>
 
           {/* ========== TAB 1: Channel Intelligence ========== */}
           <TabsContent value="channels" className="space-y-4">
