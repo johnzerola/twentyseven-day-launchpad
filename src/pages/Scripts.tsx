@@ -623,7 +623,7 @@ const Scripts = () => {
     }
   };
 
-  // Auto-detect characters from script and generate images
+  // Auto-detect characters from script (descriptions only, no image generation to save credits)
   const autoDetectCharacters = async () => {
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
@@ -646,32 +646,8 @@ const Scripts = () => {
       }));
       if (extracted.length === 0) { toast.info('Nenhum personagem detectado no roteiro.'); return; }
       setCharacters(extracted);
-      toast.success(`${extracted.length} personagens detectados! Gerando imagens...`);
-      
-      // Auto-generate images for all detected characters
-      for (let i = 0; i < extracted.length; i++) {
-        const char = extracted[i];
-        setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: true } : c));
-        try {
-          const prompt = buildCharImagePrompt(char);
-          const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-segment-image', {
-            body: { visualPrompt: prompt, textContent: '', segmentIndex: i },
-          });
-          if (!imgErr && imgData?.imageUrl) {
-            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, imageUrl: imgData.imageUrl, generatingImage: false } : c));
-          } else {
-            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
-          }
-        } catch {
-          setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
-        }
-      }
-      // Persist characters with images to database
-      persistCharacters(extracted.map((c, i) => {
-        // Get latest imageUrl from state - but since state updates are async, use extracted + any generated urls
-        return c;
-      }));
-      toast.success('Todos os personagens com imagens geradas e salvos!');
+      persistCharacters(extracted);
+      toast.success(`${extracted.length} personagens detectados e salvos! As descrições serão injetadas nos prompts visuais.`);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao detectar personagens');
     } finally {
@@ -1383,51 +1359,31 @@ const Scripts = () => {
                   </div>
 
                   {/* Auto-detect button */}
-                  <Button onClick={autoDetectCharacters} disabled={detectingCharacters} className="w-full gap-2 mb-4" variant="default">
-                    {detectingCharacters ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                    {detectingCharacters ? 'Detectando personagens e gerando imagens...' : '🪄 Detectar Personagens do Roteiro + Gerar Imagens'}
+                  <Button onClick={autoDetectCharacters} disabled={detectingCharacters || !script} className="w-full gap-2 mb-2 gradient-hero border-0">
+                    {detectingCharacters ? <><Loader2 className="w-4 h-4 animate-spin" /> Detectando personagens...</>
+                      : <><Wand2 className="w-4 h-4" /> 🎭 Detectar Personagens do Roteiro</>}
                   </Button>
+                  <p className="text-[10px] text-muted-foreground text-center mb-4">As descrições serão injetadas automaticamente nos prompts visuais de cada cena</p>
 
                   {/* Existing characters */}
                   {characters.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {characters.map((c, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                          <div className="shrink-0">
-                            {c.generatingImage ? (
-                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center">
-                                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                              </div>
-                            ) : c.imageUrl ? (
-                              <img src={c.imageUrl} alt={c.name} className="w-16 h-16 rounded-lg object-cover border border-border" />
-                            ) : (
-                              <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-lg font-bold">
-                                {c.name.charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                            {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground">{c.name} <span className="text-[10px] text-muted-foreground ml-1">({c.gender}, {c.age} anos)</span></p>
                             <p className="text-[10px] text-muted-foreground">{c.role}</p>
-                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance.skin_color} skin, {c.appearance.hair_color} {c.appearance.hair_style} hair, {c.appearance.eye_color} eyes</p>
+                            <p className="text-[10px] text-muted-foreground">👤 {c.appearance.skin_color} skin, {c.appearance.hair_color} {c.appearance.hair_style} hair, {c.appearance.eye_color} eyes, {c.appearance.height}</p>
                             <p className="text-[10px] text-muted-foreground">👕 {c.clothing.shirt}, {c.clothing.pants}, {c.clothing.shoes}</p>
-                            <p className="text-[10px] text-muted-foreground">🧠 {c.personality.join(', ')}</p>
-                            <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 mt-1 px-2"
-                              disabled={c.generatingImage}
-                              onClick={() => generateCharacterImage(i)}>
-                              {c.generatingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Image className="w-3 h-3" />}
-                              {c.imageUrl ? 'Regerar imagem' : 'Gerar imagem'}
-                            </Button>
                           </div>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeCharacter(i)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       ))}
-                      <Button onClick={generateAllCharacterImages} variant="outline" size="sm" className="w-full gap-2 text-xs"
-                        disabled={characters.some(c => c.generatingImage)}>
-                        <Image className="w-3 h-3" /> Gerar imagens de todos os personagens
-                      </Button>
                     </div>
                   )}
 
@@ -1496,23 +1452,10 @@ const Scripts = () => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <label className="text-[10px] text-muted-foreground mb-1 block">⏱️ Duração por cena</label>
-                        <select value={sceneDuration} onChange={e => setSceneDuration(parseInt(e.target.value))} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-                          <option value={6}>6 segundos</option>
-                          <option value={7}>7 segundos</option>
-                          <option value={8}>8 segundos (padrão)</option>
-                          <option value={9}>9 segundos</option>
-                          <option value={10}>10 segundos</option>
-                        </select>
-                      </div>
-                      <div className="flex items-end">
-                        <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground w-full">
-                          🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong>
-                          {characters.length > 0 && <> • 👥 {characters.length} personagens</>}
-                        </div>
-                      </div>
+                    <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground mb-3">
+                      🎬 Estilo: <strong className="text-foreground">{VIDEO_STYLES.find(v => v.value === videoStyle)?.label}</strong>
+                      {characters.length > 0 && <> • 👥 {characters.length} personagens</>}
+                      <span className="ml-2">• ⏱ Duração automática pela IA</span>
                     </div>
 
                     {/* Primary action: Audio Intelligence */}
@@ -1563,52 +1506,6 @@ const Scripts = () => {
                   {/* Generated Scenes */}
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
-                      {/* Open in Studio Button */}
-                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-3">
-                        <Button className="w-full gap-2 gradient-hero border-0" onClick={async () => {
-                          try {
-                            const pid = await getOrCreateProject();
-                            // Save synced scenes to scenes table
-                            const { data: { user } } = await supabase.auth.getUser();
-                            if (!user) throw new Error('Login required');
-                            // Update project with latest script
-                            await supabase.from('video_projects').update({
-                              script: getCleanNarration(),
-                              title: topic || 'Script Project',
-                              niche: niche || undefined,
-                              status: 'scripted',
-                            } as any).eq('id', pid);
-                            // Delete old scenes and insert new
-                            await supabase.from('scenes').delete().eq('project_id', pid);
-                            if (syncedScenes.length > 0) {
-                              const rows = syncedScenes.map((s: any) => ({
-                                project_id: pid,
-                                sequence_order: s.sceneIndex,
-                                segment_index: s.sceneIndex,
-                                tts_text: s.narrativeText || '',
-                                veo3_prompt: s.visualPrompt,
-                                camera_movement: s.cameraAngle,
-                                lighting: s.lightingSetup || '',
-                                emotional_intent: s.mood,
-                                duration_sec: s.sceneDurationSeconds || sceneDuration,
-                                negative_prompt: s.negativePrompt || '',
-                                character_ref: s.charactersInScene?.join(', ') || '',
-                                status: 'pending',
-                              }));
-                              await supabase.from('scenes').insert(rows as any);
-                            }
-                            // Persist characters
-                            await persistCharacters(characters);
-                            // Navigate to Studio with project_id
-                            window.location.href = `/studio?project=${pid}`;
-                          } catch (err: any) {
-                            toast.error(err.message || 'Erro ao abrir no Studio');
-                          }
-                        }}>
-                          <Film className="w-4 h-4" /> 🎬 Abrir no Studio (Sincronizar Cenas)
-                        </Button>
-                        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">Salva roteiro, personagens e cenas no banco e abre o Studio pronto para produção</p>
-                      </div>
 
                       {/* AutoFlow Export Label */}
                       <div className="bg-muted/30 rounded-lg p-3 space-y-2">
