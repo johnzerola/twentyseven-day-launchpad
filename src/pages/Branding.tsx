@@ -193,8 +193,8 @@ const RevenueSimulator = () => {
 
 // ─── Brand Kit Generator (IA) ────────────────────────────────────────
 const BrandKitGenerator = () => {
+  const channelData = useUserChannel();
   const [niche, setNiche] = useState('');
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
