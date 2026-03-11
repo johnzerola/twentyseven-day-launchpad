@@ -290,6 +290,12 @@ const NicheExplorer = () => {
                     <div><p className="text-2xl font-bold text-primary">{a.facelessViability}%</p><p className="text-[10px] text-muted-foreground">Faceless Viável</p></div>
                     <div><p className="text-2xl font-bold">{data.meta.totalChannels}</p><p className="text-[10px] text-muted-foreground">Canais analisados</p></div>
                   </div>
+                  {a.score >= 70 && (
+                    <Button onClick={() => navigate(`/scripts?niche=${encodeURIComponent(niche)}&style=${a.facelessViability > 50 ? 'faceless' : 'talking_head'}`)}
+                      className="gradient-hero border-0 gap-2 h-11 px-6 shrink-0">
+                      <Rocket className="w-4 h-4" /> Iniciar Pipeline de Roteiro
+                    </Button>
+                  )}
                 </div>
               </motion.div>
 
