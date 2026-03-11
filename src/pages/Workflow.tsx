@@ -1,94 +1,134 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, ChevronRight, ArrowRight, Lightbulb, FileText, Wand2, Film, Upload, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, FolderOpen, Film, FileText, Wand2, Upload, Loader2, Trash2, ChevronRight, Clock, Eye, Users, MoreVertical, Search, Filter, Rocket, Edit3, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Link } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatNumber } from '@/lib/formatters';
 
-interface WorkflowStep {
-  id: number;
+type ProjectStatus = 'draft' | 'script' | 'scenes' | 'published';
+
+interface Project {
+  id: string;
   title: string;
-  description: string;
-  icon: React.ElementType;
-  route: string;
-  tips: string[];
-  status: 'completed' | 'current' | 'locked';
+  niche: string | null;
+  status: string | null;
+  script: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  duration_seconds: number | null;
+  scene_count?: number;
 }
 
-const STEPS_TEMPLATE: Omit<WorkflowStep, 'status'>[] = [
-  { id: 1, title: 'Descoberta de Nicho', description: 'Encontre nichos lucrativos e analise canais virais com DubSpy e Niche Explorer.', icon: Lightbulb, route: '/niches', tips: ['Use o DubSpy para encontrar canais emergentes', 'Verifique o RPM estimado no Niche Explorer', 'Procure nichos com score > 70'] },
-  { id: 2, title: 'Roteirização', description: 'Gere roteiros cinematográficos com hooks virais do Viral Database.', icon: FileText, route: '/scripts', tips: ['Selecione hooks do Viral Database', 'Use estrutura de 3 atos para retenção', 'Adicione loops abertos a cada 2-3 minutos'] },
-  { id: 3, title: 'Títulos & SEO', description: 'Gere títulos virais otimizados para CTR e descrições SEO completas.', icon: Wand2, route: '/titles', tips: ['Use o A/B Tester para comparar títulos', 'Gere descrição SEO com timestamps', 'Teste diferentes estilos: curiosidade, urgência, números'] },
-  { id: 4, title: 'Identidade Visual', description: 'Crie marca, paleta de cores e conceitos de thumbnail no Growth Center.', icon: Film, route: '/branding', tips: ['Gere Brand Kit completo com IA', 'Use o Thumbnail Lab para conceitos visuais', 'Simule receita no Revenue Simulator'] },
-  { id: 5, title: 'Publicação', description: 'Configure thumbnail, tags SEO e publique no YouTube.', icon: Upload, route: '/workflow', tips: ['Siga o Growth Checklist', 'Agende para horário de pico do nicho', 'Use community posts para gerar antecipação'] },
+const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string; icon: React.ElementType; step: number }> = {
+  draft: { label: 'Rascunho', color: 'bg-muted text-muted-foreground', icon: Edit3, step: 1 },
+  script: { label: 'Roteiro Pronto', color: 'bg-primary/20 text-primary', icon: FileText, step: 2 },
+  scenes: { label: 'Cenas Geradas', color: 'bg-accent/20 text-accent', icon: Film, step: 3 },
+  published: { label: 'Publicado', color: 'bg-emerald-500/20 text-emerald-400', icon: CheckCircle2, step: 4 },
+};
+
+const STEPS = [
+  { key: 'draft', label: 'Ideia', icon: Edit3 },
+  { key: 'script', label: 'Roteiro', icon: FileText },
+  { key: 'scenes', label: 'Cenas', icon: Film },
+  { key: 'published', label: 'Publicado', icon: Upload },
 ];
 
-function buildSteps(completedIds: number[]): WorkflowStep[] {
-  return STEPS_TEMPLATE.map((s, i) => {
-    const done = completedIds.includes(s.id);
-    const prevDone = i === 0 || completedIds.includes(STEPS_TEMPLATE[i - 1].id);
-    return { ...s, status: done ? 'completed' : prevDone ? 'current' : 'locked' } as WorkflowStep;
-  });
-}
-
-const MODULE_KEY = 'workflow';
-
 const Workflow = () => {
-  const [completedIds, setCompletedIds] = useState<number[]>([]);
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeStep, setActiveStep] = useState(0);
+  const [filter, setFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [newNiche, setNewNiche] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const steps = buildSteps(completedIds);
-  const completedCount = completedIds.length;
-  const progress = Math.round((completedCount / steps.length) * 100);
-  const current = steps[activeStep];
-
-  // Load from DB
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      const { data } = await supabase
-        .from('user_progress')
-        .select('completed_items')
-        .eq('user_id', user.id)
-        .eq('module', MODULE_KEY)
-        .maybeSingle();
-      if (data?.completed_items) {
-        setCompletedIds(data.completed_items as number[]);
-      }
-      setLoading(false);
-    })();
-  }, []);
-
-  // Persist to DB
-  const persist = useCallback(async (ids: number[]) => {
+  const loadProjects = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase
-      .from('user_progress')
-      .upsert({ user_id: user.id, module: MODULE_KEY, completed_items: ids, updated_at: new Date().toISOString() }, { onConflict: 'user_id,module' });
-    if (error) console.error('persist error:', error);
+    if (!user) { setLoading(false); return; }
+
+    const { data: projs } = await supabase
+      .from('video_projects')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
+
+    if (projs) {
+      // Get scene counts
+      const ids = projs.map(p => p.id);
+      const sceneCounts: Record<string, number> = {};
+      if (ids.length > 0) {
+        const { data: scenes } = await supabase
+          .from('scenes')
+          .select('project_id')
+          .in('project_id', ids);
+        (scenes || []).forEach(s => {
+          sceneCounts[s.project_id] = (sceneCounts[s.project_id] || 0) + 1;
+        });
+      }
+      setProjects(projs.map(p => ({ ...p, scene_count: sceneCounts[p.id] || 0 })));
+    }
+    setLoading(false);
   }, []);
 
-  const toggleComplete = (idx: number) => {
-    const stepId = steps[idx].id;
-    setCompletedIds(prev => {
-      let next: number[];
-      if (prev.includes(stepId)) {
-        // Uncheck this and all after
-        next = prev.filter(id => id < stepId);
-      } else {
-        next = [...prev, stepId].sort((a, b) => a - b);
-      }
-      persist(next);
-      return next;
-    });
-    toast.success(completedIds.includes(steps[idx].id) ? 'Etapa desmarcada' : 'Etapa concluída!');
+  useEffect(() => { loadProjects(); }, [loadProjects]);
+
+  const createProject = async () => {
+    if (!newTitle.trim()) return;
+    setCreating(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setCreating(false); return; }
+
+    const { data, error } = await supabase.from('video_projects').insert({
+      user_id: user.id,
+      title: newTitle.trim(),
+      niche: newNiche.trim() || null,
+      status: 'draft',
+    }).select().single();
+
+    if (error) { toast.error('Erro ao criar projeto'); setCreating(false); return; }
+    toast.success('Projeto criado!');
+    setNewTitle('');
+    setNewNiche('');
+    setDialogOpen(false);
+    setCreating(false);
+    loadProjects();
+  };
+
+  const deleteProject = async (id: string) => {
+    const { error } = await supabase.from('video_projects').delete().eq('id', id);
+    if (error) return toast.error('Erro ao deletar');
+    setProjects(prev => prev.filter(p => p.id !== id));
+    toast.success('Projeto removido');
+  };
+
+  const updateStatus = async (id: string, status: ProjectStatus) => {
+    await supabase.from('video_projects').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    toast.success(`Status: ${STATUS_CONFIG[status].label}`);
+  };
+
+  const filtered = projects.filter(p => {
+    if (filter !== 'all' && p.status !== filter) return false;
+    if (search && !p.title.toLowerCase().includes(search.toLowerCase()) && !(p.niche || '').toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const statusCounts = {
+    all: projects.length,
+    draft: projects.filter(p => p.status === 'draft').length,
+    script: projects.filter(p => p.status === 'script').length,
+    scenes: projects.filter(p => p.status === 'scenes').length,
+    published: projects.filter(p => p.status === 'published').length,
   };
 
   if (loading) {
@@ -103,75 +143,180 @@ const Workflow = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-foreground">Production Workflow</h1>
-            <p className="text-muted-foreground text-sm mt-1">Fluxo completo: da ideia à publicação em 7 etapas</p>
-          </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{completedCount}/{steps.length} etapas</span>
-            <Progress value={progress} className="w-32 h-2" />
-            <Badge variant="outline" className="text-primary border-primary/30">{progress}%</Badge>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+              <Rocket className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-foreground">Project Workspace</h1>
+              <p className="text-muted-foreground text-sm">{projects.length} projetos · Pipeline completo da ideia à publicação</p>
+            </div>
           </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-hero border-0 gap-2">
+                <Plus className="w-4 h-4" /> Novo Projeto
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Projeto</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Título do vídeo</label>
+                  <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Ex: Os 5 Maiores Mistérios Não Resolvidos" className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Nicho (opcional)</label>
+                  <Input value={newNiche} onChange={e => setNewNiche(e.target.value)} placeholder="Ex: true crime, finanças, horror..." className="mt-1" />
+                </div>
+                <Button onClick={createProject} disabled={creating || !newTitle.trim()} className="w-full gradient-hero border-0">
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Criar Projeto
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <div className="grid grid-cols-5 gap-1">
-          {steps.map((step, i) => (
-            <button key={step.id} onClick={() => setActiveStep(i)}
-              className={`relative flex flex-col items-center p-2 rounded-lg transition-all ${activeStep === i ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-card'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-all ${
-                step.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
-                step.status === 'current' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
-              }`}>
-                {step.status === 'completed' ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
-              </div>
-              <span className={`text-[10px] text-center leading-tight ${step.status === 'locked' ? 'text-muted-foreground/50' : 'text-foreground'}`}>{step.title}</span>
-              {i < steps.length - 1 && <ChevronRight className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/30 hidden md:block" />}
+        {/* Stats Row */}
+        <div className="grid grid-cols-5 gap-3">
+          {[
+            { key: 'all', label: 'Todos', count: statusCounts.all, color: 'text-foreground' },
+            { key: 'draft', label: 'Rascunhos', count: statusCounts.draft, color: 'text-muted-foreground' },
+            { key: 'script', label: 'Com Roteiro', count: statusCounts.script, color: 'text-primary' },
+            { key: 'scenes', label: 'Com Cenas', count: statusCounts.scenes, color: 'text-accent' },
+            { key: 'published', label: 'Publicados', count: statusCounts.published, color: 'text-emerald-400' },
+          ].map(s => (
+            <button key={s.key} onClick={() => setFilter(s.key)}
+              className={`rounded-xl p-3 text-center transition-all ${filter === s.key ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-card hover:bg-card/80'}`}>
+              <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
+              <p className="text-[10px] text-muted-foreground">{s.label}</p>
             </button>
           ))}
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div key={activeStep} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="bg-card border border-border rounded-xl p-6 space-y-5">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${current.status === 'completed' ? 'bg-emerald-500/20' : 'bg-primary/20'}`}>
-                  <current.icon className={`w-6 h-6 ${current.status === 'completed' ? 'text-emerald-400' : 'text-primary'}`} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">Etapa {current.id}: {current.title}</h2>
-                  <p className="text-sm text-muted-foreground">{current.description}</p>
-                </div>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar projetos por título ou nicho..."
+            className="pl-10 bg-secondary/50" />
+        </div>
+
+        {/* Pipeline View */}
+        <div className="grid grid-cols-4 gap-1 bg-secondary/30 rounded-xl p-1">
+          {STEPS.map((step, i) => {
+            const count = projects.filter(p => p.status === step.key).length;
+            return (
+              <div key={step.key} className="flex items-center gap-2 px-3 py-2 rounded-lg">
+                <step.icon className={`w-4 h-4 ${count > 0 ? 'text-primary' : 'text-muted-foreground/50'}`} />
+                <span className="text-xs text-muted-foreground">{step.label}</span>
+                <Badge variant="secondary" className="text-[10px] ml-auto">{count}</Badge>
+                {i < STEPS.length - 1 && <ChevronRight className="w-3 h-3 text-muted-foreground/30" />}
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant={current.status === 'completed' ? 'outline' : 'default'} onClick={() => toggleComplete(activeStep)}>
-                  {current.status === 'completed' ? <><CheckCircle2 className="w-4 h-4 mr-1" /> Concluída</> : <><Circle className="w-4 h-4 mr-1" /> Marcar concluída</>}
-                </Button>
-                <Link to={current.route}>
-                  <Button size="sm" variant="secondary"><ExternalLink className="w-4 h-4 mr-1" /> Abrir módulo</Button>
-                </Link>
-              </div>
+            );
+          })}
+        </div>
+
+        {/* Projects List */}
+        <div className="space-y-3">
+          <AnimatePresence>
+            {filtered.map((project, i) => {
+              const status = (project.status || 'draft') as ProjectStatus;
+              const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              const hasScript = !!project.script && project.script.length > 50;
+              const hasScenes = (project.scene_count || 0) > 0;
+              const progressValue = config.step * 25;
+
+              return (
+                <motion.div key={project.id}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 transition-all group">
+                  <div className="flex items-start gap-4">
+                    {/* Status Icon */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${config.color}`}>
+                      <config.icon className="w-5 h-5" />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-sm font-semibold text-foreground truncate">{project.title || 'Sem título'}</h3>
+                        <Badge className={`text-[9px] shrink-0 ${config.color}`}>{config.label}</Badge>
+                        {project.niche && <Badge variant="outline" className="text-[9px] shrink-0">{project.niche}</Badge>}
+                      </div>
+
+                      <div className="flex items-center gap-4 text-[11px] text-muted-foreground mb-2">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {project.updated_at ? new Date(project.updated_at).toLocaleDateString('pt-BR') : '—'}
+                        </span>
+                        {hasScript && <span className="flex items-center gap-1"><FileText className="w-3 h-3 text-primary" /> Roteiro</span>}
+                        {hasScenes && <span className="flex items-center gap-1"><Film className="w-3 h-3 text-accent" /> {project.scene_count} cenas</span>}
+                        {project.duration_seconds ? <span>{Math.round(project.duration_seconds / 60)} min</span> : null}
+                      </div>
+
+                      <Progress value={progressValue} className="h-1.5" />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {status === 'draft' && (
+                        <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
+                          onClick={() => navigate(`/scripts?projectId=${project.id}&niche=${encodeURIComponent(project.niche || '')}`)}>
+                          <FileText className="w-3 h-3" /> Criar Roteiro
+                        </Button>
+                      )}
+                      {status === 'script' && hasScript && (
+                        <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
+                          onClick={() => navigate(`/scripts?projectId=${project.id}`)}>
+                          <Film className="w-3 h-3" /> Gerar Cenas
+                        </Button>
+                      )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {Object.entries(STATUS_CONFIG).map(([key, val]) => (
+                            <DropdownMenuItem key={key} onClick={() => updateStatus(project.id, key as ProjectStatus)}
+                              className={status === key ? 'bg-primary/10' : ''}>
+                              <val.icon className="w-3.5 h-3.5 mr-2" /> {val.label}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuItem onClick={() => deleteProject(project.id)} className="text-destructive">
+                            <Trash2 className="w-3.5 h-3.5 mr-2" /> Deletar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          {filtered.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <FolderOpen className="w-16 h-16 mx-auto mb-4 opacity-15" />
+              <p className="text-lg font-semibold mb-1">
+                {projects.length === 0 ? 'Nenhum projeto ainda' : 'Nenhum projeto com este filtro'}
+              </p>
+              <p className="text-sm mb-4">Crie seu primeiro projeto para começar o pipeline de produção</p>
+              <Button onClick={() => setDialogOpen(true)} className="gradient-hero border-0 gap-2">
+                <Plus className="w-4 h-4" /> Criar Primeiro Projeto
+              </Button>
             </div>
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Lightbulb className="w-4 h-4 text-accent" /> Dicas para esta etapa
-              </h3>
-              <ul className="space-y-1.5">
-                {current.tips.map((tip, i) => (
-                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                    <ArrowRight className="w-3 h-3 mt-1 text-primary shrink-0" />{tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex justify-between pt-2">
-              <Button variant="ghost" size="sm" disabled={activeStep === 0} onClick={() => setActiveStep(p => p - 1)}>← Anterior</Button>
-              <Button variant="ghost" size="sm" disabled={activeStep === steps.length - 1} onClick={() => setActiveStep(p => p + 1)}>Próxima →</Button>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

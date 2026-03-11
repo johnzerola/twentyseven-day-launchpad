@@ -96,12 +96,34 @@ serve(async (req) => {
       }
     }
 
+    // === Also populate viral_titles_db ===
+    let titlesAdded = 0;
+    for (const config of selectedConfigs) {
+      try {
+        const titleRes = await fetch(`${SUPABASE_URL}/functions/v1/build-viral-titles-db`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ niche: config.niche, country: "US", language: config.language, minViews: 350000, maxResults: 15 }),
+        });
+        if (titleRes.ok) {
+          const titleData = await titleRes.json();
+          titlesAdded += titleData.inserted || 0;
+        }
+      } catch (e) {
+        console.error(`Title scan error for ${config.niche}:`, e);
+      }
+    }
+
     // Log summary
-    console.log(`Auto-scan complete: ${totalAnalyzed} new channels analyzed`);
+    console.log(`Auto-scan complete: ${totalAnalyzed} new channels, ${titlesAdded} new viral titles`);
 
     return new Response(JSON.stringify({
       success: true,
       analyzed: totalAnalyzed,
+      titlesAdded,
       niches_scanned: selectedConfigs.map(c => c.niche),
       results,
       timestamp: new Date().toISOString(),

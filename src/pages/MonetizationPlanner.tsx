@@ -31,6 +31,14 @@ const QUICK_STARTS = [
   { label: '📊 Entender a regra dos 10-12 vídeos', message: 'Me explica essa história de que o YouTube só entende seu canal depois de 10-12 vídeos. Como furar essa bolha?' },
 ];
 
+interface UserChannelData {
+  channel_name: string;
+  subscribers: number | null;
+  views: number | null;
+  videos: number | null;
+  niche: string | null;
+}
+
 const MonetizationPlanner = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -39,6 +47,7 @@ const MonetizationPlanner = () => {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [expandedPhase, setExpandedPhase] = useState<number>(0);
   const [showPlan, setShowPlan] = useState(false);
+  const [userChannels, setUserChannels] = useState<UserChannelData[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const savedPlanIdRef = useRef<string | null>(null);
@@ -48,12 +57,19 @@ const MonetizationPlanner = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load saved plan + chat + progress on mount
+  // Load saved plan + chat + progress + user channels on mount
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
+      // Load user channels for context
+      const { data: channels } = await supabase
+        .from('user_channels')
+        .select('channel_name, subscribers, views, videos, niche')
+        .eq('user_id', user.id);
+      if (channels?.length) setUserChannels(channels);
+
       // Load monetization plan
       const { data: saved } = await supabase
         .from('monetization_plans')
@@ -141,13 +157,25 @@ const MonetizationPlanner = () => {
     let assistantContent = '';
 
     try {
+      // Build user context from channels
+      const userContext = userChannels.length > 0 ? {
+        channels: userChannels.map(c => ({
+          name: c.channel_name,
+          subscribers: c.subscribers,
+          views: c.views,
+          videos: c.videos,
+          niche: c.niche,
+        })),
+        hasChannel: true,
+      } : { hasChannel: false };
+
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, userContext }),
       });
 
       if (!resp.ok) {
@@ -251,6 +279,15 @@ const MonetizationPlanner = () => {
             <p className="text-xs text-muted-foreground mt-0.5">
               Converse comigo — vou te ajudar a criar um plano realista baseado em dados reais
             </p>
+            {userChannels.length > 0 && (
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {userChannels.map((ch, i) => (
+                  <Badge key={i} variant="outline" className="text-[10px] gap-1">
+                    <Users className="w-3 h-3" /> {ch.channel_name} · {ch.subscribers ? `${(ch.subscribers / 1000).toFixed(1)}K` : '0'} subs
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Messages */}
