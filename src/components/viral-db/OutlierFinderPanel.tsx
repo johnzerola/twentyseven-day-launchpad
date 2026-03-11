@@ -192,13 +192,24 @@ export const OutlierFinderPanel = () => {
                     <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{formatNumber(o.views)} views</span>
                     <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3 text-emerald-400" />{o.multiplier}x</span>
                   </div>
-                  <div className="flex justify-between items-center pt-1">
+                  <div className="flex justify-between items-center pt-1 gap-1">
                     <Badge variant="outline" className="text-[10px]">{o.niche}</Badge>
-                    <a href={o.video_url} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                        <ExternalLink className="w-3 h-3" /> Ver no YouTube
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                        onClick={() => {
+                          const ref = `${o.video_title} (${formatNumber(o.views)} views, ${o.multiplier}x viral, canal: ${o.channel_name})`;
+                          sessionStorage.setItem('outlier_topic', ref);
+                          navigate('/scripts');
+                          toast.success('Referência enviada ao Script Engine!');
+                        }}>
+                        <Sparkles className="w-3 h-3" /> Usar como referência
                       </Button>
-                    </a>
+                      <a href={o.video_url} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      </a>
+                    </div>
                   </div>
                 </div>
               </motion.div>
