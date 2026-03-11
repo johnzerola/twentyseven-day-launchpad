@@ -623,7 +623,7 @@ const Scripts = () => {
     }
   };
 
-  // Auto-detect characters from script and generate images
+  // Auto-detect characters from script (descriptions only, no image generation to save credits)
   const autoDetectCharacters = async () => {
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
@@ -646,32 +646,8 @@ const Scripts = () => {
       }));
       if (extracted.length === 0) { toast.info('Nenhum personagem detectado no roteiro.'); return; }
       setCharacters(extracted);
-      toast.success(`${extracted.length} personagens detectados! Gerando imagens...`);
-      
-      // Auto-generate images for all detected characters
-      for (let i = 0; i < extracted.length; i++) {
-        const char = extracted[i];
-        setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: true } : c));
-        try {
-          const prompt = buildCharImagePrompt(char);
-          const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-segment-image', {
-            body: { visualPrompt: prompt, textContent: '', segmentIndex: i },
-          });
-          if (!imgErr && imgData?.imageUrl) {
-            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, imageUrl: imgData.imageUrl, generatingImage: false } : c));
-          } else {
-            setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
-          }
-        } catch {
-          setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, generatingImage: false } : c));
-        }
-      }
-      // Persist characters with images to database
-      persistCharacters(extracted.map((c, i) => {
-        // Get latest imageUrl from state - but since state updates are async, use extracted + any generated urls
-        return c;
-      }));
-      toast.success('Todos os personagens com imagens geradas e salvos!');
+      persistCharacters(extracted);
+      toast.success(`${extracted.length} personagens detectados e salvos! As descrições serão injetadas nos prompts visuais.`);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao detectar personagens');
     } finally {
