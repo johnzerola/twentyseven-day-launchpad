@@ -45,14 +45,7 @@ interface ChatMsg {
   content: string;
 }
 
-const COUNTRIES = [
-  { code: 'US', label: '🇺🇸 EUA' }, { code: 'ES', label: '🇪🇸 Espanha' },
-  { code: 'BR', label: '🇧🇷 Brasil' }, { code: 'DE', label: '🇩🇪 Alemanha' },
-  { code: 'FR', label: '🇫🇷 França' }, { code: 'GB', label: '🇬🇧 Reino Unido' },
-  { code: 'JP', label: '🇯🇵 Japão' }, { code: 'KR', label: '🇰🇷 Coreia' },
-  { code: 'MX', label: '🇲🇽 México' }, { code: 'IT', label: '🇮🇹 Itália' },
-  { code: 'CA', label: '🇨🇦 Canadá' }, { code: 'AU', label: '🇦🇺 Austrália' },
-];
+// Use COUNTRIES from constants (property: .value instead of .code)
 
 const GROWTH_COLORS: Record<string, string> = {
   explosive: 'bg-red-500/20 text-red-400',
