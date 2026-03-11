@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Network, Loader2, Users, Eye, TrendingUp, Search as SearchIcon, Lightbulb, ExternalLink, Star, SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,58 @@ export const ClusterTab = () => {
 
   const activeFilterCount = [minSubs, maxSubs, minVideoViews, maxChannelVideos].filter(v => v).length;
 
+  // Load last cluster search on mount
+  useEffect(() => {
+    const loadLast = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('saved_searches')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('tab', 'cluster')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.results_json) {
+        const saved = data.results_json as any;
+        setClusters(saved.clusters || []);
+        setChannels(saved.channels || []);
+        const f = (data.filters_json as any) || {};
+        if (f.niche) setNiche(f.niche);
+        if (f.country) setCountry(f.country);
+        if (f.language) setLanguage(f.language);
+        setHasSearched(true);
+      }
+    };
+    loadLast();
+  }, []);
+
+  const persistSearch = useCallback(async (nicheQ: string, cls: Cluster[], chs: ChannelResult[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const filters = { niche: nicheQ, country, language, minSubs, maxSubs, minVideoViews, maxChannelVideos };
+    const { data: existing } = await supabase
+      .from('saved_searches')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('query', nicheQ)
+      .eq('tab', 'cluster')
+      .maybeSingle();
+    if (existing) {
+      await supabase.from('saved_searches').update({
+        results_json: { clusters: cls, channels: chs } as any,
+        filters_json: filters as any,
+        updated_at: new Date().toISOString(),
+      }).eq('id', existing.id);
+    } else {
+      await supabase.from('saved_searches').insert({
+        user_id: user.id, query: nicheQ, tab: 'cluster',
+        results_json: { clusters: cls, channels: chs } as any, filters_json: filters as any,
+      });
+    }
+  }, [country, language, minSubs, maxSubs, minVideoViews, maxChannelVideos]);
+
   const scan = async () => {
     const nicheQuery = niche || customNiche;
     if (!nicheQuery.trim()) { toast.error('Selecione ou digite um nicho'); return; }
@@ -71,9 +123,12 @@ export const ClusterTab = () => {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setClusters(data?.clusters || []);
-      setChannels(data?.channels || []);
-      if (!data?.clusters?.length) toast.info('Poucos canais para clustering. Tente um nicho mais amplo.');
+      const cls = data?.clusters || [];
+      const chs = data?.channels || [];
+      setClusters(cls);
+      setChannels(chs);
+      if (!cls.length) toast.info('Poucos canais para clustering. Tente um nicho mais amplo.');
+      await persistSearch(nicheQuery, cls, chs);
     } catch (err: any) {
       toast.error(err.message || 'Erro na varredura');
     } finally {
