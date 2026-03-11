@@ -773,7 +773,9 @@ const NicheExplorer = () => {
                 <p className="text-center text-muted-foreground py-8">Sem vídeos trending.</p>
               )}
             </TabsContent>
+            </TabsContent>
           </Tabs>
+          </div>
         )}
 
         {/* Empty state */}
