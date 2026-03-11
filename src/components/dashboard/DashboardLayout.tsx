@@ -18,6 +18,7 @@ const navItems = [
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
   
+  { key: 'Multichannel', icon: Layers, path: '/multichannel' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
 ];
 
