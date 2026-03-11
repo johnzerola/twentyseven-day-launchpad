@@ -266,7 +266,14 @@ const ViralDatabase = () => {
     });
   }, [channels, styleFilter, nicheFilter, searchFilter, countryFilter, facelessOnly]);
 
-  // Extract patterns from all channels
+  // Reset page when filters change
+  useEffect(() => { setChannelPage(0); }, [styleFilter, nicheFilter, searchFilter, countryFilter, facelessOnly]);
+
+  const pagedChannels = useMemo(() => {
+    const from = channelPage * CHANNELS_PER_PAGE;
+    return filteredChannels.slice(from, from + CHANNELS_PER_PAGE);
+  }, [filteredChannels, channelPage]);
+
   const allPatterns = useMemo(() => {
     const hookMap = new Map<string, { text: string; count: number; avgViews: number; styles: Set<string> }>();
     channels.forEach(ch => {
