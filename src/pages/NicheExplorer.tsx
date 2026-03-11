@@ -141,6 +141,8 @@ const NicheExplorer = () => {
   const channels = data?.channels || [];
   const trending = data?.trending || [];
   const countryMeta = data?.meta?.countryData;
+  const viralDbData = data?.viralDbData;
+  const searchQueries = data?.meta?.searchQueries || [];
   const filteredChannels = filterFaceless ? channels.filter((c: any) => c.faceless) : channels;
 
   const radarData = a?.radarMetrics ? [
