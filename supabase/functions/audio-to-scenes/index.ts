@@ -74,11 +74,11 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
       .select("category,title,prompt_template,tags")
-      .order("viral_score", { ascending: false }).limit(15);
+      .order("viral_score", { ascending: false }).limit(10);
 
     const knowledgeBlock = (sceneKnowledge || []).map((r: any) =>
-      `[${r.category.toUpperCase()}] ${r.title}:\n${r.prompt_template}`
-    ).join("\n\n");
+      `[${r.category.toUpperCase()}] ${r.title}:\n${r.prompt_template.slice(0, 300)}`
+    ).join("\n\n").slice(0, 4000);
 
     // ========== STEP 3: Build word-timestamped transcript blocks ==========
     // Group words into sentence-like blocks using punctuation and pauses
@@ -117,10 +117,11 @@ serve(async (req) => {
     // ========== STEP 4: AI Semantic Scene Division + Contextual Prompts ==========
     console.log("Step 3: AI analyzing narrative for semantic scene division...");
 
-    // Build the transcript with timestamps for the AI
-    const timestampedTranscript = blocks.map((b, i) =>
+    // Build the transcript with timestamps for the AI (cap to avoid token overflow)
+    const maxBlocks = Math.min(blocks.length, 200);
+    const timestampedTranscript = blocks.slice(0, maxBlocks).map((b) =>
       `[${b.startTime.toFixed(1)}s - ${b.endTime.toFixed(1)}s] ${b.text}`
-    ).join("\n");
+    ).join("\n").slice(0, 30000);
 
     // Style guides
     const styleGuides: Record<string, string> = {
@@ -244,7 +245,7 @@ Quality tags for each prompt: "masterpiece, award-winning cinematography, 8K UHD
 
 ${timestampedTranscript}
 
-${script ? `\nFULL SCRIPT FOR CONTEXT:\n${script.slice(0, 2000)}` : ''}
+${script ? `\nFULL SCRIPT FOR CONTEXT:\n${script.slice(0, 1500)}` : ''}
 
 TASK: Analyze this narration semantically. Identify natural scene boundaries based on:
 - Topic/subject changes
