@@ -867,7 +867,9 @@ export type Database = {
           created_at: string | null
           duration_seconds: number | null
           id: string
+          intelligence_json: Json | null
           niche: string | null
+          scene_blueprint_json: Json | null
           script: string | null
           status: string | null
           title: string
@@ -878,7 +880,9 @@ export type Database = {
           created_at?: string | null
           duration_seconds?: number | null
           id?: string
+          intelligence_json?: Json | null
           niche?: string | null
+          scene_blueprint_json?: Json | null
           script?: string | null
           status?: string | null
           title?: string
@@ -889,7 +893,9 @@ export type Database = {
           created_at?: string | null
           duration_seconds?: number | null
           id?: string
+          intelligence_json?: Json | null
           niche?: string | null
+          scene_blueprint_json?: Json | null
           script?: string | null
           status?: string | null
           title?: string

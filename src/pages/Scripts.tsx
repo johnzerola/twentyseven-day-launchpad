@@ -161,6 +161,12 @@ const Scripts = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
+  // Intelligence Pipeline
+  const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
+  const [analyzingTopic, setAnalyzingTopic] = useState(false);
+  const [showIntelligence, setShowIntelligence] = useState(false);
+  const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
+
   useEffect(() => {
     loadHistory(); loadTemplates();
     const outlierTopic = sessionStorage.getItem('outlier_topic');
@@ -381,6 +387,22 @@ const Scripts = () => {
     return text.replace(/---SCORES---.*?---END_SCORES---\s*/s, '').trim();
   };
 
+  const parseSceneBlueprint = (text: string): any[] => {
+    const match = text.match(/---SCENE_BLUEPRINT---\s*([\s\S]*?)\s*---END_SCENE_BLUEPRINT---/);
+    if (!match) return [];
+    try {
+      // Try to find JSON array in the matched content
+      const jsonStr = match[1].trim();
+      const arrMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (arrMatch) return JSON.parse(arrMatch[0]);
+    } catch { /* ignore parse errors */ }
+    return [];
+  };
+
+  const cleanBlueprintFromScript = (text: string): string => {
+    return text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
+  };
+
   const generateScript = async () => {
     if (!topic.trim()) return;
     setLoading(true);
@@ -389,8 +411,28 @@ const Scripts = () => {
     setSyncedScenes([]);
     setScorecard(null);
     setEditMode(false);
+    setSceneBlueprintJson([]);
 
     try {
+      // ========== PHASE 0: Intelligence Analysis ==========
+      setAnalyzingTopic(true);
+      let briefing = null;
+      try {
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-topic', {
+          body: { topic, niche, style, language },
+        });
+        if (!analysisError && analysisData?.briefing) {
+          briefing = analysisData.briefing;
+          setIntelligenceBriefing(analysisData);
+          setShowIntelligence(true);
+          toast.success(`📊 Inteligência: ${analysisData.metadata?.channelsAnalyzed || 0} canais analisados`);
+        }
+      } catch (err) {
+        console.warn('Intelligence analysis failed, proceeding without:', err);
+      }
+      setAnalyzingTopic(false);
+
+      // ========== PHASE 1+2: Script Generation with Briefing ==========
       const viralContext = getViralContext();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-script`, {
         method: 'POST',
@@ -398,7 +440,7 @@ const Scripts = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext }),
+        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext, intelligenceBriefing: briefing }),
       });
 
       if (resp.status === 402) throw new Error('Créditos insuficientes.');
@@ -425,16 +467,34 @@ const Scripts = () => {
           try {
             const p = JSON.parse(json);
             const c = p.choices?.[0]?.delta?.content;
-            if (c) { fullScript += c; setScript(cleanScoresFromScript(fullScript)); }
+            if (c) { fullScript += c; setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullScript))); }
           } catch { buffer = line + '\n' + buffer; break; }
         }
       }
       parseScorecard(fullScript);
-      setScript(cleanScoresFromScript(fullScript));
+      
+      // Parse scene blueprint
+      const blueprint = parseSceneBlueprint(fullScript);
+      if (blueprint.length > 0) {
+        setSceneBlueprintJson(blueprint);
+        toast.success(`🎬 Blueprint: ${blueprint.length} blocos narrativos mapeados`);
+      }
+      
+      setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullScript)));
+
+      // Persist intelligence + blueprint to video_projects
+      try {
+        const pid = await getOrCreateProject();
+        await supabase.from('video_projects').update({
+          intelligence_json: briefing || {},
+          scene_blueprint_json: blueprint,
+        } as any).eq('id', pid);
+      } catch { /* non-critical */ }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
+      setAnalyzingTopic(false);
     }
   };
 
@@ -634,6 +694,8 @@ const Scripts = () => {
           audioDurationSeconds: audioDuration || undefined,
           sceneDurationSeconds: sceneDuration,
           language,
+          niche,
+          sceneBlueprintFromScript: sceneBlueprintJson.length > 0 ? sceneBlueprintJson : undefined,
         },
       });
 
@@ -841,10 +903,92 @@ const Scripts = () => {
                 </div>
               </div>
               <Button onClick={generateScript} disabled={loading || !topic.trim()} className="w-full gap-2">
-                <Sparkles className="w-4 h-4" />
-                {loading ? 'Gerando...' : 'Gerar Roteiro'}
+                {analyzingTopic ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando inteligência...</> :
+                 loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando roteiro...</> :
+                 <><Sparkles className="w-4 h-4" /> 🧠 Analisar & Gerar Roteiro</>}
               </Button>
             </div>
+
+            {/* Intelligence Briefing Panel */}
+            {intelligenceBriefing && (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <button onClick={() => setShowIntelligence(!showIntelligence)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <span className="font-semibold text-xs">📊 Análise de Inteligência</span>
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
+                      {intelligenceBriefing.metadata?.channelsAnalyzed || 0} canais
+                    </Badge>
+                  </div>
+                  {showIntelligence ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+                <AnimatePresence>
+                  {showIntelligence && (
+                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                      <div className="px-3 pb-3 space-y-3 border-t border-border/30 pt-2 max-h-[400px] overflow-y-auto">
+                        {/* Competitive Analysis */}
+                        {intelligenceBriefing.briefing?.competitive_analysis && (
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Análise Competitiva</p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {(intelligenceBriefing.briefing.competitive_analysis.what_works || []).slice(0, 3).map((w: string, i: number) => (
+                                <div key={i} className="bg-primary/5 rounded px-2 py-1 text-[10px]">✅ {w}</div>
+                              ))}
+                              {(intelligenceBriefing.briefing.competitive_analysis.what_to_avoid || []).slice(0, 2).map((w: string, i: number) => (
+                                <div key={i} className="bg-destructive/5 rounded px-2 py-1 text-[10px]">❌ {w}</div>
+                              ))}
+                            </div>
+                            {intelligenceBriefing.briefing.competitive_analysis.content_gaps?.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] text-muted-foreground">Gaps de Conteúdo:</p>
+                                {intelligenceBriefing.briefing.competitive_analysis.content_gaps.slice(0, 3).map((g: string, i: number) => (
+                                  <div key={i} className="text-[10px] text-primary">💡 {g}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Recommended Hooks */}
+                        {intelligenceBriefing.briefing?.recommended_hooks?.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Hooks Recomendados</p>
+                            {intelligenceBriefing.briefing.recommended_hooks.slice(0, 3).map((h: any, i: number) => (
+                              <div key={i} className="bg-muted/30 rounded-lg p-2 text-[10px]">
+                                <p className="font-medium">🎣 "{h.hook_text}"</p>
+                                <p className="text-muted-foreground">{h.why_it_works}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Visual Blueprint */}
+                        {intelligenceBriefing.briefing?.visual_blueprint && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Blueprint Visual</p>
+                            <div className="bg-muted/30 rounded-lg p-2 text-[10px] space-y-0.5">
+                              <p>🎨 Estilo: {intelligenceBriefing.briefing.visual_blueprint.recommended_style}</p>
+                              <p>💡 Iluminação: {intelligenceBriefing.briefing.visual_blueprint.lighting_mood}</p>
+                              <p>🎬 Hook Visual: {intelligenceBriefing.briefing.visual_blueprint.hook_visual_suggestion}</p>
+                            </div>
+                          </div>
+                        )}
+                        {/* Reference Channels */}
+                        {intelligenceBriefing.metadata?.topChannelNames?.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Canais Referência</p>
+                            <div className="flex flex-wrap gap-1">
+                              {intelligenceBriefing.metadata.topChannelNames.map((name: string, i: number) => (
+                                <Badge key={i} variant="outline" className="text-[9px]">{name}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {/* Templates Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
