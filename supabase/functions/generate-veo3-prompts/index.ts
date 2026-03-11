@@ -90,7 +90,7 @@ Segments:\n${segmentTexts}`
                     properties: {
                       segmentIndex: { type: "number" },
                       veo3Prompt: { type: "string", description: "100-200 word prompt using Veo3 formula. MUST end with anti-text block." },
-                      negativePrompt: { type: "string", description: "Always: subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, blurry, distorted, deformed" },
+                      negativePrompt: { type: "string", description: "Always include ALL: subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements, blurry, distorted, deformed hands, extra fingers, six fingers, fused fingers, melted hands, mutated body parts, bad anatomy, disfigured, poorly drawn face, amateur, low quality, jpeg artifacts, oversaturated, underexposed" },
                       shotType: { type: "string", description: "ECU, CU, MCU, MS, MLS, FS, LS, ELS, OTS, bird's eye, worm's eye" },
                       cameraMovement: { type: "string", description: "dolly, tracking, crane, steadicam, slow pan, orbit, push-in, pull-out, rack focus" },
                       lensSpec: { type: "string", description: "24mm, 35mm, 50mm, 85mm, 135mm, anamorphic" },

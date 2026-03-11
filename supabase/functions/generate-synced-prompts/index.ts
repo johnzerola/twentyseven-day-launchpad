@@ -114,7 +114,7 @@ OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'snea
                       startTime: { type: "number" },
                       endTime: { type: "number" },
                       visualPrompt: { type: "string", description: "100-200 word Veo3 prompt. Structure: [Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]. MUST end with: (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)" },
-                      negativePrompt: { type: "string", description: "Negative exclusions: subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, blurry, distorted, deformed hands, extra fingers, amateur" },
+                      negativePrompt: { type: "string", description: "Negative exclusions: subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements, blurry, distorted, deformed hands, extra fingers, six fingers, fused fingers, melted hands, mutated body parts, bad anatomy, disfigured, poorly drawn face, amateur, low quality, jpeg artifacts, oversaturated, underexposed" },
                       cameraAngle: { type: "string", description: "Specific Veo3 camera: dolly shot, tracking shot, crane shot, steadicam, slow pan, orbit shot, push-in, pull-out, rack focus, Dutch angle, POV" },
                       lensSpec: { type: "string", description: "Lens: 24mm wide, 35mm, 50mm, 85mm portrait, 135mm telephoto, anamorphic" },
                       lightingSetup: { type: "string", description: "Lighting: golden hour, Rembrandt, butterfly, split, rim/edge, volumetric, chiaroscuro, practical lights, neon" },
