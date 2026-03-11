@@ -580,7 +580,9 @@ const Scripts = () => {
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
                       <PromptExporter scenes={syncedScenes} characters={characters} topic={topic} videoStyle={videoStyle} language={language} />
-                      <SceneViewer scenes={syncedScenes} />
+                      <TimelineSyncLab scenes={syncedScenes} onUpdateScene={(index, updates) => {
+                        setSyncedScenes(prev => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
+                      }} />
                     </div>
                   )}
                 </motion.div>
