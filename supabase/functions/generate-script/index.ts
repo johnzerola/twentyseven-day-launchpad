@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -13,6 +15,8 @@ serve(async (req) => {
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
 
     // ========== Fetch Knowledge from DB ==========
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -176,7 +180,54 @@ ${retention}
 ⚠️ USE ESTE BRIEFING como BASE OBRIGATÓRIA. O roteiro deve refletir os padrões que FUNCIONAM neste nicho.\n`; 
     }
 
-    // ========== PHASE 1: GPT-5 Creates the Draft ==========
+    // ========== PHASE 0: GPT-5 generates HOOK + OPEN LOOPS (Ensemble AI) ==========
+    console.log("Phase 0 (GPT-5): Generating hook & open loops...");
+    
+    let gpt5Hook = '';
+    try {
+      const hookResponse = await fetch(AI_URL, {
+        method: "POST",
+        headers: aiHeaders,
+        body: JSON.stringify({
+          model: "openai/gpt-5",
+          messages: [
+            { role: "system", content: `Você é o MELHOR COPYWRITER DO MUNDO para YouTube hooks. Seu trabalho é criar os primeiros 60 segundos IMPOSSÍVEIS DE IGNORAR.
+
+Idioma: ${language || 'português'}
+Estilo: ${style || 'narração'}
+${viralInjection}
+${intelligenceBlock}
+
+REGRAS:
+- Crie UM hook devastador (primeiros 5-8 segundos) que cause CHOQUE ou CURIOSIDADE VISCERAL
+- Crie 3 OPEN LOOPS nos próximos 50 segundos que só fecham no final do vídeo
+- Use linguagem hipnótica, presente do indicativo, frases curtas
+- Valores em dólares ($)
+- APENAS texto falado. ZERO anotações técnicas` },
+            { role: "user", content: `Crie o HOOK + OPEN LOOPS para um vídeo de ${duration} minutos sobre: "${topic}"
+
+Retorne APENAS o texto dos primeiros 60 segundos de narração. Sem cabeçalhos, sem meta-texto.` }
+          ],
+          stream: false,
+        }),
+      });
+
+      if (hookResponse.ok) {
+        const hookData = await hookResponse.json();
+        gpt5Hook = hookData.choices?.[0]?.message?.content || '';
+        console.log("Phase 0 (GPT-5) complete. Hook length:", gpt5Hook.length, "chars");
+      } else {
+        console.warn("Phase 0 (GPT-5) failed with status:", hookResponse.status, "— continuing without hook");
+      }
+    } catch (e) {
+      console.warn("Phase 0 (GPT-5) error:", e, "— continuing without hook");
+    }
+
+    // ========== PHASE 1: Gemini Flash Creates the Draft ==========
+    const hookInjection = gpt5Hook
+      ? `\n\n🎯 HOOK PRÉ-GERADO POR GPT-5 (USE COMO BASE OBRIGATÓRIA para os primeiros 60 segundos — pode melhorar mas NÃO enfraquecer):\n---\n${gpt5Hook}\n---\n`
+      : '';
+
     const phase1System = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. Seus roteiros têm 95%+ de retenção.
 
 🧠 BASE DE CONHECIMENTO YOUTUBE (USE ATIVAMENTE):
@@ -207,6 +258,7 @@ ${scriptKnowledge}
 ${selectedStyle}
 ${viralInjection}
 ${intelligenceBlock}
+${hookInjection}
 Nicho: ${niche || 'geral'}
 Idioma: ${language || 'português'}
 
@@ -234,12 +286,9 @@ Idioma: ${language || 'português'}
 
 ⚠️ CRÍTICO: O roteiro DEVE ter ${targetWords}+ palavras para preencher ${durationMinutes} minutos COMPLETOS.`;
 
-    const phase1Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const phase1Response = await fetch(AI_URL, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: aiHeaders,
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
@@ -248,7 +297,7 @@ Idioma: ${language || 'português'}
 
 REQUISITOS INEGOCIÁVEIS:
 - Mínimo ${targetWords} palavras
-- Hook de CHOQUE nos primeiros 5 segundos
+- Hook de CHOQUE nos primeiros 5 segundos${gpt5Hook ? ' (USE O HOOK PRÉ-GERADO COMO BASE)' : ''}
 - 2-3 loops abertos nos primeiros 60 segundos
 - Pattern interrupts a cada 45 segundos
 - Escalada emocional constante
@@ -318,32 +367,83 @@ REGRAS:
 - Valores em dólares ($)
 - SOMENTE texto falado na parte de narração`;
 
-    const phase2Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const phase2Response = await fetch(AI_URL, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: aiHeaders,
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: phase2System },
           { role: "user", content: `ROTEIRO PARA REVISAR E TURBINAR:\n\n${draftScript}\n\nMISSÃO: Transforme em algo que o espectador NÃO CONSIGA parar de assistir. Dê scores HONESTOS e reescreva as partes fracas com força total.\n\nRetorne o roteiro COMPLETO reescrito (incluindo ---EXTRAS---).` }
         ],
-        stream: true,
+        stream: false,
       }),
     });
 
-    if (!phase2Response.ok) {
-      console.error("Phase 2 error, falling back to Phase 1 draft");
-      return streamText(draftScript, corsHeaders);
+    let finalScript = draftScript;
+    if (phase2Response.ok) {
+      const phase2Data = await phase2Response.json();
+      finalScript = phase2Data.choices?.[0]?.message?.content || draftScript;
+      console.log("Phase 2 (Gemini Pro) complete. Final length:", finalScript.length, "chars");
+    } else {
+      console.warn("Phase 2 failed, using Phase 1 draft. Status:", phase2Response.status);
     }
 
-    console.log("Phase 2 (Gemini Pro) streaming enhanced script...");
+    // ========== PHASE 3: GPT-5-mini Fact-Check (Ensemble AI) ==========
+    console.log("Phase 3 (GPT-5-mini): Fact-checking...");
+    
+    let factCheckResult = '';
+    try {
+      // Extract only narration (before ---EXTRAS---) for fact-checking
+      const narrationOnly = finalScript.split('---EXTRAS---')[0].trim();
+      
+      const factCheckResponse = await fetch(AI_URL, {
+        method: "POST",
+        headers: aiHeaders,
+        body: JSON.stringify({
+          model: "openai/gpt-5-mini",
+          messages: [
+            { role: "system", content: `Você é um VERIFICADOR DE FATOS rigoroso. Analise o roteiro abaixo e identifique:
 
-    return new Response(phase2Response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+1. AFIRMAÇÕES FACTUAIS que podem estar INCORRETAS ou EXAGERADAS
+2. NÚMEROS/ESTATÍSTICAS que precisam de verificação
+3. CITAÇÕES ou referências históricas imprecisas
+
+Para cada problema encontrado, sugira a CORREÇÃO.
+
+FORMATO DE RESPOSTA:
+---FACT_CHECK---
+Se NÃO encontrou problemas: "✅ APROVADO — Nenhuma imprecisão factual detectada."
+Se encontrou problemas:
+⚠️ [número]: "[frase original]" → PROBLEMA: [explicação] → CORREÇÃO: [versão correta]
+---END_FACT_CHECK---
+
+Seja pragmático — ignore opiniões, hipérboles narrativas e estilo. Foque APENAS em fatos verificáveis.
+Idioma: ${language || 'português'}` },
+            { role: "user", content: narrationOnly.slice(0, 12000) } // Limit to avoid token overflow
+          ],
+          stream: false,
+        }),
+      });
+
+      if (factCheckResponse.ok) {
+        const fcData = await factCheckResponse.json();
+        factCheckResult = fcData.choices?.[0]?.message?.content || '';
+        console.log("Phase 3 (Fact-check) complete. Issues found:", factCheckResult.includes('⚠️') ? 'YES' : 'NO');
+      } else {
+        console.warn("Phase 3 (Fact-check) failed:", factCheckResponse.status);
+      }
+    } catch (e) {
+      console.warn("Phase 3 (Fact-check) error:", e);
+    }
+
+    // ========== Append fact-check to final output ==========
+    if (factCheckResult) {
+      finalScript += `\n\n${factCheckResult}`;
+    }
+
+    // ========== Stream the final result ==========
+    return streamText(finalScript, corsHeaders);
   } catch (e) {
     console.error("generate-script error:", e);
     return errResp(e instanceof Error ? e.message : "Unknown error", 500);

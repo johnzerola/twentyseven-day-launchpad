@@ -56,9 +56,9 @@ Para cada título, classifique o estilo e estime o CTR de 3 a 15%.`;
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "openai/gpt-5",
           messages: [
-            { role: "system", content: "Você é um especialista em YouTube viral. Responda APENAS com JSON válido." },
+            { role: "system", content: "Você é um especialista em YouTube viral com foco em copywriting de alta conversão. Responda APENAS com JSON válido." },
             { role: "user", content: prompt },
           ],
           tools: [{
