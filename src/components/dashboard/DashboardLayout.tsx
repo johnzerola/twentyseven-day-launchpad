@@ -89,6 +89,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </header>
         <main className="p-6">{children}</main>
       </div>
+      <ChatbotWidget />
     </div>
   );
 };
