@@ -136,32 +136,53 @@ serve(async (req) => {
     const daysBack = 14 + Math.floor(Math.random() * 46);
     const after = new Date(Date.now() - daysBack * 86400000).toISOString();
 
-    const ytSearches = await Promise.all(
-      searchQueries.slice(0, 3).map((q: string, i: number) => {
-        const order = ["viewCount", "relevance", "date"][i % 3];
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(q)}&maxResults=40&order=${order}&regionCode=${region}&relevanceLanguage=${lang}&publishedAfter=${after}&key=${YOUTUBE_API_KEY}`;
-        return fetch(url).then(r => r.json()).catch(() => ({ items: [] }));
-      })
-    );
-
-    // Deduplicate videos
+    let allSearchItems: any[] = [];
     const seenVideoIds = new Set<string>();
-    const allSearchItems: any[] = [];
-    ytSearches.forEach((sd: any) => {
-      (sd.items || []).forEach((item: any) => {
-        const vid = item.id?.videoId;
-        if (vid && !seenVideoIds.has(vid)) {
-          seenVideoIds.add(vid);
-          allSearchItems.push(item);
-        }
-      });
-    });
 
+    // Try YouTube search with key fallback
+    for (let keyAttempt = 0; keyAttempt < ytKeys.length && allSearchItems.length === 0; keyAttempt++) {
+      const currentKey = getYtKey();
+      const ytSearches = await Promise.all(
+        searchQueries.slice(0, 3).map((q: string, i: number) => {
+          const order = ["viewCount", "relevance", "date"][i % 3];
+          const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(q)}&maxResults=40&order=${order}&regionCode=${region}&relevanceLanguage=${lang}&publishedAfter=${after}&key=${currentKey}`;
+          return fetch(url).then(r => r.json()).catch(() => ({ items: [] }));
+        })
+      );
+
+      ytSearches.forEach((sd: any) => {
+        if (sd.error?.errors?.[0]?.reason === "quotaExceeded") {
+          console.log(`YouTube key #${ytKeyIndex + 1} quota exceeded, switching...`);
+          ytKeyIndex++;
+          return;
+        }
+        (sd.items || []).forEach((item: any) => {
+          const vid = item.id?.videoId;
+          if (vid && !seenVideoIds.has(vid)) {
+            seenVideoIds.add(vid);
+            allSearchItems.push(item);
+          }
+        });
+      });
+
+      if (allSearchItems.length === 0 && keyAttempt < ytKeys.length - 1) {
+        ytKeyIndex++;
+        console.log(`Retrying with YouTube key #${ytKeyIndex + 1}`);
+      }
+    }
+
+    // If no YouTube results, still generate analysis from internal databases
     if (!allSearchItems.length) {
-      return new Response(JSON.stringify({ 
-        channels: [], trending: [], analysis: null, viralDbData: { titles: viralTitles, topPatterns, topTriggers },
-        directCompetitors, meta: { niche, country: region, baseRpm, totalChannels: 0, totalVideos: 0, timestamp: Date.now(), countryData: { ...countryData, ypp: YPP_REQUIREMENTS }, searchQueries },
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // We have viralTitles, intelChannels, nicheDbRows — generate analysis from those
+      if (viralTitles.length > 0 || intelChannels.length > 0 || nicheDbRows.length > 0) {
+        console.log(`No YouTube results, generating analysis from internal DB (${viralTitles.length} titles, ${intelChannels.length} channels, ${nicheDbRows.length} niches)`);
+        // Skip to AI analysis with internal data only
+      } else {
+        return new Response(JSON.stringify({
+          channels: [], trending: [], analysis: null, viralDbData: { titles: viralTitles, topPatterns, topTriggers },
+          directCompetitors, meta: { niche, country: region, baseRpm, totalChannels: 0, totalVideos: 0, timestamp: Date.now(), countryData: { ...countryData, ypp: YPP_REQUIREMENTS }, searchQueries },
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // === STEP 3: Get video + channel stats ===
