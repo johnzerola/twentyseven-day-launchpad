@@ -199,10 +199,20 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
       const metaData = data?.meta || null;
       setChannels(chs);
       setMeta(metaData);
-      if (!chs.length) toast.info('Nenhum canal encontrado. Tente ampliar os filtros.');
+      if (data?.error) {
+        toast.error(data.error);
+      } else if (data?.meta?.quotaExceeded) {
+        toast.error('Quota da YouTube API esgotada. Tente novamente amanhã.');
+      } else if (!chs.length) {
+        toast.info('Nenhum canal encontrado. Tente ampliar os filtros.');
+      }
       await persistSearch(nicheQuery, chs, metaData);
     } catch (err: any) {
-      toast.error(err.message || 'Erro na varredura');
+      if (err.message?.includes('quota') || err.message?.includes('429')) {
+        toast.error('Quota da YouTube API esgotada. Tente novamente amanhã.');
+      } else {
+        toast.error(err.message || 'Erro na varredura');
+      }
     } finally {
       setLoading(false);
     }
