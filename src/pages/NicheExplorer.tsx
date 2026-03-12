@@ -63,12 +63,13 @@ const NicheExplorer = () => {
   const saveAnalysis = async (nicheStr: string, countryStr: string, result: any) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const score = result?.analysis?.score ?? result?.score ?? 0;
     await supabase.from('saved_niche_analyses').insert({
       user_id: user.id,
       niche: nicheStr,
       country: countryStr,
       analysis_json: result,
-      score: result?.analysis?.score || 0,
+      score,
     } as any);
     analysesPag.resetPage();
     loadAnalyses();
