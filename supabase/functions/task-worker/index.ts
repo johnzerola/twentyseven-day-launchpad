@@ -166,6 +166,18 @@ serve(async (req) => {
             result = await ingestResp.json();
             break;
 
+          case "viral_score_scan":
+            const viralResp = await fetch(`${supabaseUrl}/functions/v1/viral-score-worker`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ action: "scan", ...(task.payload || {}) }),
+            });
+            result = await viralResp.json();
+            break;
+
           default:
             result = { warning: `Unknown task_type: ${task.task_type}` };
 
