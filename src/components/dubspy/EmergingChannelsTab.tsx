@@ -90,11 +90,14 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   const [minVideoViews, setMinVideoViews] = useState('');
   const [minEngagement, setMinEngagement] = useState('');
   const [minViralScore, setMinViralScore] = useState('');
+  const [facelessOnly, setFacelessOnly] = useState(false);
+  const [maxUploadFreq, setMaxUploadFreq] = useState('');
+  const [minAvgViews, setMinAvgViews] = useState('');
   const [sortBy, setSortBy] = useState(mode === 'escapees' ? 'growthVelocity' : 'viralScore');
   const [customNiche, setCustomNiche] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const activeFilterCount = [minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore].filter(v => v).length;
+  const activeFilterCount = [minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, maxUploadFreq, minAvgViews].filter(v => v).length + (facelessOnly ? 1 : 0);
 
   const tabKey = mode === 'emerging' ? 'emerging' : 'escapees';
 
