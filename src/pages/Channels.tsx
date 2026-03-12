@@ -147,7 +147,7 @@ const Channels = () => {
           const { data: analysisData, error: analysisErr } = await supabase.functions.invoke('analyze-channel', { body: { channelInput: chData.channelId } });
           if (!analysisErr && analysisData && !analysisData.error) {
             await supabase.from('user_channels').update({
-              analysis_json: { ...analysisData.analysis, recentVideos: analysisData.recentVideos, topVideos: analysisData.topVideos, avgRecentViews: analysisData.avgRecentViews },
+              analysis_json: { ...analysisData.analysis, recentVideos: analysisData.recentVideos, topVideos: analysisData.topVideos, avgRecentViews: analysisData.avgRecentViews, realMetrics: analysisData.realMetrics },
               niche: analysisData.analysis?.niche_detected || null,
             } as any).eq('id', inserted.id);
             toast.success('Análise completa!');
