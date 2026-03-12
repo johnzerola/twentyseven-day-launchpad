@@ -908,6 +908,84 @@ export type Database = {
         }
         Relationships: []
       }
+      reverse_engineering_analyses: {
+        Row: {
+          analyzed_by: string | null
+          channel_id: string | null
+          channel_name: string | null
+          clone_template: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          hook_analysis: Json | null
+          id: string
+          language: string | null
+          monetization_score: number | null
+          narrative_structure: Json | null
+          niche: string | null
+          pacing_analysis: Json | null
+          psychological_triggers: string[] | null
+          quality_score: number | null
+          retention_curve: Json | null
+          scene_structure: Json | null
+          subscribers: number | null
+          user_id: string | null
+          video_id: string
+          video_title: string
+          views: number | null
+          viral_score: number | null
+        }
+        Insert: {
+          analyzed_by?: string | null
+          channel_id?: string | null
+          channel_name?: string | null
+          clone_template?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          hook_analysis?: Json | null
+          id?: string
+          language?: string | null
+          monetization_score?: number | null
+          narrative_structure?: Json | null
+          niche?: string | null
+          pacing_analysis?: Json | null
+          psychological_triggers?: string[] | null
+          quality_score?: number | null
+          retention_curve?: Json | null
+          scene_structure?: Json | null
+          subscribers?: number | null
+          user_id?: string | null
+          video_id: string
+          video_title?: string
+          views?: number | null
+          viral_score?: number | null
+        }
+        Update: {
+          analyzed_by?: string | null
+          channel_id?: string | null
+          channel_name?: string | null
+          clone_template?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          hook_analysis?: Json | null
+          id?: string
+          language?: string | null
+          monetization_score?: number | null
+          narrative_structure?: Json | null
+          niche?: string | null
+          pacing_analysis?: Json | null
+          psychological_triggers?: string[] | null
+          quality_score?: number | null
+          retention_curve?: Json | null
+          scene_structure?: Json | null
+          subscribers?: number | null
+          user_id?: string | null
+          video_id?: string
+          video_title?: string
+          views?: number | null
+          viral_score?: number | null
+        }
+        Relationships: []
+      }
       saved_niche_analyses: {
         Row: {
           analysis_json: Json
