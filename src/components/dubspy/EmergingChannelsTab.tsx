@@ -130,7 +130,7 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   const persistSearch = useCallback(async (nicheQ: string, chs: ChannelResult[], metaData: any) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const filters = { niche: nicheQ, country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore };
+    const filters = { niche: nicheQ, country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, facelessOnly, maxUploadFreq, minAvgViews };
     const { data: existing } = await supabase
       .from('saved_searches')
       .select('id')
