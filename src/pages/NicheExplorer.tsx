@@ -113,6 +113,12 @@ const NicheExplorer = () => {
       if (result?.error) throw new Error(result.error);
       setData(result);
       await saveAnalysis(q, country, result);
+
+      // AUTO-FEED: Trigger intelligence sync from user activity (non-blocking)
+      supabase.functions.invoke('intelligence-sync-engine', {
+        body: { mode: 'user_activity_feed' },
+      }).catch(() => {}); // fire-and-forget
+
       toast.success('Análise completa e salva!');
     } catch (err: any) {
       toast.error(err.message || 'Erro na análise');
