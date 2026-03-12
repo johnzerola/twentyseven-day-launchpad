@@ -320,6 +320,21 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                 <Input type="number" placeholder="ex: 30" value={minViralScore} onChange={e => setMinViralScore(e.target.value)}
                   className="h-8 bg-secondary/50 text-sm" />
               </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Min views médio</label>
+                <Input type="number" placeholder="ex: 5000" value={minAvgViews} onChange={e => setMinAvgViews(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Max freq. upload (dias)</label>
+                <Input type="number" placeholder="ex: 14" value={maxUploadFreq} onChange={e => setMaxUploadFreq(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div className="flex items-center gap-2 pt-4">
+                <input type="checkbox" id="facelessOnly" checked={facelessOnly} onChange={e => setFacelessOnly(e.target.checked)}
+                  className="rounded border-input" />
+                <label htmlFor="facelessOnly" className="text-[11px] text-muted-foreground cursor-pointer">Apenas canais Faceless</label>
+              </div>
             </div>
           )}
         </div>
