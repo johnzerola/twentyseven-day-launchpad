@@ -6,18 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { draft_script, niche, language, duration, style, target_words } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
+    if (!CLAUDE_API_KEY) throw new Error("CLAUDE_API_KEY not configured");
     if (!draft_script) throw new Error("draft_script is required");
 
-    const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch knowledge for review context
@@ -36,7 +33,7 @@ serve(async (req) => {
 
     const tw = target_words || 2000;
 
-    const systemPrompt = `Você é um DIRETOR CRIATIVO IMPLACÁVEL que avalia roteiros para canais 10M+ inscritos.
+    const systemPrompt = `Você é um DIRETOR CRIATIVO IMPLACÁVEL que avalia e reescreve roteiros para canais YouTube 10M+ inscritos.
 
 🧠 CONHECIMENTO:
 ${ytKnowledge.slice(0, 2000)}
@@ -68,13 +65,21 @@ DEPOIS: ---SCENE_BLUEPRINT--- [JSON array de blocos ~30-45s] ---END_SCENE_BLUEPR
 
 REGRAS: ZERO anotações técnicas no roteiro. Mínimo ${tw} palavras. Idioma: ${language || 'português'}. Valores em $.`;
 
-    console.log("Phase 2: Streaming refine from Gemini Pro...");
-    const refineRes = await fetch(AI_URL, {
-      method: "POST", headers: aiHeaders,
+    console.log("Phase 2: Streaming refine from Claude...");
+
+    // Claude API with streaming
+    const refineRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 16000,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: `ROTEIRO PARA REVISAR E TURBINAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Transforme em algo que o espectador NÃO CONSIGA parar de assistir. Scores HONESTOS. Reescreva partes fracas. Retorne COMPLETO.` }
         ],
         stream: true,
@@ -82,13 +87,62 @@ REGRAS: ZERO anotações técnicas no roteiro. Mínimo ${tw} palavras. Idioma: $
     });
 
     if (!refineRes.ok) {
-      if (refineRes.status === 429) return errResp("Rate limit. Aguarde.", 429);
-      if (refineRes.status === 402) return errResp("Créditos insuficientes.", 402);
-      console.error("Phase 2 error:", refineRes.status);
-      throw new Error("Refine failed");
+      const errText = await refineRes.text();
+      console.error("Claude error:", refineRes.status, errText);
+      if (refineRes.status === 429) return errResp("Rate limit Claude. Aguarde.", 429);
+      if (refineRes.status === 402) return errResp("Créditos Claude insuficientes.", 402);
+      throw new Error(`Claude API error: ${refineRes.status}`);
     }
 
-    return new Response(refineRes.body, {
+    // Transform Claude SSE stream to OpenAI-compatible SSE format
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    (async () => {
+      try {
+        const reader = refineRes.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let idx: number;
+          while ((idx = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 1);
+
+            if (!line.startsWith("data: ")) continue;
+            const json = line.slice(6).trim();
+            if (!json || json === "[DONE]") continue;
+
+            try {
+              const evt = JSON.parse(json);
+              // Claude content_block_delta
+              if (evt.type === "content_block_delta" && evt.delta?.text) {
+                const openaiChunk = {
+                  choices: [{ delta: { content: evt.delta.text }, index: 0 }],
+                };
+                await writer.write(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+              }
+              if (evt.type === "message_stop") {
+                await writer.write(encoder.encode("data: [DONE]\n\n"));
+              }
+            } catch { /* skip malformed */ }
+          }
+        }
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+      } catch (e) {
+        console.error("Stream transform error:", e);
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    return new Response(readable, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
 
