@@ -102,3 +102,18 @@ verify_jwt = false
 [functions.audience-psychology-engine]
 verify_jwt = false
 
+[functions.self-learning-engine]
+verify_jwt = false
+
+[functions.channel-intelligence]
+verify_jwt = false
+
+[functions.task-worker]
+verify_jwt = false
+
+[functions.auto-enrich-worker]
+verify_jwt = false
+
+[functions.enrich-video-knowledge]
+verify_jwt = false
+
