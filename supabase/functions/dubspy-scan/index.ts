@@ -24,7 +24,11 @@ interface ScanParams {
 async function fetchJSON(url: string) {
   const res = await fetch(url);
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  if (data.error) {
+    const reason = data.error.errors?.[0]?.reason;
+    if (reason === "quotaExceeded") throw new Error("QUOTA_EXCEEDED");
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
   return data;
 }
 
@@ -258,7 +262,13 @@ serve(async (req) => {
     console.log(`Total unique videos found: ${allVideoItems.length} from ${searchQueries.length} queries`);
 
     if (!allVideoItems.length) {
-      return new Response(JSON.stringify({ channels: [], clusters: [], meta: { totalFound: 0, emergingCount: 0, escapeeCount: 0, queriesUsed: searchQueries } }), {
+      // Check if all queries failed due to quota
+      const quotaExceeded = allSearchResults.every(r => r.length === 0);
+      return new Response(JSON.stringify({ 
+        channels: [], clusters: [], 
+        error: quotaExceeded ? "Quota da YouTube API esgotada. Tente novamente amanhã." : undefined,
+        meta: { totalFound: 0, emergingCount: 0, escapeeCount: 0, queriesUsed: searchQueries, quotaExceeded } 
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

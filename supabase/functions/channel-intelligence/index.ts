@@ -29,19 +29,44 @@ serve(async (req) => {
 
     // ========== 1. RESOLVE CHANNEL ID ==========
     let channelId = channelInput.trim();
-    const urlMatch = channelInput.match(/youtube\.com\/(channel\/|c\/|@)([^\/\?]+)/);
+    const urlMatch = channelInput.match(/youtube\.com\/(channel\/|c\/|@)([^\/\?\#\s]+)/);
     if (urlMatch) {
       if (urlMatch[1] === "channel/") {
         channelId = urlMatch[2];
       } else {
-        const sr = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(urlMatch[2])}&maxResults=1&key=${YOUTUBE_API_KEY}`);
-        const sd = await sr.json();
-        if (sd.items?.[0]) channelId = sd.items[0].snippet.channelId;
+        // Use channels.list with forHandle for @ handles (doesn't count as search quota)
+        const handle = urlMatch[2];
+        const handleRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
+        const handleData = await handleRes.json();
+        if (handleData.error?.errors?.[0]?.reason === "quotaExceeded") {
+          return new Response(JSON.stringify({ error: "Quota da YouTube API esgotada. Tente novamente amanhã ou reduza o uso." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (handleData.items?.[0]) {
+          channelId = handleData.items[0].id;
+        } else {
+          // Fallback: try search
+          const sr = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&maxResults=1&key=${YOUTUBE_API_KEY}`);
+          const sd = await sr.json();
+          if (sd.error?.errors?.[0]?.reason === "quotaExceeded") {
+            return new Response(JSON.stringify({ error: "Quota da YouTube API esgotada. Tente novamente amanhã." }), {
+              status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (sd.items?.[0]) channelId = sd.items[0].snippet.channelId;
+        }
       }
     } else if (channelInput.startsWith("@")) {
-      const sr = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelInput)}&maxResults=1&key=${YOUTUBE_API_KEY}`);
-      const sd = await sr.json();
-      if (sd.items?.[0]) channelId = sd.items[0].snippet.channelId;
+      const handle = channelInput.replace("@", "");
+      const handleRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
+      const handleData = await handleRes.json();
+      if (handleData.error?.errors?.[0]?.reason === "quotaExceeded") {
+        return new Response(JSON.stringify({ error: "Quota da YouTube API esgotada. Tente novamente amanhã." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (handleData.items?.[0]) channelId = handleData.items[0].id;
     }
 
     // ========== 2. FETCH CHANNEL + VIDEOS IN PARALLEL ==========
@@ -52,9 +77,17 @@ serve(async (req) => {
     ]);
 
     const [channelData, recentData, topData] = await Promise.all([channelRes.json(), recentRes.json(), topRes.json()]);
+    
+    // Check for quota exceeded in channel fetch
+    if (channelData.error?.errors?.[0]?.reason === "quotaExceeded" || recentData.error?.errors?.[0]?.reason === "quotaExceeded") {
+      return new Response(JSON.stringify({ error: "Quota da YouTube API esgotada. Tente novamente amanhã." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
     const channel = channelData.items?.[0];
     if (!channel) {
-      return new Response(JSON.stringify({ error: "Canal não encontrado." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Canal não encontrado. Verifique a URL ou ID do canal." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const stats = channel.statistics;
