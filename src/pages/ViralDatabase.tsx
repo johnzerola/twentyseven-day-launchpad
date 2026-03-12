@@ -336,7 +336,8 @@ const ViralDatabase = () => {
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('402')) toast.error('Créditos insuficientes.');
-      else if (msg.includes('429')) toast.error('Rate limit. Tente novamente.');
+      else if (msg.includes('429')) toast.error('Quota/rate limit da API atingido. Tente novamente amanhã.');
+      else if (msg.includes('404') || msg.toLowerCase().includes('canal não encontrado')) toast.error('Canal não encontrado. Use URL completa, @handle ou ID UC.');
       else toast.error(msg || 'Erro ao analisar canal');
     } finally {
       setAnalyzing(false);

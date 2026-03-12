@@ -504,14 +504,15 @@ serve(async (req) => {
       }
     }
 
-    // Log execution
-    await sb.from("execution_logs").insert({
+    // Log execution (never break the request if logging fails)
+    const { error: logError } = await sb.from("execution_logs").insert({
       function_name: "intelligence-sync-engine",
       success: results.errors === 0,
       duration_ms: Date.now() - startTime,
       api_calls_made: results.synced + results.enriched,
       metadata: { mode, ...results },
-    }).catch(() => {});
+    });
+    if (logError) console.error("execution_logs insert error:", logError);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

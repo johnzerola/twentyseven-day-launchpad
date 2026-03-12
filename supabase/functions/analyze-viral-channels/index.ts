@@ -22,10 +22,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // ========== Mode 1: Analyze specific channel URL ==========
+    // ========== Mode 1: Analyze specific channel URL/handle/id ==========
     if (channelUrl) {
       const channelId = await resolveChannelId(channelUrl, YOUTUBE_API_KEY);
-      if (!channelId) throw new Error("Could not resolve channel");
+      if (!channelId) return json({ error: "Canal não encontrado. Envie URL completa, @handle ou ID UC..." }, 404);
       const result = await analyzeChannel(channelId, YOUTUBE_API_KEY, LOVABLE_API_KEY, sb);
       return json({ channel: result });
     }
@@ -57,12 +57,17 @@ serve(async (req) => {
   } catch (e) {
     console.error("analyze-viral-channels error:", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
-    if (msg.includes("429") || msg.includes("rate")) {
-      return json({ error: "Rate limit exceeded. Try again later." }, 429);
+
+    if (msg.includes("QUOTA_EXCEEDED")) {
+      return json({ error: "Quota da YouTube API esgotada. Tente novamente amanhã." }, 429);
+    }
+    if (msg.includes("CHANNEL_NOT_FOUND")) {
+      return json({ error: "Canal não encontrado. Verifique a URL/@handle e tente novamente." }, 404);
     }
     if (msg.includes("402")) {
-      return json({ error: "Credits insufficient." }, 402);
+      return json({ error: "Créditos insuficientes." }, 402);
     }
+
     return json({ error: msg }, 500);
   }
 });
@@ -95,30 +100,72 @@ function buildSearchQueries(niche: string, style: string, lang: string): string[
   return keywords.map(k => `${k} ${niche}${langSuffix}`.trim());
 }
 
-async function resolveChannelId(url: string, apiKey: string): Promise<string | null> {
-  // Handle various YouTube URL formats
-  const patterns = [
-    /youtube\.com\/channel\/(UC[\w-]+)/,
-    /youtube\.com\/@([\w.-]+)/,
-    /youtube\.com\/c\/([\w.-]+)/,
-    /youtube\.com\/user\/([\w.-]+)/,
-  ];
+async function resolveChannelId(input: string, apiKey: string): Promise<string | null> {
+  const raw = input.trim();
+  if (!raw) return null;
 
-  for (const pat of patterns) {
-    const m = url.match(pat);
-    if (m) {
-      if (m[1].startsWith("UC")) return m[1];
-      // Search by handle/username
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(m[1])}&key=${apiKey}&maxResults=1`
-      );
-      const data = await res.json();
-      return data.items?.[0]?.snippet?.channelId || null;
-    }
-  }
   // Direct channel ID
-  if (url.startsWith("UC")) return url;
-  return null;
+  if (raw.startsWith("UC") && raw.length >= 24) return raw;
+
+  const normalized = raw
+    .replace(/\?.*$/, "")
+    .replace(/#.*$/, "")
+    .replace(/\/+$/, "");
+
+  // youtube.com/channel/UC...
+  const channelIdMatch = normalized.match(/youtube\.com\/channel\/(UC[\w-]+)/i);
+  if (channelIdMatch?.[1]) return channelIdMatch[1];
+
+  // youtube.com/@handle or @handle
+  const handleMatch = normalized.match(/youtube\.com\/@([\w.-]+)/i) || normalized.match(/^@([\w.-]+)$/i);
+  if (handleMatch?.[1]) {
+    return await resolveByHandle(handleMatch[1], apiKey);
+  }
+
+  // youtube.com/c/name or youtube.com/user/name
+  const customNameMatch = normalized.match(/youtube\.com\/(?:c|user)\/([^\/]+)/i);
+  if (customNameMatch?.[1]) {
+    return await resolveBySearch(customNameMatch[1], apiKey);
+  }
+
+  // Plain text fallback: try as handle, then as search query
+  const asHandle = raw.replace(/^@/, "").trim();
+  const handleId = await resolveByHandle(asHandle, apiKey);
+  if (handleId) return handleId;
+
+  return await resolveBySearch(raw, apiKey);
+}
+
+function assertYouTubeResponse(data: any) {
+  const reason = data?.error?.errors?.[0]?.reason;
+  if (reason === "quotaExceeded") throw new Error("QUOTA_EXCEEDED");
+  if (data?.error?.message) throw new Error(`YOUTUBE_ERROR: ${data.error.message}`);
+}
+
+async function resolveByHandle(handle: string, apiKey: string): Promise<string | null> {
+  if (!handle) return null;
+  const cleanHandle = handle.replace(/^@/, "").trim();
+  if (!cleanHandle) return null;
+
+  const byHandleRes = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(cleanHandle)}&key=${apiKey}`
+  );
+  const byHandleData = await byHandleRes.json();
+  assertYouTubeResponse(byHandleData);
+
+  return byHandleData.items?.[0]?.id || null;
+}
+
+async function resolveBySearch(query: string, apiKey: string): Promise<string | null> {
+  if (!query?.trim()) return null;
+
+  const res = await fetch(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=1`
+  );
+  const data = await res.json();
+  assertYouTubeResponse(data);
+
+  return data.items?.[0]?.snippet?.channelId || null;
 }
 
 async function searchChannels(query: string, apiKey: string): Promise<{ channelId: string; title: string }[]> {
@@ -126,6 +173,7 @@ async function searchChannels(query: string, apiKey: string): Promise<{ channelI
     `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=10&order=viewCount`
   );
   const data = await res.json();
+  assertYouTubeResponse(data);
   if (!data.items) return [];
   return data.items.map((item: any) => ({
     channelId: item.snippet.channelId,
@@ -144,8 +192,9 @@ async function analyzeChannel(
     `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}&key=${youtubeKey}`
   );
   const chData = await chRes.json();
+  assertYouTubeResponse(chData);
   const ch = chData.items?.[0];
-  if (!ch) throw new Error("Channel not found");
+  if (!ch) throw new Error("CHANNEL_NOT_FOUND");
 
   const stats = ch.statistics;
   const snippet = ch.snippet;
@@ -155,6 +204,7 @@ async function analyzeChannel(
     `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=viewCount&type=video&maxResults=5&key=${youtubeKey}`
   );
   const vidData = await vidRes.json();
+  assertYouTubeResponse(vidData);
   const videoIds = (vidData.items || []).map((v: any) => v.id.videoId).filter(Boolean);
 
   let topVideos: any[] = [];
@@ -163,6 +213,7 @@ async function analyzeChannel(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(",")}&key=${youtubeKey}`
     );
     const statsData = await statsRes.json();
+    assertYouTubeResponse(statsData);
     topVideos = (statsData.items || []).map((v: any) => ({
       title: v.snippet.title,
       views: parseInt(v.statistics.viewCount || "0"),
