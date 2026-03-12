@@ -108,7 +108,7 @@ serve(async (req) => {
                 },
                 niche: video.niche || null,
                 source_video: video.channel_id,
-              }).catch(() => {});
+              });
 
               await sb.from("task_queue").insert({
                 task_type: "reverse_engineer",
