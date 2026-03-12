@@ -34,10 +34,11 @@ serve(async (req) => {
         let query = sb.from('viral_titles_db').select('title,views,why_viral,title_pattern,niche').order('views', { ascending: false }).limit(30);
         if (niche) query = query.ilike('niche', `%${niche}%`);
 
-        const [titlesRes, triggersRes, formatsRes] = await Promise.all([
+        const [titlesRes, triggersRes, formatsRes, psychPatternsRes] = await Promise.all([
           query,
           sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'psychology_triggers').order('effectiveness_score', { ascending: false }).limit(10),
           sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'content_format').order('effectiveness_score', { ascending: false }).limit(8),
+          sb.from('audience_psychology_patterns').select('trigger_type,description,example_titles,retention_score').order('retention_score', { ascending: false }).limit(8),
         ]);
 
         const viralTitles = titlesRes.data;
