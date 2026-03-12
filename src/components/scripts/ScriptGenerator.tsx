@@ -260,12 +260,14 @@ export const ScriptGenerator = ({
   };
 
   // ═══════ STEP 3: Dual AI Scoring ═══════
-  const runStep3_DualScore = async () => {
+  const runStep3_DualScoreWithText = async (scriptText?: string) => {
+    const textToScore = scriptText || script;
     setGenerating(true);
     setLoading(true);
     setWizardStep(3);
+    if (scriptText) setScript(scriptText);
     setDualScore(null);
-    setPhaseLabel('🛡️ GPT e Gemini Pro estão avaliando o roteiro...');
+    setPhaseLabel('🛡️ GPT e Gemini estão avaliando o roteiro...');
 
     try {
       const { data, error } = await supabase.functions.invoke('score-script', {
