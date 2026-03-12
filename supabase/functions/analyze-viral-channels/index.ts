@@ -49,9 +49,16 @@ serve(async (req) => {
 
     // ========== Mode 1: Analyze specific channel URL/handle/id ==========
     if (channelUrl) {
-      const channelId = await resolveChannelId(channelUrl, YOUTUBE_API_KEY);
+      let channelId: string | null = null;
+      try {
+        channelId = await resolveChannelId(channelUrl, getCurrentKey());
+      } catch (e: any) {
+        if (e.message === "QUOTA_EXCEEDED_RETRY") {
+          channelId = await resolveChannelId(channelUrl, getCurrentKey());
+        } else throw e;
+      }
       if (!channelId) return json({ error: "Canal não encontrado. Envie URL completa, @handle ou ID UC..." }, 404);
-      const result = await analyzeChannel(channelId, YOUTUBE_API_KEY, LOVABLE_API_KEY, sb);
+      const result = await analyzeChannel(channelId, getCurrentKey(), LOVABLE_API_KEY, sb);
       return json({ channel: result });
     }
 
