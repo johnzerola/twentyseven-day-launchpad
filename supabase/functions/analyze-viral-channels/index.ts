@@ -67,7 +67,7 @@ serve(async (req) => {
     const allChannels: any[] = [];
 
     for (const query of searchQueries.slice(0, 3)) {
-      const channels = await searchChannels(query, YOUTUBE_API_KEY);
+      const channels = await searchChannels(query, getCurrentKey());
       for (const ch of channels.slice(0, 5)) {
         try {
           const existing = await sb.from("channel_intelligence")
@@ -77,7 +77,7 @@ serve(async (req) => {
 
           if (existing.data) continue; // skip already analyzed
 
-          const result = await analyzeChannel(ch.channelId, YOUTUBE_API_KEY, LOVABLE_API_KEY, sb);
+          const result = await analyzeChannel(ch.channelId, getCurrentKey(), LOVABLE_API_KEY, sb);
           allChannels.push(result);
         } catch (e) {
           console.error(`Failed to analyze ${ch.channelId}:`, e);
