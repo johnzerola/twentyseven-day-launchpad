@@ -142,7 +142,15 @@ const NicheExplorer = () => {
   const countryMeta = data?.meta?.countryData;
   const viralDbData = data?.viralDbData;
   const searchQueries = data?.meta?.searchQueries || [];
-  const filteredChannels = filterFaceless ? channels.filter((c: any) => c.faceless) : channels;
+
+  // ALGORITHM GATE: Only show channels that pass our viral score threshold (≥35)
+  const algorithmApprovedChannels = channels.filter((c: any) => (c.viralScore || 0) >= 35);
+  const filteredChannels = filterFaceless ? algorithmApprovedChannels.filter((c: any) => c.faceless) : algorithmApprovedChannels;
+  const rejectedCount = channels.length - algorithmApprovedChannels.length;
+
+  // ALGORITHM GATE: Only show trending videos with engagement rate ≥1% OR views ≥50K
+  const algorithmApprovedTrending = trending.filter((v: any) => (v.engagementRate || 0) >= 1 || (v.views || 0) >= 50000);
+  const rejectedTrendingCount = trending.length - algorithmApprovedTrending.length;
 
   const radarData = a?.radarMetrics ? [
     { metric: 'RPM', value: a.radarMetrics.rpm },
