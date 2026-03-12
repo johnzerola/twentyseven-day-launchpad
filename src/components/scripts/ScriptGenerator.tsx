@@ -54,6 +54,10 @@ interface ScriptGeneratorProps {
 const SPEECH_RATES: Record<string, number> = {
   'português': 150, 'inglês': 160, 'espanhol': 155,
   'polonês': 145, 'alemão': 140, 'turco': 150, 'japonês': 130,
+  'francês': 155, 'italiano': 155, 'tcheco': 145, 'holandês': 150,
+  'coreano': 135, 'hindi': 145, 'árabe': 140, 'indonésio': 150,
+  'tailandês': 140, 'vietnamita': 145, 'romeno': 150, 'húngaro': 145,
+  'sueco': 150, 'norueguês': 150, 'dinamarquês': 150, 'finlandês': 140,
 };
 
 export const ScriptGenerator = ({
