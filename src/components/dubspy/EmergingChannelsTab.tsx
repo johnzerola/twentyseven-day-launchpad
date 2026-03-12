@@ -151,7 +151,7 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
         results_json: chs as any, channel_info_json: metaData as any, filters_json: filters as any,
       });
     }
-  }, [country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, tabKey]);
+  }, [country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, facelessOnly, maxUploadFreq, minAvgViews, tabKey]);
 
   const scan = async () => {
     const nicheQuery = niche || customNiche;
