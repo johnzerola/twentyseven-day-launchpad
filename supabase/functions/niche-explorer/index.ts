@@ -200,78 +200,78 @@ serve(async (req) => {
       const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${channelIds.slice(0, 50).join(",")}&key=${currentKey}`);
       const cData = await cRes.json();
 
-    const chMap: Record<string, any> = {};
-    (cData.items || []).forEach((ch: any) => {
-      const subs = parseInt(ch.statistics.subscriberCount || "0");
-      const totalViews = parseInt(ch.statistics.viewCount || "0");
-      const videoCount = parseInt(ch.statistics.videoCount || "0");
-      chMap[ch.id] = {
-        id: ch.id, name: ch.snippet.title,
-        thumbnail: ch.snippet.thumbnails?.medium?.url,
-        description: ch.snippet.description?.slice(0, 200) || "",
-        subscribers: subs, totalViews, videoCount,
-        avgViews: videoCount > 0 ? Math.floor(totalViews / videoCount) : 0,
-        country: ch.snippet.country || "",
-        keywords: ch.brandingSettings?.channel?.keywords || "",
-        createdAt: ch.snippet.publishedAt,
-      };
-    });
+      (cData.items || []).forEach((ch: any) => {
+        const subs = parseInt(ch.statistics.subscriberCount || "0");
+        const totalViews = parseInt(ch.statistics.viewCount || "0");
+        const videoCount = parseInt(ch.statistics.videoCount || "0");
+        chMap[ch.id] = {
+          id: ch.id, name: ch.snippet.title,
+          thumbnail: ch.snippet.thumbnails?.medium?.url,
+          description: ch.snippet.description?.slice(0, 200) || "",
+          subscribers: subs, totalViews, videoCount,
+          avgViews: videoCount > 0 ? Math.floor(totalViews / videoCount) : 0,
+          country: ch.snippet.country || "",
+          keywords: ch.brandingSettings?.channel?.keywords || "",
+          createdAt: ch.snippet.publishedAt,
+        };
+      });
 
-    // Build trending videos
-    const trending = (vData.items || []).map((v: any) => {
-      const views = parseInt(v.statistics?.viewCount || "0");
-      const likes = parseInt(v.statistics?.likeCount || "0");
-      const comments = parseInt(v.statistics?.commentCount || "0");
-      const ch = chMap[v.snippet.channelId];
-      const publishedMs = new Date(v.snippet.publishedAt).getTime();
-      const hoursAge = Math.max(1, (Date.now() - publishedMs) / 3600000);
-      const daysAge = hoursAge / 24;
+      // Build trending videos
+      trending = (vData.items || []).map((v: any) => {
+        const views = parseInt(v.statistics?.viewCount || "0");
+        const likes = parseInt(v.statistics?.likeCount || "0");
+        const comments = parseInt(v.statistics?.commentCount || "0");
+        const ch = chMap[v.snippet.channelId];
+        const publishedMs = new Date(v.snippet.publishedAt).getTime();
+        const hoursAge = Math.max(1, (Date.now() - publishedMs) / 3600000);
+        const daysAge = hoursAge / 24;
 
-      return {
-        id: v.id, title: v.snippet.title, channelTitle: v.snippet.channelTitle,
-        channelId: v.snippet.channelId, thumbnail: v.snippet.thumbnails?.medium?.url,
-        views, likes, comments, publishedAt: v.snippet.publishedAt,
-        duration: v.contentDetails?.duration || "",
-        vph: Math.round(views / hoursAge), vpd: Math.round(views / Math.max(1, daysAge)),
-        engagementRate: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
-        commentRate: views > 0 ? parseFloat(((comments / views) * 100).toFixed(3)) : 0,
-        viewsPerSub: ch?.subscribers > 0 ? parseFloat((views / ch.subscribers).toFixed(2)) : 0,
-        isOutlier: ch ? views >= ch.avgViews * 3 : false,
-        isSuperOutlier: ch ? views >= ch.avgViews * 10 : false,
-        channelSubs: ch?.subscribers || 0,
-      };
-    });
+        return {
+          id: v.id, title: v.snippet.title, channelTitle: v.snippet.channelTitle,
+          channelId: v.snippet.channelId, thumbnail: v.snippet.thumbnails?.medium?.url,
+          views, likes, comments, publishedAt: v.snippet.publishedAt,
+          duration: v.contentDetails?.duration || "",
+          vph: Math.round(views / hoursAge), vpd: Math.round(views / Math.max(1, daysAge)),
+          engagementRate: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
+          commentRate: views > 0 ? parseFloat(((comments / views) * 100).toFixed(3)) : 0,
+          viewsPerSub: ch?.subscribers > 0 ? parseFloat((views / ch.subscribers).toFixed(2)) : 0,
+          isOutlier: ch ? views >= ch.avgViews * 3 : false,
+          isSuperOutlier: ch ? views >= ch.avgViews * 10 : false,
+          channelSubs: ch?.subscribers || 0,
+        };
+      });
 
-    // Group by channel
-    const channelGroups: Record<string, any[]> = {};
-    trending.forEach((v: any) => {
-      if (!channelGroups[v.channelId]) channelGroups[v.channelId] = [];
-      channelGroups[v.channelId].push(v);
-    });
+      // Group by channel
+      const channelGroups: Record<string, any[]> = {};
+      trending.forEach((v: any) => {
+        if (!channelGroups[v.channelId]) channelGroups[v.channelId] = [];
+        channelGroups[v.channelId].push(v);
+      });
 
-    const channels = Object.entries(channelGroups).map(([chId, videos]) => {
-      const ch = chMap[chId];
-      if (!ch) return null;
-      const outlierCount = videos.filter((v: any) => v.isOutlier).length;
-      const superOutlierCount = videos.filter((v: any) => v.isSuperOutlier).length;
-      const avgEngagement = videos.reduce((s: number, v: any) => s + v.engagementRate, 0) / videos.length;
-      const avgVph = videos.reduce((s: number, v: any) => s + v.vph, 0) / videos.length;
-      const maxViews = Math.max(...videos.map((v: any) => v.views));
+      channels = Object.entries(channelGroups).map(([chId, videos]) => {
+        const ch = chMap[chId];
+        if (!ch) return null;
+        const outlierCount = videos.filter((v: any) => v.isOutlier).length;
+        const superOutlierCount = videos.filter((v: any) => v.isSuperOutlier).length;
+        const avgEngagement = videos.reduce((s: number, v: any) => s + v.engagementRate, 0) / videos.length;
+        const avgVph = videos.reduce((s: number, v: any) => s + v.vph, 0) / videos.length;
+        const maxViews = Math.max(...videos.map((v: any) => v.views));
 
-      const viralScore = Math.min(100, Math.round(
-        (outlierCount * 15) + (superOutlierCount * 25) +
-        (avgEngagement * 5) + (Math.min(avgVph, 2000) / 20) +
-        (ch.subscribers < 10000 ? 20 : ch.subscribers < 100000 ? 10 : 5)
-      ));
-      const isMonetized = ch.subscribers >= 1000 && ch.totalViews >= 240000;
+        const viralScore = Math.min(100, Math.round(
+          (outlierCount * 15) + (superOutlierCount * 25) +
+          (avgEngagement * 5) + (Math.min(avgVph, 2000) / 20) +
+          (ch.subscribers < 10000 ? 20 : ch.subscribers < 100000 ? 10 : 5)
+        ));
+        const isMonetized = ch.subscribers >= 1000 && ch.totalViews >= 240000;
 
-      return {
-        ...ch, outlierCount, superOutlierCount,
-        avgEngagement: parseFloat(avgEngagement.toFixed(2)),
-        avgVph: Math.round(avgVph), viralScore, isMonetized, maxViews,
-        videos: videos.sort((a: any, b: any) => b.views - a.views).slice(0, 5),
-      };
-    }).filter(Boolean).sort((a: any, b: any) => b.viralScore - a.viralScore);
+        return {
+          ...ch, outlierCount, superOutlierCount,
+          avgEngagement: parseFloat(avgEngagement.toFixed(2)),
+          avgVph: Math.round(avgVph), viralScore, isMonetized, maxViews,
+          videos: videos.sort((a: any, b: any) => b.views - a.views).slice(0, 5),
+        };
+      }).filter(Boolean).sort((a: any, b: any) => b.viralScore - a.viralScore);
+    } // end if allSearchItems.length > 0
 
     // === STEP 4: AI Analysis with ALL data ===
     const topChannelsSummary = channels.slice(0, 15).map((c: any) => 
