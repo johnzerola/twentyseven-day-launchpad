@@ -50,6 +50,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_learning: {
+        Row: {
+          created_at: string | null
+          id: string
+          insight: string | null
+          source: string | null
+          topic: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          insight?: string | null
+          source?: string | null
+          topic?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          insight?: string | null
+          source?: string | null
+          topic?: string | null
+        }
+        Relationships: []
+      }
       api_config: {
         Row: {
           api_name: string
@@ -555,6 +579,7 @@ export type Database = {
           id: string
           niche: string | null
           retention_score: number | null
+          source_video: string | null
         }
         Insert: {
           created_at?: string | null
@@ -563,6 +588,7 @@ export type Database = {
           id?: string
           niche?: string | null
           retention_score?: number | null
+          source_video?: string | null
         }
         Update: {
           created_at?: string | null
@@ -571,6 +597,7 @@ export type Database = {
           id?: string
           niche?: string | null
           retention_score?: number | null
+          source_video?: string | null
         }
         Relationships: []
       }
@@ -1703,6 +1730,7 @@ export type Database = {
           niche: string | null
           pattern_json: Json | null
           pattern_name: string
+          source_video: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1710,6 +1738,7 @@ export type Database = {
           niche?: string | null
           pattern_json?: Json | null
           pattern_name: string
+          source_video?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1717,6 +1746,7 @@ export type Database = {
           niche?: string | null
           pattern_json?: Json | null
           pattern_name?: string
+          source_video?: string | null
         }
         Relationships: []
       }
