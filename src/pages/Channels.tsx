@@ -217,6 +217,15 @@ const Channels = () => {
           channelStrengths: analysis?.strengths?.slice(0, 3),
           channelWeaknesses: analysis?.weaknesses?.slice(0, 3),
           contentGaps: competitorInsights?.content_gaps?.slice(0, 3),
+          realMetrics: analysis?.realMetrics ? {
+            sub_watch_ratio: analysis.realMetrics.sub_watch_ratio,
+            engagement_health: analysis.realMetrics.engagement_health,
+            best_upload_day: analysis.realMetrics.best_upload_day,
+            avg_duration_seconds: analysis.realMetrics.avg_duration_seconds,
+          } : undefined,
+          viralTopics: analysis?.viral_potential_topics?.slice(0, 3),
+          bestContentType: analysis?.best_content_type,
+          recommendedLength: analysis?.recommended_video_length,
         },
       });
       if (error) throw error;
