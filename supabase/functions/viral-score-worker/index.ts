@@ -203,7 +203,7 @@ serve(async (req) => {
       success: false,
       duration_ms: Date.now() - startTime,
       error_message: e instanceof Error ? e.message : "Unknown",
-    }).catch(() => {});
+    });
     return jsonResponse({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });

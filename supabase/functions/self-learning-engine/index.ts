@@ -343,7 +343,7 @@ serve(async (req) => {
       api_calls_made: results.learned,
       metadata: { mode, learned: results.learned, errors: results.errors, details: results.details.slice(0, 20) },
       error_message: results.errors > 0 ? `${results.errors} errors during learning cycle` : null,
-    }).then(() => {}).catch(() => {});
+    });
 
     console.log(`Self-Learning Engine: mode=${mode}, learned=${results.learned}, errors=${results.errors}`);
 
