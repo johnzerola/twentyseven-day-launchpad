@@ -22,10 +22,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // ========== Mode 1: Analyze specific channel URL ==========
+    // ========== Mode 1: Analyze specific channel URL/handle/id ==========
     if (channelUrl) {
       const channelId = await resolveChannelId(channelUrl, YOUTUBE_API_KEY);
-      if (!channelId) throw new Error("Could not resolve channel");
+      if (!channelId) return json({ error: "Canal não encontrado. Envie URL completa, @handle ou ID UC..." }, 404);
       const result = await analyzeChannel(channelId, YOUTUBE_API_KEY, LOVABLE_API_KEY, sb);
       return json({ channel: result });
     }
