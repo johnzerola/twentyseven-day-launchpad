@@ -58,6 +58,7 @@ const Scripts = () => {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
+  const [customStyleNotes, setCustomStyleNotes] = useState('');
 
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
