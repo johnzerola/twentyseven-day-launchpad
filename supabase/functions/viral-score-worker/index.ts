@@ -122,7 +122,7 @@ serve(async (req) => {
                   viral_score: scoreData.score,
                 },
                 status: "pending",
-              }).catch(() => {});
+              });
             }
 
             results.push({
