@@ -100,30 +100,40 @@ function buildSearchQueries(niche: string, style: string, lang: string): string[
   return keywords.map(k => `${k} ${niche}${langSuffix}`.trim());
 }
 
-async function resolveChannelId(url: string, apiKey: string): Promise<string | null> {
-  // Handle various YouTube URL formats
-  const patterns = [
-    /youtube\.com\/channel\/(UC[\w-]+)/,
-    /youtube\.com\/@([\w.-]+)/,
-    /youtube\.com\/c\/([\w.-]+)/,
-    /youtube\.com\/user\/([\w.-]+)/,
-  ];
+async function resolveChannelId(input: string, apiKey: string): Promise<string | null> {
+  const raw = input.trim();
+  if (!raw) return null;
 
-  for (const pat of patterns) {
-    const m = url.match(pat);
-    if (m) {
-      if (m[1].startsWith("UC")) return m[1];
-      // Search by handle/username
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(m[1])}&key=${apiKey}&maxResults=1`
-      );
-      const data = await res.json();
-      return data.items?.[0]?.snippet?.channelId || null;
-    }
-  }
   // Direct channel ID
-  if (url.startsWith("UC")) return url;
-  return null;
+  if (raw.startsWith("UC") && raw.length >= 24) return raw;
+
+  const normalized = raw
+    .replace(/\?.*$/, "")
+    .replace(/#.*$/, "")
+    .replace(/\/+$/, "");
+
+  // youtube.com/channel/UC...
+  const channelIdMatch = normalized.match(/youtube\.com\/channel\/(UC[\w-]+)/i);
+  if (channelIdMatch?.[1]) return channelIdMatch[1];
+
+  // youtube.com/@handle or @handle
+  const handleMatch = normalized.match(/youtube\.com\/@([\w.-]+)/i) || normalized.match(/^@([\w.-]+)$/i);
+  if (handleMatch?.[1]) {
+    return await resolveByHandle(handleMatch[1], apiKey);
+  }
+
+  // youtube.com/c/name or youtube.com/user/name
+  const customNameMatch = normalized.match(/youtube\.com\/(?:c|user)\/([^\/]+)/i);
+  if (customNameMatch?.[1]) {
+    return await resolveBySearch(customNameMatch[1], apiKey);
+  }
+
+  // Plain text fallback: try as handle, then as search query
+  const asHandle = raw.replace(/^@/, "").trim();
+  const handleId = await resolveByHandle(asHandle, apiKey);
+  if (handleId) return handleId;
+
+  return await resolveBySearch(raw, apiKey);
 }
 
 async function searchChannels(query: string, apiKey: string): Promise<{ channelId: string; title: string }[]> {
