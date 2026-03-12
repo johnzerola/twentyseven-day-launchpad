@@ -280,6 +280,15 @@ ${viralFormats || "Sem formatos disponíveis"}
 📝 TÉCNICAS DE ROTEIRO COMPROVADAS (APLIQUE TODAS):
 ${scriptKnowledge}
 
+🧪 PADRÕES DE PSICOLOGIA DA AUDIÊNCIA (extraídos via NLP de vídeos reais):
+${psychPatterns || "Sem padrões disponíveis"}
+
+✍️ PADRÕES LINGUÍSTICOS VIRAIS (power words, ritmo, tom):
+${linguisticKnowledge || "Sem dados linguísticos"}
+
+🔍 GAPS DE CONTEÚDO DETECTADOS (oportunidades inexploradas):
+${topicGaps || "Sem gaps detectados"}
+
 🧲 TÉCNICAS DE MAGNETISMO:
 1. HOOK DE CHOQUE [primeiros 5 segundos] — Afirmação ABSURDA, CONTRAINTUITIVA ou NÚMERO IMPOSSÍVEL
 2. LOOPS DE CURIOSIDADE — 2-3 loops nos primeiros 60 segundos que só fecham no final
