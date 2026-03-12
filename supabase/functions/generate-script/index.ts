@@ -56,6 +56,25 @@ serve(async (req) => {
       return `• ${c.name || c.format}: ${c.description || ''} — Hook: ${c.hook_style || 'N/A'} | Estrutura: ${c.structure || c.blueprint || 'N/A'}`;
     }).join("\n");
 
+    // Audience psychology patterns (from auto-enrichment + manual)
+    const psychPatterns = (psychPatternsRes.data || []).map((r: any) => {
+      const hooks = Array.isArray(r.example_hooks) ? r.example_hooks.slice(0, 2).join(' | ') : '';
+      return `• ${r.trigger_type}: ${r.description?.slice(0, 200)}${hooks ? ` — Hooks: ${hooks}` : ''}${r.storytelling_pattern ? ` — Pattern: ${r.storytelling_pattern}` : ''}`;
+    }).join("\n");
+
+    // Linguistic patterns from NLP enrichment
+    const linguisticKnowledge = (linguisticRes.data || []).map((r: any) => {
+      const c = r.content_json;
+      return `• [${c.niche || 'geral'}] Power words: ${(c.power_words || []).slice(0, 8).join(', ')} | Tom: ${c.tone || 'N/A'} | Ritmo: ${c.sentence_rhythm || 'N/A'}`;
+    }).join("\n");
+
+    // Topic clusters & content gaps
+    const topicGaps = (topicClustersRes.data || []).map((r: any) => {
+      const c = r.content_json;
+      const gaps = (c.content_gaps || []).slice(0, 3).map((g: any) => g.topic).join(', ');
+      return gaps ? `• Gaps em ${c.niche || 'nicho'}: ${gaps}` : null;
+    }).filter(Boolean).join("\n");
+
     // ========== Speech rate calculation ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160,
