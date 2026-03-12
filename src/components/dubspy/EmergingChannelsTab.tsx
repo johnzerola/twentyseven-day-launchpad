@@ -40,13 +40,15 @@ const EMERGING_PRESETS = [
   { label: '< 6 meses', maxVideos: 50, maxAge: 180 },
 ];
 
-const SORT_OPTIONS = [
+  const SORT_OPTIONS = [
   { value: 'viralScore', label: '🔥 Viral Score' },
   { value: 'subscribers', label: '👥 Inscritos' },
   { value: 'maxVideoViews', label: '👁 Max Views' },
   { value: 'growthVelocity', label: '📈 Crescimento' },
   { value: 'avgEngagement', label: '💬 Engajamento' },
   { value: 'avgViewVelocity72h', label: '⚡ Velocidade 72h' },
+  { value: 'uploadFrequencyDays', label: '📅 Frequência Upload' },
+  { value: 'growthPotentialScore', label: '🎯 Potencial' },
 ];
 
 const ViralScoreRing = ({ score, label, size = 48 }: { score: number; label: string; size?: number }) => {
