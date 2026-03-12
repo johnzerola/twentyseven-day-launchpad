@@ -174,11 +174,28 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           minVideoViews: minVideoViews ? parseInt(minVideoViews) : undefined,
           minEngagement: minEngagement ? parseFloat(minEngagement) : undefined,
           minViralScore: minViralScore ? parseInt(minViralScore) : undefined,
+          facelessOnly: facelessOnly || undefined,
+          maxUploadFreq: maxUploadFreq ? parseInt(maxUploadFreq) : undefined,
+          minAvgViews: minAvgViews ? parseInt(minAvgViews) : undefined,
         },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      const chs = data?.channels || [];
+      let chs: ChannelResult[] = data?.channels || [];
+      
+      // Client-side post-filters for fields not handled by backend
+      if (facelessOnly) {
+        chs = chs.filter(ch => !ch.thumbnail || ch.description?.toLowerCase().includes('faceless') || ch.videoCount > 0);
+      }
+      if (maxUploadFreq) {
+        const maxFreq = parseInt(maxUploadFreq);
+        chs = chs.filter(ch => !ch.uploadFrequencyDays || ch.uploadFrequencyDays <= maxFreq);
+      }
+      if (minAvgViews) {
+        const minAvg = parseInt(minAvgViews);
+        chs = chs.filter(ch => ch.avgViews >= minAvg);
+      }
+      
       const metaData = data?.meta || null;
       setChannels(chs);
       setMeta(metaData);
