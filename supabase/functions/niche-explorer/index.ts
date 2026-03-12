@@ -31,9 +31,15 @@ serve(async (req) => {
 
   try {
     const { niche, country, language } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+    const ytKeys: string[] = [];
+    const k1 = Deno.env.get("YOUTUBE_API_KEY");
+    const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
+    if (k1) ytKeys.push(k1);
+    if (k2) ytKeys.push(k2);
+    let ytKeyIndex = 0;
+    const getYtKey = () => ytKeys[ytKeyIndex % ytKeys.length] || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+    if (!ytKeys.length) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -130,115 +136,142 @@ serve(async (req) => {
     const daysBack = 14 + Math.floor(Math.random() * 46);
     const after = new Date(Date.now() - daysBack * 86400000).toISOString();
 
-    const ytSearches = await Promise.all(
-      searchQueries.slice(0, 3).map((q: string, i: number) => {
-        const order = ["viewCount", "relevance", "date"][i % 3];
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(q)}&maxResults=40&order=${order}&regionCode=${region}&relevanceLanguage=${lang}&publishedAfter=${after}&key=${YOUTUBE_API_KEY}`;
-        return fetch(url).then(r => r.json()).catch(() => ({ items: [] }));
-      })
-    );
-
-    // Deduplicate videos
+    let allSearchItems: any[] = [];
     const seenVideoIds = new Set<string>();
-    const allSearchItems: any[] = [];
-    ytSearches.forEach((sd: any) => {
-      (sd.items || []).forEach((item: any) => {
-        const vid = item.id?.videoId;
-        if (vid && !seenVideoIds.has(vid)) {
-          seenVideoIds.add(vid);
-          allSearchItems.push(item);
-        }
-      });
-    });
 
-    if (!allSearchItems.length) {
-      return new Response(JSON.stringify({ 
-        channels: [], trending: [], analysis: null, viralDbData: { titles: viralTitles, topPatterns, topTriggers },
-        directCompetitors, meta: { niche, country: region, baseRpm, totalChannels: 0, totalVideos: 0, timestamp: Date.now(), countryData: { ...countryData, ypp: YPP_REQUIREMENTS }, searchQueries },
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Try YouTube search with key fallback
+    for (let keyAttempt = 0; keyAttempt < ytKeys.length && allSearchItems.length === 0; keyAttempt++) {
+      const currentKey = getYtKey();
+      const ytSearches = await Promise.all(
+        searchQueries.slice(0, 3).map((q: string, i: number) => {
+          const order = ["viewCount", "relevance", "date"][i % 3];
+          const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(q)}&maxResults=40&order=${order}&regionCode=${region}&relevanceLanguage=${lang}&publishedAfter=${after}&key=${currentKey}`;
+          return fetch(url).then(r => r.json()).catch(() => ({ items: [] }));
+        })
+      );
+
+      ytSearches.forEach((sd: any) => {
+        if (sd.error?.errors?.[0]?.reason === "quotaExceeded") {
+          console.log(`YouTube key #${ytKeyIndex + 1} quota exceeded, switching...`);
+          ytKeyIndex++;
+          return;
+        }
+        (sd.items || []).forEach((item: any) => {
+          const vid = item.id?.videoId;
+          if (vid && !seenVideoIds.has(vid)) {
+            seenVideoIds.add(vid);
+            allSearchItems.push(item);
+          }
+        });
+      });
+
+      if (allSearchItems.length === 0 && keyAttempt < ytKeys.length - 1) {
+        ytKeyIndex++;
+        console.log(`Retrying with YouTube key #${ytKeyIndex + 1}`);
+      }
     }
 
-    // === STEP 3: Get video + channel stats ===
-    const videoIds = allSearchItems.map((i: any) => i.id.videoId).filter(Boolean).join(",");
-    const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`);
-    const vData = await vRes.json();
+    // If no YouTube results, still generate analysis from internal databases
+    if (!allSearchItems.length) {
+      // We have viralTitles, intelChannels, nicheDbRows — generate analysis from those
+      if (viralTitles.length > 0 || intelChannels.length > 0 || nicheDbRows.length > 0) {
+        console.log(`No YouTube results, generating analysis from internal DB (${viralTitles.length} titles, ${intelChannels.length} channels, ${nicheDbRows.length} niches)`);
+        // Skip to AI analysis with internal data only
+      } else {
+        return new Response(JSON.stringify({
+          channels: [], trending: [], analysis: null, viralDbData: { titles: viralTitles, topPatterns, topTriggers },
+          directCompetitors, meta: { niche, country: region, baseRpm, totalChannels: 0, totalVideos: 0, timestamp: Date.now(), countryData: { ...countryData, ypp: YPP_REQUIREMENTS }, searchQueries },
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
-    const channelIds = [...new Set((vData.items || []).map((v: any) => v.snippet.channelId))] as string[];
-    const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${channelIds.slice(0, 50).join(",")}&key=${YOUTUBE_API_KEY}`);
-    const cData = await cRes.json();
-
+    // === STEP 3: Get video + channel stats (only if we have YouTube results) ===
+    let trending: any[] = [];
+    let channels: any[] = [];
     const chMap: Record<string, any> = {};
-    (cData.items || []).forEach((ch: any) => {
-      const subs = parseInt(ch.statistics.subscriberCount || "0");
-      const totalViews = parseInt(ch.statistics.viewCount || "0");
-      const videoCount = parseInt(ch.statistics.videoCount || "0");
-      chMap[ch.id] = {
-        id: ch.id, name: ch.snippet.title,
-        thumbnail: ch.snippet.thumbnails?.medium?.url,
-        description: ch.snippet.description?.slice(0, 200) || "",
-        subscribers: subs, totalViews, videoCount,
-        avgViews: videoCount > 0 ? Math.floor(totalViews / videoCount) : 0,
-        country: ch.snippet.country || "",
-        keywords: ch.brandingSettings?.channel?.keywords || "",
-        createdAt: ch.snippet.publishedAt,
-      };
-    });
 
-    // Build trending videos
-    const trending = (vData.items || []).map((v: any) => {
-      const views = parseInt(v.statistics?.viewCount || "0");
-      const likes = parseInt(v.statistics?.likeCount || "0");
-      const comments = parseInt(v.statistics?.commentCount || "0");
-      const ch = chMap[v.snippet.channelId];
-      const publishedMs = new Date(v.snippet.publishedAt).getTime();
-      const hoursAge = Math.max(1, (Date.now() - publishedMs) / 3600000);
-      const daysAge = hoursAge / 24;
+    if (allSearchItems.length > 0) {
+      const currentKey = getYtKey();
+      const videoIds = allSearchItems.map((i: any) => i.id.videoId).filter(Boolean).join(",");
+      const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${videoIds}&key=${currentKey}`);
+      const vData = await vRes.json();
 
-      return {
-        id: v.id, title: v.snippet.title, channelTitle: v.snippet.channelTitle,
-        channelId: v.snippet.channelId, thumbnail: v.snippet.thumbnails?.medium?.url,
-        views, likes, comments, publishedAt: v.snippet.publishedAt,
-        duration: v.contentDetails?.duration || "",
-        vph: Math.round(views / hoursAge), vpd: Math.round(views / Math.max(1, daysAge)),
-        engagementRate: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
-        commentRate: views > 0 ? parseFloat(((comments / views) * 100).toFixed(3)) : 0,
-        viewsPerSub: ch?.subscribers > 0 ? parseFloat((views / ch.subscribers).toFixed(2)) : 0,
-        isOutlier: ch ? views >= ch.avgViews * 3 : false,
-        isSuperOutlier: ch ? views >= ch.avgViews * 10 : false,
-        channelSubs: ch?.subscribers || 0,
-      };
-    });
+      const channelIds = [...new Set((vData.items || []).map((v: any) => v.snippet.channelId))] as string[];
+      const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${channelIds.slice(0, 50).join(",")}&key=${currentKey}`);
+      const cData = await cRes.json();
 
-    // Group by channel
-    const channelGroups: Record<string, any[]> = {};
-    trending.forEach((v: any) => {
-      if (!channelGroups[v.channelId]) channelGroups[v.channelId] = [];
-      channelGroups[v.channelId].push(v);
-    });
+      (cData.items || []).forEach((ch: any) => {
+        const subs = parseInt(ch.statistics.subscriberCount || "0");
+        const totalViews = parseInt(ch.statistics.viewCount || "0");
+        const videoCount = parseInt(ch.statistics.videoCount || "0");
+        chMap[ch.id] = {
+          id: ch.id, name: ch.snippet.title,
+          thumbnail: ch.snippet.thumbnails?.medium?.url,
+          description: ch.snippet.description?.slice(0, 200) || "",
+          subscribers: subs, totalViews, videoCount,
+          avgViews: videoCount > 0 ? Math.floor(totalViews / videoCount) : 0,
+          country: ch.snippet.country || "",
+          keywords: ch.brandingSettings?.channel?.keywords || "",
+          createdAt: ch.snippet.publishedAt,
+        };
+      });
 
-    const channels = Object.entries(channelGroups).map(([chId, videos]) => {
-      const ch = chMap[chId];
-      if (!ch) return null;
-      const outlierCount = videos.filter((v: any) => v.isOutlier).length;
-      const superOutlierCount = videos.filter((v: any) => v.isSuperOutlier).length;
-      const avgEngagement = videos.reduce((s: number, v: any) => s + v.engagementRate, 0) / videos.length;
-      const avgVph = videos.reduce((s: number, v: any) => s + v.vph, 0) / videos.length;
-      const maxViews = Math.max(...videos.map((v: any) => v.views));
+      // Build trending videos
+      trending = (vData.items || []).map((v: any) => {
+        const views = parseInt(v.statistics?.viewCount || "0");
+        const likes = parseInt(v.statistics?.likeCount || "0");
+        const comments = parseInt(v.statistics?.commentCount || "0");
+        const ch = chMap[v.snippet.channelId];
+        const publishedMs = new Date(v.snippet.publishedAt).getTime();
+        const hoursAge = Math.max(1, (Date.now() - publishedMs) / 3600000);
+        const daysAge = hoursAge / 24;
 
-      const viralScore = Math.min(100, Math.round(
-        (outlierCount * 15) + (superOutlierCount * 25) +
-        (avgEngagement * 5) + (Math.min(avgVph, 2000) / 20) +
-        (ch.subscribers < 10000 ? 20 : ch.subscribers < 100000 ? 10 : 5)
-      ));
-      const isMonetized = ch.subscribers >= 1000 && ch.totalViews >= 240000;
+        return {
+          id: v.id, title: v.snippet.title, channelTitle: v.snippet.channelTitle,
+          channelId: v.snippet.channelId, thumbnail: v.snippet.thumbnails?.medium?.url,
+          views, likes, comments, publishedAt: v.snippet.publishedAt,
+          duration: v.contentDetails?.duration || "",
+          vph: Math.round(views / hoursAge), vpd: Math.round(views / Math.max(1, daysAge)),
+          engagementRate: views > 0 ? parseFloat(((likes / views) * 100).toFixed(2)) : 0,
+          commentRate: views > 0 ? parseFloat(((comments / views) * 100).toFixed(3)) : 0,
+          viewsPerSub: ch?.subscribers > 0 ? parseFloat((views / ch.subscribers).toFixed(2)) : 0,
+          isOutlier: ch ? views >= ch.avgViews * 3 : false,
+          isSuperOutlier: ch ? views >= ch.avgViews * 10 : false,
+          channelSubs: ch?.subscribers || 0,
+        };
+      });
 
-      return {
-        ...ch, outlierCount, superOutlierCount,
-        avgEngagement: parseFloat(avgEngagement.toFixed(2)),
-        avgVph: Math.round(avgVph), viralScore, isMonetized, maxViews,
-        videos: videos.sort((a: any, b: any) => b.views - a.views).slice(0, 5),
-      };
-    }).filter(Boolean).sort((a: any, b: any) => b.viralScore - a.viralScore);
+      // Group by channel
+      const channelGroups: Record<string, any[]> = {};
+      trending.forEach((v: any) => {
+        if (!channelGroups[v.channelId]) channelGroups[v.channelId] = [];
+        channelGroups[v.channelId].push(v);
+      });
+
+      channels = Object.entries(channelGroups).map(([chId, videos]) => {
+        const ch = chMap[chId];
+        if (!ch) return null;
+        const outlierCount = videos.filter((v: any) => v.isOutlier).length;
+        const superOutlierCount = videos.filter((v: any) => v.isSuperOutlier).length;
+        const avgEngagement = videos.reduce((s: number, v: any) => s + v.engagementRate, 0) / videos.length;
+        const avgVph = videos.reduce((s: number, v: any) => s + v.vph, 0) / videos.length;
+        const maxViews = Math.max(...videos.map((v: any) => v.views));
+
+        const viralScore = Math.min(100, Math.round(
+          (outlierCount * 15) + (superOutlierCount * 25) +
+          (avgEngagement * 5) + (Math.min(avgVph, 2000) / 20) +
+          (ch.subscribers < 10000 ? 20 : ch.subscribers < 100000 ? 10 : 5)
+        ));
+        const isMonetized = ch.subscribers >= 1000 && ch.totalViews >= 240000;
+
+        return {
+          ...ch, outlierCount, superOutlierCount,
+          avgEngagement: parseFloat(avgEngagement.toFixed(2)),
+          avgVph: Math.round(avgVph), viralScore, isMonetized, maxViews,
+          videos: videos.sort((a: any, b: any) => b.views - a.views).slice(0, 5),
+        };
+      }).filter(Boolean).sort((a: any, b: any) => b.viralScore - a.viralScore);
+    } // end if allSearchItems.length > 0
 
     // === STEP 4: AI Analysis with ALL data ===
     const topChannelsSummary = channels.slice(0, 15).map((c: any) => 
