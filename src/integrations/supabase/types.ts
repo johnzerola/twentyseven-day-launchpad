@@ -98,6 +98,45 @@ export type Database = {
         }
         Relationships: []
       }
+      audience_psychology_patterns: {
+        Row: {
+          created_at: string | null
+          description: string
+          example_hooks: string[] | null
+          example_titles: string[] | null
+          id: string
+          niches: string[] | null
+          retention_score: number | null
+          source: string | null
+          storytelling_pattern: string | null
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string
+          example_hooks?: string[] | null
+          example_titles?: string[] | null
+          id?: string
+          niches?: string[] | null
+          retention_score?: number | null
+          source?: string | null
+          storytelling_pattern?: string | null
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          example_hooks?: string[] | null
+          example_titles?: string[] | null
+          id?: string
+          niches?: string[] | null
+          retention_score?: number | null
+          source?: string | null
+          storytelling_pattern?: string | null
+          trigger_type?: string
+        }
+        Relationships: []
+      }
       channel_groups: {
         Row: {
           channels: Json | null

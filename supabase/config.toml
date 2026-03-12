@@ -99,3 +99,6 @@ verify_jwt = false
 [functions.monetiza-score]
 verify_jwt = false
 
+[functions.audience-psychology-engine]
+verify_jwt = false
+
