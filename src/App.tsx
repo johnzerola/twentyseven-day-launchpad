@@ -19,6 +19,7 @@ import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
 import MultiChannel from "./pages/MultiChannel";
+import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 
 import NotFound from "./pages/NotFound";
 
