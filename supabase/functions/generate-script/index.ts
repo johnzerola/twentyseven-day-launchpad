@@ -42,6 +42,17 @@ serve(async (req) => {
       return `🎯 ${r.channel_name} (${r.style}, ${r.growth_rate}, avg ${r.avg_views} views): Hooks=[${hooks}] | Visual: ${r.visual_style_notes || "N/A"}`;
     }).join("\n");
 
+    // Psychology triggers & content formats from viral_content_library
+    const psychTriggers = (triggersRes.data || []).map((r: any) => {
+      const c = r.content_json;
+      return `• [${r.category}] ${c.name || c.technique || c.trigger}: ${c.description || c.how_to_apply || c.tip || ''} (score: ${r.effectiveness_score}/10)`;
+    }).join("\n");
+
+    const viralFormats = (formatsRes.data || []).map((r: any) => {
+      const c = r.content_json;
+      return `• ${c.name || c.format}: ${c.description || ''} — Hook: ${c.hook_style || 'N/A'} | Estrutura: ${c.structure || c.blueprint || 'N/A'}`;
+    }).join("\n");
+
     // ========== Speech rate calculation ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160,

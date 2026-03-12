@@ -66,6 +66,8 @@ serve(async (req) => {
 ${niche ? `Nicho: ${niche}` : ''}
 ${topic ? `Tema específico: ${topic}` : ''}
 ${viralRefBlock}
+${psychologyBlock}
+${formatsBlock}
 
 Use estas metodologias virais:
 - Curiosidade: perguntas abertas, "O que acontece quando...", "A verdade sobre..."
