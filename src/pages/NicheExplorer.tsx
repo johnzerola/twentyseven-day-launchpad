@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { COUNTRY_LANGUAGE } from '@/lib/constants';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Compass, Search, Star, TrendingUp, Eye, Users, DollarSign, Zap, Filter, BarChart3, Target, Layers, Shield, Crown, Globe, ArrowUpRight, Flame, CheckCircle, XCircle, AlertTriangle, Lightbulb, Brain, Copy, Clock, Rocket, BookOpen, Lock, Unlock, ExternalLink, Swords, Timer, BadgeDollarSign, History, Trash2, FolderOpen, Database, Sparkles, Hash } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -106,7 +107,7 @@ const NicheExplorer = () => {
 
     try {
       const { data: result, error } = await supabase.functions.invoke('niche-explorer', {
-        body: { niche: q, country, language: 'pt' },
+        body: { niche: q, country, language: COUNTRY_LANGUAGE[country] || 'en' },
       });
       if (error) throw new Error(error.message);
       if (result?.error) throw new Error(result.error);
