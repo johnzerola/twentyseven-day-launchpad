@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
@@ -60,6 +60,17 @@ const SPEECH_RATES: Record<string, number> = {
   'sueco': 150, 'norueguês': 150, 'dinamarquês': 150, 'finlandês': 140,
 };
 
+type PipelinePhase = 'idle' | 'intelligence' | 'draft' | 'refine' | 'factcheck' | 'done';
+
+const PHASE_INFO: Record<PipelinePhase, { label: string; icon: any; percent: number }> = {
+  idle: { label: '', icon: null, percent: 0 },
+  intelligence: { label: '🔍 Fase 0: Analisando inteligência...', icon: Brain, percent: 10 },
+  draft: { label: '✍️ Fase 1: GPT-5 Hook + Gemini Flash gerando rascunho...', icon: Zap, percent: 35 },
+  refine: { label: '🎯 Fase 2: Gemini Pro refinando qualidade...', icon: Wand2, percent: 70 },
+  factcheck: { label: '🛡️ Fase 3: Verificação de fatos...', icon: Shield, percent: 90 },
+  done: { label: '✅ Pipeline completo!', icon: CheckCircle2, percent: 100 },
+};
+
 export const ScriptGenerator = ({
   topic, setTopic, duration, setDuration, style, setStyle,
   niche, setNiche, language, setLanguage, script, setScript,
@@ -69,8 +80,9 @@ export const ScriptGenerator = ({
 }: ScriptGeneratorProps) => {
   const [editMode, setEditMode] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [analyzingTopic, setAnalyzingTopic] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [phase, setPhase] = useState<PipelinePhase>('idle');
+  const [skipRefine, setSkipRefine] = useState(false);
 
   const wpm = SPEECH_RATES[language] || 150;
   const wordCount = script.split(/\s+/).filter(Boolean).length;
@@ -101,6 +113,48 @@ export const ScriptGenerator = ({
 
   const cleanBlueprintFromScript = (text: string): string => text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
 
+  // Stream SSE from edge function, calling onDelta for each token
+  const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
+    const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.status === 402) throw new Error('Créditos insuficientes.');
+    if (resp.status === 429) throw new Error('Rate limit. Aguarde e tente novamente.');
+    if (!resp.ok || !resp.body) throw new Error(`Erro na função ${fnName}`);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (!line.startsWith('data: ')) continue;
+        const json = line.slice(6).trim();
+        if (json === '[DONE]') break;
+        try {
+          const p = JSON.parse(json);
+          const c = p.choices?.[0]?.delta?.content;
+          if (c) { fullText += c; onDelta(fullText); }
+        } catch { buffer = line + '\n' + buffer; break; }
+      }
+    }
+    return fullText;
+  };
+
   const generateScript = async () => {
     if (!topic.trim() || generating) return;
     setGenerating(true);
@@ -109,10 +163,10 @@ export const ScriptGenerator = ({
     setActiveStep('script');
     setScorecard(null);
     setSceneBlueprintJson([]);
+    setPhase('intelligence');
 
     try {
-      // Phase 0: Intelligence
-      setAnalyzingTopic(true);
+      // ═══════ PHASE 0: Intelligence ═══════
       let briefing = null;
       try {
         const { data, error } = await supabase.functions.invoke('analyze-topic', {
@@ -124,70 +178,94 @@ export const ScriptGenerator = ({
           toast.success(`📊 ${data.metadata?.channelsAnalyzed || 0} canais + ${data.metadata?.youtubeVideosFound || 0} vídeos analisados`);
         }
       } catch (err) { console.warn('Intelligence failed:', err); }
-      setAnalyzingTopic(false);
 
-      // Phase 1+2: Script Generation
+      // ═══════ PHASE 1: Draft (GPT-5 Hook + Gemini Flash streaming) ═══════
+      setPhase('draft');
       const viralContext = getViralContext();
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ topic, duration: parseInt(duration), style, niche, language, viralContext, intelligenceBriefing: briefing }),
+      
+      const draftText = await streamFromFunction('generate-script', {
+        topic, duration: parseInt(duration), style, niche, language,
+        viralContext, intelligenceBriefing: briefing,
+      }, (fullText) => {
+        setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullText)));
       });
 
-      if (resp.status === 402) throw new Error('Créditos insuficientes.');
-      if (resp.status === 429) throw new Error('Rate limit. Aguarde e tente novamente.');
-      if (!resp.ok || !resp.body) throw new Error('Erro ao gerar roteiro');
+      toast.success('✍️ Rascunho completo!');
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let fullScript = '';
+      // Extract blueprint from draft
+      const draftBlueprint = parseSceneBlueprint(draftText);
+      const cleanDraft = cleanBlueprintFromScript(cleanScoresFromScript(draftText));
+      setScript(cleanDraft);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx: number;
-        while ((idx = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 1);
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (!line.startsWith('data: ')) continue;
-          const json = line.slice(6).trim();
-          if (json === '[DONE]') break;
-          try {
-            const p = JSON.parse(json);
-            const c = p.choices?.[0]?.delta?.content;
-            if (c) { fullScript += c; setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullScript))); }
-          } catch { buffer = line + '\n' + buffer; break; }
+      // ═══════ PHASE 2: Refine (Gemini Pro streaming) ═══════
+      if (!skipRefine) {
+        setPhase('refine');
+        try {
+          const refinedText = await streamFromFunction('refine-script', {
+            draft_script: cleanDraft,
+            niche, language, duration: parseInt(duration), style,
+            target_words: targetWords,
+          }, (fullText) => {
+            setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullText)));
+          });
+
+          parseScorecard(refinedText);
+          const refinedBlueprint = parseSceneBlueprint(refinedText);
+          const blueprint = refinedBlueprint.length > 0 ? refinedBlueprint : draftBlueprint;
+          if (blueprint.length > 0) {
+            setSceneBlueprintJson(blueprint);
+            toast.success(`🎬 Blueprint: ${blueprint.length} blocos narrativos`);
+          }
+          setScript(cleanBlueprintFromScript(cleanScoresFromScript(refinedText)));
+          toast.success('🎯 Roteiro refinado pelo Gemini Pro!');
+        } catch (refineErr) {
+          console.warn('Refine failed, using draft:', refineErr);
+          toast.info('Refinamento indisponível, usando rascunho de alta qualidade');
+          if (draftBlueprint.length > 0) {
+            setSceneBlueprintJson(draftBlueprint);
+          }
+        }
+      } else {
+        // Skip refine, use draft
+        if (draftBlueprint.length > 0) {
+          setSceneBlueprintJson(draftBlueprint);
         }
       }
-      parseScorecard(fullScript);
-      const blueprint = parseSceneBlueprint(fullScript);
-      if (blueprint.length > 0) {
-        setSceneBlueprintJson(blueprint);
-        toast.success(`🎬 Blueprint: ${blueprint.length} blocos narrativos mapeados`);
-      }
-      setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullScript)));
 
+      // ═══════ PHASE 3: Fact-check (fire and forget) ═══════
+      setPhase('factcheck');
+      try {
+        const { data: fcData } = await supabase.functions.invoke('score-script', {
+          body: { script: script.slice(0, 10000), niche, language },
+        });
+        if (fcData?.scores) {
+          setScorecard(fcData.scores);
+        }
+      } catch { /* non-critical */ }
+
+      // ═══════ SAVE ═══════
+      setPhase('done');
       try {
         const pid = await getOrCreateProject();
-        await supabase.from('video_projects').update({ intelligence_json: briefing || {}, scene_blueprint_json: blueprint } as any).eq('id', pid);
+        await supabase.from('video_projects').update({
+          intelligence_json: briefing || {},
+          scene_blueprint_json: parseSceneBlueprint(script),
+        } as any).eq('id', pid);
       } catch { /* non-critical */ }
-      // Auto-learn from script generation (fire-and-forget)
+
       supabase.functions.invoke('learn-from-user', {
         body: { type: 'script_generated', data: { topic, niche, style, duration } },
       }).catch(() => {});
+
       onScriptGenerated?.();
+      toast.success('✅ Pipeline Ensemble AI completo!');
+
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
       setGenerating(false);
-      setAnalyzingTopic(false);
+      setTimeout(() => setPhase('idle'), 3000);
     }
   };
 
@@ -205,6 +283,8 @@ export const ScriptGenerator = ({
     toast.success('Copiado!');
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const phaseInfo = PHASE_INFO[phase];
 
   return (
     <>
@@ -271,14 +351,45 @@ export const ScriptGenerator = ({
             </select>
           </div>
         </div>
+
+        {/* Skip Refine Toggle */}
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="skipRefine" checked={skipRefine} onChange={e => setSkipRefine(e.target.checked)} className="rounded" />
+          <label htmlFor="skipRefine" className="text-xs text-muted-foreground">⚡ Modo rápido (pular refinamento Gemini Pro)</label>
+        </div>
+
         <Button onClick={generateScript} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
-          {analyzingTopic ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando inteligência...</> :
-           loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando roteiro...</> :
+          {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Pipeline Ensemble AI...</> :
            <><Sparkles className="w-4 h-4" /> 🧠 Analisar & Gerar Roteiro</>}
         </Button>
       </div>
 
-      {/* Script Output (used in right panel) */}
+      {/* Pipeline Progress */}
+      <AnimatePresence>
+        {phase !== 'idle' && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-2">
+              {phaseInfo.icon && <phaseInfo.icon className={`w-5 h-5 ${phase === 'done' ? 'text-emerald-400' : 'text-primary animate-pulse'}`} />}
+              <span className="text-sm font-medium">{phaseInfo.label}</span>
+            </div>
+            <Progress value={phaseInfo.percent} className="h-2" />
+            <div className="flex justify-between mt-1.5">
+              {(['intelligence', 'draft', 'refine', 'factcheck', 'done'] as PipelinePhase[]).map((p) => {
+                const isActive = p === phase;
+                const isDone = PHASE_INFO[p].percent < PHASE_INFO[phase].percent;
+                return (
+                  <div key={p} className={`text-[9px] font-medium ${isActive ? 'text-primary' : isDone ? 'text-emerald-400' : 'text-muted-foreground/50'}`}>
+                    {isDone ? '✓' : isActive ? '●' : '○'} {p === 'intelligence' ? 'Intel' : p === 'draft' ? 'Draft' : p === 'refine' ? 'Refine' : p === 'factcheck' ? 'Check' : 'Done'}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Script Output */}
       {(script || loading) && (
         <motion.div key="script-output" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="bg-card border border-border rounded-xl p-5">
@@ -289,7 +400,7 @@ export const ScriptGenerator = ({
                 <div className="mt-1.5 space-y-1">
                   <p className="text-xs text-muted-foreground">
                     {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ⏱ {estimatedMinutesDisplay} min
-                    {scorecard && <span className="ml-2 text-primary font-medium">• Dual-AI ✓</span>}
+                    {scorecard && <span className="ml-2 text-primary font-medium">• Ensemble AI ✓</span>}
                   </p>
                   <div className="flex items-center gap-2">
                     <Progress value={progressPercent} className="h-1.5 flex-1" />
@@ -344,7 +455,7 @@ export const ScriptGenerator = ({
           {loading && !script && (
             <div className="text-center py-12">
               <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
-              <p className="text-sm text-muted-foreground">Dual-AI: GPT-5 criando → Gemini Pro revisando...</p>
+              <p className="text-sm text-muted-foreground">Ensemble AI: Analisando → Gerando → Refinando...</p>
             </div>
           )}
 
@@ -358,12 +469,7 @@ export const ScriptGenerator = ({
                 <ReactMarkdown>{script}</ReactMarkdown>
               </div>
             )
-          ) : !loading && (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Configure e gere seu roteiro viral</p>
-            </div>
-          )}
+          ) : null}
         </motion.div>
       )}
     </>
