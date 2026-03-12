@@ -140,7 +140,11 @@ const NicheExplorer = () => {
     if (error?.code === '23505') return toast.info('Canal já rastreado');
     if (error) return toast.error('Erro');
     toast.success(`${ch.name} rastreado!`);
-  };
+
+    // AUTO-FEED: Sync tracked channel to intelligence (non-blocking)
+    supabase.functions.invoke('intelligence-sync-engine', {
+      body: { mode: 'sync_channels_to_intel' },
+    }).catch(() => {});
 
   const a = data?.analysis;
   const channels = data?.channels || [];
