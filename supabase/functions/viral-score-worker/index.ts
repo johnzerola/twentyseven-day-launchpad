@@ -146,14 +146,14 @@ serve(async (req) => {
         duration_ms: Date.now() - startTime,
         api_calls_made: enriched_count,
         metadata: { action: "scan", videos_processed: results.length, breakouts, enriched: enriched_count, niche: niche || "all", formula: "v2" },
-      }).catch(() => {});
+      });
 
       if (breakouts > 0) {
         await sb.from("ai_learning").insert({
           topic: "viral_detection_v2",
           insight: `V2 Scan: ${results.length} vídeos → ${breakouts} breakouts (nicho: ${niche || "all"}). Top: ${Math.max(...results.map(r => r.score))}/100. Fórmula: 7-signal com velocity_accel + cluster + retention_proxy.`,
           source: "viral-score-worker-v2",
-        }).catch(() => {});
+        });
       }
 
       return jsonResponse({
