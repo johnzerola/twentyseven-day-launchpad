@@ -34,10 +34,11 @@ serve(async (req) => {
         let query = sb.from('viral_titles_db').select('title,views,why_viral,title_pattern,niche').order('views', { ascending: false }).limit(30);
         if (niche) query = query.ilike('niche', `%${niche}%`);
 
-        const [titlesRes, triggersRes, formatsRes] = await Promise.all([
+        const [titlesRes, triggersRes, formatsRes, psychPatternsRes] = await Promise.all([
           query,
           sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'psychology_triggers').order('effectiveness_score', { ascending: false }).limit(10),
           sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'content_format').order('effectiveness_score', { ascending: false }).limit(8),
+          sb.from('audience_psychology_patterns').select('trigger_type,description,example_titles,retention_score').order('retention_score', { ascending: false }).limit(8),
         ]);
 
         const viralTitles = titlesRes.data;
@@ -58,6 +59,15 @@ serve(async (req) => {
           formatsBlock = `\n\n🎬 FORMATOS DE CONTEÚDO VIRAL (adapte títulos a estes formatos):\n${formats.map((f: any) => {
             const c = f.content_json;
             return `• ${c.name || c.format}: ${c.description || c.hook_style || ''} — Título ideal: ${c.title_pattern || c.example_title || 'N/A'}`;
+          }).join('\n')}`;
+        }
+
+        // Audience psychology patterns from NLP enrichment
+        const psychPatterns = psychPatternsRes.data;
+        if (psychPatterns?.length) {
+          formatsBlock += `\n\n🧪 PADRÕES DE PSICOLOGIA DA AUDIÊNCIA (aplique nos títulos):\n${psychPatterns.map((p: any) => {
+            const titles = Array.isArray(p.example_titles) ? p.example_titles.slice(0, 2).map((t: string) => `"${t}"`).join(', ') : '';
+            return `• ${p.trigger_type}: ${p.description?.slice(0, 150)}${titles ? ` — Ex: ${titles}` : ''}`;
           }).join('\n')}`;
         }
       } catch { /* viral DB optional */ }
