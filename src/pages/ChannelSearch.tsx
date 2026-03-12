@@ -226,6 +226,12 @@ const ChannelSearch = () => {
       if (data?.error) throw new Error(data.error);
       setDeepScanResult(data);
       toast.success('Deep Scan completo!');
+      // Auto-learn from video analysis (fire-and-forget)
+      if (data?.analysis) {
+        supabase.functions.invoke('learn-from-user', {
+          body: { type: 'video_analysis', data: { videoInfo: data.videoInfo, analysis: data.analysis } },
+        }).catch(() => {});
+      }
     } catch (err: any) {
       toast.error(err.message || 'Erro no Deep Scan');
     } finally {
