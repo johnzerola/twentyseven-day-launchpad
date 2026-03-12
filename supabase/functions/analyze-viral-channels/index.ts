@@ -163,7 +163,12 @@ async function resolveChannelId(input: string, apiKey: string): Promise<string |
 
 function assertYouTubeResponse(data: any) {
   const reason = data?.error?.errors?.[0]?.reason;
-  if (reason === "quotaExceeded") throw new Error("QUOTA_EXCEEDED");
+  if (reason === "quotaExceeded") {
+    if (switchKey()) {
+      throw new Error("QUOTA_EXCEEDED_RETRY");
+    }
+    throw new Error("QUOTA_EXCEEDED");
+  }
   if (data?.error?.message) throw new Error(`YOUTUBE_ERROR: ${data.error.message}`);
 }
 
