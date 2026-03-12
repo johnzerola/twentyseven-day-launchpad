@@ -361,7 +361,7 @@ ANALISE:
             const d = video.contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
             return d ? (parseInt(d[1]||'0')*3600 + parseInt(d[2]||'0')*60 + parseInt(d[3]||'0')) : 0;
           })(),
-        }).then(() => {}).catch(() => {})));
+        }).then(() => {}).catch(() => {}));
       }
 
       await Promise.allSettled(learnPromises);
