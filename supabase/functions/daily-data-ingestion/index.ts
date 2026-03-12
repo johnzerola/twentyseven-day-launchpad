@@ -86,14 +86,23 @@ serve(async (req) => {
       }
     }
 
-    // 3) Enqueue task to detect emerging channels from fresh data
-    const idempKey = `detect_emerging_${new Date().toISOString().slice(0, 10)}`;
-    await sb.from("task_queue").upsert({
-      task_type: "detect_emerging_channels",
-      payload: { date: new Date().toISOString().slice(0, 10) },
-      status: "pending",
-      idempotency_key: idempKey,
-    }, { onConflict: "idempotency_key" });
+    // 3) Enqueue tasks for all daily intelligence engines
+    const today = new Date().toISOString().slice(0, 10);
+    const dailyTasks = [
+      { task_type: "detect_emerging_channels", payload: { date: today } },
+      { task_type: "find_outliers", payload: { date: today, niches: (niches || []).map(n => n.name).slice(0, 5) } },
+      { task_type: "build_viral_titles", payload: { date: today, niches: (niches || []).map(n => n.name).slice(0, 3) } },
+    ];
+
+    for (const task of dailyTasks) {
+      const idempKey = `${task.task_type}_${today}`;
+      await sb.from("task_queue").upsert({
+        task_type: task.task_type,
+        payload: task.payload,
+        status: "pending",
+        idempotency_key: idempKey,
+      }, { onConflict: "idempotency_key" });
+    }
 
     await sb.from("execution_logs").insert({
       function_name: "daily-data-ingestion",
