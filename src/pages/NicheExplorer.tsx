@@ -883,9 +883,9 @@ const NicheExplorer = () => {
 
             {/* === TAB: TRENDING === */}
             <TabsContent value="trending" className="space-y-3">
-              {trending.length > 0 ? (
+              {algorithmApprovedTrending.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {trending.slice(0, 18).map((v: any) => (
+                  {algorithmApprovedTrending.slice(0, 18).map((v: any) => (
                     <a key={v.id} href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer"
                       className="glass rounded-xl overflow-hidden hover:border-primary/30 transition-all group">
                       <div className="relative">
