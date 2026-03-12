@@ -93,3 +93,9 @@ verify_jwt = false
 [functions.learn-from-user]
 verify_jwt = false
 
+[functions.score-script]
+verify_jwt = false
+
+[functions.monetiza-score]
+verify_jwt = false
+

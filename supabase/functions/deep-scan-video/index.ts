@@ -365,8 +365,36 @@ ANALISE:
         }).then(() => {}).catch(() => {}));
       }
 
+      // 6. Save complete video blueprint for reuse
+      learnPromises.push(sb.from("video_blueprints").upsert({
+        video_id: videoId,
+        video_title: video.snippet.title,
+        channel_name: video.snippet.channelTitle,
+        channel_id: video.snippet.channelId,
+        views,
+        likes,
+        niche: analysis.contentDNA?.nicheCategory || 'unknown',
+        story_structure: {
+          format: analysis.contentDNA?.format,
+          emotionalTone: analysis.contentDNA?.emotionalTone,
+          targetPersona: analysis.contentDNA?.targetPersona,
+        },
+        hook_type: analysis.hookAnalysis?.hookType || null,
+        hook_text: analysis.hookAnalysis?.hookText || null,
+        psychological_triggers: analysis.contentDNA?.psychTriggers || [],
+        narrative_style: analysis.contentDNA?.format || null,
+        pacing_type: analysis.visualStyle?.editingPace || null,
+        visual_style: analysis.visualStyle?.primaryStyle || null,
+        scene_structure: analysis.rewatchSegments || [],
+        retention_map: analysis.retentionMap || {},
+        clone_template: analysis.cloneTemplate || {},
+        scores: analysis.scores || {},
+        thumbnail_analysis: analysis.thumbnailAnalysis || {},
+        source: 'deep-scan',
+      }, { onConflict: "video_id" }).then(() => {}).catch(() => {}));
+
       await Promise.allSettled(learnPromises);
-      console.log(`Auto-learn: saved ${learnPromises.length} insights from "${video.snippet.title}"`);
+      console.log(`Auto-learn: saved ${learnPromises.length} insights + blueprint from "${video.snippet.title}"`);
     } catch (learnErr) {
       console.error("Auto-learn error (non-fatal):", learnErr);
     }
