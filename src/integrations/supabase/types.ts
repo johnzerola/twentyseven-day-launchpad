@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_tests: {
+        Row: {
+          ended_at: string | null
+          id: string
+          metric_target: string | null
+          project_id: string | null
+          result: Json | null
+          started_at: string | null
+          test_type: string | null
+          variant_a: Json | null
+          variant_b: Json | null
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          metric_target?: string | null
+          project_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          test_type?: string | null
+          variant_a?: Json | null
+          variant_b?: Json | null
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          metric_target?: string | null
+          project_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          test_type?: string | null
+          variant_a?: Json | null
+          variant_b?: Json | null
+        }
+        Relationships: []
+      }
       api_config: {
         Row: {
           api_name: string
@@ -508,6 +544,33 @@ export type Database = {
           niche?: string | null
           seo_tags?: Json | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      hook_library: {
+        Row: {
+          created_at: string | null
+          hook_text: string
+          hook_type: string | null
+          id: string
+          niche: string | null
+          retention_score: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          hook_text: string
+          hook_type?: string | null
+          id?: string
+          niche?: string | null
+          retention_score?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          hook_text?: string
+          hook_type?: string | null
+          id?: string
+          niche?: string | null
+          retention_score?: number | null
         }
         Relationships: []
       }
@@ -1162,6 +1225,48 @@ export type Database = {
         }
         Relationships: []
       }
+      thumbnail_features: {
+        Row: {
+          avg_contrast: number | null
+          color_profile: Json | null
+          created_at: string | null
+          ctr_estimate: number | null
+          dominant_colors: Json | null
+          emotion_tags: Json | null
+          face_count: number | null
+          id: string
+          source_url: string | null
+          text_overlay: boolean | null
+          video_id: string
+        }
+        Insert: {
+          avg_contrast?: number | null
+          color_profile?: Json | null
+          created_at?: string | null
+          ctr_estimate?: number | null
+          dominant_colors?: Json | null
+          emotion_tags?: Json | null
+          face_count?: number | null
+          id?: string
+          source_url?: string | null
+          text_overlay?: boolean | null
+          video_id: string
+        }
+        Update: {
+          avg_contrast?: number | null
+          color_profile?: Json | null
+          created_at?: string | null
+          ctr_estimate?: number | null
+          dominant_colors?: Json | null
+          emotion_tags?: Json | null
+          face_count?: number | null
+          id?: string
+          source_url?: string | null
+          text_overlay?: boolean | null
+          video_id?: string
+        }
+        Relationships: []
+      }
       tracked_channels: {
         Row: {
           channel_name: string
@@ -1426,6 +1531,60 @@ export type Database = {
         }
         Relationships: []
       }
+      video_retention_curve: {
+        Row: {
+          bucket_seconds: number
+          created_at: string | null
+          id: string
+          percent_viewers: number
+          video_id: string
+        }
+        Insert: {
+          bucket_seconds?: number
+          created_at?: string | null
+          id?: string
+          percent_viewers?: number
+          video_id: string
+        }
+        Update: {
+          bucket_seconds?: number
+          created_at?: string | null
+          id?: string
+          percent_viewers?: number
+          video_id?: string
+        }
+        Relationships: []
+      }
+      video_segments: {
+        Row: {
+          end_seconds: number
+          id: string
+          meta: Json | null
+          metric: number | null
+          segment_type: string
+          start_seconds: number
+          video_id: string
+        }
+        Insert: {
+          end_seconds?: number
+          id?: string
+          meta?: Json | null
+          metric?: number | null
+          segment_type?: string
+          start_seconds?: number
+          video_id: string
+        }
+        Update: {
+          end_seconds?: number
+          id?: string
+          meta?: Json | null
+          metric?: number | null
+          segment_type?: string
+          start_seconds?: number
+          video_id?: string
+        }
+        Relationships: []
+      }
       viral_content_library: {
         Row: {
           category: string
@@ -1456,6 +1615,30 @@ export type Database = {
           language?: string
           niches?: string[] | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      viral_patterns: {
+        Row: {
+          created_at: string | null
+          id: string
+          niche: string | null
+          pattern_json: Json | null
+          pattern_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          pattern_json?: Json | null
+          pattern_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          pattern_json?: Json | null
+          pattern_name?: string
         }
         Relationships: []
       }
