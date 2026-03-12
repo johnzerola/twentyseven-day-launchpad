@@ -158,6 +158,54 @@ export type Database = {
         }
         Relationships: []
       }
+      attention_engineering: {
+        Row: {
+          applicable_niches: Json | null
+          category: string
+          created_at: string | null
+          duration_window_sec: number | null
+          examples: Json | null
+          id: string
+          intensity_level: number | null
+          pattern_name: string
+          psychological_basis: string | null
+          retention_impact: number | null
+          source: string | null
+          technique: string
+          trigger_second: number | null
+        }
+        Insert: {
+          applicable_niches?: Json | null
+          category?: string
+          created_at?: string | null
+          duration_window_sec?: number | null
+          examples?: Json | null
+          id?: string
+          intensity_level?: number | null
+          pattern_name: string
+          psychological_basis?: string | null
+          retention_impact?: number | null
+          source?: string | null
+          technique?: string
+          trigger_second?: number | null
+        }
+        Update: {
+          applicable_niches?: Json | null
+          category?: string
+          created_at?: string | null
+          duration_window_sec?: number | null
+          examples?: Json | null
+          id?: string
+          intensity_level?: number | null
+          pattern_name?: string
+          psychological_basis?: string | null
+          retention_impact?: number | null
+          source?: string | null
+          technique?: string
+          trigger_second?: number | null
+        }
+        Relationships: []
+      }
       audience_psychology_patterns: {
         Row: {
           created_at: string | null
@@ -598,6 +646,51 @@ export type Database = {
           niche?: string | null
           retention_score?: number | null
           source_video?: string | null
+        }
+        Relationships: []
+      }
+      micro_niches: {
+        Row: {
+          avg_views: number | null
+          competition: string | null
+          created_at: string | null
+          example_channels: Json | null
+          faceless_friendly: boolean | null
+          growth_rate: string | null
+          id: string
+          keywords: Json | null
+          micro_niche: string
+          monetization_score: number | null
+          niche: string
+          trend_direction: string | null
+        }
+        Insert: {
+          avg_views?: number | null
+          competition?: string | null
+          created_at?: string | null
+          example_channels?: Json | null
+          faceless_friendly?: boolean | null
+          growth_rate?: string | null
+          id?: string
+          keywords?: Json | null
+          micro_niche: string
+          monetization_score?: number | null
+          niche: string
+          trend_direction?: string | null
+        }
+        Update: {
+          avg_views?: number | null
+          competition?: string | null
+          created_at?: string | null
+          example_channels?: Json | null
+          faceless_friendly?: boolean | null
+          growth_rate?: string | null
+          id?: string
+          keywords?: Json | null
+          micro_niche?: string
+          monetization_score?: number | null
+          niche?: string
+          trend_direction?: string | null
         }
         Relationships: []
       }
@@ -1282,6 +1375,54 @@ export type Database = {
         }
         Relationships: []
       }
+      script_structures: {
+        Row: {
+          avg_retention: number | null
+          cliffhanger_pattern: string
+          created_at: string | null
+          effectiveness_score: number | null
+          ending_pattern: string
+          examples: Json | null
+          id: string
+          intro_pattern: string
+          middle_pattern: string
+          niche: string | null
+          segments: Json | null
+          source: string | null
+          structure_name: string
+        }
+        Insert: {
+          avg_retention?: number | null
+          cliffhanger_pattern?: string
+          created_at?: string | null
+          effectiveness_score?: number | null
+          ending_pattern?: string
+          examples?: Json | null
+          id?: string
+          intro_pattern?: string
+          middle_pattern?: string
+          niche?: string | null
+          segments?: Json | null
+          source?: string | null
+          structure_name: string
+        }
+        Update: {
+          avg_retention?: number | null
+          cliffhanger_pattern?: string
+          created_at?: string | null
+          effectiveness_score?: number | null
+          ending_pattern?: string
+          examples?: Json | null
+          id?: string
+          intro_pattern?: string
+          middle_pattern?: string
+          niche?: string | null
+          segments?: Json | null
+          source?: string | null
+          structure_name?: string
+        }
+        Relationships: []
+      }
       task_queue: {
         Row: {
           attempts: number
@@ -1369,6 +1510,54 @@ export type Database = {
           source_url?: string | null
           text_overlay?: boolean | null
           video_id?: string
+        }
+        Relationships: []
+      }
+      thumbnail_patterns: {
+        Row: {
+          color_scheme: Json | null
+          composition_rules: Json | null
+          created_at: string | null
+          ctr_average: number | null
+          effectiveness_score: number | null
+          emotion: string | null
+          examples: Json | null
+          faces_required: boolean | null
+          id: string
+          niche: string | null
+          pattern_name: string
+          text_overlay_style: string | null
+          thumbnail_type: string
+        }
+        Insert: {
+          color_scheme?: Json | null
+          composition_rules?: Json | null
+          created_at?: string | null
+          ctr_average?: number | null
+          effectiveness_score?: number | null
+          emotion?: string | null
+          examples?: Json | null
+          faces_required?: boolean | null
+          id?: string
+          niche?: string | null
+          pattern_name: string
+          text_overlay_style?: string | null
+          thumbnail_type?: string
+        }
+        Update: {
+          color_scheme?: Json | null
+          composition_rules?: Json | null
+          created_at?: string | null
+          ctr_average?: number | null
+          effectiveness_score?: number | null
+          emotion?: string | null
+          examples?: Json | null
+          faces_required?: boolean | null
+          id?: string
+          niche?: string | null
+          pattern_name?: string
+          text_overlay_style?: string | null
+          thumbnail_type?: string
         }
         Relationships: []
       }
@@ -1804,6 +1993,48 @@ export type Database = {
           title_pattern?: string | null
           views?: number
           why_viral?: string | null
+        }
+        Relationships: []
+      }
+      youtube_keywords: {
+        Row: {
+          best_title_patterns: Json | null
+          competition: string | null
+          created_at: string | null
+          ctr_estimate: number | null
+          id: string
+          keyword: string
+          language: string | null
+          niche: string | null
+          related_keywords: Json | null
+          search_volume: string | null
+          trend: string | null
+        }
+        Insert: {
+          best_title_patterns?: Json | null
+          competition?: string | null
+          created_at?: string | null
+          ctr_estimate?: number | null
+          id?: string
+          keyword: string
+          language?: string | null
+          niche?: string | null
+          related_keywords?: Json | null
+          search_volume?: string | null
+          trend?: string | null
+        }
+        Update: {
+          best_title_patterns?: Json | null
+          competition?: string | null
+          created_at?: string | null
+          ctr_estimate?: number | null
+          id?: string
+          keyword?: string
+          language?: string | null
+          niche?: string | null
+          related_keywords?: Json | null
+          search_volume?: string | null
+          trend?: string | null
         }
         Relationships: []
       }
