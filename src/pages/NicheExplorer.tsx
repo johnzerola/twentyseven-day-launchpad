@@ -145,6 +145,7 @@ const NicheExplorer = () => {
     supabase.functions.invoke('intelligence-sync-engine', {
       body: { mode: 'sync_channels_to_intel' },
     }).catch(() => {});
+  };
 
   const a = data?.analysis;
   const channels = data?.channels || [];
