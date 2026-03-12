@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -60,16 +60,15 @@ const SPEECH_RATES: Record<string, number> = {
   'sueco': 150, 'norueguês': 150, 'dinamarquês': 150, 'finlandês': 140,
 };
 
-type PipelinePhase = 'idle' | 'intelligence' | 'draft' | 'refine' | 'factcheck' | 'done';
+// Wizard steps
+type WizardStep = 0 | 1 | 2 | 3;
 
-const PHASE_INFO: Record<PipelinePhase, { label: string; icon: any; percent: number }> = {
-  idle: { label: '', icon: null, percent: 0 },
-  intelligence: { label: '🔍 Fase 0: Analisando inteligência...', icon: Brain, percent: 10 },
-  draft: { label: '✍️ Fase 1: GPT-5 Hook + Gemini Flash gerando rascunho...', icon: Zap, percent: 35 },
-  refine: { label: '🎯 Fase 2: Gemini Pro refinando qualidade...', icon: Wand2, percent: 70 },
-  factcheck: { label: '🛡️ Fase 3: Verificação de fatos...', icon: Shield, percent: 90 },
-  done: { label: '✅ Pipeline completo!', icon: CheckCircle2, percent: 100 },
-};
+const WIZARD_STEPS = [
+  { label: 'Configuração', icon: FileText, desc: 'Defina tópico, estilo e idioma' },
+  { label: 'Rascunho IA', icon: Zap, desc: 'Gemini gera o rascunho — revise e edite' },
+  { label: 'Refinamento Claude', icon: Brain, desc: 'Claude refina — revise e edite' },
+  { label: 'Roteiro Final', icon: CheckCircle2, desc: 'Score final + roteiro pronto' },
+];
 
 export const ScriptGenerator = ({
   topic, setTopic, duration, setDuration, style, setStyle,
@@ -81,12 +80,14 @@ export const ScriptGenerator = ({
   const [editMode, setEditMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [phase, setPhase] = useState<PipelinePhase>('idle');
-  const [skipRefine, setSkipRefine] = useState(false);
+  const [wizardStep, setWizardStep] = useState<WizardStep>(0);
+  const [draftScript, setDraftScript] = useState('');
+  const [phaseLabel, setPhaseLabel] = useState('');
 
   const wpm = SPEECH_RATES[language] || 150;
-  const wordCount = script.split(/\s+/).filter(Boolean).length;
-  const charCount = script.length;
+  const currentScript = wizardStep === 1 ? draftScript : script;
+  const wordCount = currentScript.split(/\s+/).filter(Boolean).length;
+  const charCount = currentScript.length;
   const estimatedMinutes = wordCount > 0 ? (wordCount / wpm) : 0;
   const estimatedMinutesDisplay = `${Math.floor(estimatedMinutes)}:${String(Math.round((estimatedMinutes % 1) * 60)).padStart(2, '0')}`;
   const targetWords = parseInt(duration) * wpm;
@@ -113,7 +114,9 @@ export const ScriptGenerator = ({
 
   const cleanBlueprintFromScript = (text: string): string => text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
 
-  // Stream SSE from edge function, calling onDelta for each token
+  const cleanAll = (text: string) => cleanBlueprintFromScript(cleanScoresFromScript(text));
+
+  // Stream SSE from edge function
   const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
     const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
       method: 'POST',
@@ -155,18 +158,21 @@ export const ScriptGenerator = ({
     return fullText;
   };
 
-  const generateScript = async () => {
+  // ═══════ STEP 1: Generate Draft ═══════
+  const runStep1_Draft = async () => {
     if (!topic.trim() || generating) return;
     setGenerating(true);
     setLoading(true);
+    setDraftScript('');
     setScript('');
-    setActiveStep('script');
     setScorecard(null);
     setSceneBlueprintJson([]);
-    setPhase('intelligence');
+    setWizardStep(1);
+    setEditMode(false);
 
     try {
-      // ═══════ PHASE 0: Intelligence ═══════
+      // Phase 0: Intelligence
+      setPhaseLabel('🔍 Analisando inteligência competitiva...');
       let briefing = null;
       try {
         const { data, error } = await supabase.functions.invoke('analyze-topic', {
@@ -179,76 +185,90 @@ export const ScriptGenerator = ({
         }
       } catch (err) { console.warn('Intelligence failed:', err); }
 
-      // ═══════ PHASE 1: Draft (GPT-5 Hook + Gemini Flash streaming) ═══════
-      setPhase('draft');
+      // Phase 1: Draft streaming
+      setPhaseLabel('✍️ Gemini está gerando seu rascunho...');
       const viralContext = getViralContext();
       
-      const draftText = await streamFromFunction('generate-script', {
+      const rawDraft = await streamFromFunction('generate-script', {
         topic, duration: parseInt(duration), style, niche, language,
         viralContext, intelligenceBriefing: briefing,
       }, (fullText) => {
-        setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullText)));
+        setDraftScript(cleanAll(fullText));
       });
 
-      toast.success('✍️ Rascunho completo!');
+      // Extract blueprint
+      const blueprint = parseSceneBlueprint(rawDraft);
+      if (blueprint.length > 0) setSceneBlueprintJson(blueprint);
+      setDraftScript(cleanAll(rawDraft));
+      setPhaseLabel('');
+      toast.success('✍️ Rascunho pronto! Revise, edite e clique em "Próxima Etapa".');
 
-      // Extract blueprint from draft
-      const draftBlueprint = parseSceneBlueprint(draftText);
-      const cleanDraft = cleanBlueprintFromScript(cleanScoresFromScript(draftText));
-      setScript(cleanDraft);
+    } catch (err: any) {
+      toast.error(err.message);
+      setWizardStep(0);
+    } finally {
+      setLoading(false);
+      setGenerating(false);
+    }
+  };
 
-      // ═══════ PHASE 2: Refine (Gemini Pro streaming) ═══════
-      if (!skipRefine) {
-        setPhase('refine');
-        try {
-          const refinedText = await streamFromFunction('refine-script', {
-            draft_script: cleanDraft,
-            niche, language, duration: parseInt(duration), style,
-            target_words: targetWords,
-          }, (fullText) => {
-            setScript(cleanBlueprintFromScript(cleanScoresFromScript(fullText)));
-          });
+  // ═══════ STEP 2: Refine with Claude ═══════
+  const runStep2_Refine = async () => {
+    if (generating) return;
+    setGenerating(true);
+    setLoading(true);
+    setScript('');
+    setWizardStep(2);
+    setEditMode(false);
+    setPhaseLabel('🧠 Claude está refinando seu roteiro...');
 
-          parseScorecard(refinedText);
-          const refinedBlueprint = parseSceneBlueprint(refinedText);
-          const blueprint = refinedBlueprint.length > 0 ? refinedBlueprint : draftBlueprint;
-          if (blueprint.length > 0) {
-            setSceneBlueprintJson(blueprint);
-            toast.success(`🎬 Blueprint: ${blueprint.length} blocos narrativos`);
-          }
-          setScript(cleanBlueprintFromScript(cleanScoresFromScript(refinedText)));
-          toast.success('🎯 Roteiro refinado pelo Gemini Pro!');
-        } catch (refineErr) {
-          console.warn('Refine failed, using draft:', refineErr);
-          toast.info('Refinamento indisponível, usando rascunho de alta qualidade');
-          if (draftBlueprint.length > 0) {
-            setSceneBlueprintJson(draftBlueprint);
-          }
-        }
-      } else {
-        // Skip refine, use draft
-        if (draftBlueprint.length > 0) {
-          setSceneBlueprintJson(draftBlueprint);
-        }
-      }
+    try {
+      const refinedRaw = await streamFromFunction('refine-script', {
+        draft_script: draftScript,
+        niche, language, duration: parseInt(duration), style,
+        target_words: targetWords,
+      }, (fullText) => {
+        setScript(cleanAll(fullText));
+      });
 
-      // ═══════ PHASE 3: Fact-check (fire and forget) ═══════
-      setPhase('factcheck');
+      parseScorecard(refinedRaw);
+      const refinedBlueprint = parseSceneBlueprint(refinedRaw);
+      if (refinedBlueprint.length > 0) setSceneBlueprintJson(refinedBlueprint);
+      setScript(cleanAll(refinedRaw));
+      setPhaseLabel('');
+      toast.success('🧠 Claude refinou! Revise, edite e clique em "Finalizar".');
+
+    } catch (err: any) {
+      toast.error(`Refinamento falhou: ${err.message}. Usando rascunho.`);
+      setScript(draftScript);
+      setPhaseLabel('');
+    } finally {
+      setLoading(false);
+      setGenerating(false);
+    }
+  };
+
+  // ═══════ STEP 3: Final Score + Save ═══════
+  const runStep3_Finalize = async () => {
+    setGenerating(true);
+    setLoading(true);
+    setWizardStep(3);
+    setPhaseLabel('🛡️ Verificação final de qualidade...');
+
+    try {
+      // Score
       try {
         const { data: fcData } = await supabase.functions.invoke('score-script', {
           body: { script: script.slice(0, 10000), niche, language },
         });
-        if (fcData?.scores) {
-          setScorecard(fcData.scores);
-        }
+        if (fcData?.scores) setScorecard(fcData.scores);
       } catch { /* non-critical */ }
 
-      // ═══════ SAVE ═══════
-      setPhase('done');
+      // Save to project
       try {
         const pid = await getOrCreateProject();
         await supabase.from('video_projects').update({
-          intelligence_json: briefing || {},
+          intelligence_json: intelligenceBriefing || {},
           scene_blueprint_json: parseSceneBlueprint(script),
         } as any).eq('id', pid);
       } catch { /* non-critical */ }
@@ -258,220 +278,393 @@ export const ScriptGenerator = ({
       }).catch(() => {});
 
       onScriptGenerated?.();
-      toast.success('✅ Pipeline Ensemble AI completo!');
+      setPhaseLabel('');
+      toast.success('✅ Roteiro finalizado e salvo!');
 
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
       setGenerating(false);
-      setTimeout(() => setPhase('idle'), 3000);
     }
   };
 
   const saveScript = async () => {
-    if (!script) return;
+    const textToSave = wizardStep === 1 ? draftScript : script;
+    if (!textToSave) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Faça login'); return; }
-    await supabase.from('saved_scripts').insert({ user_id: user.id, topic, duration: parseInt(duration), style, script_content: script } as any);
+    await supabase.from('saved_scripts').insert({ user_id: user.id, topic, duration: parseInt(duration), style, script_content: textToSave } as any);
     toast.success('Roteiro salvo!');
   };
 
   const copyScript = () => {
-    navigator.clipboard.writeText(script);
+    const text = wizardStep === 1 ? draftScript : script;
+    navigator.clipboard.writeText(text);
     setCopied(true);
     toast.success('Copiado!');
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const phaseInfo = PHASE_INFO[phase];
+  const resetWizard = () => {
+    setWizardStep(0);
+    setDraftScript('');
+    setScript('');
+    setScorecard(null);
+    setPhaseLabel('');
+    setEditMode(false);
+  };
+
+  const activeText = wizardStep === 1 ? draftScript : script;
+  const setActiveText = wizardStep === 1 ? setDraftScript : setScript;
 
   return (
     <>
-      {/* Config Panel */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-        <h3 className="font-semibold text-sm">Configurações</h3>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Tópico *</label>
-          <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-muted/30" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Duração (minutos)</label>
-          <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-            {[5, 10, 15, 20, 30, 40, 60].map(d => (
-              <option key={d} value={String(d)}>{d} min (~{d * wpm} palavras)</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Estilo do roteiro</label>
-          <div className="grid grid-cols-1 gap-1.5 max-h-[180px] overflow-y-auto pr-1">
-            {STYLES.map(s => (
-              <button key={s.value} onClick={() => setStyle(s.value)}
-                className={`text-left p-2 rounded-lg border transition-all text-xs ${
-                  style === s.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+      {/* ═══════ WIZARD STEPPER ═══════ */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between gap-1">
+          {WIZARD_STEPS.map((step, i) => {
+            const isActive = wizardStep === i;
+            const isDone = wizardStep > i;
+            const StepIcon = step.icon;
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center text-center gap-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  isDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                  isActive ? 'bg-primary/20 text-primary border border-primary/30 ring-2 ring-primary/20' :
+                  'bg-muted/30 text-muted-foreground border border-border/50'
                 }`}>
-                <span className="font-medium">{s.label}</span>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
-              </button>
-            ))}
-          </div>
+                  {isDone ? <Check className="w-4 h-4" /> : <StepIcon className="w-4 h-4" />}
+                </div>
+                <span className={`text-[10px] font-medium leading-tight ${isActive ? 'text-primary' : isDone ? 'text-emerald-400' : 'text-muted-foreground/60'}`}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Nicho</label>
-            <Input value={niche} onChange={e => setNiche(e.target.value)} placeholder="finanças" className="bg-muted/30" />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Idioma</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-              <option value="português">🇧🇷 Português</option>
-              <option value="inglês">🇺🇸 English</option>
-              <option value="espanhol">🇪🇸 Español</option>
-              <option value="alemão">🇩🇪 Deutsch</option>
-              <option value="polonês">🇵🇱 Polski</option>
-              <option value="turco">🇹🇷 Türkçe</option>
-              <option value="japonês">🇯🇵 日本語</option>
-              <option value="francês">🇫🇷 Français</option>
-              <option value="italiano">🇮🇹 Italiano</option>
-              <option value="tcheco">🇨🇿 Čeština</option>
-              <option value="holandês">🇳🇱 Nederlands</option>
-              <option value="coreano">🇰🇷 한국어</option>
-              <option value="hindi">🇮🇳 हिन्दी</option>
-              <option value="árabe">🇸🇦 العربية</option>
-              <option value="indonésio">🇮🇩 Bahasa</option>
-              <option value="tailandês">🇹🇭 ไทย</option>
-              <option value="vietnamita">🇻🇳 Tiếng Việt</option>
-              <option value="romeno">🇷🇴 Română</option>
-              <option value="húngaro">🇭🇺 Magyar</option>
-              <option value="sueco">🇸🇪 Svenska</option>
-              <option value="norueguês">🇳🇴 Norsk</option>
-              <option value="dinamarquês">🇩🇰 Dansk</option>
-              <option value="finlandês">🇫🇮 Suomi</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Skip Refine Toggle */}
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="skipRefine" checked={skipRefine} onChange={e => setSkipRefine(e.target.checked)} className="rounded" />
-          <label htmlFor="skipRefine" className="text-xs text-muted-foreground">⚡ Modo rápido (pular refinamento Gemini Pro)</label>
-        </div>
-
-        <Button onClick={generateScript} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
-          {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Pipeline Ensemble AI...</> :
-           <><Sparkles className="w-4 h-4" /> 🧠 Analisar & Gerar Roteiro</>}
-        </Button>
-      </div>
-
-      {/* Pipeline Progress */}
-      <AnimatePresence>
-        {phase !== 'idle' && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-2">
-              {phaseInfo.icon && <phaseInfo.icon className={`w-5 h-5 ${phase === 'done' ? 'text-emerald-400' : 'text-primary animate-pulse'}`} />}
-              <span className="text-sm font-medium">{phaseInfo.label}</span>
-            </div>
-            <Progress value={phaseInfo.percent} className="h-2" />
-            <div className="flex justify-between mt-1.5">
-              {(['intelligence', 'draft', 'refine', 'factcheck', 'done'] as PipelinePhase[]).map((p) => {
-                const isActive = p === phase;
-                const isDone = PHASE_INFO[p].percent < PHASE_INFO[phase].percent;
-                return (
-                  <div key={p} className={`text-[9px] font-medium ${isActive ? 'text-primary' : isDone ? 'text-emerald-400' : 'text-muted-foreground/50'}`}>
-                    {isDone ? '✓' : isActive ? '●' : '○'} {p === 'intelligence' ? 'Intel' : p === 'draft' ? 'Draft' : p === 'refine' ? 'Refine' : p === 'factcheck' ? 'Check' : 'Done'}
-                  </div>
-                );
-              })}
-            </div>
+        {phaseLabel && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 flex items-center gap-2 text-xs text-primary">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            {phaseLabel}
           </motion.div>
         )}
-      </AnimatePresence>
+      </div>
 
-      {/* Script Output */}
-      {(script || loading) && (
-        <motion.div key="script-output" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
+      {/* ═══════ STEP 0: Config ═══════ */}
+      <AnimatePresence mode="wait">
+        {wizardStep === 0 && (
+          <motion.div key="step0" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+            className="bg-card border border-border rounded-xl p-5 space-y-3">
+            <h3 className="font-semibold text-sm">1. Configurações do Roteiro</h3>
             <div>
-              <h3 className="font-semibold text-sm">Roteiro</h3>
-              {script && (
-                <div className="mt-1.5 space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    {wordCount.toLocaleString()} palavras • {charCount.toLocaleString()} chars • ⏱ {estimatedMinutesDisplay} min
-                    {scorecard && <span className="ml-2 text-primary font-medium">• Ensemble AI ✓</span>}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Progress value={progressPercent} className="h-1.5 flex-1" />
-                    <span className={`text-[10px] font-medium ${progressPercent >= 100 ? 'text-emerald-400' : progressPercent >= 70 ? 'text-yellow-400' : 'text-destructive'}`}>
-                      {progressPercent}%
-                    </span>
-                  </div>
-                </div>
-              )}
+              <label className="text-xs text-muted-foreground mb-1 block">Tópico *</label>
+              <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-muted/30" />
             </div>
-            {script && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Duração (minutos)</label>
+              <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
+                {[5, 10, 15, 20, 30, 40, 60].map(d => (
+                  <option key={d} value={String(d)}>{d} min (~{d * wpm} palavras)</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Estilo do roteiro</label>
+              <div className="grid grid-cols-1 gap-1.5 max-h-[180px] overflow-y-auto pr-1">
+                {STYLES.map(s => (
+                  <button key={s.value} onClick={() => setStyle(s.value)}
+                    className={`text-left p-2 rounded-lg border transition-all text-xs ${
+                      style === s.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+                    }`}>
+                    <span className="font-medium">{s.label}</span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nicho</label>
+                <Input value={niche} onChange={e => setNiche(e.target.value)} placeholder="finanças" className="bg-muted/30" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Idioma</label>
+                <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
+                  <option value="português">🇧🇷 Português</option>
+                  <option value="inglês">🇺🇸 English</option>
+                  <option value="espanhol">🇪🇸 Español</option>
+                  <option value="alemão">🇩🇪 Deutsch</option>
+                  <option value="polonês">🇵🇱 Polski</option>
+                  <option value="turco">🇹🇷 Türkçe</option>
+                  <option value="japonês">🇯🇵 日本語</option>
+                  <option value="francês">🇫🇷 Français</option>
+                  <option value="italiano">🇮🇹 Italiano</option>
+                  <option value="tcheco">🇨🇿 Čeština</option>
+                  <option value="holandês">🇳🇱 Nederlands</option>
+                  <option value="coreano">🇰🇷 한국어</option>
+                  <option value="hindi">🇮🇳 हिन्दी</option>
+                  <option value="árabe">🇸🇦 العربية</option>
+                  <option value="indonésio">🇮🇩 Bahasa</option>
+                  <option value="tailandês">🇹🇭 ไทย</option>
+                  <option value="vietnamita">🇻🇳 Tiếng Việt</option>
+                  <option value="romeno">🇷🇴 Română</option>
+                  <option value="húngaro">🇭🇺 Magyar</option>
+                  <option value="sueco">🇸🇪 Svenska</option>
+                  <option value="norueguês">🇳🇴 Norsk</option>
+                  <option value="dinamarquês">🇩🇰 Dansk</option>
+                  <option value="finlandês">🇫🇮 Suomi</option>
+                </select>
+              </div>
+            </div>
+
+            <Button onClick={runStep1_Draft} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
+              <Sparkles className="w-4 h-4" /> Gerar Rascunho com IA
+              <ArrowRight className="w-4 h-4 ml-auto" />
+            </Button>
+
+            {/* Paste own script shortcut */}
+            <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => {
+              setWizardStep(1);
+              setDraftScript('');
+              setEditMode(true);
+            }}>
+              <ClipboardPaste className="w-3 h-3" /> Ou cole seu próprio roteiro
+            </Button>
+          </motion.div>
+        )}
+
+        {/* ═══════ STEP 1: Draft Review ═══════ */}
+        {wizardStep === 1 && (
+          <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  2. Rascunho Gerado
+                </h3>
+                {draftScript && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {wordCount.toLocaleString()} palavras • ⏱ {estimatedMinutesDisplay} min
+                    <span className={`ml-2 font-medium ${progressPercent >= 100 ? 'text-emerald-400' : progressPercent >= 70 ? 'text-yellow-400' : 'text-destructive'}`}>
+                      ({progressPercent}% do alvo)
+                    </span>
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-7 text-xs">
+                  {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                  {editMode ? 'Ler' : 'Editar'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1 h-7 text-xs">
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
+                  <Save className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            {generating && !draftScript && (
+              <div className="text-center py-12">
+                <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
+                <p className="text-sm text-muted-foreground">Gemini está gerando o rascunho...</p>
+              </div>
+            )}
+
+            {(draftScript || editMode) && (
+              editMode ? (
+                <textarea value={draftScript} onChange={e => setDraftScript(e.target.value)}
+                  placeholder="Cole seu roteiro aqui ou edite o rascunho gerado..."
+                  className="w-full min-h-[400px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto" />
+              ) : (
+                <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
+                  <ReactMarkdown>{draftScript}</ReactMarkdown>
+                </div>
+              )
+            )}
+
+            {/* Navigation */}
+            {draftScript && !generating && (
+              <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
+                <Button variant="ghost" size="sm" onClick={() => setWizardStep(0)} className="gap-1 text-xs">
+                  <ArrowLeft className="w-3 h-3" /> Voltar
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { setScript(draftScript); setWizardStep(3); runStep3_Finalize(); }} className="gap-1 text-xs">
+                    ⚡ Pular refinamento
+                  </Button>
+                  <Button size="sm" onClick={runStep2_Refine} disabled={generating} className="gap-2 text-xs">
+                    <Brain className="w-4 h-4" /> Refinar com Claude
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ═══════ STEP 2: Claude Refine Review ═══════ */}
+        {wizardStep === 2 && (
+          <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                  3. Refinado pelo Claude
+                </h3>
+                {script && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {wordCount.toLocaleString()} palavras • ⏱ {estimatedMinutesDisplay} min
+                    <span className={`ml-2 font-medium ${progressPercent >= 100 ? 'text-emerald-400' : progressPercent >= 70 ? 'text-yellow-400' : 'text-destructive'}`}>
+                      ({progressPercent}% do alvo)
+                    </span>
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-7 text-xs">
+                  {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                  {editMode ? 'Ler' : 'Editar'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1 h-7 text-xs">
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
+                  <Save className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            {scorecard && (
+              <div className="grid grid-cols-5 gap-1.5 mb-3">
+                {[
+                  { label: '🎯 Hook', score: scorecard.hook },
+                  { label: '📊 Retenção', score: scorecard.retention },
+                  { label: '💥 Emoção', score: scorecard.emotion },
+                  { label: '🌊 Fluidez', score: scorecard.flow },
+                  { label: '🏆 Payoff', score: scorecard.payoff },
+                ].map(({ label, score }) => (
+                  <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-[9px] text-muted-foreground">{label}</p>
+                    <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>{score}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {generating && !script && (
+              <div className="text-center py-12">
+                <Brain className="w-10 h-10 mx-auto mb-3 text-purple-400 animate-pulse" />
+                <p className="text-sm text-muted-foreground">Claude está refinando o roteiro...</p>
+              </div>
+            )}
+
+            {(script || editMode) && (
+              editMode ? (
+                <textarea value={script} onChange={e => setScript(e.target.value)}
+                  className="w-full min-h-[400px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto" />
+              ) : (
+                <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
+                  <ReactMarkdown>{script}</ReactMarkdown>
+                </div>
+              )
+            )}
+
+            {script && !generating && (
+              <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
+                <Button variant="ghost" size="sm" onClick={() => setWizardStep(1)} className="gap-1 text-xs">
+                  <ArrowLeft className="w-3 h-3" /> Voltar ao rascunho
+                </Button>
+                <Button size="sm" onClick={runStep3_Finalize} disabled={generating} className="gap-2 text-xs">
+                  <CheckCircle2 className="w-4 h-4" /> Finalizar Roteiro
+                  <ArrowRight className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ═══════ STEP 3: Final ═══════ */}
+        {wizardStep === 3 && (
+          <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  4. Roteiro Final
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {wordCount.toLocaleString()} palavras • ⏱ {estimatedMinutesDisplay} min
+                  {scorecard && <span className="ml-2 text-emerald-400 font-medium">• Verificado ✓</span>}
+                </p>
+              </div>
               <div className="flex gap-1.5">
                 <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-7 text-xs">
                   {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
                   {editMode ? 'Ler' : 'Editar'}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
-                  <Save className="w-3 h-3" /> Salvar
+                  <Save className="w-3 h-3" />
                 </Button>
                 <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1 h-7 text-xs">
                   {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 </Button>
-                <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-1 h-7 text-xs">
-                  Próximo <Film className="w-3 h-3" />
+              </div>
+            </div>
+
+            {scorecard && (
+              <div className="grid grid-cols-5 gap-1.5 mb-3">
+                {[
+                  { label: '🎯 Hook', score: scorecard.hook },
+                  { label: '📊 Retenção', score: scorecard.retention },
+                  { label: '💥 Emoção', score: scorecard.emotion },
+                  { label: '🌊 Fluidez', score: scorecard.flow },
+                  { label: '🏆 Payoff', score: scorecard.payoff },
+                ].map(({ label, score }) => (
+                  <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-[9px] text-muted-foreground">{label}</p>
+                    <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>{score}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {generating && (
+              <div className="text-center py-6">
+                <Shield className="w-8 h-8 mx-auto mb-2 text-primary animate-pulse" />
+                <p className="text-sm text-muted-foreground">Verificação final...</p>
+              </div>
+            )}
+
+            {script && (
+              editMode ? (
+                <textarea value={script} onChange={e => setScript(e.target.value)}
+                  className="w-full min-h-[400px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto" />
+              ) : (
+                <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
+                  <ReactMarkdown>{script}</ReactMarkdown>
+                </div>
+              )
+            )}
+
+            {!generating && script && (
+              <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
+                <Button variant="ghost" size="sm" onClick={resetWizard} className="gap-1 text-xs">
+                  <RotateCcw className="w-3 h-3" /> Novo roteiro
+                </Button>
+                <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-2 text-xs">
+                  Próxima Etapa: Estilo Visual <Film className="w-4 h-4" />
                 </Button>
               </div>
             )}
-            {!script && !loading && (
-              <Button size="sm" variant="outline" onClick={() => { setEditMode(true); setScript(''); }} className="gap-1 h-7 text-xs">
-                <ClipboardPaste className="w-3 h-3" /> Colar meu roteiro
-              </Button>
-            )}
-          </div>
-
-          {scorecard && (
-            <div className="grid grid-cols-5 gap-1.5 mb-3">
-              {[
-                { label: '🎯 Hook', score: scorecard.hook },
-                { label: '📊 Retenção', score: scorecard.retention },
-                { label: '💥 Emoção', score: scorecard.emotion },
-                { label: '🌊 Fluidez', score: scorecard.flow },
-                { label: '🏆 Payoff', score: scorecard.payoff },
-              ].map(({ label, score }) => (
-                <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-[9px] text-muted-foreground">{label}</p>
-                  <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>{score}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {loading && !script && (
-            <div className="text-center py-12">
-              <Zap className="w-10 h-10 mx-auto mb-3 text-primary animate-pulse" />
-              <p className="text-sm text-muted-foreground">Ensemble AI: Analisando → Gerando → Refinando...</p>
-            </div>
-          )}
-
-          {script || editMode ? (
-            editMode ? (
-              <textarea value={script} onChange={e => setScript(e.target.value)}
-                placeholder="Cole seu roteiro aqui ou edite o roteiro gerado..."
-                className="w-full min-h-[500px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto" />
-            ) : (
-              <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
-                <ReactMarkdown>{script}</ReactMarkdown>
-              </div>
-            )
-          ) : null}
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
