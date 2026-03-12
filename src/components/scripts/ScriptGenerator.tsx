@@ -613,7 +613,7 @@ export const ScriptGenerator = ({
                 <Button variant="ghost" size="sm" onClick={() => setWizardStep(1)} className="gap-1 text-xs">
                   <ArrowLeft className="w-3 h-3" /> Voltar ao rascunho
                 </Button>
-                <Button size="sm" onClick={runStep3_DualScore} disabled={generating} className="gap-2 text-xs">
+                <Button size="sm" onClick={() => runStep3_DualScoreWithText()} disabled={generating} className="gap-2 text-xs">
                   <Shield className="w-4 h-4" /> Avaliar (GPT + Gemini)
                   <ArrowRight className="w-3 h-3" />
                 </Button>
