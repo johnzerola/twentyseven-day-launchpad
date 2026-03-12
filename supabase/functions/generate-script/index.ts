@@ -249,6 +249,12 @@ ${ytKnowledge}
 📡 INTELIGÊNCIA DE CANAIS VIRAIS FACELESS (REFERÊNCIAS REAIS):
 ${channelIntel || "Sem dados de canais disponíveis"}
 
+🧠 GATILHOS PSICOLÓGICOS & TÉCNICAS DE RETENÇÃO (da base de inteligência viral):
+${psychTriggers || "Sem gatilhos disponíveis"}
+
+🎬 FORMATOS DE CONTEÚDO VIRAL (adapte o roteiro a estes padrões de sucesso):
+${viralFormats || "Sem formatos disponíveis"}
+
 📝 TÉCNICAS DE ROTEIRO COMPROVADAS (APLIQUE TODAS):
 ${scriptKnowledge}
 
