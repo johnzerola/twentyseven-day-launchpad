@@ -88,7 +88,7 @@ serve(async (req) => {
                   title: video.title,
                   formula_version: "v2",
                 },
-              }, { onConflict: "channel_id" }).catch(() => {});
+              }, { onConflict: "channel_id" });
             }
 
             // Breakout → reverse-engineer + queue
