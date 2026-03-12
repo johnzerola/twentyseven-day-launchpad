@@ -23,23 +23,18 @@ serve(async (req) => {
       if (urlMatch[1] === "channel/") {
         channelId = identifier;
       } else {
-        // Handle @username or /c/ name - search for channel
         const searchRes = await fetch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(identifier)}&maxResults=1&key=${YOUTUBE_API_KEY}`
         );
         const searchData = await searchRes.json();
-        if (searchData.items?.[0]) {
-          channelId = searchData.items[0].snippet.channelId;
-        }
+        if (searchData.items?.[0]) channelId = searchData.items[0].snippet.channelId;
       }
     } else if (channelInput.startsWith("@")) {
       const searchRes = await fetch(
         `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelInput)}&maxResults=1&key=${YOUTUBE_API_KEY}`
       );
       const searchData = await searchRes.json();
-      if (searchData.items?.[0]) {
-        channelId = searchData.items[0].snippet.channelId;
-      }
+      if (searchData.items?.[0]) channelId = searchData.items[0].snippet.channelId;
     }
 
     // Get channel stats
@@ -56,10 +51,13 @@ serve(async (req) => {
     const channel = channelData.items[0];
     const stats = channel.statistics;
     const snippet = channel.snippet;
+    const subscribers = parseInt(stats.subscriberCount || "0");
+    const totalViews = parseInt(stats.viewCount || "0");
+    const videoCount = parseInt(stats.videoCount || "0");
 
-    // Get recent videos (last 20)
+    // Get recent videos (last 30)
     const videosRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=20&type=video&key=${YOUTUBE_API_KEY}`
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=30&type=video&key=${YOUTUBE_API_KEY}`
     );
     const videosData = await videosRes.json();
     const videoIds = videosData.items?.map((v: any) => v.id.videoId).filter(Boolean).join(",");
@@ -79,44 +77,145 @@ serve(async (req) => {
     );
     const topVideosData = await topVideosRes.json();
     const topVideoIds = topVideosData.items?.map((v: any) => v.id.videoId).filter(Boolean).join(",");
-    
+
     let topVideoStats: any[] = [];
     if (topVideoIds) {
       const tvRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${topVideoIds}&key=${YOUTUBE_API_KEY}`
+        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${topVideoIds}&key=${YOUTUBE_API_KEY}`
       );
       const tvData = await tvRes.json();
       topVideoStats = tvData.items || [];
     }
 
+    // ========== COMPUTE REAL METRICS ==========
+    const recentVideos = videoStats.map((v: any) => {
+      const views = parseInt(v.statistics?.viewCount || "0");
+      const likes = parseInt(v.statistics?.likeCount || "0");
+      const comments = parseInt(v.statistics?.commentCount || "0");
+      const duration = v.contentDetails?.duration || "";
+      // Parse ISO 8601 duration
+      const dMatch = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      const durationSec = dMatch ? (parseInt(dMatch[1] || "0") * 3600 + parseInt(dMatch[2] || "0") * 60 + parseInt(dMatch[3] || "0")) : 0;
+      return {
+        title: v.snippet.title,
+        views,
+        likes,
+        comments,
+        publishedAt: v.snippet.publishedAt,
+        duration,
+        durationSeconds: durationSec,
+        engagement_rate: views > 0 ? ((likes + comments) / views * 100) : 0,
+        like_rate: views > 0 ? (likes / views * 100) : 0,
+        comment_rate: views > 0 ? (comments / views * 100) : 0,
+        sub_watch_ratio: subscribers > 0 ? (views / subscribers * 100) : 0,
+      };
+    });
+
+    const topVideos = topVideoStats.map((v: any) => {
+      const views = parseInt(v.statistics?.viewCount || "0");
+      const likes = parseInt(v.statistics?.likeCount || "0");
+      const comments = parseInt(v.statistics?.commentCount || "0");
+      const dMatch = (v.contentDetails?.duration || "").match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      const durationSec = dMatch ? (parseInt(dMatch[1] || "0") * 3600 + parseInt(dMatch[2] || "0") * 60 + parseInt(dMatch[3] || "0")) : 0;
+      return {
+        title: v.snippet.title,
+        views,
+        likes,
+        comments,
+        durationSeconds: durationSec,
+        engagement_rate: views > 0 ? ((likes + comments) / views * 100) : 0,
+        sub_watch_ratio: subscribers > 0 ? (views / subscribers * 100) : 0,
+      };
+    });
+
+    const avgViews = recentVideos.length > 0
+      ? recentVideos.reduce((sum: number, v: any) => sum + v.views, 0) / recentVideos.length
+      : 0;
+
+    // Subscriber watch ratio: what % of subs watch each video on average
+    const sub_watch_ratio = subscribers > 0 ? (avgViews / subscribers * 100) : 0;
+
+    // Engagement metrics
+    const totalLikes = recentVideos.reduce((s: number, v: any) => s + v.likes, 0);
+    const totalComments = recentVideos.reduce((s: number, v: any) => s + v.comments, 0);
+    const totalRecentViews = recentVideos.reduce((s: number, v: any) => s + v.views, 0);
+    const avg_engagement_rate = totalRecentViews > 0 ? ((totalLikes + totalComments) / totalRecentViews * 100) : 0;
+    const avg_like_rate = totalRecentViews > 0 ? (totalLikes / totalRecentViews * 100) : 0;
+    const avg_comment_rate = totalRecentViews > 0 ? (totalComments / totalRecentViews * 100) : 0;
+
+    // Upload consistency: avg days between uploads
+    const dates = recentVideos
+      .map((v: any) => new Date(v.publishedAt).getTime())
+      .sort((a: number, b: number) => b - a);
+    let avg_days_between_uploads = 0;
+    if (dates.length >= 2) {
+      const diffs = [];
+      for (let i = 0; i < dates.length - 1; i++) {
+        diffs.push((dates[i] - dates[i + 1]) / (1000 * 60 * 60 * 24));
+      }
+      avg_days_between_uploads = Math.round(diffs.reduce((a: number, b: number) => a + b, 0) / diffs.length);
+    }
+
+    // Average video duration
+    const durations = recentVideos.filter((v: any) => v.durationSeconds > 0).map((v: any) => v.durationSeconds);
+    const avg_duration_seconds = durations.length > 0 ? Math.round(durations.reduce((a: number, b: number) => a + b, 0) / durations.length) : 0;
+
+    // Views per video overall
+    const views_per_video = videoCount > 0 ? Math.round(totalViews / videoCount) : 0;
+
+    // Best performing time patterns
+    const dayOfWeek = recentVideos.map((v: any) => {
+      const d = new Date(v.publishedAt);
+      return { day: d.getUTCDay(), views: v.views };
+    });
+    const dayAgg: Record<number, { total: number; count: number }> = {};
+    dayOfWeek.forEach((d: any) => {
+      if (!dayAgg[d.day]) dayAgg[d.day] = { total: 0, count: 0 };
+      dayAgg[d.day].total += d.views;
+      dayAgg[d.day].count++;
+    });
+    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const best_upload_day = Object.entries(dayAgg)
+      .map(([day, data]) => ({ day: dayNames[parseInt(day)], avg: Math.round(data.total / data.count) }))
+      .sort((a, b) => b.avg - a.avg)[0]?.day || 'N/A';
+
+    // Outlier detection: videos with 3x+ avg views
+    const outlier_videos = recentVideos.filter((v: any) => avgViews > 0 && v.views >= avgViews * 3);
+    const underperforming_videos = recentVideos.filter((v: any) => avgViews > 0 && v.views < avgViews * 0.3);
+
+    const realMetrics = {
+      sub_watch_ratio: Math.round(sub_watch_ratio * 100) / 100,
+      avg_engagement_rate: Math.round(avg_engagement_rate * 1000) / 1000,
+      avg_like_rate: Math.round(avg_like_rate * 1000) / 1000,
+      avg_comment_rate: Math.round(avg_comment_rate * 1000) / 1000,
+      avg_days_between_uploads,
+      avg_duration_seconds,
+      views_per_video,
+      best_upload_day,
+      outlier_count: outlier_videos.length,
+      underperforming_count: underperforming_videos.length,
+      total_recent_videos: recentVideos.length,
+      avg_views: Math.round(avgViews),
+      // Health indicators
+      consistency_score: avg_days_between_uploads <= 3 ? 'excelente' : avg_days_between_uploads <= 7 ? 'bom' : avg_days_between_uploads <= 14 ? 'regular' : 'fraco',
+      engagement_health: avg_engagement_rate >= 8 ? 'excelente' : avg_engagement_rate >= 4 ? 'bom' : avg_engagement_rate >= 2 ? 'regular' : 'fraco',
+      sub_loyalty: sub_watch_ratio >= 30 ? 'alta' : sub_watch_ratio >= 15 ? 'média' : sub_watch_ratio >= 5 ? 'baixa' : 'muito_baixa',
+    };
+
     // Prepare data for AI analysis
     const channelSummary = {
       name: snippet.title,
       description: snippet.description,
-      subscribers: parseInt(stats.subscriberCount || "0"),
-      totalViews: parseInt(stats.viewCount || "0"),
-      videoCount: parseInt(stats.videoCount || "0"),
+      subscribers,
+      totalViews,
+      videoCount,
       thumbnail: snippet.thumbnails?.medium?.url,
       country: snippet.country || "Unknown",
       createdAt: snippet.publishedAt,
-      recentVideos: videoStats.map((v: any) => ({
-        title: v.snippet.title,
-        views: parseInt(v.statistics?.viewCount || "0"),
-        likes: parseInt(v.statistics?.likeCount || "0"),
-        comments: parseInt(v.statistics?.commentCount || "0"),
-        publishedAt: v.snippet.publishedAt,
-        duration: v.contentDetails?.duration,
-      })),
-      topVideos: topVideoStats.map((v: any) => ({
-        title: v.snippet.title,
-        views: parseInt(v.statistics?.viewCount || "0"),
-        likes: parseInt(v.statistics?.likeCount || "0"),
-      })),
+      realMetrics,
+      recentVideos: recentVideos.slice(0, 15),
+      topVideos: topVideos.slice(0, 10),
     };
-
-    const avgViews = channelSummary.recentVideos.length > 0
-      ? channelSummary.recentVideos.reduce((sum: number, v: any) => sum + v.views, 0) / channelSummary.recentVideos.length
-      : 0;
 
     // Call Lovable AI for analysis
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -130,12 +229,19 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é uma equipe de 3 especialistas analisando um canal do YouTube:
+            content: `Você é uma equipe de 3 especialistas analisando um canal do YouTube com MÉTRICAS REAIS:
 1. CEO YouTube Expert: 10+ anos de experiência, 500+ canais monetizados, expert em algoritmo 2025/2026
-2. Engenheiro de Software Sênior: especialista em dados e métricas
+2. Engenheiro de Dados: especialista em métricas de engajamento e retenção
 3. Roteirista Veterano: ex-MrBeast/Disney, CTR 30%+, retenção 80%+
 
-Analise os dados do canal e retorne uma análise completa em JSON com esta estrutura EXATA:
+MÉTRICAS REAIS DISPONÍVEIS - use-as na análise:
+- sub_watch_ratio: % dos inscritos que assistem cada vídeo em média
+- avg_engagement_rate: taxa de engajamento (likes+comments/views)
+- avg_comment_rate: taxa de comentários
+- consistency_score: frequência de uploads
+- outlier_count: vídeos que performaram 3x+ acima da média
+
+Analise os dados e retorne JSON com esta estrutura EXATA:
 {
   "seo_score": number (0-100),
   "title_quality_score": number (0-100),
@@ -153,21 +259,26 @@ Analise os dados do canal e retorne uma análise completa em JSON com esta estru
   "upload_frequency_recommendation": "string",
   "content_strategy": "string",
   "competitor_insights": "string",
-  "growth_potential": "string"
+  "growth_potential": "string",
+  "engagement_diagnosis": "string — análise detalhada do engajamento real",
+  "subscriber_loyalty_analysis": "string — análise da lealdade dos inscritos baseada em sub_watch_ratio",
+  "best_content_type": "string — tipo de conteúdo que performa melhor baseado nos dados",
+  "recommended_video_length": "string — duração ideal baseada nos dados reais",
+  "viral_potential_topics": ["string — 5 tópicos com alto potencial baseados nos outliers do canal"]
 }
 
-Seja MUITO específico e prático. Use dados reais do canal.`
+Seja MUITO específico e prático. Use os DADOS REAIS do canal.`
           },
           {
             role: "user",
-            content: `Analise este canal do YouTube:\n\n${JSON.stringify(channelSummary, null, 2)}\n\nMédia de views recentes: ${Math.round(avgViews)}\n\nRetorne APENAS o JSON, sem markdown.`
+            content: `Analise este canal do YouTube com métricas reais:\n\n${JSON.stringify(channelSummary, null, 2)}\n\nRetorne APENAS o JSON, sem markdown.`
           }
         ],
         tools: [{
           type: "function",
           function: {
             name: "channel_analysis",
-            description: "Return structured channel analysis",
+            description: "Return structured channel analysis with real metrics",
             parameters: {
               type: "object",
               properties: {
@@ -187,9 +298,14 @@ Seja MUITO específico e prático. Use dados reais do canal.`
                 upload_frequency_recommendation: { type: "string" },
                 content_strategy: { type: "string" },
                 competitor_insights: { type: "string" },
-                growth_potential: { type: "string" }
+                growth_potential: { type: "string" },
+                engagement_diagnosis: { type: "string" },
+                subscriber_loyalty_analysis: { type: "string" },
+                best_content_type: { type: "string" },
+                recommended_video_length: { type: "string" },
+                viral_potential_topics: { type: "array", items: { type: "string" } },
               },
-              required: ["seo_score", "title_quality_score", "niche_detected", "strengths", "weaknesses", "seo_improvements", "content_strategy"],
+              required: ["seo_score", "title_quality_score", "niche_detected", "strengths", "weaknesses", "seo_improvements", "content_strategy", "engagement_diagnosis", "subscriber_loyalty_analysis"],
               additionalProperties: false
             }
           }
@@ -205,7 +321,7 @@ Seja MUITO específico e prático. Use dados reais do canal.`
         });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -220,7 +336,6 @@ Seja MUITO específico e prático. Use dados reais do canal.`
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
       analysis = JSON.parse(toolCall.function.arguments);
     } catch {
-      // Fallback: try parsing content directly
       const content = aiData.choices?.[0]?.message?.content || "";
       analysis = JSON.parse(content.replace(/```json?\n?/g, "").replace(/```/g, "").trim());
     }
@@ -230,15 +345,16 @@ Seja MUITO específico e prático. Use dados reais do canal.`
         id: channelId,
         name: snippet.title,
         thumbnail: snippet.thumbnails?.medium?.url,
-        subscribers: parseInt(stats.subscriberCount || "0"),
-        views: parseInt(stats.viewCount || "0"),
-        videos: parseInt(stats.videoCount || "0"),
+        subscribers,
+        views: totalViews,
+        videos: videoCount,
         country: snippet.country,
         createdAt: snippet.publishedAt,
       },
       analysis,
-      recentVideos: channelSummary.recentVideos.slice(0, 5),
-      topVideos: channelSummary.topVideos.slice(0, 5),
+      realMetrics,
+      recentVideos: recentVideos.slice(0, 10),
+      topVideos: topVideos.slice(0, 10),
       avgRecentViews: Math.round(avgViews),
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
