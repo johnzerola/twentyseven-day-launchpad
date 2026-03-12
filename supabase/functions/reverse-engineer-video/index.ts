@@ -49,7 +49,7 @@ serve(async (req) => {
     if (BRAVE_API_KEY) {
       try {
         const searchQuery = `"${video_title}" transcript analysis breakdown`;
-        const braveRes = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=3`, {
+        const braveRes = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=2`, {
           headers: { "X-Subscription-Token": BRAVE_API_KEY },
         });
         const braveData = await braveRes.json();

@@ -35,7 +35,7 @@ serve(async (req) => {
       if (cached) return (cached.result_json as any)?.results || [];
       
       try {
-        const params = new URLSearchParams({ q: `${topic} ${niche || ''} YouTube`, count: "8" });
+        const params = new URLSearchParams({ q: `${topic} ${niche || ''} YouTube`, count: "5" });
         const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
           headers: { Accept: "application/json", "X-Subscription-Token": BRAVE_API_KEY },
         });
