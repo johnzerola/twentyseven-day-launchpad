@@ -82,12 +82,12 @@ serve(async (req) => {
       cached: false,
     };
 
-    // Cache for 24h
+    // Cache for 48h (validation mode: stretch budget)
     await sb.from("research_cache").upsert({
       cache_key: cacheKey,
       source: "brave",
       result_json: result,
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     }, { onConflict: "cache_key,source" });
 
     return new Response(JSON.stringify(result), {
