@@ -22,9 +22,6 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { hours = 72, niche, limit = 200, action = "scan" } = body;
 
-    // ═══════════════════════════════════════════════════════════════
-    // ACTION: scan — Full viral scan with new 7-signal formula
-    // ═══════════════════════════════════════════════════════════════
     if (action === "scan") {
       let query = sb.from("viral_titles_db").select("*").order("views", { ascending: false }).limit(limit);
       if (niche) query = query.eq("niche", niche);
@@ -35,8 +32,8 @@ serve(async (req) => {
         return jsonResponse({ success: true, message: "No videos to process", processed: 0 });
       }
 
-      // Pre-compute cluster scores for all niches in this batch
       const clusterScores = await computeClusterScores(sb);
+      const crossNicheMomentum = await computeCrossNicheMomentum(sb);
 
       const results: any[] = [];
       let breakouts = 0;
@@ -47,33 +44,25 @@ serve(async (req) => {
 
         for (const video of batch) {
           try {
-            // Enrich with YouTube stats
             let enrichedVideo = { ...video };
             if (YOUTUBE_API_KEY && video.channel_id) {
               enrichedVideo = await enrichWithYouTube(video, YOUTUBE_API_KEY);
               enriched_count++;
             }
 
-            // Enrich thumbnail via AI vision (if not already done)
             let thumbnailCtr = 0.05;
             if (LOVABLE_API_KEY && video.channel_id) {
               thumbnailCtr = await enrichThumbnailScore(sb, LOVABLE_API_KEY, video);
             }
             enrichedVideo.thumbnail_ctr = thumbnailCtr;
 
-            // Get channel median for ratio
             const channelMedian = await getChannelMedianViews(sb, video.channel_id || video.channel_name);
-
-            // Get velocity history for acceleration
             const velocityHistory = await getVelocityHistory(sb, video.channel_id);
-
-            // Cluster score for this niche
             const clusterScore = clusterScores[video.niche || "general"] || 0;
+            const crossMomentum = crossNicheMomentum[video.niche || "general"] || 0;
 
-            // Compute NEW viral score (7-signal professional formula)
-            const scoreData = computeViralScoreV2(enrichedVideo, channelMedian, velocityHistory, clusterScore);
+            const scoreData = computeViralScoreV3(enrichedVideo, channelMedian, velocityHistory, clusterScore, crossMomentum);
 
-            // Upsert emerging channel
             if (scoreData.score >= STRONG_SCORE && video.channel_id) {
               await sb.from("emerging_channels").upsert({
                 channel_id: video.channel_id,
@@ -86,17 +75,16 @@ serve(async (req) => {
                   views: enrichedVideo.views,
                   score_breakdown: scoreData.breakdown,
                   title: video.title,
-                  formula_version: "v2",
+                  formula_version: "v3",
                 },
               }, { onConflict: "channel_id" });
             }
 
-            // Breakout → reverse-engineer + queue
             if (scoreData.score >= BREAKOUT_SCORE) {
               breakouts++;
 
               await sb.from("viral_patterns").insert({
-                pattern_name: `v2-${video.channel_id || "unknown"}-${Date.now()}`,
+                pattern_name: `v3-${video.channel_id || "unknown"}-${Date.now()}`,
                 pattern_json: {
                   hook_text: video.title,
                   views: enrichedVideo.views,
@@ -104,7 +92,7 @@ serve(async (req) => {
                   score_breakdown: scoreData.breakdown,
                   emotional_triggers: video.emotional_triggers || [],
                   title_pattern: video.title_pattern,
-                  formula: "v2_7signal",
+                  formula: "v3_9signal",
                 },
                 niche: video.niche || null,
                 source_video: video.channel_id,
@@ -139,35 +127,32 @@ serve(async (req) => {
         if (i + 10 < videos.length) await new Promise(r => setTimeout(r, 500));
       }
 
-      // Log execution
       await sb.from("execution_logs").insert({
         function_name: "viral-score-worker",
         success: true,
         duration_ms: Date.now() - startTime,
         api_calls_made: enriched_count,
-        metadata: { action: "scan", videos_processed: results.length, breakouts, enriched: enriched_count, niche: niche || "all", formula: "v2" },
+        metadata: { action: "scan", videos_processed: results.length, breakouts, enriched: enriched_count, niche: niche || "all", formula: "v3" },
       });
 
       if (breakouts > 0) {
         await sb.from("ai_learning").insert({
-          topic: "viral_detection_v2",
-          insight: `V2 Scan: ${results.length} vídeos → ${breakouts} breakouts (nicho: ${niche || "all"}). Top: ${Math.max(...results.map(r => r.score))}/100. Fórmula: 7-signal com velocity_accel + cluster + retention_proxy.`,
-          source: "viral-score-worker-v2",
+          topic: "viral_detection_v3",
+          insight: `V3 Scan: ${results.length} vídeos → ${breakouts} breakouts (nicho: ${niche || "all"}). Top: ${Math.max(...results.map(r => r.score))}/100. Fórmula: 9-signal com recency_decay + engagement_quality + cross_niche_momentum.`,
+          source: "viral-score-worker-v3",
         });
       }
 
       return jsonResponse({
         success: true, processed: results.length, breakouts, enriched: enriched_count,
-        formula_version: "v2",
+        formula_version: "v3",
         top_results: results.filter(r => r.score >= 50).sort((a, b) => b.score - a.score).slice(0, 20),
         cluster_signals: clusterScores,
+        cross_niche_momentum: crossNicheMomentum,
         duration_ms: Date.now() - startTime,
       });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ACTION: recalculate_batch
-    // ═══════════════════════════════════════════════════════════════
     if (action === "recalculate_batch") {
       const { data: channels } = await sb.from("emerging_channels")
         .select("*").order("viral_score", { ascending: false }).limit(100);
@@ -175,23 +160,24 @@ serve(async (req) => {
       if (!channels?.length) return jsonResponse({ success: true, message: "No channels to recalculate" });
 
       const clusterScores = await computeClusterScores(sb);
+      const crossNicheMomentum = await computeCrossNicheMomentum(sb);
       let updated = 0;
 
       for (const ch of channels) {
         const meta = (ch.meta as any) || {};
-        const score = computeViralScoreV2(
+        const score = computeViralScoreV3(
           { views: meta.views || 0, likes: 0, comments: 0, published_at: ch.detected_at, duration_seconds: 600 },
-          1, [], clusterScores[ch.niche || "general"] || 0
+          1, [], clusterScores[ch.niche || "general"] || 0, crossNicheMomentum[ch.niche || "general"] || 0
         );
         await sb.from("emerging_channels").update({
           viral_score: Math.round(score.score * 100),
           last_checked: new Date().toISOString(),
-          meta: { ...meta, score_breakdown: score.breakdown, formula_version: "v2" },
+          meta: { ...meta, score_breakdown: score.breakdown, formula_version: "v3" },
         }).eq("id", ch.id);
         updated++;
       }
 
-      return jsonResponse({ success: true, updated, formula: "v2", duration_ms: Date.now() - startTime });
+      return jsonResponse({ success: true, updated, formula: "v3", duration_ms: Date.now() - startTime });
     }
 
     return jsonResponse({ error: `Unknown action: ${action}` }, 400);
@@ -209,23 +195,26 @@ serve(async (req) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// NEW V2 VIRAL SCORE — 7-Signal Professional Formula
+// V3 VIRAL SCORE — 9-Signal Algorithm
 // ═══════════════════════════════════════════════════════════════════
 //
 // viral_score = 
-//   0.25 × view_ratio        (views vs channel median)
-//   0.20 × velocity           (views per hour, normalized)
-//   0.15 × velocity_accel     (acceleration: current vs previous velocity)
-//   0.15 × estimated_retention (AVD / video_length proxy)
-//   0.10 × comment_velocity   (comments_per_hour / views_per_hour)
-//   0.10 × thumbnail_score    (AI-analyzed CTR estimate)
-//   0.05 × novelty            (cluster uniqueness signal)
+//   0.20 × view_ratio         (views vs channel median)
+//   0.15 × velocity            (views per hour, normalized)
+//   0.12 × velocity_accel      (acceleration: current vs previous velocity)
+//   0.12 × estimated_retention (AVD / video_length proxy)
+//   0.10 × recency_decay       (NEW: fresher content scores higher, exponential decay)
+//   0.10 × engagement_quality  (NEW: like-to-view + comment-to-view quality ratio)
+//   0.08 × comment_velocity    (comments_per_hour / views_per_hour)
+//   0.08 × thumbnail_score     (AI-analyzed CTR estimate)
+//   0.05 × cross_niche_signal  (NEW: momentum across related niches)
 //
-function computeViralScoreV2(
+function computeViralScoreV3(
   video: any,
   channelMedianViews: number,
   velocityHistory: number[],
   clusterScore: number,
+  crossNicheMomentum: number,
 ): { score: number; breakdown: Record<string, number> } {
   const views = Number(video.views || 0);
   const likes = Number(video.likes || 0);
@@ -234,55 +223,68 @@ function computeViralScoreV2(
   const publishedAt = video.published_at ? new Date(video.published_at) : new Date();
 
   const hoursSincePublish = Math.max((Date.now() - publishedAt.getTime()) / 3600000, 1);
+  const daysSincePublish = hoursSincePublish / 24;
 
-  // ── Signal 1: View Ratio (0.25) ──
+  // ── Signal 1: View Ratio (0.20) ──
   const viewsRatio = views / Math.max(1, channelMedianViews);
   const normViewRatio = Math.tanh(viewsRatio / 4);
 
-  // ── Signal 2: Velocity (0.20) ──
+  // ── Signal 2: Velocity (0.15) ──
   const viewsPerHour = views / hoursSincePublish;
   const normVelocity = Math.tanh(viewsPerHour / 1000);
 
-  // ── Signal 3: Velocity Acceleration (0.15) ──
-  // Compare current VPH to previous period's VPH
-  // If accelerating → video is gaining momentum (very bullish signal)
+  // ── Signal 3: Velocity Acceleration (0.12) ──
   const prevVph = velocityHistory.length > 0
     ? velocityHistory.reduce((a, b) => a + b, 0) / velocityHistory.length
-    : viewsPerHour * 0.8; // assume 80% of current if no history
+    : viewsPerHour * 0.8;
   const velocityAccel = prevVph > 0 ? (viewsPerHour - prevVph) / prevVph : 0;
-  const normVelocityAccel = Math.tanh(Math.max(0, velocityAccel)); // only positive acceleration matters
+  const normVelocityAccel = Math.tanh(Math.max(0, velocityAccel));
 
-  // ── Signal 4: Estimated Retention (0.15) ──
-  // Without real YouTube Analytics, proxy via engagement signals
-  // estimated_retention = avg_view_duration / video_length
-  // Proxy AVD from likes/comments engagement + duration
-  const engagementRate = (likes + comments * 3) / Math.max(1, views); // comments weighted 3x
-  const estimatedAvdRatio = Math.min(1, 0.25 + engagementRate * 10); // base 25% + engagement boost
+  // ── Signal 4: Estimated Retention (0.12) ──
+  const engagementRate = (likes + comments * 3) / Math.max(1, views);
+  const estimatedAvdRatio = Math.min(1, 0.25 + engagementRate * 10);
   const normRetention = estimatedAvdRatio;
 
-  // ── Signal 5: Comment Velocity (0.10) ──
-  // comments_per_hour / views_per_hour = comment density
+  // ── Signal 5: Recency Decay (0.10) — NEW ──
+  // Exponential decay: videos within 7 days score highest, 30+ days penalized heavily
+  // half-life = 14 days
+  const recencyDecay = Math.exp(-0.693 * daysSincePublish / 14);
+  const normRecency = Math.min(1, recencyDecay);
+
+  // ── Signal 6: Engagement Quality (0.10) — NEW ──
+  // Combines like-to-view ratio and comment-to-view ratio with quality weighting
+  // High-quality engagement = lots of comments relative to views (indicates discussion)
+  const likeRatio = likes / Math.max(1, views);
+  const commentRatio = comments / Math.max(1, views);
+  // Ideal: 4%+ likes, 0.5%+ comments
+  const likeQuality = Math.min(1, likeRatio / 0.04);
+  const commentQuality = Math.min(1, commentRatio / 0.005);
+  const normEngagementQuality = likeQuality * 0.5 + commentQuality * 0.5;
+
+  // ── Signal 7: Comment Velocity (0.08) ──
   const commentsPerHour = comments / hoursSincePublish;
   const commentVelocity = viewsPerHour > 0 ? commentsPerHour / viewsPerHour : 0;
   const normCommentVelocity = Math.tanh(commentVelocity * 50);
 
-  // ── Signal 6: Thumbnail Score (0.10) ──
+  // ── Signal 8: Thumbnail Score (0.08) ──
   const thumbScore = Math.min(1, (video.thumbnail_ctr || 0.05) / 10);
 
-  // ── Signal 7: Novelty / Cluster Signal (0.05) ──
-  // If multiple small channels explode in same niche = opportunity signal
-  const normNovelty = Math.min(1, clusterScore);
+  // ── Signal 9: Cross-Niche Momentum (0.05) — NEW ──
+  // If related niches are also growing, this niche has broader momentum
+  const normCrossNiche = Math.min(1, (clusterScore * 0.6 + crossNicheMomentum * 0.4));
 
   // ── Weighted Sum ──
-  const W = { w1: 0.25, w2: 0.20, w3: 0.15, w4: 0.15, w5: 0.10, w6: 0.10, w7: 0.05 };
+  const W = { w1: 0.20, w2: 0.15, w3: 0.12, w4: 0.12, w5: 0.10, w6: 0.10, w7: 0.08, w8: 0.08, w9: 0.05 };
   const score =
     W.w1 * normViewRatio +
     W.w2 * normVelocity +
     W.w3 * normVelocityAccel +
     W.w4 * normRetention +
-    W.w5 * normCommentVelocity +
-    W.w6 * thumbScore +
-    W.w7 * normNovelty;
+    W.w5 * normRecency +
+    W.w6 * normEngagementQuality +
+    W.w7 * normCommentVelocity +
+    W.w8 * thumbScore +
+    W.w9 * normCrossNiche;
 
   return {
     score: Math.round(score * 100) / 100,
@@ -291,15 +293,21 @@ function computeViralScoreV2(
       velocity: round2(normVelocity),
       velocity_acceleration: round2(normVelocityAccel),
       estimated_retention: round2(normRetention),
+      recency_decay: round2(normRecency),
+      engagement_quality: round2(normEngagementQuality),
       comment_velocity: round2(normCommentVelocity),
       thumbnail_score: round2(thumbScore),
-      novelty_cluster: round2(normNovelty),
+      cross_niche_signal: round2(normCrossNiche),
       raw: {
         views, vph: Math.round(viewsPerHour), channel_median: channelMedianViews,
         velocity_accel_pct: round2(velocityAccel * 100),
         est_avd_ratio: round2(estimatedAvdRatio),
         comment_density: round2(commentVelocity),
         cluster_score: round2(clusterScore),
+        days_since_publish: round2(daysSincePublish),
+        like_ratio_pct: round2(likeRatio * 100),
+        comment_ratio_pct: round2(commentRatio * 100),
+        cross_niche_momentum: round2(crossNicheMomentum),
       },
     },
   };
@@ -311,7 +319,6 @@ function computeViralScoreV2(
 async function computeClusterScores(sb: any): Promise<Record<string, number>> {
   const scores: Record<string, number> = {};
 
-  // Get recently growing channels grouped by niche
   const { data: emerging } = await sb.from("emerging_channels")
     .select("niche, viral_score, channel_id")
     .gte("last_checked", new Date(Date.now() - 7 * 86400_000).toISOString())
@@ -319,7 +326,6 @@ async function computeClusterScores(sb: any): Promise<Record<string, number>> {
 
   if (!emerging?.length) return scores;
 
-  // Group by niche and count growing channels
   const nicheMap: Record<string, number[]> = {};
   for (const ch of emerging) {
     const n = ch.niche || "general";
@@ -327,64 +333,83 @@ async function computeClusterScores(sb: any): Promise<Record<string, number>> {
     nicheMap[n].push(ch.viral_score || 0);
   }
 
-  // Get total channels per niche from channel_intelligence
   const { data: totalChannels } = await sb.from("channel_intelligence")
-    .select("niche")
-    .limit(500);
+    .select("niche").limit(500);
 
   const totalPerNiche: Record<string, number> = {};
   for (const ch of (totalChannels || [])) {
     totalPerNiche[ch.niche] = (totalPerNiche[ch.niche] || 0) + 1;
   }
 
-  // cluster_score = channels_growing_same_keyword / total_channels
-  // Boosted if 3+ channels are growing simultaneously
   for (const [n, growingScores] of Object.entries(nicheMap)) {
     const growing = growingScores.length;
     const total = Math.max(1, totalPerNiche[n] || growing);
     const ratio = growing / total;
-
-    // Cluster signal: strong if 3+ channels growing in same niche
-    const clusterBonus = growing >= 3 ? 0.3 : growing >= 2 ? 0.1 : 0;
-    scores[n] = Math.min(1, ratio + clusterBonus);
+    const avgScore = growingScores.reduce((a, b) => a + b, 0) / growing;
+    const clusterBonus = growing >= 5 ? 0.4 : growing >= 3 ? 0.3 : growing >= 2 ? 0.1 : 0;
+    const qualityBonus = avgScore > 60 ? 0.15 : avgScore > 40 ? 0.05 : 0;
+    scores[n] = Math.min(1, ratio + clusterBonus + qualityBonus);
   }
 
   return scores;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Velocity History — for acceleration computation
+// NEW: Cross-Niche Momentum — detects broader trends
+// ═══════════════════════════════════════════════════════════════════
+async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number>> {
+  const momentum: Record<string, number> = {};
+
+  // Get niches with recent viral activity
+  const { data: recentViral } = await sb.from("viral_titles_db")
+    .select("niche, views")
+    .gte("published_at", new Date(Date.now() - 14 * 86400_000).toISOString())
+    .order("views", { ascending: false })
+    .limit(200);
+
+  if (!recentViral?.length) return momentum;
+
+  // Count viral videos per niche in last 14 days
+  const nicheActivity: Record<string, { count: number; totalViews: number }> = {};
+  for (const v of recentViral) {
+    const n = v.niche || "general";
+    if (!nicheActivity[n]) nicheActivity[n] = { count: 0, totalViews: 0 };
+    nicheActivity[n].count++;
+    nicheActivity[n].totalViews += Number(v.views || 0);
+  }
+
+  // Niches with 3+ viral videos in 14 days create momentum for related niches
+  const activeNiches = Object.entries(nicheActivity).filter(([_, v]) => v.count >= 3);
+  const totalActiveNiches = activeNiches.length;
+
+  for (const [niche] of Object.entries(nicheActivity)) {
+    // Cross-niche signal: how many OTHER niches are also active
+    const otherActive = activeNiches.filter(([n]) => n !== niche).length;
+    momentum[niche] = Math.min(1, otherActive / Math.max(1, totalActiveNiches) + (nicheActivity[niche].count >= 5 ? 0.2 : 0));
+  }
+
+  return momentum;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Velocity History
 // ═══════════════════════════════════════════════════════════════════
 async function getVelocityHistory(sb: any, channelId: string | null): Promise<number[]> {
   if (!channelId) return [];
-
-  // Check if we have previous scan data in emerging_channels meta
   const { data: ch } = await sb.from("emerging_channels")
-    .select("meta")
-    .eq("channel_id", channelId)
-    .maybeSingle();
-
+    .select("meta").eq("channel_id", channelId).maybeSingle();
   const meta = (ch?.meta as any) || {};
-  if (meta.score_breakdown?.raw?.vph) {
-    return [meta.score_breakdown.raw.vph]; // previous velocity
-  }
+  if (meta.score_breakdown?.raw?.vph) return [meta.score_breakdown.raw.vph];
   return [];
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Thumbnail Enrichment via AI Vision
+// Thumbnail Enrichment
 // ═══════════════════════════════════════════════════════════════════
 async function enrichThumbnailScore(sb: any, lovableKey: string, video: any): Promise<number> {
-  // Check if already analyzed
   const { data: existing } = await sb.from("thumbnail_features")
-    .select("ctr_estimate")
-    .eq("video_id", video.channel_id || video.id || "")
-    .maybeSingle();
-
+    .select("ctr_estimate").eq("video_id", video.channel_id || video.id || "").maybeSingle();
   if (existing?.ctr_estimate) return existing.ctr_estimate;
-
-  // No real thumbnail URL in viral_titles_db, return default
-  // (auto-enrich-worker handles real thumbnail analysis with YouTube API)
   return 0.05;
 }
 
@@ -446,7 +471,6 @@ async function getChannelMedianViews(sb: any, channelId: string | null): Promise
   return arr[Math.floor(arr.length / 2)] || 1;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
 function round2(n: number): number { return Math.round(n * 100) / 100; }
 
 function jsonResponse(data: any, status = 200) {
