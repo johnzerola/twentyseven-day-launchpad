@@ -6,16 +6,41 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+let _ytKeys: string[] = [];
+let _currentKeyIndex = 0;
+
+function getYouTubeKeys(): string[] {
+  const keys: string[] = [];
+  const k1 = Deno.env.get("YOUTUBE_API_KEY");
+  const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
+  if (k1) keys.push(k1);
+  if (k2) keys.push(k2);
+  return keys;
+}
+
+function getCurrentKey(): string {
+  if (!_ytKeys.length) throw new Error("No YouTube API keys configured");
+  return _ytKeys[_currentKeyIndex % _ytKeys.length];
+}
+
+function switchKey(): boolean {
+  if (_ytKeys.length <= 1) return false;
+  _currentKeyIndex = (_currentKeyIndex + 1) % _ytKeys.length;
+  console.log(`Switched to YouTube API key #${_currentKeyIndex + 1}`);
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { niche, style, channelUrl, language } = await req.json();
 
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+    _ytKeys = getYouTubeKeys();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+    if (!_ytKeys.length) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const YOUTUBE_API_KEY = getCurrentKey();
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -24,9 +49,16 @@ serve(async (req) => {
 
     // ========== Mode 1: Analyze specific channel URL/handle/id ==========
     if (channelUrl) {
-      const channelId = await resolveChannelId(channelUrl, YOUTUBE_API_KEY);
+      let channelId: string | null = null;
+      try {
+        channelId = await resolveChannelId(channelUrl, getCurrentKey());
+      } catch (e: any) {
+        if (e.message === "QUOTA_EXCEEDED_RETRY") {
+          channelId = await resolveChannelId(channelUrl, getCurrentKey());
+        } else throw e;
+      }
       if (!channelId) return json({ error: "Canal não encontrado. Envie URL completa, @handle ou ID UC..." }, 404);
-      const result = await analyzeChannel(channelId, YOUTUBE_API_KEY, LOVABLE_API_KEY, sb);
+      const result = await analyzeChannel(channelId, getCurrentKey(), LOVABLE_API_KEY, sb);
       return json({ channel: result });
     }
 
@@ -35,7 +67,7 @@ serve(async (req) => {
     const allChannels: any[] = [];
 
     for (const query of searchQueries.slice(0, 3)) {
-      const channels = await searchChannels(query, YOUTUBE_API_KEY);
+      const channels = await searchChannels(query, getCurrentKey());
       for (const ch of channels.slice(0, 5)) {
         try {
           const existing = await sb.from("channel_intelligence")
@@ -45,7 +77,7 @@ serve(async (req) => {
 
           if (existing.data) continue; // skip already analyzed
 
-          const result = await analyzeChannel(ch.channelId, YOUTUBE_API_KEY, LOVABLE_API_KEY, sb);
+          const result = await analyzeChannel(ch.channelId, getCurrentKey(), LOVABLE_API_KEY, sb);
           allChannels.push(result);
         } catch (e) {
           console.error(`Failed to analyze ${ch.channelId}:`, e);
@@ -138,7 +170,12 @@ async function resolveChannelId(input: string, apiKey: string): Promise<string |
 
 function assertYouTubeResponse(data: any) {
   const reason = data?.error?.errors?.[0]?.reason;
-  if (reason === "quotaExceeded") throw new Error("QUOTA_EXCEEDED");
+  if (reason === "quotaExceeded") {
+    if (switchKey()) {
+      throw new Error("QUOTA_EXCEEDED_RETRY");
+    }
+    throw new Error("QUOTA_EXCEEDED");
+  }
   if (data?.error?.message) throw new Error(`YOUTUBE_ERROR: ${data.error.message}`);
 }
 

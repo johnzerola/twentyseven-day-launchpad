@@ -18,10 +18,45 @@ function parseYouTubeInput(input: string): { type: 'channel_id' | 'handle' | 'vi
   return { type: 'query', value: trimmed };
 }
 
-async function fetchJSON(url: string) {
+function getYouTubeKeys(): string[] {
+  const keys: string[] = [];
+  const k1 = Deno.env.get("YOUTUBE_API_KEY");
+  const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
+  if (k1) keys.push(k1);
+  if (k2) keys.push(k2);
+  return keys;
+}
+
+let _ytKeys: string[] = [];
+let _currentKeyIndex = 0;
+
+function getCurrentKey(): string {
+  if (!_ytKeys.length) throw new Error("No YouTube API keys configured");
+  return _ytKeys[_currentKeyIndex % _ytKeys.length];
+}
+
+function switchKey(): boolean {
+  if (_ytKeys.length <= 1) return false;
+  _currentKeyIndex = (_currentKeyIndex + 1) % _ytKeys.length;
+  console.log(`Switched to YouTube API key #${_currentKeyIndex + 1}`);
+  return true;
+}
+
+async function fetchJSON(url: string): Promise<any> {
   const res = await fetch(url);
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  if (data.error) {
+    const reason = data.error.errors?.[0]?.reason;
+    if (reason === "quotaExceeded" && switchKey()) {
+      // Retry with the other key
+      const newUrl = url.replace(/key=[^&]+/, `key=${getCurrentKey()}`);
+      const res2 = await fetch(newUrl);
+      const data2 = await res2.json();
+      if (data2.error) throw new Error(data2.error.message || JSON.stringify(data2.error));
+      return data2;
+    }
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
   return data;
 }
 
@@ -64,8 +99,9 @@ serve(async (req) => {
 
   try {
     const { query, language, country, period, minViews, minLikes, minSubs, maxSubs, niche, searchType } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+    _ytKeys = getYouTubeKeys();
+    if (!_ytKeys.length) throw new Error("YOUTUBE_API_KEY not configured");
+    const YOUTUBE_API_KEY = getCurrentKey();
     if (!query?.trim()) throw new Error("Query is required");
 
     const parsed = parseYouTubeInput(query);
