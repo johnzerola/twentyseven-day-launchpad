@@ -173,6 +173,10 @@ export const ScriptGenerator = ({
         const pid = await getOrCreateProject();
         await supabase.from('video_projects').update({ intelligence_json: briefing || {}, scene_blueprint_json: blueprint } as any).eq('id', pid);
       } catch { /* non-critical */ }
+      // Auto-learn from script generation (fire-and-forget)
+      supabase.functions.invoke('learn-from-user', {
+        body: { type: 'script_generated', data: { topic, niche, style, duration } },
+      }).catch(() => {});
       onScriptGenerated?.();
     } catch (err: any) {
       toast.error(err.message);

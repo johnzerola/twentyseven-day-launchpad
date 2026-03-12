@@ -177,6 +177,12 @@ const ChannelSearch = () => {
       if (!r.length) toast.info('Nenhum vídeo encontrado');
       // Auto-save
       await saveSearch(query, activeTab, r, ch);
+      // Auto-learn from search results (fire-and-forget)
+      if (r.length > 0) {
+        supabase.functions.invoke('learn-from-user', {
+          body: { type: 'search', data: { query, niche, results: r.slice(0, 15) } },
+        }).catch(() => {});
+      }
     } catch (err: any) {
       toast.error(err.message || 'Erro na busca');
     } finally {
@@ -220,6 +226,12 @@ const ChannelSearch = () => {
       if (data?.error) throw new Error(data.error);
       setDeepScanResult(data);
       toast.success('Deep Scan completo!');
+      // Auto-learn from video analysis (fire-and-forget)
+      if (data?.analysis) {
+        supabase.functions.invoke('learn-from-user', {
+          body: { type: 'video_analysis', data: { videoInfo: data.videoInfo, analysis: data.analysis } },
+        }).catch(() => {});
+      }
     } catch (err: any) {
       toast.error(err.message || 'Erro no Deep Scan');
     } finally {
