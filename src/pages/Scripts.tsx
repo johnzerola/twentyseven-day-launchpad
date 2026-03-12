@@ -566,8 +566,8 @@ const Scripts = () => {
                   className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Audio Intelligence → Cenas Contextuais</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">A IA transcreve o áudio e gera prompts visuais contextuais</p>
+                      <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Gerador de Cenas Visuais</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">A IA analisa o roteiro e cria prompts visuais cinematográficos</p>
                     </div>
                   </div>
                   <AudioProcessor
