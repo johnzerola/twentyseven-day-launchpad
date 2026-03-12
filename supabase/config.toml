@@ -117,3 +117,6 @@ verify_jwt = false
 [functions.enrich-video-knowledge]
 verify_jwt = false
 
+[functions.video-orchestrator]
+verify_jwt = false
+

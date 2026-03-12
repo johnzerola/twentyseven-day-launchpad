@@ -94,6 +94,18 @@ serve(async (req) => {
             result = await learnResp.json();
             break;
 
+          case "orchestrate_video":
+            const orchResp = await fetch(`${supabaseUrl}/functions/v1/video-orchestrator`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(task.payload || {}),
+            });
+            result = await orchResp.json();
+            break;
+
           case "generate_prompts":
             const promptsResp = await fetch(`${supabaseUrl}/functions/v1/generate-synced-prompts`, {
               method: "POST",
