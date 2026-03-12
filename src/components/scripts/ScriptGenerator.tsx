@@ -542,7 +542,7 @@ export const ScriptGenerator = ({
                   <ArrowLeft className="w-3 h-3" /> Voltar
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setScript(draftScript); setWizardStep(3); setTimeout(runStep3_DualScore, 100); }} className="gap-1 text-xs">
+                  <Button variant="outline" size="sm" onClick={async () => { setScript(draftScript); await runStep3_DualScoreWithText(draftScript); }} className="gap-1 text-xs">
                     ⚡ Pular refinamento
                   </Button>
                   <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">

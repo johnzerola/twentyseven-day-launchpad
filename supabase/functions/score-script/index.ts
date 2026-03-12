@@ -86,7 +86,7 @@ serve(async (req) => {
       fetch(AI_URL, {
         method: "POST", headers: aiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: SCORE_PROMPT + "\nVocê é o AVALIADOR GEMINI. Seja independente na sua análise." },
             { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
