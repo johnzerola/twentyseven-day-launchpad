@@ -577,6 +577,7 @@ const Scripts = () => {
                     sceneBlueprintJson={sceneBlueprintJson}
                     syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
                     getCleanNarration={getCleanNarration}
+                    customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
                   />
                   {syncedScenes.length > 0 && (
                     <div className="space-y-3">
