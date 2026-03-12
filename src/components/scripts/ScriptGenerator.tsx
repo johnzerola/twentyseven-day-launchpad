@@ -260,16 +260,18 @@ export const ScriptGenerator = ({
   };
 
   // ═══════ STEP 3: Dual AI Scoring ═══════
-  const runStep3_DualScore = async () => {
+  const runStep3_DualScoreWithText = async (scriptText?: string) => {
+    const textToScore = scriptText || script;
     setGenerating(true);
     setLoading(true);
     setWizardStep(3);
+    if (scriptText) setScript(scriptText);
     setDualScore(null);
-    setPhaseLabel('🛡️ GPT e Gemini Pro estão avaliando o roteiro...');
+    setPhaseLabel('🛡️ GPT e Gemini estão avaliando o roteiro...');
 
     try {
       const { data, error } = await supabase.functions.invoke('score-script', {
-        body: { script: script.slice(0, 12000), niche, style, language, topic },
+        body: { script: textToScore.slice(0, 12000), niche, style, language, topic },
       });
 
       if (error) throw new Error(error.message || 'Erro na avaliação');
@@ -542,7 +544,7 @@ export const ScriptGenerator = ({
                   <ArrowLeft className="w-3 h-3" /> Voltar
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setScript(draftScript); setWizardStep(3); setTimeout(runStep3_DualScore, 100); }} className="gap-1 text-xs">
+                  <Button variant="outline" size="sm" onClick={async () => { setScript(draftScript); await runStep3_DualScoreWithText(draftScript); }} className="gap-1 text-xs">
                     ⚡ Pular refinamento
                   </Button>
                   <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">
@@ -611,7 +613,7 @@ export const ScriptGenerator = ({
                 <Button variant="ghost" size="sm" onClick={() => setWizardStep(1)} className="gap-1 text-xs">
                   <ArrowLeft className="w-3 h-3" /> Voltar ao rascunho
                 </Button>
-                <Button size="sm" onClick={runStep3_DualScore} disabled={generating} className="gap-2 text-xs">
+                <Button size="sm" onClick={() => runStep3_DualScoreWithText()} disabled={generating} className="gap-2 text-xs">
                   <Shield className="w-4 h-4" /> Avaliar (GPT + Gemini)
                   <ArrowRight className="w-3 h-3" />
                 </Button>

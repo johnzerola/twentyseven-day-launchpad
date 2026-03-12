@@ -68,13 +68,13 @@ serve(async (req) => {
       },
     };
 
-    // Run BOTH evaluations in parallel: GPT-5 + Gemini Pro
-    console.log("Dual scoring: GPT-5 + Gemini Pro in parallel...");
+    // Run BOTH evaluations in parallel: GPT-5-nano + Gemini Flash (fast models to avoid timeout)
+    console.log("Dual scoring: GPT-5-nano + Gemini Flash in parallel...");
     const [gptRes, geminiRes] = await Promise.all([
       fetch(AI_URL, {
         method: "POST", headers: aiHeaders,
         body: JSON.stringify({
-          model: "openai/gpt-5-mini",
+          model: "openai/gpt-5-nano",
           messages: [
             { role: "system", content: SCORE_PROMPT + "\nVocê é o AVALIADOR GPT. Seja independente na sua análise." },
             { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
@@ -86,7 +86,7 @@ serve(async (req) => {
       fetch(AI_URL, {
         method: "POST", headers: aiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: SCORE_PROMPT + "\nVocê é o AVALIADOR GEMINI. Seja independente na sua análise." },
             { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
