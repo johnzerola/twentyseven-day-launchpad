@@ -245,13 +245,29 @@ export const ScriptGenerator = ({
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Idioma</label>
             <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-              <option value="português">Português</option>
-              <option value="inglês">English</option>
-              <option value="espanhol">Español</option>
-              <option value="alemão">Deutsch</option>
-              <option value="polonês">Polski</option>
-              <option value="turco">Türkçe</option>
-              <option value="japonês">日本語</option>
+              <option value="português">🇧🇷 Português</option>
+              <option value="inglês">🇺🇸 English</option>
+              <option value="espanhol">🇪🇸 Español</option>
+              <option value="alemão">🇩🇪 Deutsch</option>
+              <option value="polonês">🇵🇱 Polski</option>
+              <option value="turco">🇹🇷 Türkçe</option>
+              <option value="japonês">🇯🇵 日本語</option>
+              <option value="francês">🇫🇷 Français</option>
+              <option value="italiano">🇮🇹 Italiano</option>
+              <option value="tcheco">🇨🇿 Čeština</option>
+              <option value="holandês">🇳🇱 Nederlands</option>
+              <option value="coreano">🇰🇷 한국어</option>
+              <option value="hindi">🇮🇳 हिन्दी</option>
+              <option value="árabe">🇸🇦 العربية</option>
+              <option value="indonésio">🇮🇩 Bahasa</option>
+              <option value="tailandês">🇹🇭 ไทย</option>
+              <option value="vietnamita">🇻🇳 Tiếng Việt</option>
+              <option value="romeno">🇷🇴 Română</option>
+              <option value="húngaro">🇭🇺 Magyar</option>
+              <option value="sueco">🇸🇪 Svenska</option>
+              <option value="norueguês">🇳🇴 Norsk</option>
+              <option value="dinamarquês">🇩🇰 Dansk</option>
+              <option value="finlandês">🇫🇮 Suomi</option>
             </select>
           </div>
         </div>
