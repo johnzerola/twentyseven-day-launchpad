@@ -19,6 +19,7 @@ import Titles from "./pages/Titles";
 import ViralDatabase from "./pages/ViralDatabase";
 import Workflow from "./pages/Workflow";
 import MultiChannel from "./pages/MultiChannel";
+import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 
 import NotFound from "./pages/NotFound";
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/workflow" element={<P><Workflow /></P>} />
             <Route path="/multichannel" element={<P><MultiChannel /></P>} />
+            <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
             
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />

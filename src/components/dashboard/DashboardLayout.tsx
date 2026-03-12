@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle, Lock, CreditCard } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle, Lock, CreditCard, Database } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,7 @@ const navItems = [
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
+  { key: 'Knowledge Base', icon: Database, path: '/knowledge' },
 ];
 
 const TIER_COLORS: Record<string, string> = {
