@@ -22,7 +22,7 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const aiH = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
-    const results = { enriched: 0, breakouts: 0, hooks_generated: 0, patterns_saved: 0, errors: 0, details: [] as any[] };
+    const results = { enriched: 0, breakouts: 0, hooks_generated: 0, patterns_saved: 0, scripts_generated: 0, prompts_queued: 0, errors: 0, details: [] as any[] };
 
     // Step 1: Get recent trending videos (published within 72h)
     const since = new Date(Date.now() - 72 * 3600000).toISOString();
