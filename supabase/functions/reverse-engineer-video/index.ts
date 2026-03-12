@@ -202,12 +202,105 @@ serve(async (req) => {
       source: "reverse-engineer",
     }, { onConflict: "video_id" }).catch(() => {});
 
+    // ========== AUTO-FEED PIPELINE: Libraries enrichment ==========
+    const feedPromises: Promise<any>[] = [];
+
+    // 1. Feed hook_library with extracted hook
+    if (analysis.hook_analysis?.hook_text_estimate) {
+      feedPromises.push(
+        sb.from("hook_library").upsert({
+          hook_text: analysis.hook_analysis.hook_text_estimate,
+          hook_type: analysis.hook_analysis.hook_type || "curiosity",
+          niche: niche || "general",
+          retention_score: analysis.hook_analysis.retention_loop_count ? Math.min(analysis.hook_analysis.retention_loop_count + 5, 10) : 7,
+          source_video: video_id || video_title,
+        }, { onConflict: "hook_text" }).catch(() => {})
+      );
+    }
+
+    // 2. Feed attention_library with scene-level retention patterns
+    if (analysis.scene_structure?.length > 0) {
+      for (const scene of analysis.scene_structure.slice(0, 8)) {
+        feedPromises.push(
+          sb.from("attention_library").insert({
+            pattern_name: `${scene.retention_technique || scene.purpose || "scene"}_${niche}`,
+            scene_type: scene.purpose || "narrative",
+            time_window: scene.timestamp_estimate || "unknown",
+            emotion: scene.visual_style || "neutral",
+            visual_change: 6,
+            attention_score: 7,
+            retention_score: (analysis.viral_score || 5) / 10,
+            niche: niche || "general",
+            example_text: `[${video_title}] ${scene.purpose}: ${scene.visual_style}`,
+            source: "reverse-engineer-auto",
+          }).catch(() => {})
+        );
+      }
+    }
+
+    // 3. Feed viral_patterns with narrative structure
+    if (analysis.narrative_structure?.arc_type) {
+      feedPromises.push(
+        sb.from("viral_patterns").upsert({
+          pattern_name: `${analysis.narrative_structure.arc_type}_${niche}`,
+          niche: niche || "general",
+          source_video: video_id || video_title,
+          pattern_json: {
+            arc_type: analysis.narrative_structure.arc_type,
+            segments: analysis.narrative_structure.segments,
+            cliffhanger_count: analysis.narrative_structure.cliffhanger_count,
+            payoff_style: analysis.narrative_structure.payoff_style,
+            pacing: analysis.pacing_analysis,
+            psychological_triggers: analysis.psychological_triggers,
+          },
+        }, { onConflict: "pattern_name" }).catch(() => {})
+      );
+    }
+
+    // 4. Feed viral_titles_db if high viral score
+    if ((analysis.viral_score || 0) >= 7 && video_title) {
+      feedPromises.push(
+        sb.from("viral_titles_db").upsert({
+          title: video_title,
+          views: views || 0,
+          channel_id: channel_id || null,
+          channel_name: channel_name || null,
+          niche: niche || "general",
+          duration_seconds: duration_seconds || 0,
+          language: language || "pt",
+          emotional_triggers: analysis.psychological_triggers || [],
+          title_pattern: analysis.hook_analysis?.hook_type || null,
+          why_viral: `Viral Score: ${analysis.viral_score}. Triggers: ${(analysis.psychological_triggers || []).join(", ")}`,
+        }, { onConflict: "title" }).catch(() => {})
+      );
+    }
+
+    // 5. Feed audience_psychology_patterns with triggers
+    if (analysis.psychological_triggers?.length > 0) {
+      for (const trigger of analysis.psychological_triggers.slice(0, 3)) {
+        feedPromises.push(
+          sb.from("audience_psychology_patterns").insert({
+            trigger_type: trigger,
+            description: `Extracted from viral analysis of "${video_title}" (${niche})`,
+            niches: [niche || "general"],
+            example_titles: [video_title],
+            example_hooks: analysis.hook_analysis?.hook_text_estimate ? [analysis.hook_analysis.hook_text_estimate] : [],
+            retention_score: Math.round((analysis.viral_score || 5)),
+            source: "reverse-engineer-auto",
+          }).catch(() => {})
+        );
+      }
+    }
+
+    await Promise.all(feedPromises);
+    // ========== END AUTO-FEED PIPELINE ==========
+
     await sb.from("execution_logs").insert({
       function_name: "reverse-engineer-video",
       success: true,
       duration_ms: Date.now() - startTime,
       api_calls_made: 2,
-      metadata: { video_id, niche, viral_score: analysis.viral_score },
+      metadata: { video_id, niche, viral_score: analysis.viral_score, libraries_fed: feedPromises.length },
     }).catch(() => {});
 
     return new Response(JSON.stringify({
