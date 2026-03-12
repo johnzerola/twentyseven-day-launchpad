@@ -296,6 +296,19 @@ async function ingestResearchData(sb: any, domain: any, parsed: any) {
       }
     }
 
+    // Storytelling structures domain
+    if (domain.target_table === "script_knowledge" && parsed.structures) {
+      for (const s of parsed.structures.slice(0, 10)) {
+        await sb.from("script_knowledge").insert({
+          category: s.category || "storytelling_structure",
+          title: s.title || "Untitled Structure",
+          content: `${s.content || ""}${s.when_to_use ? `\n\nQuando usar: ${s.when_to_use}` : ""}${s.example_outline ? `\n\nOutline: ${s.example_outline}` : ""}`,
+          effectiveness_score: s.effectiveness_score || 7,
+          examples: JSON.stringify(s.example_outline ? [s.example_outline] : []),
+        });
+      }
+    }
+
     if (domain.target_table === "viral_content_library" && parsed.formats) {
       for (const fmt of parsed.formats.slice(0, 5)) {
         await sb.from("viral_content_library").insert({
