@@ -99,8 +99,9 @@ serve(async (req) => {
 
   try {
     const { query, language, country, period, minViews, minLikes, minSubs, maxSubs, niche, searchType } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+    _ytKeys = getYouTubeKeys();
+    if (!_ytKeys.length) throw new Error("YOUTUBE_API_KEY not configured");
+    const YOUTUBE_API_KEY = getCurrentKey();
     if (!query?.trim()) throw new Error("Query is required");
 
     const parsed = parseYouTubeInput(query);
