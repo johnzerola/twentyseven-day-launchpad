@@ -285,6 +285,91 @@ ANALISE:
     if (!toolCall) throw new Error("No AI response");
     const analysis = JSON.parse(toolCall.function.arguments);
 
+    // ========== AUTO-LEARN: Save insights to knowledge tables ==========
+    try {
+      const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const learnPromises: Promise<any>[] = [];
+
+      // 1. Save hook to script_knowledge
+      if (analysis.hookAnalysis?.powerScore >= 7) {
+        learnPromises.push(sb.from("script_knowledge").insert({
+          category: "hook",
+          title: `Hook: ${analysis.hookAnalysis.hookType} — "${video.snippet.title}"`,
+          content: `${analysis.hookAnalysis.hookText}\n\nPor que funciona: ${analysis.hookAnalysis.whyItWorks}`,
+          effectiveness_score: analysis.hookAnalysis.powerScore,
+          examples: JSON.stringify([video.snippet.title]),
+        }));
+      }
+
+      // 2. Save retention techniques
+      if (analysis.retentionMap?.structure?.length) {
+        for (const phase of analysis.retentionMap.structure.filter((p: any) => p.retentionEstimate >= 70).slice(0, 3)) {
+          learnPromises.push(sb.from("script_knowledge").insert({
+            category: "retention_technique",
+            title: `${phase.phase} — ${phase.technique}`,
+            content: `Técnica de retenção "${phase.technique}" usada na fase "${phase.phase}" (${phase.timeRange}). Retenção estimada: ${phase.retentionEstimate}%. Extraída do vídeo "${video.snippet.title}" do canal "${video.snippet.channelTitle}".`,
+            effectiveness_score: Math.round(phase.retentionEstimate / 10),
+            examples: JSON.stringify([`${video.snippet.title} (${phase.timeRange})`]),
+          }));
+        }
+      }
+
+      // 3. Save psychology triggers to viral_content_library
+      if (analysis.contentDNA?.psychTriggers?.length) {
+        learnPromises.push(sb.from("viral_content_library").insert({
+          category: "psychology_triggers",
+          content_json: {
+            triggers: analysis.contentDNA.psychTriggers,
+            source_video: video.snippet.title,
+            source_channel: video.snippet.channelTitle,
+            format: analysis.contentDNA.format,
+            emotional_tone: analysis.contentDNA.emotionalTone,
+            niche: analysis.contentDNA.nicheCategory,
+          },
+          language: "en",
+          niches: [analysis.contentDNA.nicheCategory],
+          effectiveness_score: Math.round(analysis.scores?.virality / 10) || 7,
+        }));
+      }
+
+      // 4. Save visual style as scene prompt knowledge
+      if (analysis.visualStyle?.replicabilityAsFaceless >= 60) {
+        learnPromises.push(sb.from("scene_prompt_knowledge").insert({
+          category: analysis.visualStyle.primaryStyle.toLowerCase().replace(/\s+/g, '_'),
+          title: `Visual: ${analysis.visualStyle.primaryStyle} — "${video.snippet.title}"`,
+          prompt_template: `Style: ${analysis.visualStyle.primaryStyle}. Color grading: ${analysis.visualStyle.colorGrading}. Transitions: ${analysis.visualStyle.transitionStyle}. B-roll: ${analysis.visualStyle.bRollUsage}. Editing pace: ${analysis.visualStyle.editingPace}. Production: ${analysis.visualStyle.productionLevel}. Tools: ${(analysis.visualStyle.toolsSuggested || []).join(', ')}.`,
+          viral_score: Math.round(analysis.scores?.virality / 10) || 7,
+          tags: JSON.stringify([analysis.visualStyle.primaryStyle, ...analysis.visualStyle.secondaryStyles || []]),
+        }));
+      }
+
+      // 5. Save title to viral_titles_db if high performing
+      if (views >= 350000) {
+        learnPromises.push(sb.from("viral_titles_db").insert({
+          title: video.snippet.title,
+          channel_name: video.snippet.channelTitle,
+          channel_id: video.snippet.channelId,
+          views,
+          likes,
+          niche: analysis.contentDNA?.nicheCategory || 'unknown',
+          why_viral: analysis.hookAnalysis?.whyItWorks || null,
+          title_pattern: analysis.titleAnalysis?.copywritingTechnique || null,
+          emotional_triggers: analysis.contentDNA?.psychTriggers || [],
+          seo_score: analysis.titleAnalysis?.ctrScore ? Math.round(analysis.titleAnalysis.ctrScore) : 0,
+          published_at: video.snippet.publishedAt,
+          duration_seconds: (() => {
+            const d = video.contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            return d ? (parseInt(d[1]||'0')*3600 + parseInt(d[2]||'0')*60 + parseInt(d[3]||'0')) : 0;
+          })(),
+        }).then(() => {}).catch(() => {})));
+      }
+
+      await Promise.allSettled(learnPromises);
+      console.log(`Auto-learn: saved ${learnPromises.length} insights from "${video.snippet.title}"`);
+    } catch (learnErr) {
+      console.error("Auto-learn error (non-fatal):", learnErr);
+    }
+
     return new Response(JSON.stringify({
       videoInfo: {
         id: videoId,
@@ -301,6 +386,7 @@ ANALISE:
         hasTranscript: !!transcript,
       },
       analysis,
+      autoLearn: true,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
