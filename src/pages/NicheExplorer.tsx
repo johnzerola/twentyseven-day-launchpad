@@ -115,10 +115,12 @@ const NicheExplorer = () => {
       setData(result);
       await saveAnalysis(q, country, result);
 
-      // AUTO-FEED: Trigger intelligence sync from user activity (non-blocking)
-      supabase.functions.invoke('intelligence-sync-engine', {
+      // AUTO-FEED: Trigger intelligence sync from user activity (non-blocking, silent on failure)
+      void supabase.functions.invoke('intelligence-sync-engine', {
         body: { mode: 'user_activity_feed' },
-      }).catch(() => {}); // fire-and-forget
+      }).then(({ error }) => {
+        if (error) console.warn('intelligence-sync-engine user_activity_feed:', error.message);
+      }).catch(() => {});
 
       toast.success('Análise completa e salva!');
     } catch (err: any) {
