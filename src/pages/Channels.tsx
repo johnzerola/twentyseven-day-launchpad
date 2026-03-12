@@ -479,6 +479,90 @@ const Channels = () => {
                           </div>
                         </div>
 
+                        {/* Real Engagement Metrics */}
+                        {analysis.realMetrics && (
+                          <div className="glass rounded-xl p-5">
+                            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" /> Métricas Reais de Engajamento</h3>
+                            <div className="grid grid-cols-4 gap-3 mb-4">
+                              {[
+                                { label: '👥 Inscritos que Assistem', value: `${analysis.realMetrics.sub_watch_ratio}%`, sub: analysis.realMetrics.sub_loyalty === 'alta' ? '🟢 Lealdade Alta' : analysis.realMetrics.sub_loyalty === 'média' ? '🟡 Lealdade Média' : '🔴 Lealdade Baixa', color: analysis.realMetrics.sub_loyalty === 'alta' ? 'border-emerald-500/30 bg-emerald-500/5' : analysis.realMetrics.sub_loyalty === 'média' ? 'border-amber-500/30 bg-amber-500/5' : 'border-red-500/30 bg-red-500/5' },
+                                { label: '💬 Taxa Engajamento', value: `${analysis.realMetrics.avg_engagement_rate}%`, sub: analysis.realMetrics.engagement_health === 'excelente' ? '🟢 Excelente' : analysis.realMetrics.engagement_health === 'bom' ? '🟢 Bom' : '🟡 Regular', color: analysis.realMetrics.engagement_health === 'excelente' || analysis.realMetrics.engagement_health === 'bom' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5' },
+                                { label: '📅 Frequência Upload', value: `${analysis.realMetrics.avg_days_between_uploads}d`, sub: analysis.realMetrics.consistency_score === 'excelente' ? '🟢 Excelente' : analysis.realMetrics.consistency_score === 'bom' ? '🟢 Bom' : '🟡 Regular', color: analysis.realMetrics.consistency_score === 'excelente' || analysis.realMetrics.consistency_score === 'bom' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5' },
+                                { label: '⏱ Duração Média', value: analysis.realMetrics.avg_duration_seconds > 3600 ? `${Math.round(analysis.realMetrics.avg_duration_seconds / 60)}min` : `${Math.floor(analysis.realMetrics.avg_duration_seconds / 60)}:${String(analysis.realMetrics.avg_duration_seconds % 60).padStart(2, '0')}`, sub: `📊 ${analysis.realMetrics.total_recent_videos} vídeos analisados`, color: 'border-border/50 bg-secondary/20' },
+                              ].map((m, i) => (
+                                <div key={i} className={`rounded-lg p-3 border ${m.color}`}>
+                                  <p className="text-[10px] text-muted-foreground mb-1">{m.label}</p>
+                                  <p className="text-lg font-bold">{m.value}</p>
+                                  <p className="text-[9px] mt-1">{m.sub}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="bg-secondary/20 rounded-lg p-3">
+                                <p className="text-[10px] text-muted-foreground">❤️ Taxa de Likes</p>
+                                <p className="text-sm font-bold">{analysis.realMetrics.avg_like_rate}%</p>
+                              </div>
+                              <div className="bg-secondary/20 rounded-lg p-3">
+                                <p className="text-[10px] text-muted-foreground">💬 Taxa Comentários</p>
+                                <p className="text-sm font-bold">{analysis.realMetrics.avg_comment_rate}%</p>
+                              </div>
+                              <div className="bg-secondary/20 rounded-lg p-3">
+                                <p className="text-[10px] text-muted-foreground">📆 Melhor Dia</p>
+                                <p className="text-sm font-bold">{analysis.realMetrics.best_upload_day}</p>
+                              </div>
+                            </div>
+                            {(analysis.realMetrics.outlier_count > 0 || analysis.realMetrics.underperforming_count > 0) && (
+                              <div className="flex gap-3 mt-3">
+                                {analysis.realMetrics.outlier_count > 0 && (
+                                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">🚀 {analysis.realMetrics.outlier_count} vídeos virais (3x+ média)</Badge>
+                                )}
+                                {analysis.realMetrics.underperforming_count > 0 && (
+                                  <Badge className="bg-red-500/10 text-red-400 border-red-500/30">📉 {analysis.realMetrics.underperforming_count} abaixo de 30% da média</Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* AI Engagement Diagnosis */}
+                        {(analysis.engagement_diagnosis || analysis.subscriber_loyalty_analysis) && (
+                          <div className="grid grid-cols-2 gap-4">
+                            {analysis.engagement_diagnosis && (
+                              <div className="glass rounded-xl p-4">
+                                <h4 className="font-semibold text-xs flex items-center gap-1.5 mb-2"><TrendingUp className="w-3.5 h-3.5 text-primary" /> Diagnóstico de Engajamento</h4>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{analysis.engagement_diagnosis}</p>
+                              </div>
+                            )}
+                            {analysis.subscriber_loyalty_analysis && (
+                              <div className="glass rounded-xl p-4">
+                                <h4 className="font-semibold text-xs flex items-center gap-1.5 mb-2"><Users className="w-3.5 h-3.5 text-primary" /> Lealdade dos Inscritos</h4>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{analysis.subscriber_loyalty_analysis}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Viral Potential Topics */}
+                        {analysis.viral_potential_topics?.length > 0 && (
+                          <div className="glass rounded-xl p-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 mb-3"><Flame className="w-4 h-4 text-primary" /> Tópicos com Potencial Viral</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                              {analysis.viral_potential_topics.map((t: string, i: number) => (
+                                <div key={i} className="flex items-start gap-2 bg-primary/5 rounded-lg p-2.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                                  <span className="text-xs text-muted-foreground">{t}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {(analysis.best_content_type || analysis.recommended_video_length) && (
+                              <div className="flex gap-3 mt-3 text-[10px] text-muted-foreground">
+                                {analysis.best_content_type && <span>📹 Melhor formato: <strong className="text-foreground">{analysis.best_content_type}</strong></span>}
+                                {analysis.recommended_video_length && <span>⏱ Duração ideal: <strong className="text-foreground">{analysis.recommended_video_length}</strong></span>}
+                              </div>
+                            )}
+                          </div>
+                        )
+
                         {/* Strengths & Weaknesses — side by side with icons */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="glass rounded-xl p-4">
