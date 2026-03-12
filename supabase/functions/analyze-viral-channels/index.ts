@@ -136,11 +136,44 @@ async function resolveChannelId(input: string, apiKey: string): Promise<string |
   return await resolveBySearch(raw, apiKey);
 }
 
+function assertYouTubeResponse(data: any) {
+  const reason = data?.error?.errors?.[0]?.reason;
+  if (reason === "quotaExceeded") throw new Error("QUOTA_EXCEEDED");
+  if (data?.error?.message) throw new Error(`YOUTUBE_ERROR: ${data.error.message}`);
+}
+
+async function resolveByHandle(handle: string, apiKey: string): Promise<string | null> {
+  if (!handle) return null;
+  const cleanHandle = handle.replace(/^@/, "").trim();
+  if (!cleanHandle) return null;
+
+  const byHandleRes = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(cleanHandle)}&key=${apiKey}`
+  );
+  const byHandleData = await byHandleRes.json();
+  assertYouTubeResponse(byHandleData);
+
+  return byHandleData.items?.[0]?.id || null;
+}
+
+async function resolveBySearch(query: string, apiKey: string): Promise<string | null> {
+  if (!query?.trim()) return null;
+
+  const res = await fetch(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=1`
+  );
+  const data = await res.json();
+  assertYouTubeResponse(data);
+
+  return data.items?.[0]?.snippet?.channelId || null;
+}
+
 async function searchChannels(query: string, apiKey: string): Promise<{ channelId: string; title: string }[]> {
   const res = await fetch(
     `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=10&order=viewCount`
   );
   const data = await res.json();
+  assertYouTubeResponse(data);
   if (!data.items) return [];
   return data.items.map((item: any) => ({
     channelId: item.snippet.channelId,
