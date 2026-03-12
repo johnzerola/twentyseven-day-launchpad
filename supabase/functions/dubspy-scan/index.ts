@@ -24,7 +24,11 @@ interface ScanParams {
 async function fetchJSON(url: string) {
   const res = await fetch(url);
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  if (data.error) {
+    const reason = data.error.errors?.[0]?.reason;
+    if (reason === "quotaExceeded") throw new Error("QUOTA_EXCEEDED");
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
   return data;
 }
 
