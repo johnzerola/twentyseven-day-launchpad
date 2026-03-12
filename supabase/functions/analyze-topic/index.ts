@@ -35,7 +35,7 @@ serve(async (req) => {
       if (cached) return (cached.result_json as any)?.results || [];
       
       try {
-        const params = new URLSearchParams({ q: `${topic} ${niche || ''} YouTube`, count: "8" });
+        const params = new URLSearchParams({ q: `${topic} ${niche || ''} YouTube`, count: "5" });
         const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
           headers: { Accept: "application/json", "X-Subscription-Token": BRAVE_API_KEY },
         });
@@ -44,10 +44,10 @@ serve(async (req) => {
         const results = (data.web?.results || []).slice(0, 8).map((r: any) => ({
           title: r.title, url: r.url, description: r.description,
         }));
-        // Cache 24h
+        // Cache 48h (validation mode: stretch Brave budget)
         await sb.from("research_cache").upsert({
           cache_key: cacheKey, source: "brave", result_json: { results },
-          expires_at: new Date(Date.now() + 24 * 3600000).toISOString(),
+          expires_at: new Date(Date.now() + 48 * 3600000).toISOString(),
         }, { onConflict: "cache_key,source" }).then(() => {});
         return results;
       } catch (e) { console.warn("Brave Search error:", e); return []; }

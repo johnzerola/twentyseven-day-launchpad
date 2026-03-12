@@ -1816,6 +1816,30 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          description: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value?: Json
+          description?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          description?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       video_blueprints: {
         Row: {
           channel_id: string | null

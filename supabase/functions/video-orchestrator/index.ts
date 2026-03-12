@@ -234,7 +234,7 @@ async function buildRag(sb: any, braveKey: string | undefined, query: string, ni
     }));
     await sb.from("research_cache").insert({
       cache_key: cacheKey, query, source: "brave",
-      result_json: results, expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
+      result_json: results, expires_at: new Date(Date.now() + 48 * 3600_000).toISOString(),
     }).catch(() => {});
     return JSON.stringify(results).slice(0, 3000);
   } catch (e) {
