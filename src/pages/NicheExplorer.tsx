@@ -113,6 +113,12 @@ const NicheExplorer = () => {
       if (result?.error) throw new Error(result.error);
       setData(result);
       await saveAnalysis(q, country, result);
+
+      // AUTO-FEED: Trigger intelligence sync from user activity (non-blocking)
+      supabase.functions.invoke('intelligence-sync-engine', {
+        body: { mode: 'user_activity_feed' },
+      }).catch(() => {}); // fire-and-forget
+
       toast.success('Análise completa e salva!');
     } catch (err: any) {
       toast.error(err.message || 'Erro na análise');
@@ -134,6 +140,11 @@ const NicheExplorer = () => {
     if (error?.code === '23505') return toast.info('Canal já rastreado');
     if (error) return toast.error('Erro');
     toast.success(`${ch.name} rastreado!`);
+
+    // AUTO-FEED: Sync tracked channel to intelligence (non-blocking)
+    supabase.functions.invoke('intelligence-sync-engine', {
+      body: { mode: 'sync_channels_to_intel' },
+    }).catch(() => {});
   };
 
   const a = data?.analysis;
@@ -142,7 +153,15 @@ const NicheExplorer = () => {
   const countryMeta = data?.meta?.countryData;
   const viralDbData = data?.viralDbData;
   const searchQueries = data?.meta?.searchQueries || [];
-  const filteredChannels = filterFaceless ? channels.filter((c: any) => c.faceless) : channels;
+
+  // ALGORITHM GATE: Only show channels that pass our viral score threshold (≥35)
+  const algorithmApprovedChannels = channels.filter((c: any) => (c.viralScore || 0) >= 35);
+  const filteredChannels = filterFaceless ? algorithmApprovedChannels.filter((c: any) => c.faceless) : algorithmApprovedChannels;
+  const rejectedCount = channels.length - algorithmApprovedChannels.length;
+
+  // ALGORITHM GATE: Only show trending videos with engagement rate ≥1% OR views ≥50K
+  const algorithmApprovedTrending = trending.filter((v: any) => (v.engagementRate || 0) >= 1 || (v.views || 0) >= 50000);
+  const rejectedTrendingCount = trending.length - algorithmApprovedTrending.length;
 
   const radarData = a?.radarMetrics ? [
     { metric: 'RPM', value: a.radarMetrics.rpm },
@@ -264,10 +283,12 @@ const NicheExplorer = () => {
           {/* Data sources info */}
           {data?.meta && (
             <div className="flex gap-2 flex-wrap text-[10px]">
+              <Badge variant="outline" className="gap-1 border-primary/50 text-primary font-semibold"><Shield className="w-3 h-3" /> Algoritmo V2 Ativo</Badge>
               <Badge variant="outline" className="gap-1"><Search className="w-3 h-3" /> {searchQueries.length} buscas AI</Badge>
-              <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {data.meta.totalChannels} canais via API</Badge>
-              <Badge variant="outline" className="gap-1"><Flame className="w-3 h-3" /> {data.meta.totalVideos} vídeos</Badge>
-              {data.meta.viralTitlesInDb > 0 && <Badge variant="outline" className="gap-1 text-accent border-accent/30"><Database className="w-3 h-3" /> {data.meta.viralTitlesInDb} títulos virais do DB</Badge>}
+              <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {filteredChannels.length}/{data.meta.totalChannels} canais aprovados</Badge>
+              {rejectedCount > 0 && <Badge variant="outline" className="gap-1 border-destructive/30 text-destructive"><XCircle className="w-3 h-3" /> {rejectedCount} filtrados</Badge>}
+              <Badge variant="outline" className="gap-1"><Flame className="w-3 h-3" /> {algorithmApprovedTrending.length}/{data.meta.totalVideos} vídeos aprovados</Badge>
+              {data.meta.viralTitlesInDb > 0 && <Badge variant="outline" className="gap-1 text-accent border-accent/30"><Database className="w-3 h-3" /> {data.meta.viralTitlesInDb} títulos virais</Badge>}
               {data.meta.intelChannelMatches > 0 && <Badge variant="outline" className="gap-1 text-primary border-primary/30"><Brain className="w-3 h-3" /> {data.meta.intelChannelMatches} canais internos</Badge>}
             </div>
           )}
@@ -862,9 +883,9 @@ const NicheExplorer = () => {
 
             {/* === TAB: TRENDING === */}
             <TabsContent value="trending" className="space-y-3">
-              {trending.length > 0 ? (
+              {algorithmApprovedTrending.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {trending.slice(0, 18).map((v: any) => (
+                  {algorithmApprovedTrending.slice(0, 18).map((v: any) => (
                     <a key={v.id} href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer"
                       className="glass rounded-xl overflow-hidden hover:border-primary/30 transition-all group">
                       <div className="relative">
