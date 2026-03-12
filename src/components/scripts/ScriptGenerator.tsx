@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -60,15 +60,26 @@ const SPEECH_RATES: Record<string, number> = {
   'sueco': 150, 'norueguês': 150, 'dinamarquês': 150, 'finlandês': 140,
 };
 
-// Wizard steps
 type WizardStep = 0 | 1 | 2 | 3;
 
 const WIZARD_STEPS = [
   { label: 'Configuração', icon: FileText, desc: 'Defina tópico, estilo e idioma' },
   { label: 'Rascunho IA', icon: Zap, desc: 'Gemini gera o rascunho — revise e edite' },
-  { label: 'Refinamento Claude', icon: Brain, desc: 'Claude refina — revise e edite' },
-  { label: 'Roteiro Final', icon: CheckCircle2, desc: 'Score final + roteiro pronto' },
+  { label: 'Refinamento Claude', icon: Brain, desc: 'Claude melhora pontos fracos' },
+  { label: 'Avaliação Dual', icon: Shield, desc: 'GPT + Gemini avaliam (mín. 14/20)' },
 ];
+
+interface DualScore {
+  approved: boolean;
+  combinedScore: number;
+  gpt_score: number;
+  gemini_score: number;
+  gpt_details: any;
+  gemini_details: any;
+  strengths: string[];
+  weaknesses: string[];
+  improvements: string[];
+}
 
 export const ScriptGenerator = ({
   topic, setTopic, duration, setDuration, style, setStyle,
@@ -83,6 +94,9 @@ export const ScriptGenerator = ({
   const [wizardStep, setWizardStep] = useState<WizardStep>(0);
   const [draftScript, setDraftScript] = useState('');
   const [phaseLabel, setPhaseLabel] = useState('');
+  const [dualScore, setDualScore] = useState<DualScore | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
   const wpm = SPEECH_RATES[language] || 150;
   const currentScript = wizardStep === 1 ? draftScript : script;
@@ -113,10 +127,8 @@ export const ScriptGenerator = ({
   };
 
   const cleanBlueprintFromScript = (text: string): string => text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
-
   const cleanAll = (text: string) => cleanBlueprintFromScript(cleanScoresFromScript(text));
 
-  // Stream SSE from edge function
   const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
     const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
       method: 'POST',
@@ -159,19 +171,19 @@ export const ScriptGenerator = ({
   };
 
   // ═══════ STEP 1: Generate Draft ═══════
-  const runStep1_Draft = async () => {
+  const runStep1_Draft = async (rejectionFeedback?: any) => {
     if (!topic.trim() || generating) return;
     setGenerating(true);
     setLoading(true);
     setDraftScript('');
     setScript('');
     setScorecard(null);
+    setDualScore(null);
     setSceneBlueprintJson([]);
     setWizardStep(1);
     setEditMode(false);
 
     try {
-      // Phase 0: Intelligence
       setPhaseLabel('🔍 Analisando inteligência competitiva...');
       let briefing = null;
       try {
@@ -185,8 +197,7 @@ export const ScriptGenerator = ({
         }
       } catch (err) { console.warn('Intelligence failed:', err); }
 
-      // Phase 1: Draft streaming
-      setPhaseLabel('✍️ Gemini está gerando seu rascunho...');
+      setPhaseLabel(retryCount > 0 ? `✍️ Gemini gerando novo rascunho (tentativa ${retryCount + 1})...` : '✍️ Gemini está gerando seu rascunho...');
       const viralContext = getViralContext();
       
       const rawDraft = await streamFromFunction('generate-script', {
@@ -196,7 +207,6 @@ export const ScriptGenerator = ({
         setDraftScript(cleanAll(fullText));
       });
 
-      // Extract blueprint
       const blueprint = parseSceneBlueprint(rawDraft);
       if (blueprint.length > 0) setSceneBlueprintJson(blueprint);
       setDraftScript(cleanAll(rawDraft));
@@ -213,20 +223,21 @@ export const ScriptGenerator = ({
   };
 
   // ═══════ STEP 2: Refine with Claude ═══════
-  const runStep2_Refine = async () => {
+  const runStep2_Refine = async (rejectionFeedback?: any) => {
     if (generating) return;
     setGenerating(true);
     setLoading(true);
     setScript('');
     setWizardStep(2);
     setEditMode(false);
-    setPhaseLabel('🧠 Claude está refinando seu roteiro...');
+    setPhaseLabel('🧠 Claude está melhorando os pontos fracos...');
 
     try {
       const refinedRaw = await streamFromFunction('refine-script', {
         draft_script: draftScript,
         niche, language, duration: parseInt(duration), style,
         target_words: targetWords,
+        rejection_feedback: rejectionFeedback || null,
       }, (fullText) => {
         setScript(cleanAll(fullText));
       });
@@ -236,7 +247,7 @@ export const ScriptGenerator = ({
       if (refinedBlueprint.length > 0) setSceneBlueprintJson(refinedBlueprint);
       setScript(cleanAll(refinedRaw));
       setPhaseLabel('');
-      toast.success('🧠 Claude refinou! Revise, edite e clique em "Finalizar".');
+      toast.success('🧠 Claude melhorou os pontos fracos! Revise e clique em "Avaliar".');
 
     } catch (err: any) {
       toast.error(`Refinamento falhou: ${err.message}. Usando rascunho.`);
@@ -248,45 +259,78 @@ export const ScriptGenerator = ({
     }
   };
 
-  // ═══════ STEP 3: Final Score + Save ═══════
-  const runStep3_Finalize = async () => {
+  // ═══════ STEP 3: Dual AI Scoring ═══════
+  const runStep3_DualScore = async () => {
     setGenerating(true);
     setLoading(true);
     setWizardStep(3);
-    setPhaseLabel('🛡️ Verificação final de qualidade...');
+    setDualScore(null);
+    setPhaseLabel('🛡️ GPT e Gemini Pro estão avaliando o roteiro...');
 
     try {
-      // Score
-      try {
-        const { data: fcData } = await supabase.functions.invoke('score-script', {
-          body: { script: script.slice(0, 10000), niche, language },
-        });
-        if (fcData?.scores) setScorecard(fcData.scores);
-      } catch { /* non-critical */ }
+      const { data, error } = await supabase.functions.invoke('score-script', {
+        body: { script: script.slice(0, 12000), niche, style, language, topic },
+      });
 
-      // Save to project
-      try {
-        const pid = await getOrCreateProject();
-        await supabase.from('video_projects').update({
-          intelligence_json: intelligenceBriefing || {},
-          scene_blueprint_json: parseSceneBlueprint(script),
-        } as any).eq('id', pid);
-      } catch { /* non-critical */ }
+      if (error) throw new Error(error.message || 'Erro na avaliação');
 
-      supabase.functions.invoke('learn-from-user', {
-        body: { type: 'script_generated', data: { topic, niche, style, duration } },
-      }).catch(() => {});
+      const result: DualScore = data;
+      setDualScore(result);
 
-      onScriptGenerated?.();
+      if (result.approved) {
+        toast.success(`✅ APROVADO! Score: ${result.combinedScore}/20 (GPT: ${result.gpt_score} + Gemini: ${result.gemini_score})`);
+        
+        // Save to project
+        try {
+          const pid = await getOrCreateProject();
+          await supabase.from('video_projects').update({
+            intelligence_json: intelligenceBriefing || {},
+            scene_blueprint_json: parseSceneBlueprint(script),
+          } as any).eq('id', pid);
+        } catch { /* non-critical */ }
+
+        // Save learning: approved script patterns
+        supabase.functions.invoke('learn-from-user', {
+          body: { type: 'script_approved', data: { topic, niche, style, duration, combined_score: result.combinedScore } },
+        }).catch(() => {});
+
+        onScriptGenerated?.();
+      } else {
+        toast.error(`❌ REPROVADO: ${result.combinedScore}/20 (mínimo 14). GPT: ${result.gpt_score} | Gemini: ${result.gemini_score}`);
+      }
+
       setPhaseLabel('');
-      toast.success('✅ Roteiro finalizado e salvo!');
 
     } catch (err: any) {
       toast.error(err.message);
+      setPhaseLabel('');
     } finally {
       setLoading(false);
       setGenerating(false);
     }
+  };
+
+  // ═══════ AUTO-RETRY: Rejected → Redo from draft ═══════
+  const handleRetry = async () => {
+    if (retryCount >= MAX_RETRIES) {
+      toast.error('Limite de tentativas atingido. Edite manualmente ou mude o tópico.');
+      return;
+    }
+
+    const feedback = dualScore ? {
+      reason: `Score ${dualScore.combinedScore}/20 (abaixo de 14)`,
+      weaknesses: dualScore.weaknesses,
+      improvements: dualScore.improvements,
+      gpt_score: dualScore.gpt_score,
+      gemini_score: dualScore.gemini_score,
+    } : null;
+
+    setRetryCount(prev => prev + 1);
+    setDualScore(null);
+    
+    // Go back to step 1 and regenerate with feedback
+    toast.info(`🔄 Regenerando roteiro (tentativa ${retryCount + 2}/${MAX_RETRIES + 1})...`);
+    await runStep1_Draft(feedback);
   };
 
   const saveScript = async () => {
@@ -311,12 +355,13 @@ export const ScriptGenerator = ({
     setDraftScript('');
     setScript('');
     setScorecard(null);
+    setDualScore(null);
     setPhaseLabel('');
     setEditMode(false);
+    setRetryCount(0);
   };
 
   const activeText = wizardStep === 1 ? draftScript : script;
-  const setActiveText = wizardStep === 1 ? setDraftScript : setScript;
 
   return (
     <>
@@ -348,6 +393,12 @@ export const ScriptGenerator = ({
             <Loader2 className="w-3 h-3 animate-spin" />
             {phaseLabel}
           </motion.div>
+        )}
+        {retryCount > 0 && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
+            <RefreshCw className="w-3 h-3" />
+            Tentativa {retryCount + 1}/{MAX_RETRIES + 1} — IA aprendendo com erros anteriores
+          </div>
         )}
       </div>
 
@@ -418,12 +469,11 @@ export const ScriptGenerator = ({
               </div>
             </div>
 
-            <Button onClick={runStep1_Draft} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
+            <Button onClick={() => runStep1_Draft()} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
               <Sparkles className="w-4 h-4" /> Gerar Rascunho com IA
               <ArrowRight className="w-4 h-4 ml-auto" />
             </Button>
 
-            {/* Paste own script shortcut */}
             <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => {
               setWizardStep(1);
               setDraftScript('');
@@ -486,17 +536,16 @@ export const ScriptGenerator = ({
               )
             )}
 
-            {/* Navigation */}
             {draftScript && !generating && (
               <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
                 <Button variant="ghost" size="sm" onClick={() => setWizardStep(0)} className="gap-1 text-xs">
                   <ArrowLeft className="w-3 h-3" /> Voltar
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setScript(draftScript); setWizardStep(3); runStep3_Finalize(); }} className="gap-1 text-xs">
+                  <Button variant="outline" size="sm" onClick={() => { setScript(draftScript); setWizardStep(3); setTimeout(runStep3_DualScore, 100); }} className="gap-1 text-xs">
                     ⚡ Pular refinamento
                   </Button>
-                  <Button size="sm" onClick={runStep2_Refine} disabled={generating} className="gap-2 text-xs">
+                  <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">
                     <Brain className="w-4 h-4" /> Refinar com Claude
                     <ArrowRight className="w-3 h-3" />
                   </Button>
@@ -539,27 +588,10 @@ export const ScriptGenerator = ({
               </div>
             </div>
 
-            {scorecard && (
-              <div className="grid grid-cols-5 gap-1.5 mb-3">
-                {[
-                  { label: '🎯 Hook', score: scorecard.hook },
-                  { label: '📊 Retenção', score: scorecard.retention },
-                  { label: '💥 Emoção', score: scorecard.emotion },
-                  { label: '🌊 Fluidez', score: scorecard.flow },
-                  { label: '🏆 Payoff', score: scorecard.payoff },
-                ].map(({ label, score }) => (
-                  <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[9px] text-muted-foreground">{label}</p>
-                    <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>{score}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {generating && !script && (
               <div className="text-center py-12">
                 <Brain className="w-10 h-10 mx-auto mb-3 text-purple-400 animate-pulse" />
-                <p className="text-sm text-muted-foreground">Claude está refinando o roteiro...</p>
+                <p className="text-sm text-muted-foreground">Claude está melhorando os pontos fracos...</p>
               </div>
             )}
 
@@ -579,8 +611,8 @@ export const ScriptGenerator = ({
                 <Button variant="ghost" size="sm" onClick={() => setWizardStep(1)} className="gap-1 text-xs">
                   <ArrowLeft className="w-3 h-3" /> Voltar ao rascunho
                 </Button>
-                <Button size="sm" onClick={runStep3_Finalize} disabled={generating} className="gap-2 text-xs">
-                  <CheckCircle2 className="w-4 h-4" /> Finalizar Roteiro
+                <Button size="sm" onClick={runStep3_DualScore} disabled={generating} className="gap-2 text-xs">
+                  <Shield className="w-4 h-4" /> Avaliar (GPT + Gemini)
                   <ArrowRight className="w-3 h-3" />
                 </Button>
               </div>
@@ -588,78 +620,174 @@ export const ScriptGenerator = ({
           </motion.div>
         )}
 
-        {/* ═══════ STEP 3: Final ═══════ */}
+        {/* ═══════ STEP 3: Dual AI Evaluation ═══════ */}
         {wizardStep === 3 && (
           <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  4. Roteiro Final
+                  <Shield className="w-4 h-4 text-blue-400" />
+                  4. Avaliação Dual IA
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {wordCount.toLocaleString()} palavras • ⏱ {estimatedMinutesDisplay} min
-                  {scorecard && <span className="ml-2 text-emerald-400 font-medium">• Verificado ✓</span>}
+                  GPT + Gemini Pro avaliam independentemente (mínimo 14/20 para aprovar)
                 </p>
               </div>
               <div className="flex gap-1.5">
-                <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-7 text-xs">
-                  {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
-                  {editMode ? 'Ler' : 'Editar'}
+                <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1 h-7 text-xs">
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={saveScript} className="gap-1 h-7 text-xs">
                   <Save className="w-3 h-3" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={copyScript} className="gap-1 h-7 text-xs">
-                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                </Button>
               </div>
             </div>
 
-            {scorecard && (
-              <div className="grid grid-cols-5 gap-1.5 mb-3">
-                {[
-                  { label: '🎯 Hook', score: scorecard.hook },
-                  { label: '📊 Retenção', score: scorecard.retention },
-                  { label: '💥 Emoção', score: scorecard.emotion },
-                  { label: '🌊 Fluidez', score: scorecard.flow },
-                  { label: '🏆 Payoff', score: scorecard.payoff },
-                ].map(({ label, score }) => (
-                  <div key={label} className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-[9px] text-muted-foreground">{label}</p>
-                    <p className={`text-lg font-bold ${score >= 9 ? 'text-emerald-400' : score >= 7 ? 'text-yellow-400' : 'text-destructive'}`}>{score}</p>
+            {/* Dual Score Display */}
+            {dualScore && (
+              <div className="space-y-3 mb-4">
+                {/* Combined Score */}
+                <div className={`p-4 rounded-xl border-2 text-center ${
+                  dualScore.approved 
+                    ? 'border-emerald-500/50 bg-emerald-500/10' 
+                    : 'border-destructive/50 bg-destructive/10'
+                }`}>
+                  <p className="text-xs text-muted-foreground mb-1">Score Combinado</p>
+                  <p className={`text-4xl font-black ${dualScore.approved ? 'text-emerald-400' : 'text-destructive'}`}>
+                    {dualScore.combinedScore}<span className="text-lg text-muted-foreground">/20</span>
+                  </p>
+                  <p className={`text-sm font-semibold mt-1 ${dualScore.approved ? 'text-emerald-400' : 'text-destructive'}`}>
+                    {dualScore.approved ? '✅ APROVADO' : '❌ REPROVADO (mínimo 14)'}
+                  </p>
+                </div>
+
+                {/* Individual Scores */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground mb-1 font-medium">🤖 GPT-5</p>
+                    <p className={`text-2xl font-bold ${dualScore.gpt_score >= 7 ? 'text-emerald-400' : dualScore.gpt_score >= 5 ? 'text-yellow-400' : 'text-destructive'}`}>
+                      {dualScore.gpt_score}<span className="text-xs text-muted-foreground">/10</span>
+                    </p>
+                    {dualScore.gpt_details && (
+                      <p className="text-[10px] text-muted-foreground mt-1 italic">"{dualScore.gpt_details.verdict}"</p>
+                    )}
                   </div>
-                ))}
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground mb-1 font-medium">💎 Gemini Pro</p>
+                    <p className={`text-2xl font-bold ${dualScore.gemini_score >= 7 ? 'text-emerald-400' : dualScore.gemini_score >= 5 ? 'text-yellow-400' : 'text-destructive'}`}>
+                      {dualScore.gemini_score}<span className="text-xs text-muted-foreground">/10</span>
+                    </p>
+                    {dualScore.gemini_details && (
+                      <p className="text-[10px] text-muted-foreground mt-1 italic">"{dualScore.gemini_details.verdict}"</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Detail breakdown */}
+                {(dualScore.gpt_details || dualScore.gemini_details) && (
+                  <div className="grid grid-cols-6 gap-1">
+                    {['hook', 'retention', 'emotion', 'flow', 'payoff', 'originality'].map(metric => {
+                      const gVal = dualScore.gpt_details?.[metric] || 0;
+                      const gemVal = dualScore.gemini_details?.[metric] || 0;
+                      const avg = Math.round((gVal + gemVal) / 2);
+                      const labels: Record<string, string> = { hook: '🎯 Hook', retention: '📊 Ret.', emotion: '💥 Emo.', flow: '🌊 Flow', payoff: '🏆 Pay.', originality: '✨ Orig.' };
+                      return (
+                        <div key={metric} className="text-center p-1.5 rounded bg-muted/20">
+                          <p className="text-[8px] text-muted-foreground">{labels[metric]}</p>
+                          <p className={`text-sm font-bold ${avg >= 7 ? 'text-emerald-400' : avg >= 5 ? 'text-yellow-400' : 'text-destructive'}`}>{avg}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Strengths & Weaknesses */}
+                {dualScore.strengths?.length > 0 && (
+                  <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                    <p className="text-[10px] font-semibold text-emerald-400 mb-1">✅ Pontos Fortes</p>
+                    {dualScore.strengths.map((s, i) => (
+                      <p key={i} className="text-[10px] text-muted-foreground">• {s}</p>
+                    ))}
+                  </div>
+                )}
+                {dualScore.weaknesses?.length > 0 && (
+                  <div className="p-2.5 rounded-lg bg-destructive/5 border border-destructive/20">
+                    <p className="text-[10px] font-semibold text-destructive mb-1">❌ Pontos Fracos</p>
+                    {dualScore.weaknesses.map((w, i) => (
+                      <p key={i} className="text-[10px] text-muted-foreground">• {w}</p>
+                    ))}
+                  </div>
+                )}
+                {!dualScore.approved && dualScore.improvements?.length > 0 && (
+                  <div className="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                    <p className="text-[10px] font-semibold text-amber-400 mb-1">🔧 Melhorias Necessárias</p>
+                    {dualScore.improvements.map((imp, i) => (
+                      <p key={i} className="text-[10px] text-muted-foreground">• {imp}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {generating && (
-              <div className="text-center py-6">
-                <Shield className="w-8 h-8 mx-auto mb-2 text-primary animate-pulse" />
-                <p className="text-sm text-muted-foreground">Verificação final...</p>
+              <div className="text-center py-10">
+                <Shield className="w-10 h-10 mx-auto mb-3 text-blue-400 animate-pulse" />
+                <p className="text-sm text-muted-foreground">GPT e Gemini Pro avaliando em paralelo...</p>
               </div>
             )}
 
-            {script && (
-              editMode ? (
-                <textarea value={script} onChange={e => setScript(e.target.value)}
-                  className="w-full min-h-[400px] max-h-[500px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto" />
-              ) : (
-                <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[500px] pr-2">
-                  <ReactMarkdown>{script}</ReactMarkdown>
+            {/* Script preview */}
+            {script && !generating && (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-muted-foreground font-medium">Roteiro</p>
+                  <Button size="sm" variant="ghost" onClick={() => setEditMode(!editMode)} className="gap-1 h-6 text-[10px]">
+                    {editMode ? <Eye className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                    {editMode ? 'Ler' : 'Editar'}
+                  </Button>
                 </div>
-              )
+                {editMode ? (
+                  <textarea value={script} onChange={e => setScript(e.target.value)}
+                    className="w-full min-h-[300px] max-h-[400px] bg-muted/20 border border-border rounded-lg p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto" />
+                ) : (
+                  <div className="prose prose-sm prose-invert max-w-none text-foreground overflow-y-auto max-h-[400px] pr-2">
+                    <ReactMarkdown>{script}</ReactMarkdown>
+                  </div>
+                )}
+              </>
             )}
 
-            {!generating && script && (
+            {/* Actions */}
+            {!generating && dualScore && (
               <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
-                <Button variant="ghost" size="sm" onClick={resetWizard} className="gap-1 text-xs">
-                  <RotateCcw className="w-3 h-3" /> Novo roteiro
-                </Button>
-                <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-2 text-xs">
-                  Próxima Etapa: Estilo Visual <Film className="w-4 h-4" />
-                </Button>
+                {dualScore.approved ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={resetWizard} className="gap-1 text-xs">
+                      <RotateCcw className="w-3 h-3" /> Novo roteiro
+                    </Button>
+                    <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-2 text-xs">
+                      Próxima Etapa: Estilo Visual <Film className="w-4 h-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => setWizardStep(2)} className="gap-1 text-xs">
+                      <ArrowLeft className="w-3 h-3" /> Editar manualmente
+                    </Button>
+                    <div className="flex gap-2">
+                      {retryCount < MAX_RETRIES && (
+                        <Button size="sm" variant="default" onClick={handleRetry} className="gap-2 text-xs">
+                          <RefreshCw className="w-3 h-3" /> Refazer (IA aprende)
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">{retryCount + 1}/{MAX_RETRIES}</Badge>
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => { toast.info('Aprovando manualmente...'); setDualScore({...dualScore, approved: true}); onScriptGenerated?.(); }} className="gap-1 text-xs">
+                        Aprovar mesmo assim
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </motion.div>

@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { draft_script, niche, language, duration, style, target_words } = await req.json();
+    const { draft_script, niche, language, duration, style, target_words, rejection_feedback } = await req.json();
     const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
     if (!CLAUDE_API_KEY) throw new Error("CLAUDE_API_KEY not configured");
     if (!draft_script) throw new Error("draft_script is required");
@@ -18,10 +18,12 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch knowledge for review context
-    const [ytRes, scriptRes, triggersRes] = await Promise.all([
+    const [ytRes, scriptRes, triggersRes, hookRes, structRes] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(5),
       sb.from("script_knowledge").select("category,title,content").order("effectiveness_score", { ascending: false }).limit(8),
       sb.from("viral_content_library").select("content_json,effectiveness_score,category").in("category", ["psychology_triggers", "retention_technique"]).order("effectiveness_score", { ascending: false }).limit(8),
+      sb.from("hook_library").select("hook_text,hook_type,retention_score").order("retention_score", { ascending: false }).limit(5),
+      sb.from("script_structures").select("structure_name,intro_pattern,middle_pattern,cliffhanger_pattern,ending_pattern,avg_retention").order("effectiveness_score", { ascending: false }).limit(3),
     ]);
 
     const ytKnowledge = (ytRes.data || []).map((r: any) => `${r.title}: ${r.content}`).join("\n");
@@ -30,44 +32,79 @@ serve(async (req) => {
       const c = r.content_json;
       return `• ${c.name || c.technique}: ${c.description || c.how_to_apply || ''}`;
     }).join("\n");
+    const topHooks = (hookRes.data || []).map((r: any) => `• [${r.hook_type}] "${r.hook_text}" (score: ${r.retention_score})`).join("\n");
+    const structures = (structRes.data || []).map((r: any) => `• ${r.structure_name}: Intro=${r.intro_pattern?.slice(0,80)} | Cliff=${r.cliffhanger_pattern?.slice(0,80)}`).join("\n");
 
     const tw = target_words || 2000;
 
-    const systemPrompt = `Você é um DIRETOR CRIATIVO IMPLACÁVEL que avalia e reescreve roteiros para canais YouTube 10M+ inscritos.
+    // Build rejection context if this is a retry
+    const rejectionContext = rejection_feedback ? `
+⚠️ ATENÇÃO — TENTATIVA ANTERIOR REJEITADA:
+Motivo da rejeição: ${rejection_feedback.reason}
+Pontos fracos identificados: ${(rejection_feedback.weaknesses || []).join('; ')}
+Melhorias exigidas: ${(rejection_feedback.improvements || []).join('; ')}
+Score GPT anterior: ${rejection_feedback.gpt_score}/10
+Score Gemini anterior: ${rejection_feedback.gemini_score}/10
 
-🧠 CONHECIMENTO:
-${ytKnowledge.slice(0, 2000)}
+VOCÊ DEVE corrigir ESPECIFICAMENTE esses pontos fracos. Não repita os mesmos erros.
+` : '';
 
-📝 TÉCNICAS:
-${scriptKnowledge.slice(0, 2000)}
+    const systemPrompt = `Você é um EDITOR CIRÚRGICO de roteiros para YouTube viral. Sua missão é MELHORAR o roteiro existente SEM reescrevê-lo do zero.
 
-🧠 GATILHOS:
-${psychTriggers.slice(0, 1500)}
+🚨 REGRA PRINCIPAL: PRESERVE 80-90% DO TEXTO ORIGINAL. Você NÃO é autor, é EDITOR.
 
-🔍 CRITÉRIOS DE SCORING (1-10):
-1. HOOK_SCORE: Hook impossível de ignorar?
-2. RETENTION_SCORE: Pattern interrupts a cada 45s? Open loops? Micro-cliffhangers?
-3. EMOTION_SCORE: Escalada emocional constante? Contraste?
-4. FLOW_SCORE: Flui naturalmente? Parece conversa?
-5. PAYOFF_SCORE: Final conecta ao hook?
+🔧 O QUE VOCÊ PODE FAZER:
+1. Melhorar o HOOK (primeiros 30s) — tornar mais impactante
+2. Adicionar pattern interrupts onde está MONÓTONO (a cada 45s)
+3. Inserir micro-cliffhangers entre seções
+4. Melhorar transições fracas
+5. Turbinar frases individuais que estão genéricas
+6. Adicionar open loops onde falta curiosidade
+7. Melhorar o FINAL — conectar ao hook
 
-🔧 PROCESSO:
-1. Dê scores BRUTALMENTE HONESTOS
-2. Se QUALQUER score < 8, REESCREVA as partes fracas
-3. Se hook < 9, crie hook NOVO devastador
-4. Injete mais pattern interrupts onde monótono
-5. Torne CADA frase impossível de pular
+❌ O QUE VOCÊ NÃO PODE FAZER:
+1. NÃO reescreva parágrafos inteiros que já funcionam
+2. NÃO mude a ordem narrativa
+3. NÃO remova conteúdo informativo
+4. NÃO altere o tom/estilo geral
+5. NÃO adicione informações inventadas
+6. NÃO mude mais de 20% do texto total
 
-⚠️ FORMATO:
+🧠 CONHECIMENTO YOUTUBE:
+${ytKnowledge.slice(0, 1500)}
+
+📝 TÉCNICAS DE ROTEIRO:
+${scriptKnowledge.slice(0, 1500)}
+
+🧠 GATILHOS PSICOLÓGICOS:
+${psychTriggers.slice(0, 1000)}
+
+🎯 HOOKS DE REFERÊNCIA:
+${topHooks.slice(0, 800)}
+
+📊 ESTRUTURAS VIRAIS:
+${structures.slice(0, 600)}
+${rejectionContext}
+
+📊 PROCESSO:
+1. Leia o roteiro COMPLETO
+2. Identifique os 3-5 pontos MAIS FRACOS
+3. Melhore APENAS esses pontos
+4. Mantenha TODO o resto intacto
+
+⚠️ FORMATO DE SAÍDA:
 PRIMEIRO: ---SCORES--- hook:X retention:X emotion:X flow:X payoff:X ---END_SCORES---
-DEPOIS: Roteiro COMPLETO reescrito (narração + ---EXTRAS---)
+(scores de 1-10 HONESTOS do roteiro APÓS suas melhorias)
+
+DEPOIS: O roteiro COMPLETO com suas melhorias cirúrgicas integradas.
+APENAS texto de narração. ZERO anotações técnicas. Valores em $.
+
 DEPOIS: ---SCENE_BLUEPRINT--- [JSON array de blocos ~30-45s] ---END_SCENE_BLUEPRINT---
 
-REGRAS: ZERO anotações técnicas no roteiro. Mínimo ${tw} palavras. Idioma: ${language || 'português'}. Valores em $.`;
+REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
     console.log("Phase 2: Streaming refine from Claude...");
 
-    // Claude API with streaming
     const refineRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -80,7 +117,7 @@ REGRAS: ZERO anotações técnicas no roteiro. Mínimo ${tw} palavras. Idioma: $
         max_tokens: 16000,
         system: systemPrompt,
         messages: [
-          { role: "user", content: `ROTEIRO PARA REVISAR E TURBINAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Transforme em algo que o espectador NÃO CONSIGA parar de assistir. Scores HONESTOS. Reescreva partes fracas. Retorne COMPLETO.` }
+          { role: "user", content: `ROTEIRO PARA EDIÇÃO CIRÚRGICA (NÃO reescreva do zero!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Identifique os 3-5 pontos FRACOS e melhore APENAS esses pontos. Preserve 80-90% do texto original. Retorne o roteiro COMPLETO com melhorias integradas.` }
         ],
         stream: true,
       }),
@@ -121,7 +158,6 @@ REGRAS: ZERO anotações técnicas no roteiro. Mínimo ${tw} palavras. Idioma: $
 
             try {
               const evt = JSON.parse(json);
-              // Claude content_block_delta
               if (evt.type === "content_block_delta" && evt.delta?.text) {
                 const openaiChunk = {
                   choices: [{ delta: { content: evt.delta.text }, index: 0 }],
