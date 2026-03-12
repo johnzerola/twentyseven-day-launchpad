@@ -89,19 +89,52 @@ serve(async (req) => {
               });
             }
 
-            // Step 5: If breakout → reverse engineer + generate hooks/script
-            if (viralScore >= BREAKOUT_THRESHOLD) {
+            // Step 5: If breakout → full pipeline: reverse engineer → script → scenes → queue prompts
+            if (viralScore >= BREAKOUT_THRESHOLD && isLongForm) {
               results.breakouts++;
 
-              // Reverse engineer the video
+              // 5a. Reverse engineer the video
               const pattern = await reverseEngineerVideo(sb, aiH, video, n, engagementRate);
               if (pattern) {
                 results.patterns_saved++;
                 results.details.push({ type: "breakout", title, score: viralScore, pattern: pattern.pattern_name });
 
-                // Generate hooks using RAG context
+                // 5b. Generate hooks using RAG context
                 const hooks = await generateHooks(sb, aiH, pattern, n, title);
                 results.hooks_generated += hooks.length;
+
+                // 5c. Select best hook and generate full script
+                const bestHook = hooks.length > 0
+                  ? hooks.sort((a: any, b: any) => (b.retention_score || 0) - (a.retention_score || 0))[0]
+                  : { hook_text: pattern.hook_text, hook_type: pattern.hook_type };
+
+                const scriptResult = await generateBreakoutScript(sb, aiH, pattern, bestHook, n, title, seconds);
+                if (scriptResult) {
+                  results.scripts_generated++;
+
+                  // 5d. Break script into scenes
+                  const scenes = await breakdownScenes(sb, aiH, scriptResult.script, n, scriptResult.projectId);
+                  if (scenes.length > 0) {
+                    // 5e. Queue prompt generation via task_queue
+                    await sb.from("task_queue").insert({
+                      task_type: "generate_prompts",
+                      payload: { project_id: scriptResult.projectId },
+                      status: "pending",
+                      scheduled_at: new Date().toISOString(),
+                    });
+                    results.prompts_queued++;
+                    results.details.push({ type: "auto_pipeline", title, project_id: scriptResult.projectId, scenes: scenes.length });
+                  }
+                }
+              }
+            } else if (viralScore >= BREAKOUT_THRESHOLD) {
+              results.breakouts++;
+              const pattern = await reverseEngineerVideo(sb, aiH, video, n, engagementRate);
+              if (pattern) {
+                results.patterns_saved++;
+                const hooks = await generateHooks(sb, aiH, pattern, n, title);
+                results.hooks_generated += hooks.length;
+                results.details.push({ type: "breakout_short", title, score: viralScore });
               }
             }
           } catch (e) {
