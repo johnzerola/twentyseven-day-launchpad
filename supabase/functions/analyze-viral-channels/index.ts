@@ -213,6 +213,7 @@ async function analyzeChannel(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(",")}&key=${youtubeKey}`
     );
     const statsData = await statsRes.json();
+    assertYouTubeResponse(statsData);
     topVideos = (statsData.items || []).map((v: any) => ({
       title: v.snippet.title,
       views: parseInt(v.statistics.viewCount || "0"),
