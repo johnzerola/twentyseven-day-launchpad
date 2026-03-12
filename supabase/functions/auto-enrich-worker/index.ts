@@ -435,3 +435,193 @@ ${JSON.stringify(pattern, null, 2)}
   }
   return [];
 }
+
+// ─── Step 5c: Generate full script from breakout pattern ──────
+async function generateBreakoutScript(sb: any, aiH: any, pattern: any, bestHook: any, niche: string, originalTitle: string, durationSec: number): Promise<{ script: string; projectId: string } | null> {
+  // Build RAG context
+  const { data: knowledge } = await sb.from("script_knowledge")
+    .select("title,content").order("effectiveness_score", { ascending: false }).limit(5);
+  const { data: viralHooks } = await sb.from("hook_library")
+    .select("hook_text,hook_type").eq("niche", niche).order("retention_score", { ascending: false }).limit(5);
+
+  const ragContext = `
+VIRAL PATTERN: ${pattern.pattern_name}
+Structure: ${pattern.storytelling_structure}
+Pacing: ${pattern.pacing}
+Retention techniques: ${(pattern.retention_techniques || []).join(', ')}
+Formula: ${pattern.replication_formula}
+
+BEST HOOK: [${bestHook.hook_type}] "${bestHook.hook_text}"
+
+TOP HOOKS IN NICHE:
+${(viralHooks || []).map((h: any) => `- [${h.hook_type}] "${h.hook_text}"`).join('\n')}
+
+SCRIPT KNOWLEDGE:
+${(knowledge || []).map((k: any) => `- ${k.title}: ${k.content.slice(0, 150)}`).join('\n')}
+  `.trim();
+
+  const targetDuration = Math.max(Math.min(Math.round(durationSec / 60), 15), 8);
+
+  try {
+    const aiRes = await fetch(AI_URL, {
+      method: "POST", headers: aiH,
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: `You are an elite YouTube scriptwriter. Generate a ${targetDuration}-minute faceless video script in Portuguese (BR). Use the provided viral pattern as the structural blueprint. The script must have high retention, nested curiosity loops, and anti-AI-slop natural language. Start with the provided hook.` },
+          { role: "user", content: `Create a script inspired by "${originalTitle}" in the "${niche}" niche.\n\nDuration: ~${targetDuration} minutes\n\n${ragContext}\n\nWrite the full script with clear segment markers [INTRO], [DEVELOPMENT], [CLIMAX], [CONCLUSION].` }
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "save_script",
+            description: "Save the generated script",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Video title in Portuguese" },
+                script: { type: "string", description: "Full script text with segment markers" },
+                scene_blueprint: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      segment: { type: "string" },
+                      narration: { type: "string" },
+                      visual_description: { type: "string" },
+                      duration_sec: { type: "integer" },
+                      emotional_intent: { type: "string" },
+                    },
+                    required: ["segment", "narration", "visual_description", "duration_sec", "emotional_intent"],
+                    additionalProperties: false,
+                  }
+                },
+              },
+              required: ["title", "script", "scene_blueprint"],
+              additionalProperties: false,
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "save_script" } },
+      }),
+    });
+
+    if (aiRes.ok) {
+      const aiData = await aiRes.json();
+      const tc = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (tc) {
+        const data = JSON.parse(tc.function.arguments);
+
+        // Create video project
+        const { data: project } = await sb.from("video_projects").insert({
+          title: data.title || `Auto: ${originalTitle.slice(0, 50)}`,
+          script: data.script,
+          niche,
+          duration_seconds: targetDuration * 60,
+          status: "script",
+          scene_blueprint_json: data.scene_blueprint || [],
+          intelligence_json: { source: "auto-enrich-worker", pattern: pattern.pattern_name, original: originalTitle },
+          user_id: "00000000-0000-0000-0000-000000000000", // system user placeholder
+        }).select("id").single();
+
+        if (project) {
+          console.log(`Created auto-project "${data.title}" (${project.id})`);
+          return { script: data.script, projectId: project.id };
+        }
+      }
+    } else {
+      await aiRes.text();
+    }
+  } catch (e) {
+    console.error("generateBreakoutScript error:", e);
+  }
+  return null;
+}
+
+// ─── Step 5d: Break script into scenes and save ──────
+async function breakdownScenes(sb: any, aiH: any, script: string, niche: string, projectId: string): Promise<any[]> {
+  try {
+    // Get scene prompt knowledge for visual reference
+    const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
+      .select("prompt_template,category").order("viral_score", { ascending: false }).limit(5);
+    const sceneRef = (sceneKnowledge || []).map((s: any) => `[${s.category}] ${s.prompt_template.slice(0, 100)}`).join('\n');
+
+    const aiRes = await fetch(AI_URL, {
+      method: "POST", headers: aiH,
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: `Break this script into visual scenes for a faceless YouTube video. Each scene needs a narration text, visual prompt for AI image/video generation, camera movement, and lighting.\n\nVISUAL REFERENCE:\n${sceneRef}` },
+          { role: "user", content: `Break this script into 8-15 scenes:\n\n${script.slice(0, 4000)}` }
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "save_scenes",
+            description: "Save scene breakdown",
+            parameters: {
+              type: "object",
+              properties: {
+                scenes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      tts_text: { type: "string", description: "Narration text for TTS" },
+                      visual_prompt: { type: "string", description: "Visual description for AI generation" },
+                      duration_sec: { type: "integer" },
+                      camera_movement: { type: "string" },
+                      lighting: { type: "string" },
+                      emotional_intent: { type: "string" },
+                    },
+                    required: ["tts_text", "visual_prompt", "duration_sec", "camera_movement", "lighting", "emotional_intent"],
+                    additionalProperties: false,
+                  }
+                }
+              },
+              required: ["scenes"],
+              additionalProperties: false,
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "save_scenes" } },
+      }),
+    });
+
+    if (aiRes.ok) {
+      const aiData = await aiRes.json();
+      const tc = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (tc) {
+        const data = JSON.parse(tc.function.arguments);
+        const scenes = data.scenes || [];
+
+        // Insert scenes into DB
+        for (let i = 0; i < scenes.length; i++) {
+          const s = scenes[i];
+          await sb.from("scenes").insert({
+            project_id: projectId,
+            sequence_order: i + 1,
+            tts_text: s.tts_text,
+            veo3_prompt: s.visual_prompt,
+            duration_sec: s.duration_sec || 8,
+            camera_movement: s.camera_movement,
+            lighting: s.lighting,
+            emotional_intent: s.emotional_intent,
+            status: "pending",
+          });
+        }
+
+        // Update project status
+        await sb.from("video_projects").update({ status: "scenes" }).eq("id", projectId);
+
+        console.log(`Saved ${scenes.length} scenes for project ${projectId}`);
+        return scenes;
+      }
+    } else {
+      await aiRes.text();
+    }
+  } catch (e) {
+    console.error("breakdownScenes error:", e);
+  }
+  return [];
+}
