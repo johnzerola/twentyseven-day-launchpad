@@ -350,6 +350,12 @@ Comece com o HOOK mais IMPOSSÍVEL DE IGNORAR. Vamos!` }
 🧠 BASE DE CONHECIMENTO YOUTUBE:
 ${ytKnowledge}
 
+🧠 GATILHOS PSICOLÓGICOS & TÉCNICAS DE RETENÇÃO (use para avaliar e melhorar o roteiro):
+${psychTriggers || "Sem gatilhos disponíveis"}
+
+🎬 FORMATOS DE CONTEÚDO VIRAL (verifique se o roteiro segue padrões de sucesso):
+${viralFormats || "Sem formatos disponíveis"}
+
 📝 TÉCNICAS DE ROTEIRO:
 ${scriptKnowledge}
 
