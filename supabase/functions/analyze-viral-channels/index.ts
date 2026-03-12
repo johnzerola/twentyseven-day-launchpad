@@ -57,12 +57,17 @@ serve(async (req) => {
   } catch (e) {
     console.error("analyze-viral-channels error:", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
-    if (msg.includes("429") || msg.includes("rate")) {
-      return json({ error: "Rate limit exceeded. Try again later." }, 429);
+
+    if (msg.includes("QUOTA_EXCEEDED")) {
+      return json({ error: "Quota da YouTube API esgotada. Tente novamente amanhã." }, 429);
+    }
+    if (msg.includes("CHANNEL_NOT_FOUND")) {
+      return json({ error: "Canal não encontrado. Verifique a URL/@handle e tente novamente." }, 404);
     }
     if (msg.includes("402")) {
-      return json({ error: "Credits insufficient." }, 402);
+      return json({ error: "Créditos insuficientes." }, 402);
     }
+
     return json({ error: msg }, 500);
   }
 });
