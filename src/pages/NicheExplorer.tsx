@@ -282,10 +282,12 @@ const NicheExplorer = () => {
           {/* Data sources info */}
           {data?.meta && (
             <div className="flex gap-2 flex-wrap text-[10px]">
+              <Badge variant="outline" className="gap-1 border-primary/50 text-primary font-semibold"><Shield className="w-3 h-3" /> Algoritmo V2 Ativo</Badge>
               <Badge variant="outline" className="gap-1"><Search className="w-3 h-3" /> {searchQueries.length} buscas AI</Badge>
-              <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {data.meta.totalChannels} canais via API</Badge>
-              <Badge variant="outline" className="gap-1"><Flame className="w-3 h-3" /> {data.meta.totalVideos} vídeos</Badge>
-              {data.meta.viralTitlesInDb > 0 && <Badge variant="outline" className="gap-1 text-accent border-accent/30"><Database className="w-3 h-3" /> {data.meta.viralTitlesInDb} títulos virais do DB</Badge>}
+              <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {filteredChannels.length}/{data.meta.totalChannels} canais aprovados</Badge>
+              {rejectedCount > 0 && <Badge variant="outline" className="gap-1 border-destructive/30 text-destructive"><XCircle className="w-3 h-3" /> {rejectedCount} filtrados</Badge>}
+              <Badge variant="outline" className="gap-1"><Flame className="w-3 h-3" /> {algorithmApprovedTrending.length}/{data.meta.totalVideos} vídeos aprovados</Badge>
+              {data.meta.viralTitlesInDb > 0 && <Badge variant="outline" className="gap-1 text-accent border-accent/30"><Database className="w-3 h-3" /> {data.meta.viralTitlesInDb} títulos virais</Badge>}
               {data.meta.intelChannelMatches > 0 && <Badge variant="outline" className="gap-1 text-primary border-primary/30"><Brain className="w-3 h-3" /> {data.meta.intelChannelMatches} canais internos</Badge>}
             </div>
           )}
