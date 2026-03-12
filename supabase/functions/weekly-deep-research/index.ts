@@ -307,6 +307,42 @@ async function ingestResearchData(sb: any, domain: any, parsed: any) {
         });
       }
     }
+
+    // Psychology triggers domain
+    if (domain.target_table === "viral_content_library" && domain.target_category === "psychology_triggers" && parsed.triggers) {
+      for (const trigger of parsed.triggers.slice(0, 10)) {
+        await sb.from("viral_content_library").insert({
+          category: "psychology_triggers",
+          content_json: {
+            name: trigger.name,
+            description: trigger.description,
+            how_to_apply: trigger.how_to_apply,
+            example_titles: trigger.example_titles || [],
+            best_for_niches: trigger.best_for_niches || [],
+          },
+          language: "en",
+          niches: trigger.best_for_niches || [],
+          effectiveness_score: trigger.effectiveness_score || 8,
+        });
+      }
+    }
+
+    // Niche opportunities
+    if (domain.target_table === "niche_database" && parsed.niches) {
+      for (const n of parsed.niches.slice(0, 8)) {
+        const { data: exists } = await sb.from("niche_database").select("id").ilike("name", n.name).maybeSingle();
+        if (!exists) {
+          await sb.from("niche_database").insert({
+            name: n.name,
+            rpm_estimate: n.rpm_estimate || 0,
+            saturation: n.saturation || 'medium',
+            difficulty: n.saturation || 'médio',
+            faceless_friendly: n.faceless_friendly ?? true,
+            sub_niches: JSON.stringify(n.sub_niches || []),
+          });
+        }
+      }
+    }
   } catch (e) {
     console.error("Ingestion error:", e.message);
   }
