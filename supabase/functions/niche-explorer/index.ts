@@ -185,14 +185,20 @@ serve(async (req) => {
       }
     }
 
-    // === STEP 3: Get video + channel stats ===
-    const videoIds = allSearchItems.map((i: any) => i.id.videoId).filter(Boolean).join(",");
-    const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`);
-    const vData = await vRes.json();
+    // === STEP 3: Get video + channel stats (only if we have YouTube results) ===
+    let trending: any[] = [];
+    let channels: any[] = [];
+    const chMap: Record<string, any> = {};
 
-    const channelIds = [...new Set((vData.items || []).map((v: any) => v.snippet.channelId))] as string[];
-    const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${channelIds.slice(0, 50).join(",")}&key=${YOUTUBE_API_KEY}`);
-    const cData = await cRes.json();
+    if (allSearchItems.length > 0) {
+      const currentKey = getYtKey();
+      const videoIds = allSearchItems.map((i: any) => i.id.videoId).filter(Boolean).join(",");
+      const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${videoIds}&key=${currentKey}`);
+      const vData = await vRes.json();
+
+      const channelIds = [...new Set((vData.items || []).map((v: any) => v.snippet.channelId))] as string[];
+      const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${channelIds.slice(0, 50).join(",")}&key=${currentKey}`);
+      const cData = await cRes.json();
 
     const chMap: Record<string, any> = {};
     (cData.items || []).forEach((ch: any) => {
