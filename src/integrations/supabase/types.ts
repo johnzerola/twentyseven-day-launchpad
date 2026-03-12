@@ -1267,6 +1267,81 @@ export type Database = {
         }
         Relationships: []
       }
+      video_blueprints: {
+        Row: {
+          channel_id: string | null
+          channel_name: string | null
+          clone_template: Json | null
+          created_at: string | null
+          hook_text: string | null
+          hook_type: string | null
+          id: string
+          likes: number | null
+          narrative_style: string | null
+          niche: string | null
+          pacing_type: string | null
+          psychological_triggers: string[] | null
+          retention_map: Json | null
+          scene_structure: Json | null
+          scores: Json | null
+          source: string | null
+          story_structure: Json | null
+          thumbnail_analysis: Json | null
+          video_id: string
+          video_title: string
+          views: number | null
+          visual_style: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          channel_name?: string | null
+          clone_template?: Json | null
+          created_at?: string | null
+          hook_text?: string | null
+          hook_type?: string | null
+          id?: string
+          likes?: number | null
+          narrative_style?: string | null
+          niche?: string | null
+          pacing_type?: string | null
+          psychological_triggers?: string[] | null
+          retention_map?: Json | null
+          scene_structure?: Json | null
+          scores?: Json | null
+          source?: string | null
+          story_structure?: Json | null
+          thumbnail_analysis?: Json | null
+          video_id: string
+          video_title?: string
+          views?: number | null
+          visual_style?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          channel_name?: string | null
+          clone_template?: Json | null
+          created_at?: string | null
+          hook_text?: string | null
+          hook_type?: string | null
+          id?: string
+          likes?: number | null
+          narrative_style?: string | null
+          niche?: string | null
+          pacing_type?: string | null
+          psychological_triggers?: string[] | null
+          retention_map?: Json | null
+          scene_structure?: Json | null
+          scores?: Json | null
+          source?: string | null
+          story_structure?: Json | null
+          thumbnail_analysis?: Json | null
+          video_id?: string
+          video_title?: string
+          views?: number | null
+          visual_style?: string | null
+        }
+        Relationships: []
+      }
       video_projects: {
         Row: {
           channel_id: string | null
