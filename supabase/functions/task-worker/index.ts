@@ -70,6 +70,30 @@ serve(async (req) => {
             result = await weeklyResp.json();
             break;
 
+          case "auto_enrich_videos":
+            const enrichResp = await fetch(`${supabaseUrl}/functions/v1/auto-enrich-worker`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(task.payload || {}),
+            });
+            result = await enrichResp.json();
+            break;
+
+          case "self_learning":
+            const learnResp = await fetch(`${supabaseUrl}/functions/v1/self-learning-engine`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(task.payload || {}),
+            });
+            result = await learnResp.json();
+            break;
+
           default:
             result = { warning: `Unknown task_type: ${task.task_type}` };
         }
