@@ -192,8 +192,9 @@ async function analyzeChannel(
     `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}&key=${youtubeKey}`
   );
   const chData = await chRes.json();
+  assertYouTubeResponse(chData);
   const ch = chData.items?.[0];
-  if (!ch) throw new Error("Channel not found");
+  if (!ch) throw new Error("CHANNEL_NOT_FOUND");
 
   const stats = ch.statistics;
   const snippet = ch.snippet;
