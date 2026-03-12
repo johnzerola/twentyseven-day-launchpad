@@ -56,9 +56,11 @@ const ChannelIntelligence = () => {
       setData(result);
       toast.success('Relatório gerado!');
     } catch (e: any) {
-      if (e?.message?.includes('429')) toast.error('Rate limit. Tente novamente em alguns segundos.');
-      else if (e?.message?.includes('402')) toast.error('Créditos insuficientes.');
-      else toast.error(e?.message || 'Erro ao analisar');
+      const msg = e?.message || '';
+      if (msg.includes('429')) toast.error('Quota/rate limit da API atingido. Tente novamente amanhã.');
+      else if (msg.includes('404') || msg.toLowerCase().includes('não encontrado')) toast.error('Canal não encontrado. Use URL completa, @handle ou ID UC.');
+      else if (msg.includes('402')) toast.error('Créditos insuficientes.');
+      else toast.error(msg || 'Erro ao analisar');
     }
     setLoading(false);
   };
