@@ -88,7 +88,7 @@ serve(async (req) => {
                   title: video.title,
                   formula_version: "v2",
                 },
-              }, { onConflict: "channel_id" }).catch(() => {});
+              }, { onConflict: "channel_id" });
             }
 
             // Breakout → reverse-engineer + queue
@@ -108,7 +108,7 @@ serve(async (req) => {
                 },
                 niche: video.niche || null,
                 source_video: video.channel_id,
-              }).catch(() => {});
+              });
 
               await sb.from("task_queue").insert({
                 task_type: "reverse_engineer",
@@ -122,7 +122,7 @@ serve(async (req) => {
                   viral_score: scoreData.score,
                 },
                 status: "pending",
-              }).catch(() => {});
+              });
             }
 
             results.push({
@@ -146,14 +146,14 @@ serve(async (req) => {
         duration_ms: Date.now() - startTime,
         api_calls_made: enriched_count,
         metadata: { action: "scan", videos_processed: results.length, breakouts, enriched: enriched_count, niche: niche || "all", formula: "v2" },
-      }).catch(() => {});
+      });
 
       if (breakouts > 0) {
         await sb.from("ai_learning").insert({
           topic: "viral_detection_v2",
           insight: `V2 Scan: ${results.length} vídeos → ${breakouts} breakouts (nicho: ${niche || "all"}). Top: ${Math.max(...results.map(r => r.score))}/100. Fórmula: 7-signal com velocity_accel + cluster + retention_proxy.`,
           source: "viral-score-worker-v2",
-        }).catch(() => {});
+        });
       }
 
       return jsonResponse({
@@ -203,7 +203,7 @@ serve(async (req) => {
       success: false,
       duration_ms: Date.now() - startTime,
       error_message: e instanceof Error ? e.message : "Unknown",
-    }).catch(() => {});
+    });
     return jsonResponse({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });

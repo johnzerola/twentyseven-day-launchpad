@@ -40,13 +40,15 @@ const EMERGING_PRESETS = [
   { label: '< 6 meses', maxVideos: 50, maxAge: 180 },
 ];
 
-const SORT_OPTIONS = [
+  const SORT_OPTIONS = [
   { value: 'viralScore', label: '🔥 Viral Score' },
   { value: 'subscribers', label: '👥 Inscritos' },
   { value: 'maxVideoViews', label: '👁 Max Views' },
   { value: 'growthVelocity', label: '📈 Crescimento' },
   { value: 'avgEngagement', label: '💬 Engajamento' },
   { value: 'avgViewVelocity72h', label: '⚡ Velocidade 72h' },
+  { value: 'uploadFrequencyDays', label: '📅 Frequência Upload' },
+  { value: 'growthPotentialScore', label: '🎯 Potencial' },
 ];
 
 const ViralScoreRing = ({ score, label, size = 48 }: { score: number; label: string; size?: number }) => {
@@ -88,11 +90,14 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   const [minVideoViews, setMinVideoViews] = useState('');
   const [minEngagement, setMinEngagement] = useState('');
   const [minViralScore, setMinViralScore] = useState('');
+  const [facelessOnly, setFacelessOnly] = useState(false);
+  const [maxUploadFreq, setMaxUploadFreq] = useState('');
+  const [minAvgViews, setMinAvgViews] = useState('');
   const [sortBy, setSortBy] = useState(mode === 'escapees' ? 'growthVelocity' : 'viralScore');
   const [customNiche, setCustomNiche] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const activeFilterCount = [minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore].filter(v => v).length;
+  const activeFilterCount = [minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, maxUploadFreq, minAvgViews].filter(v => v).length + (facelessOnly ? 1 : 0);
 
   const tabKey = mode === 'emerging' ? 'emerging' : 'escapees';
 
@@ -125,7 +130,7 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
   const persistSearch = useCallback(async (nicheQ: string, chs: ChannelResult[], metaData: any) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const filters = { niche: nicheQ, country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore };
+    const filters = { niche: nicheQ, country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, facelessOnly, maxUploadFreq, minAvgViews };
     const { data: existing } = await supabase
       .from('saved_searches')
       .select('id')
@@ -146,7 +151,7 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
         results_json: chs as any, channel_info_json: metaData as any, filters_json: filters as any,
       });
     }
-  }, [country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, tabKey]);
+  }, [country, language, sortBy, maxVideos, maxAge, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, facelessOnly, maxUploadFreq, minAvgViews, tabKey]);
 
   const scan = async () => {
     const nicheQuery = niche || customNiche;
@@ -169,11 +174,28 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
           minVideoViews: minVideoViews ? parseInt(minVideoViews) : undefined,
           minEngagement: minEngagement ? parseFloat(minEngagement) : undefined,
           minViralScore: minViralScore ? parseInt(minViralScore) : undefined,
+          facelessOnly: facelessOnly || undefined,
+          maxUploadFreq: maxUploadFreq ? parseInt(maxUploadFreq) : undefined,
+          minAvgViews: minAvgViews ? parseInt(minAvgViews) : undefined,
         },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      const chs = data?.channels || [];
+      let chs: ChannelResult[] = data?.channels || [];
+      
+      // Client-side post-filters for fields not handled by backend
+      if (facelessOnly) {
+        chs = chs.filter(ch => !ch.thumbnail || ch.description?.toLowerCase().includes('faceless') || ch.videoCount > 0);
+      }
+      if (maxUploadFreq) {
+        const maxFreq = parseInt(maxUploadFreq);
+        chs = chs.filter(ch => !ch.uploadFrequencyDays || ch.uploadFrequencyDays <= maxFreq);
+      }
+      if (minAvgViews) {
+        const minAvg = parseInt(minAvgViews);
+        chs = chs.filter(ch => ch.avgViews >= minAvg);
+      }
+      
       const metaData = data?.meta || null;
       setChannels(chs);
       setMeta(metaData);
@@ -314,6 +336,21 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                 <label className="text-[11px] text-muted-foreground mb-1 block">Min Viral Score</label>
                 <Input type="number" placeholder="ex: 30" value={minViralScore} onChange={e => setMinViralScore(e.target.value)}
                   className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Min views médio</label>
+                <Input type="number" placeholder="ex: 5000" value={minAvgViews} onChange={e => setMinAvgViews(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Max freq. upload (dias)</label>
+                <Input type="number" placeholder="ex: 14" value={maxUploadFreq} onChange={e => setMaxUploadFreq(e.target.value)}
+                  className="h-8 bg-secondary/50 text-sm" />
+              </div>
+              <div className="flex items-center gap-2 pt-4">
+                <input type="checkbox" id="facelessOnly" checked={facelessOnly} onChange={e => setFacelessOnly(e.target.checked)}
+                  className="rounded border-input" />
+                <label htmlFor="facelessOnly" className="text-[11px] text-muted-foreground cursor-pointer">Apenas canais Faceless</label>
               </div>
             </div>
           )}
