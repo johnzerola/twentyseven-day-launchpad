@@ -31,9 +31,15 @@ serve(async (req) => {
 
   try {
     const { niche, country, language } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+    const ytKeys: string[] = [];
+    const k1 = Deno.env.get("YOUTUBE_API_KEY");
+    const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
+    if (k1) ytKeys.push(k1);
+    if (k2) ytKeys.push(k2);
+    let ytKeyIndex = 0;
+    const getYtKey = () => ytKeys[ytKeyIndex % ytKeys.length] || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+    if (!ytKeys.length) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
