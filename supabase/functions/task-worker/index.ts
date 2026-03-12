@@ -118,9 +118,56 @@ serve(async (req) => {
             result = await promptsResp.json();
             break;
 
+          case "reverse_engineer":
+            const reverseResp = await fetch(`${supabaseUrl}/functions/v1/reverse-engineer-video`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(task.payload || {}),
+            });
+            result = await reverseResp.json();
+            break;
+
+          case "viral_score_recalc":
+            const scoreResp = await fetch(`${supabaseUrl}/functions/v1/monetiza-score`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ ...task.payload, action: "recalculate_batch" }),
+            });
+            result = await scoreResp.json();
+            break;
+
+          case "autoflow_execute":
+            const autoflowResp = await fetch(`${supabaseUrl}/functions/v1/generate-veo3-video`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(task.payload || {}),
+            });
+            result = await autoflowResp.json();
+            break;
+
+          case "daily_ingestion":
+            const ingestResp = await fetch(`${supabaseUrl}/functions/v1/daily-data-ingestion`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(task.payload || {}),
+            });
+            result = await ingestResp.json();
+            break;
+
           default:
             result = { warning: `Unknown task_type: ${task.task_type}` };
-        }
 
         // Mark done
         await sb.from("task_queue")
