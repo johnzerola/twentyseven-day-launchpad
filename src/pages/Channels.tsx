@@ -177,7 +177,7 @@ const Channels = () => {
         views: data.channel?.views || ch.views,
         videos: data.channel?.videos || ch.videos,
         niche: data.analysis?.niche_detected || ch.niche,
-        analysis_json: { ...data.analysis, recentVideos: data.recentVideos, topVideos: data.topVideos, avgRecentViews: data.avgRecentViews },
+        analysis_json: { ...data.analysis, recentVideos: data.recentVideos, topVideos: data.topVideos, avgRecentViews: data.avgRecentViews, realMetrics: data.realMetrics },
       } as any).eq('id', ch.id);
       toast.success('Canal atualizado!');
       loadChannels();
