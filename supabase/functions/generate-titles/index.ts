@@ -61,6 +61,15 @@ serve(async (req) => {
             return `• ${c.name || c.format}: ${c.description || c.hook_style || ''} — Título ideal: ${c.title_pattern || c.example_title || 'N/A'}`;
           }).join('\n')}`;
         }
+
+        // Audience psychology patterns from NLP enrichment
+        const psychPatterns = psychPatternsRes.data;
+        if (psychPatterns?.length) {
+          formatsBlock += `\n\n🧪 PADRÕES DE PSICOLOGIA DA AUDIÊNCIA (aplique nos títulos):\n${psychPatterns.map((p: any) => {
+            const titles = Array.isArray(p.example_titles) ? p.example_titles.slice(0, 2).map((t: string) => `"${t}"`).join(', ') : '';
+            return `• ${p.trigger_type}: ${p.description?.slice(0, 150)}${titles ? ` — Ex: ${titles}` : ''}`;
+          }).join('\n')}`;
+        }
       } catch { /* viral DB optional */ }
 
       const prompt = `Gere exatamente 20 títulos virais para YouTube.
