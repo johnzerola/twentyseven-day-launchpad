@@ -15,9 +15,18 @@ serve(async (req) => {
   const startTime = Date.now();
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const callFn = async (fnName: string, payload: any) => {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+      body: JSON.stringify(payload || {}),
+    });
+    return await resp.json();
+  };
 
   try {
-    // Fetch pending tasks (limit by concurrency)
     const { data: tasks } = await sb
       .from("task_queue")
       .select("*")
@@ -35,7 +44,6 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const task of tasks) {
-      // Mark as running
       await sb.from("task_queue")
         .update({ status: "running", started_at: new Date().toISOString(), attempts: task.attempts + 1 })
         .eq("id", task.id);
@@ -43,182 +51,65 @@ serve(async (req) => {
       try {
         let result: any = null;
 
-        // Route task to appropriate handler
         switch (task.task_type) {
           case "detect_emerging_channels":
-            // Call the detect-emerging-channels function
-            const detectResp = await fetch(`${supabaseUrl}/functions/v1/detect-emerging-channels`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await detectResp.json();
+            result = await callFn("detect-emerging-channels", task.payload);
             break;
-
           case "weekly_deep_research":
-            const weeklyResp = await fetch(`${supabaseUrl}/functions/v1/weekly-deep-research`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await weeklyResp.json();
+            result = await callFn("weekly-deep-research", task.payload);
             break;
-
           case "auto_enrich_videos":
-            const enrichResp = await fetch(`${supabaseUrl}/functions/v1/auto-enrich-worker`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await enrichResp.json();
+            result = await callFn("auto-enrich-worker", task.payload);
             break;
-
           case "self_learning":
-            const learnResp = await fetch(`${supabaseUrl}/functions/v1/self-learning-engine`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await learnResp.json();
+            result = await callFn("self-learning-engine", task.payload);
             break;
-
           case "orchestrate_video":
-            const orchResp = await fetch(`${supabaseUrl}/functions/v1/video-orchestrator`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await orchResp.json();
+            result = await callFn("video-orchestrator", task.payload);
             break;
-
           case "generate_prompts":
-            const promptsResp = await fetch(`${supabaseUrl}/functions/v1/generate-synced-prompts`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await promptsResp.json();
+            result = await callFn("generate-synced-prompts", task.payload);
             break;
-
           case "reverse_engineer":
-            const reverseResp = await fetch(`${supabaseUrl}/functions/v1/reverse-engineer-video`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await reverseResp.json();
+            result = await callFn("reverse-engineer-video", task.payload);
             break;
-
           case "viral_score_recalc":
-            const scoreResp = await fetch(`${supabaseUrl}/functions/v1/monetiza-score`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify({ ...task.payload, action: "recalculate_batch" }),
-            });
-            result = await scoreResp.json();
+            result = await callFn("monetiza-score", { ...task.payload, action: "recalculate_batch" });
             break;
-
           case "autoflow_execute":
-            const autoflowResp = await fetch(`${supabaseUrl}/functions/v1/generate-veo3-video`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await autoflowResp.json();
+            result = await callFn("generate-veo3-video", task.payload);
             break;
-
           case "daily_ingestion":
-            const ingestResp = await fetch(`${supabaseUrl}/functions/v1/daily-data-ingestion`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify(task.payload || {}),
-            });
-            result = await ingestResp.json();
+            result = await callFn("daily-data-ingestion", task.payload);
             break;
-
           case "viral_score_scan":
-            const viralResp = await fetch(`${supabaseUrl}/functions/v1/viral-score-worker`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify({ action: "scan", ...(task.payload || {}) }),
-            });
-            result = await viralResp.json();
+            result = await callFn("viral-score-worker", { action: "scan", ...(task.payload || {}) });
             break;
-
           default:
             result = { warning: `Unknown task_type: ${task.task_type}` };
+            break;
+        }
 
         // Mark done
         await sb.from("task_queue")
-          .update({
-            status: "done",
-            result,
-            completed_at: new Date().toISOString(),
-          })
+          .update({ status: "done", result, completed_at: new Date().toISOString() })
           .eq("id", task.id);
 
         results.push({ id: task.id, task_type: task.task_type, status: "done" });
-
-      } catch (e) {
+      } catch (e: any) {
         const attempts = task.attempts + 1;
         const shouldRetry = attempts < (task.max_attempts || 3);
 
         if (shouldRetry) {
-          // Schedule retry with exponential backoff
           const backoff = BACKOFF_BASE_MS * Math.pow(2, attempts - 1);
-          const nextSchedule = new Date(Date.now() + backoff).toISOString();
-
           await sb.from("task_queue")
-            .update({
-              status: "pending",
-              error_message: e.message,
-              scheduled_at: nextSchedule,
-            })
+            .update({ status: "pending", error_message: e.message, scheduled_at: new Date(Date.now() + backoff).toISOString() })
             .eq("id", task.id);
-
-          results.push({ id: task.id, task_type: task.task_type, status: "retry", next_attempt: nextSchedule });
+          results.push({ id: task.id, task_type: task.task_type, status: "retry" });
         } else {
           await sb.from("task_queue")
-            .update({
-              status: "failed",
-              error_message: e.message,
-              completed_at: new Date().toISOString(),
-            })
+            .update({ status: "failed", error_message: e.message, completed_at: new Date().toISOString() })
             .eq("id", task.id);
-
           results.push({ id: task.id, task_type: task.task_type, status: "failed", error: e.message });
         }
       }
@@ -229,19 +120,19 @@ serve(async (req) => {
       duration_ms: Date.now() - startTime,
       success: true,
       metadata: { tasks_processed: results.length, results },
-    });
+    }).catch(() => {});
 
     return new Response(JSON.stringify({ success: true, processed: results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (e) {
+  } catch (e: any) {
     await sb.from("execution_logs").insert({
       function_name: "task-worker",
       duration_ms: Date.now() - startTime,
       success: false,
       error_message: e.message,
-    });
+    }).catch(() => {});
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
