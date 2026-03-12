@@ -204,6 +204,7 @@ async function analyzeChannel(
     `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=viewCount&type=video&maxResults=5&key=${youtubeKey}`
   );
   const vidData = await vidRes.json();
+  assertYouTubeResponse(vidData);
   const videoIds = (vidData.items || []).map((v: any) => v.id.videoId).filter(Boolean);
 
   let topVideos: any[] = [];
