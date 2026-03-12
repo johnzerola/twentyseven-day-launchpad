@@ -158,6 +158,45 @@ export type Database = {
         }
         Relationships: []
       }
+      attention_curves: {
+        Row: {
+          avg_retention: number | null
+          best_for: string | null
+          created_at: string | null
+          curve_data: Json
+          curve_name: string
+          duration_minutes: number | null
+          id: string
+          niche: string | null
+          source: string | null
+          video_type: string
+        }
+        Insert: {
+          avg_retention?: number | null
+          best_for?: string | null
+          created_at?: string | null
+          curve_data?: Json
+          curve_name: string
+          duration_minutes?: number | null
+          id?: string
+          niche?: string | null
+          source?: string | null
+          video_type?: string
+        }
+        Update: {
+          avg_retention?: number | null
+          best_for?: string | null
+          created_at?: string | null
+          curve_data?: Json
+          curve_name?: string
+          duration_minutes?: number | null
+          id?: string
+          niche?: string | null
+          source?: string | null
+          video_type?: string
+        }
+        Relationships: []
+      }
       attention_engineering: {
         Row: {
           applicable_niches: Json | null
@@ -203,6 +242,78 @@ export type Database = {
           source?: string | null
           technique?: string
           trigger_second?: number | null
+        }
+        Relationships: []
+      }
+      attention_library: {
+        Row: {
+          attention_score: number
+          created_at: string | null
+          curiosity_gap_score: number | null
+          drop_off_risk: string | null
+          emotion: string | null
+          emotional_intensity: number | null
+          example_text: string | null
+          example_videos: Json | null
+          id: string
+          information_density: number | null
+          language: string | null
+          niche: string | null
+          novelty_score: number | null
+          pattern_name: string
+          recovery_technique: string | null
+          retention_score: number | null
+          scene_duration_sec: number | null
+          scene_type: string
+          source: string | null
+          time_window: string | null
+          visual_change: number | null
+        }
+        Insert: {
+          attention_score?: number
+          created_at?: string | null
+          curiosity_gap_score?: number | null
+          drop_off_risk?: string | null
+          emotion?: string | null
+          emotional_intensity?: number | null
+          example_text?: string | null
+          example_videos?: Json | null
+          id?: string
+          information_density?: number | null
+          language?: string | null
+          niche?: string | null
+          novelty_score?: number | null
+          pattern_name: string
+          recovery_technique?: string | null
+          retention_score?: number | null
+          scene_duration_sec?: number | null
+          scene_type?: string
+          source?: string | null
+          time_window?: string | null
+          visual_change?: number | null
+        }
+        Update: {
+          attention_score?: number
+          created_at?: string | null
+          curiosity_gap_score?: number | null
+          drop_off_risk?: string | null
+          emotion?: string | null
+          emotional_intensity?: number | null
+          example_text?: string | null
+          example_videos?: Json | null
+          id?: string
+          information_density?: number | null
+          language?: string | null
+          niche?: string | null
+          novelty_score?: number | null
+          pattern_name?: string
+          recovery_technique?: string | null
+          retention_score?: number | null
+          scene_duration_sec?: number | null
+          scene_type?: string
+          source?: string | null
+          time_window?: string | null
+          visual_change?: number | null
         }
         Relationships: []
       }
