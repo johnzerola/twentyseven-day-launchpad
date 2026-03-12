@@ -23,10 +23,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
 
-    const [ytRes, scriptRes, channelRes] = await Promise.all([
+    const [ytRes, scriptRes, channelRes, triggersRes, formatsRes] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(10),
       sb.from("script_knowledge").select("category,title,content,examples").order("effectiveness_score", { ascending: false }).limit(10),
       sb.from("channel_intelligence").select("channel_name,style,viral_patterns,visual_style_notes,avg_views,growth_rate").eq("is_faceless", true).order("avg_views", { ascending: false }).limit(8),
+      sb.from("viral_content_library").select("content_json,effectiveness_score,category").in("category", ["psychology_triggers", "storytelling_structure", "retention_technique"]).order("effectiveness_score", { ascending: false }).limit(15),
+      sb.from("viral_content_library").select("content_json,effectiveness_score").eq("category", "content_format").order("effectiveness_score", { ascending: false }).limit(8),
     ]);
 
     const ytKnowledge = (ytRes.data || []).map((r: any) => `[${r.category.toUpperCase()}] ${r.title}: ${r.content}`).join("\n\n");
@@ -38,6 +40,17 @@ serve(async (req) => {
     const channelIntel = (channelRes.data || []).map((r: any) => {
       const hooks = r.viral_patterns?.hooks ? (r.viral_patterns.hooks as string[]).join(", ") : "";
       return `🎯 ${r.channel_name} (${r.style}, ${r.growth_rate}, avg ${r.avg_views} views): Hooks=[${hooks}] | Visual: ${r.visual_style_notes || "N/A"}`;
+    }).join("\n");
+
+    // Psychology triggers & content formats from viral_content_library
+    const psychTriggers = (triggersRes.data || []).map((r: any) => {
+      const c = r.content_json;
+      return `• [${r.category}] ${c.name || c.technique || c.trigger}: ${c.description || c.how_to_apply || c.tip || ''} (score: ${r.effectiveness_score}/10)`;
+    }).join("\n");
+
+    const viralFormats = (formatsRes.data || []).map((r: any) => {
+      const c = r.content_json;
+      return `• ${c.name || c.format}: ${c.description || ''} — Hook: ${c.hook_style || 'N/A'} | Estrutura: ${c.structure || c.blueprint || 'N/A'}`;
     }).join("\n");
 
     // ========== Speech rate calculation ==========
@@ -235,6 +248,12 @@ ${ytKnowledge}
 
 📡 INTELIGÊNCIA DE CANAIS VIRAIS FACELESS (REFERÊNCIAS REAIS):
 ${channelIntel || "Sem dados de canais disponíveis"}
+
+🧠 GATILHOS PSICOLÓGICOS & TÉCNICAS DE RETENÇÃO (da base de inteligência viral):
+${psychTriggers || "Sem gatilhos disponíveis"}
+
+🎬 FORMATOS DE CONTEÚDO VIRAL (adapte o roteiro a estes padrões de sucesso):
+${viralFormats || "Sem formatos disponíveis"}
 
 📝 TÉCNICAS DE ROTEIRO COMPROVADAS (APLIQUE TODAS):
 ${scriptKnowledge}

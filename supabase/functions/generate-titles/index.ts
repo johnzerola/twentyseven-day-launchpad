@@ -26,14 +26,39 @@ serve(async (req) => {
     if (type === "generate") {
       const { niche, topic } = body;
 
-      // Fetch reference titles from viral DB
+      // Fetch reference titles + viral content library (triggers & formats)
       let viralRefBlock = '';
+      let psychologyBlock = '';
+      let formatsBlock = '';
       try {
         let query = sb.from('viral_titles_db').select('title,views,why_viral,title_pattern,niche').order('views', { ascending: false }).limit(30);
         if (niche) query = query.ilike('niche', `%${niche}%`);
-        const { data: viralTitles } = await query;
+
+        const [titlesRes, triggersRes, formatsRes] = await Promise.all([
+          query,
+          sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'psychology_triggers').order('effectiveness_score', { ascending: false }).limit(10),
+          sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'content_format').order('effectiveness_score', { ascending: false }).limit(8),
+        ]);
+
+        const viralTitles = titlesRes.data;
         if (viralTitles?.length) {
           viralRefBlock = `\n\nTÍTULOS VIRAIS REAIS DE REFERÊNCIA (${viralTitles.length} títulos com 350k+ views):\n${viralTitles.map((t: any) => `• "${t.title}" (${t.views?.toLocaleString()} views) — Pattern: ${t.title_pattern || '?'} | Why: ${t.why_viral || 'N/A'}`).join('\n')}\n\nUse estes padrões REAIS como inspiração. Não copie, mas aplique as mesmas técnicas.`;
+        }
+
+        const triggers = triggersRes.data;
+        if (triggers?.length) {
+          psychologyBlock = `\n\n🧠 GATILHOS PSICOLÓGICOS (aplique nos títulos):\n${triggers.map((t: any) => {
+            const c = t.content_json;
+            return `• ${c.name || c.trigger}: ${c.description || c.tip || ''} (score: ${t.effectiveness_score}/10)`;
+          }).join('\n')}`;
+        }
+
+        const formats = formatsRes.data;
+        if (formats?.length) {
+          formatsBlock = `\n\n🎬 FORMATOS DE CONTEÚDO VIRAL (adapte títulos a estes formatos):\n${formats.map((f: any) => {
+            const c = f.content_json;
+            return `• ${c.name || c.format}: ${c.description || c.hook_style || ''} — Título ideal: ${c.title_pattern || c.example_title || 'N/A'}`;
+          }).join('\n')}`;
         }
       } catch { /* viral DB optional */ }
 
@@ -41,6 +66,8 @@ serve(async (req) => {
 ${niche ? `Nicho: ${niche}` : ''}
 ${topic ? `Tema específico: ${topic}` : ''}
 ${viralRefBlock}
+${psychologyBlock}
+${formatsBlock}
 
 Use estas metodologias virais:
 - Curiosidade: perguntas abertas, "O que acontece quando...", "A verdade sobre..."
