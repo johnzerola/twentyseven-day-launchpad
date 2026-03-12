@@ -107,7 +107,7 @@ const NicheExplorer = () => {
 
     try {
       const { data: result, error } = await supabase.functions.invoke('niche-explorer', {
-        body: { niche: q, country, language: 'pt' },
+        body: { niche: q, country, language: COUNTRY_LANGUAGE[country] || 'en' },
       });
       if (error) throw new Error(error.message);
       if (result?.error) throw new Error(result.error);
