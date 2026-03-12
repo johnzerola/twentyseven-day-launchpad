@@ -49,6 +49,7 @@ const App = () => (
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/workflow" element={<P><Workflow /></P>} />
             <Route path="/multichannel" element={<P><MultiChannel /></P>} />
+            <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
             
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />

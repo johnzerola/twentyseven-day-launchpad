@@ -24,6 +24,7 @@ const navItems = [
   { key: 'Workflow', icon: GitBranch, path: '/workflow' },
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
+  { key: 'Knowledge Base', icon: Database, path: '/knowledge' },
 ];
 
 const TIER_COLORS: Record<string, string> = {
