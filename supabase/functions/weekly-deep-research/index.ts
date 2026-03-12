@@ -53,6 +53,35 @@ Return structured JSON with: { formats: [{ name, structure, hooks (array of exam
 Return structured JSON with: { niches: [{ name, rpm_estimate, saturation (low/medium/high), growth_rate, faceless_friendly (boolean), best_countries (array), sub_niches (array) }] }`,
     target_table: "niche_database",
   },
+  {
+    domain: "psychology_triggers",
+    prompt: `Research the most powerful psychological triggers used in viral YouTube videos. Focus on:
+1. Curiosity gap — how top creators create irresistible information gaps
+2. Emotional conflict — techniques for creating tension that keeps viewers watching
+3. Mystery and suspense — how to structure reveals for maximum dopamine
+4. Unexpected twist — patterns for plot twists that cause viewers to rewatch
+5. Transformation stories — why before/after narratives go viral
+6. Social proof and FOMO — how creators leverage scarcity and urgency
+7. Revenge/justice narratives — why retribution stories get billions of views
+8. Cognitive dissonance — how contradictions hook the brain
+Return structured JSON with: { triggers: [{ name, description, how_to_apply, effectiveness_score (1-10), example_titles (array), best_for_niches (array) }] }`,
+    target_table: "viral_content_library",
+    target_category: "psychology_triggers",
+  },
+  {
+    domain: "storytelling_structures",
+    prompt: `Research the most effective storytelling structures for YouTube video retention. Focus on:
+1. Three-act structure variations optimized for YouTube
+2. Cold open / in medias res techniques with proven retention data
+3. Nested loop structures (multiple open loops at once)
+4. The "Last 10 Seconds" technique — teasing a final revelation
+5. Emotional arc engineering — mapping viewer emotions minute by minute
+6. Hero's journey compressed for 8-20 minute videos
+7. Documentary investigative structure — building evidence toward a conclusion
+8. Confession/vulnerability narrative — why raw honesty goes viral
+Return structured JSON with: { structures: [{ title, content, category, effectiveness_score (1-10), when_to_use, example_outline }] }`,
+    target_table: "script_knowledge",
+  },
 ];
 
 serve(async (req) => {
