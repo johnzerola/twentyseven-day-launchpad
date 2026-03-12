@@ -6,16 +6,41 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+let _ytKeys: string[] = [];
+let _currentKeyIndex = 0;
+
+function getYouTubeKeys(): string[] {
+  const keys: string[] = [];
+  const k1 = Deno.env.get("YOUTUBE_API_KEY");
+  const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
+  if (k1) keys.push(k1);
+  if (k2) keys.push(k2);
+  return keys;
+}
+
+function getCurrentKey(): string {
+  if (!_ytKeys.length) throw new Error("No YouTube API keys configured");
+  return _ytKeys[_currentKeyIndex % _ytKeys.length];
+}
+
+function switchKey(): boolean {
+  if (_ytKeys.length <= 1) return false;
+  _currentKeyIndex = (_currentKeyIndex + 1) % _ytKeys.length;
+  console.log(`Switched to YouTube API key #${_currentKeyIndex + 1}`);
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { niche, style, channelUrl, language } = await req.json();
 
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+    _ytKeys = getYouTubeKeys();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+    if (!_ytKeys.length) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const YOUTUBE_API_KEY = getCurrentKey();
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
