@@ -15,7 +15,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing } = await req.json();
+    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType } = await req.json();
+    const isShort = videoType === 'short';
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
