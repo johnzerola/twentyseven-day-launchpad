@@ -12,16 +12,23 @@ function getKeys() {
 }
 
 async function ytFetch(url: string, keys: string[]): Promise<any> {
+  let lastData: any = null;
   for (const key of keys) {
     const res = await fetch(url.replace("__KEY__", key));
     const data = await res.json();
     if (data.error?.errors?.[0]?.reason === "quotaExceeded") {
       console.log("Quota exceeded, trying next key...");
+      lastData = data;
       continue;
     }
     return data;
   }
-  throw new Error("All YouTube API keys exhausted");
+  // If we get here, return last response instead of throwing (might have useful data)
+  if (lastData) {
+    console.error("All keys quota exceeded");
+    throw new Error("Quota da API do YouTube excedida. Tente novamente em alguns minutos.");
+  }
+  throw new Error("Nenhuma chave YouTube configurada");
 }
 
 async function resolveHandle(handle: string, keys: string[]): Promise<string | null> {
