@@ -6,7 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Niches and queries to rotate weekly
+// ═══════════════════════════════════════════════════════════════════
+// ECONOMY CONFIG — Prevent runaway costs
+// ═══════════════════════════════════════════════════════════════════
+const MAX_RUNS_PER_DAY = 1;           // Once per day max
+const MAX_CHANNELS_PER_NICHE = 3;     // Was 5
+const MAX_NICHES_PER_RUN = 2;         // Was 4
+
 const SCAN_CONFIGS = [
   { niche: "true crime", style: "horror", language: "en", queries: ["true crime faceless channel", "unsolved mysteries dark", "crime documentary animated"] },
   { niche: "horror", style: "horror", language: "en", queries: ["creepypasta narration new", "scary stories animated", "horror faceless channel 2026"] },
@@ -36,9 +42,30 @@ serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Pick 3-4 random niches to scan each week (to avoid quota exhaustion)
+    // ═══════════════════════════════════════════════════════════════
+    // THROTTLE — Max 1 run per day
+    // ═══════════════════════════════════════════════════════════════
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: todayLogs } = await sb.from("execution_logs")
+      .select("id")
+      .eq("function_name", "auto-scan-channels")
+      .eq("success", true)
+      .gte("created_at", `${today}T00:00:00Z`);
+
+    if ((todayLogs?.length || 0) >= MAX_RUNS_PER_DAY) {
+      return new Response(JSON.stringify({
+        success: true,
+        throttled: true,
+        reason: `Limite diário atingido (${todayLogs?.length}/${MAX_RUNS_PER_DAY})`,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Pick random niches (reduced from 4 to 2)
     const shuffled = [...SCAN_CONFIGS].sort(() => Math.random() - 0.5);
-    const selectedConfigs = shuffled.slice(0, 4);
+    const selectedConfigs = shuffled.slice(0, MAX_NICHES_PER_RUN);
 
     let totalAnalyzed = 0;
     const results: string[] = [];
@@ -47,18 +74,23 @@ serve(async (req) => {
       const query = config.queries[Math.floor(Math.random() * config.queries.length)];
 
       try {
-        // Search YouTube for channels
+        // Check YouTube API quota
+        const { data: ytAllowed } = await sb.rpc("check_and_increment_api_usage", { _api_name: "youtube" });
+        if (!ytAllowed) {
+          results.push(`⏳ ${config.niche}: YouTube quota atingida`);
+          continue;
+        }
+
         const searchRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&maxResults=10&order=viewCount`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&maxResults=5&order=viewCount`
         );
         const searchData = await searchRes.json();
         if (!searchData.items) continue;
 
-        for (const item of searchData.items.slice(0, 5)) {
+        for (const item of searchData.items.slice(0, MAX_CHANNELS_PER_NICHE)) {
           const channelId = item.snippet.channelId;
           if (!channelId) continue;
 
-          // Check if already exists
           const { data: existing } = await sb.from("channel_intelligence")
             .select("id")
             .eq("youtube_channel_id", channelId)
@@ -66,7 +98,6 @@ serve(async (req) => {
 
           if (existing) continue;
 
-          // Call analyze-viral-channels via internal invoke
           try {
             const analyzeRes = await fetch(`${SUPABASE_URL}/functions/v1/analyze-viral-channels`, {
               method: "POST",
@@ -80,15 +111,11 @@ serve(async (req) => {
             if (analyzeRes.ok) {
               totalAnalyzed++;
               results.push(`✅ ${item.snippet.channelTitle} (${config.niche})`);
-            } else {
-              const errText = await analyzeRes.text();
-              console.error(`Failed ${item.snippet.channelTitle}: ${errText}`);
             }
           } catch (e) {
             console.error(`Error analyzing ${channelId}:`, e);
           }
 
-          // Rate limit: wait 2s between channels
           await new Promise(r => setTimeout(r, 2000));
         }
       } catch (e) {
@@ -96,9 +123,10 @@ serve(async (req) => {
       }
     }
 
-    // === Also populate viral_titles_db ===
+    // Viral titles — only 1 niche per run
     let titlesAdded = 0;
-    for (const config of selectedConfigs) {
+    const titleConfig = selectedConfigs[0];
+    if (titleConfig) {
       try {
         const titleRes = await fetch(`${SUPABASE_URL}/functions/v1/build-viral-titles-db`, {
           method: "POST",
@@ -106,19 +134,24 @@ serve(async (req) => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           },
-          body: JSON.stringify({ niche: config.niche, country: "US", language: config.language, minViews: 350000, maxResults: 15 }),
+          body: JSON.stringify({ niche: titleConfig.niche, country: "US", language: titleConfig.language, minViews: 350000, maxResults: 10 }),
         });
         if (titleRes.ok) {
           const titleData = await titleRes.json();
           titlesAdded += titleData.inserted || 0;
         }
       } catch (e) {
-        console.error(`Title scan error for ${config.niche}:`, e);
+        console.error(`Title scan error:`, e);
       }
     }
 
-    // Log summary
-    console.log(`Auto-scan complete: ${totalAnalyzed} new channels, ${titlesAdded} new viral titles`);
+    // Log
+    await sb.from("execution_logs").insert({
+      function_name: "auto-scan-channels",
+      success: true,
+      duration_ms: 0,
+      metadata: { analyzed: totalAnalyzed, titlesAdded, niches: selectedConfigs.map(c => c.niche), results },
+    });
 
     return new Response(JSON.stringify({
       success: true,
@@ -126,7 +159,7 @@ serve(async (req) => {
       titlesAdded,
       niches_scanned: selectedConfigs.map(c => c.niche),
       results,
-      timestamp: new Date().toISOString(),
+      economy_mode: true,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
