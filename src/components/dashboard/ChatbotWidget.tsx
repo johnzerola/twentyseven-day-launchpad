@@ -95,7 +95,7 @@ export const ChatbotWidget = () => {
         if (recentConvo && recentConvo.length > 0 && Array.isArray(recentConvo[0].messages) && recentConvo[0].messages.length > 1) {
           // Restore last conversation
           setConversationId(recentConvo[0].id);
-          setMessages(recentConvo[0].messages as Msg[]);
+          setMessages(recentConvo[0].messages as unknown as Msg[]);
         } else {
           setMessages([
             { role: 'assistant', content: '👋 Olá! Sou o **Dotti**, seu consultor estratégico de YouTube.\n\nTenho acesso a **bases de conhecimento** com dados reais sobre algoritmo, roteiros, hooks, nichos e canais.\n\nPosso ajudar com **ideias**, **roteiros**, **títulos**, **monetização**, **algoritmo** e muito mais.\n\nO que você precisa?' },
