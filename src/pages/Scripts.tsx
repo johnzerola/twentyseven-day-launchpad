@@ -6,6 +6,7 @@ import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constant
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -367,13 +368,14 @@ const Scripts = () => {
           </div>
         )}
 
-        {/* Pipeline Progress */}
-        {script && (
-          <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-2">
-            {pipelineSteps.map((step) => (
-              <button key={step.key} onClick={() => setActiveStep(step.key as any)}
+        {/* Pipeline Progress — always visible */}
+        <div className="bg-card border border-border rounded-xl p-2 space-y-2">
+          <div className="flex items-center gap-1">
+            {pipelineSteps.map((step, i) => (
+              <button key={step.key} onClick={() => script ? setActiveStep(step.key as any) : null}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                  activeStep === step.key ? 'bg-primary text-primary-foreground'
+                  !script ? 'text-muted-foreground/40 cursor-not-allowed'
+                  : activeStep === step.key ? 'bg-primary text-primary-foreground'
                     : step.done ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/30'
                 }`}>
                 <step.icon className="w-3.5 h-3.5" />
@@ -382,7 +384,15 @@ const Scripts = () => {
               </button>
             ))}
           </div>
-        )}
+          {script && (
+            <div className="flex items-center gap-2 px-2">
+              <Progress value={(pipelineSteps.filter(s => s.done).length / pipelineSteps.length) * 100} className="h-1.5 flex-1" />
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                {pipelineSteps.filter(s => s.done).length}/{pipelineSteps.length} — Faltam {pipelineSteps.filter(s => !s.done).length} passos
+              </span>
+            </div>
+          )}
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-4">
           {/* Left: Config + Panels */}
@@ -677,7 +687,7 @@ const Scripts = () => {
                   {/* Standard Styles */}
                   <div>
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Estilos Padrão</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
                       {VIDEO_STYLES.map(vs => (
                         <button key={vs.value} onClick={() => { setVideoStyle(vs.value); setCustomStyleNotes(''); }}
                           className={`text-left p-3 rounded-xl border-2 transition-all ${
@@ -784,9 +794,25 @@ const Scripts = () => {
 
             {/* Script output is now inside ScriptGenerator but displayed here when active */}
             {(activeStep === 'script' || !script) && !loading && !script && (
-              <div className="bg-card border border-border rounded-xl p-5 text-center py-12 text-muted-foreground">
-                <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Configure e gere seu roteiro viral</p>
+              <div className="bg-card border border-border rounded-xl p-5 text-center py-16 text-muted-foreground">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-primary/60" />
+                </div>
+                <h3 className="text-base font-semibold text-foreground mb-1">Comece seu vídeo viral</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                  Preencha o tópico, nicho e estilo ao lado, depois clique em "Gerar Roteiro" para começar o pipeline de produção.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                  <Badge variant="outline" className="text-[10px]">1. Roteiro</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">2. Estilo</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">3. Personagens</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">4. Cenas</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">5. SEO</Badge>
+                </div>
               </div>
             )}
           </div>
