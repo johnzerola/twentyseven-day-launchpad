@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { getAuthHeaders } from '@/lib/auth-fetch';
 import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle, RefreshCw, Smartphone, Monitor } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
