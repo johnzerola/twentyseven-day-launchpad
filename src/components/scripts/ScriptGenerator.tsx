@@ -132,7 +132,8 @@ export const ScriptGenerator = ({
   };
 
   const cleanBlueprintFromScript = (text: string): string => text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
-  const cleanAll = (text: string) => cleanBlueprintFromScript(cleanScoresFromScript(text));
+  const cleanShortMeta = (text: string): string => text.replace(/---SHORT_META---[\s\S]*?---END_SHORT_META---\s*/g, '').trim();
+  const cleanAll = (text: string) => cleanShortMeta(cleanBlueprintFromScript(cleanScoresFromScript(text)));
 
   const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
     const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
