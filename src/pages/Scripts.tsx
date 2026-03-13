@@ -621,7 +621,7 @@ const Scripts = () => {
                     </>
                   )}
                 </motion.div>
-              )
+              )}
 
               {/* Step 5: Titles & SEO */}
               {activeStep === 'titles' && script && (
