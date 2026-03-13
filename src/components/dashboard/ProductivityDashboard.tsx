@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Flame, Trophy, Target, Calendar, FileText, Sparkles, TrendingUp, CheckCircle2, Clock, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DayActivity {
