@@ -101,6 +101,15 @@ export const ScriptGenerator = ({
   const [dualScore, setDualScore] = useState<DualScore | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
+  const lastClickRef = useRef(0);
+
+  // Debounce guard for generation buttons (3s cooldown)
+  const canClick = useCallback(() => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 3000) return false;
+    lastClickRef.current = now;
+    return true;
+  }, []);
 
   const wpm = SPEECH_RATES[language] || 150;
   const currentScript = wizardStep === 1 ? draftScript : script;
