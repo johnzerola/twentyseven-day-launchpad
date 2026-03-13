@@ -575,9 +575,14 @@ const Scripts = () => {
                 <motion.div key="prompts" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
-                <div>
-                      <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Gerador de Cenas Visuais</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">A IA analisa o roteiro e cria prompts visuais cinematográficos</p>
+                    <div>
+                      <h3 className="font-semibold text-sm flex items-center gap-2">
+                        <Image className="w-4 h-4 text-accent" />
+                        {videoType === 'short' ? 'Cenas do Short (9:16)' : 'Gerador de Cenas Visuais'}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {videoType === 'short' ? 'Blocos visuais de 8s otimizados para vertical' : 'A IA analisa o roteiro e cria prompts visuais cinematográficos'}
+                      </p>
                     </div>
                     {syncedScenes.length > 0 && (
                       <Button size="sm" onClick={() => setActiveStep('titles')} className="gap-1 h-7 text-xs gradient-hero border-0">
@@ -585,24 +590,38 @@ const Scripts = () => {
                       </Button>
                     )}
                   </div>
-                  <AudioProcessor
-                    script={script} videoStyle={videoStyle} videoStyles={VIDEO_STYLES}
-                    characters={characters} language={language} niche={niche}
-                    sceneBlueprintJson={sceneBlueprintJson}
-                    syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
-                    getCleanNarration={getCleanNarration}
-                    customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
-                  />
-                  {syncedScenes.length > 0 && (
-                    <div className="space-y-3">
-                      <PromptExporter scenes={syncedScenes} characters={characters} topic={topic} videoStyle={videoStyle} language={language} />
-                      <TimelineSyncLab scenes={syncedScenes} onUpdateScene={(index, updates) => {
-                        setSyncedScenes(prev => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
-                      }} />
-                    </div>
+
+                  {videoType === 'short' ? (
+                    <ShortsSceneBreakdown
+                      script={script}
+                      durationSeconds={parseInt(duration)}
+                      videoStyle={videoStyle}
+                      characters={characters}
+                      customStyleNotes={customStyleNotes}
+                      onScenesGenerated={setSyncedScenes}
+                    />
+                  ) : (
+                    <>
+                      <AudioProcessor
+                        script={script} videoStyle={videoStyle} videoStyles={VIDEO_STYLES}
+                        characters={characters} language={language} niche={niche}
+                        sceneBlueprintJson={sceneBlueprintJson}
+                        syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
+                        getCleanNarration={getCleanNarration}
+                        customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
+                      />
+                      {syncedScenes.length > 0 && (
+                        <div className="space-y-3">
+                          <PromptExporter scenes={syncedScenes} characters={characters} topic={topic} videoStyle={videoStyle} language={language} />
+                          <TimelineSyncLab scenes={syncedScenes} onUpdateScene={(index, updates) => {
+                            setSyncedScenes(prev => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
+                          }} />
+                        </div>
+                      )}
+                    </>
                   )}
                 </motion.div>
-              )}
+              )
 
               {/* Step 5: Titles & SEO */}
               {activeStep === 'titles' && script && (
