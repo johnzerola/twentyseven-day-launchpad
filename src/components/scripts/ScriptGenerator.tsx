@@ -660,7 +660,8 @@ export const ScriptGenerator = ({
             </div>
 
             <Button onClick={() => runStep1_Draft()} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
-              <Sparkles className="w-4 h-4" /> Gerar Rascunho com IA
+              {videoType === 'short' ? <Smartphone className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+              {videoType === 'short' ? 'Gerar Short com IA' : 'Gerar Rascunho com IA'}
               <ArrowRight className="w-4 h-4 ml-auto" />
             </Button>
 
