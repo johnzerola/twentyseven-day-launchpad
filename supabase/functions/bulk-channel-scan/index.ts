@@ -105,14 +105,20 @@ serve(async (req) => {
       
       const plRes = await fetch(plUrl);
       if (!plRes.ok) {
-        // Try backup key
-        if (YT_KEY_2 && apiKey === YT_KEY) {
-          const plRes2 = await fetch(plUrl.replace(apiKey, YT_KEY_2));
-          if (!plRes2.ok) break;
-          const plData2 = await plRes2.json();
-          allVideos.push(...(plData2.items || []).map((i: any) => i.contentDetails.videoId));
-          nextPageToken = plData2.nextPageToken || "";
-        } else break;
+        // Try backup keys
+        const backupKeys = [YT_KEY_2, YT_KEY_3].filter(k => k && k !== apiKey);
+        let resolved = false;
+        for (const bk of backupKeys) {
+          const plRes2 = await fetch(plUrl.replace(apiKey, bk!));
+          if (plRes2.ok) {
+            const plData2 = await plRes2.json();
+            allVideos.push(...(plData2.items || []).map((i: any) => i.contentDetails.videoId));
+            nextPageToken = plData2.nextPageToken || "";
+            resolved = true;
+            break;
+          }
+        }
+        if (!resolved) break;
       } else {
         const plData = await plRes.json();
         allVideos.push(...(plData.items || []).map((i: any) => i.contentDetails.videoId));
