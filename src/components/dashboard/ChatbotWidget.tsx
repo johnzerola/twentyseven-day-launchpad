@@ -316,12 +316,10 @@ export const ChatbotWidget = () => {
   const generatePlan = async (state: OnboardingState) => {
     setLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistant`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           messages: [{ role: 'user', content: `MODO ONBOARDING: Gere um plano personalizado de 30 dias.
 Dados do usuário:
