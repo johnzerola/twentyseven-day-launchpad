@@ -47,7 +47,7 @@ serve(async (req) => {
 
   try {
     const { channelId, topVideoTitles, subscribers, country } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
 
     const regionCode = country || "US";

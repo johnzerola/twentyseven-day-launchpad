@@ -36,7 +36,7 @@ serve(async (req) => {
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   try {
-    const youtubeKey = Deno.env.get("YOUTUBE_API_KEY");
+    const youtubeKey = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
     if (!youtubeKey) throw new Error("YOUTUBE_API_KEY not configured");
 
     // Get niches to scan

@@ -22,7 +22,8 @@ serve(async (req) => {
     // ========== Search YouTube Shorts ==========
     const ytKey1 = Deno.env.get("YOUTUBE_API_KEY");
     const ytKey2 = Deno.env.get("YOUTUBE_API_KEY_2");
-    let ytKey = ytKey1 || ytKey2;
+    const ytKey3 = Deno.env.get("YOUTUBE_API_KEY_3");
+    let ytKey = ytKey1 || ytKey2 || ytKey3;
 
     let shortsData: any[] = [];
     if (ytKey) {
