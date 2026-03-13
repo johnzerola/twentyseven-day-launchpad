@@ -44,12 +44,10 @@ const Onboarding = () => {
     addMessage('bot', '🔍 Analisando seu canal com IA... Isso pode levar alguns segundos.');
 
     try {
+      const authH = await getAuthHeaders();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-channel`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authH,
         body: JSON.stringify({ channelInput }),
       });
 
