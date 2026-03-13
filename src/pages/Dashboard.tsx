@@ -170,6 +170,9 @@ const Dashboard = () => {
         {/* Productivity Dashboard */}
         <ProductivityDashboard />
 
+        {/* Trend Notifications */}
+        <TrendNotifications />
+
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
