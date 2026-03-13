@@ -161,6 +161,7 @@ ${hooksBlock}
 ${psychologyBlock}
 ${formatsBlock}
 ${learningBlock}
+${scriptContextBlock}
 
 REGRAS PARA CTR MÁXIMO:
 1. Cada título deve ter entre 45-65 caracteres (sweet spot para YouTube)
