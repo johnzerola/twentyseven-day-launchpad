@@ -32,6 +32,7 @@ const P = ({ children }: { children: React.ReactNode }) => (
 );
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
