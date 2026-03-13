@@ -107,7 +107,7 @@ serve(async (req) => {
       const plRes = await fetch(plUrl);
       if (!plRes.ok) {
         // Try backup keys
-        const backupKeys = [YT_KEY_2, YT_KEY_3].filter(k => k && k !== apiKey);
+        const backupKeys = [YT_KEY_2, YT_KEY_3, YT_KEY_4].filter(k => k && k !== apiKey);
         let resolved = false;
         for (const bk of backupKeys) {
           const plRes2 = await fetch(plUrl.replace(apiKey, bk!));
