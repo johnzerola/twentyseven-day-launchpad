@@ -184,9 +184,16 @@ export const ScriptGenerator = ({
     return fullText;
   };
 
+  // ═══════ ORCHESTRATION: Phase tracking ═══════
+  const phaseIdRef = useRef('');
+
   // ═══════ STEP 1: Generate Draft ═══════
   const runStep1_Draft = async (rejectionFeedback?: any) => {
     if (!topic.trim() || generating || !canClick()) return;
+    // Generate unique phase ID for this entire run (tracks across all phases)
+    phaseIdRef.current = crypto.randomUUID();
+    console.log(`[ORCHESTRATOR] New run: ${phaseIdRef.current}`);
+    
     setGenerating(true);
     setLoading(true);
     setDraftScript('');
@@ -251,6 +258,7 @@ export const ScriptGenerator = ({
           style, niche, language,
           viralContext, intelligenceBriefing: briefing,
           videoType,
+          phaseId: phaseIdRef.current,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
@@ -287,6 +295,7 @@ export const ScriptGenerator = ({
         niche, language, duration: parseInt(duration), style,
         target_words: targetWords,
         rejection_feedback: rejectionFeedback || null,
+        phaseId: phaseIdRef.current,
       }, (fullText) => {
         setScript(cleanAll(fullText));
       });
@@ -350,6 +359,7 @@ export const ScriptGenerator = ({
         niche, language, duration: parseInt(duration), style,
         target_words: targetWords,
         consensus_improvements: improvements,
+        phaseId: phaseIdRef.current,
       }, (fullText) => {
         setScript(cleanAll(fullText));
       });
@@ -373,7 +383,7 @@ export const ScriptGenerator = ({
 
     try {
       const { data, error } = await supabase.functions.invoke('score-script', {
-        body: { script: textToScore.slice(0, 12000), niche, style, language, topic },
+        body: { script: textToScore.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
       });
 
       if (error) throw new Error(error.message || 'Erro na avaliação');
@@ -395,7 +405,7 @@ export const ScriptGenerator = ({
           // Re-score the improved version
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
           const { data: reScoreData } = await supabase.functions.invoke('score-script', {
-            body: { script: improvedText.slice(0, 12000), niche, style, language, topic },
+            body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
           });
           
           if (reScoreData && reScoreData.approved) {
@@ -444,7 +454,7 @@ export const ScriptGenerator = ({
           // Re-score
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
           const { data: reScoreData } = await supabase.functions.invoke('score-script', {
-            body: { script: improvedText.slice(0, 12000), niche, style, language, topic },
+            body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
           });
           
           if (reScoreData) {

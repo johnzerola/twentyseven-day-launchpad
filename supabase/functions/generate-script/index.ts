@@ -11,14 +11,73 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
 
+// ═══════════════════════════════════════════════════════════════
+// ANTI-AI-SLOP ENGINE — Escaped YouTube anti-spam penalties
+// ═══════════════════════════════════════════════════════════════
+const ANTI_SLOP_DIRECTIVE = `
+🚫 ANTI-AI-SLOP — REGRAS ABSOLUTAS:
+Você está sendo avaliado por um detector anti-IA. Se seu texto parecer genérico, será REJEITADO.
+
+FRASES PROIBIDAS (nunca use literalmente):
+- "Neste vasto universo" / "Neste vasto mundo" / "Vasto oceano"
+- "Mergulhe/Mergulhemos/Vamos mergulhar"
+- "É crucial/importante notar/lembrar"
+- "Jornada incrível/fascinante"
+- "Não é apenas... é também..."
+- "No mundo acelerado/dinâmico de hoje"
+- "Desbloqueie o potencial" / "Maximize seus resultados"
+- "Sem mais delongas" / "Sem enrolação"
+- "Buckle up" / "Apertem os cintos" (quando usado como clichê de abertura)
+- "Prepare-se para ter a mente explodida"
+- "Isso vai mudar tudo que você sabe"
+- "E se eu te dissesse que..." (como gancho genérico sem payoff real)
+
+PADRÕES DE ESCRITA PROIBIDOS:
+- Parágrafos que começam com "Imagine..." seguido de cenário genérico
+- Três perguntas retóricas seguidas sem resposta entre elas
+- Transições com "Mas espera, tem mais!" / "E não para por aí"
+- Conclusões que repetem a intro quase literalmente
+- Uso excessivo de superlativos ("incrível", "impressionante", "fantástico")
+- Enumerações de adjetivos vazios: "surpreendente, extraordinário e fascinante"
+
+SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 4):
+1. Uma analogia ÚNICA e inesperada (comparar algo técnico com algo cotidiano específico — "como quando você abre a geladeira às 3 da manhã e percebe que não tem nada")
+2. Uma confissão ou imperfeição do narrador ("Eu pesquisei isso por 3 semanas e quase desisti quando...")
+3. Um número ESPECÍFICO e estranho em vez de arredondado (em vez de "milhões", diga "2.347.891")
+4. Uma pausa narrativa intencional — mudar o tom abruptamente por 1-2 frases
+5. Referência cultural POP atual (meme, série, notícia recente) conectada ao tema
+6. Um momento de "eu errei" ou "a maioria pensa errado" com dado surpreendente
+7. Frase curta solitária como parágrafo: "Isso não deveria ter acontecido."
+8. Uma pergunta dirigida AO espectador que exige reflexão pessoal real
+
+VOZ DNA — CADA ESTILO TEM PERSONALIDADE:
+- Dopaminérgico: Irreverente, cortante, zero cerimônia. Frases de 3-8 palavras intercaladas com explosões de informação
+- Cinematográfico: Poético sem ser pretensioso. Descrições sensoriais (cheiro, textura, temperatura)
+- Storytelling: Vulnerável. O narrador FALHA, DUVIDA, MUDA de opinião durante a história
+- Documentário: Frio e preciso, mas com momentos de genuína perplexidade humana
+- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating
+- Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada
+`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType } = await req.json();
+    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId } = await req.json();
     const isShort = videoType === 'short';
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // ═══ ORCHESTRATION CONTRACT ═══
+    // This function is PHASE 1 (Draft Generation). It receives:
+    //   - topic, duration, style, niche, language (user config)
+    //   - viralContext (optional viral DB context)
+    //   - intelligenceBriefing (optional analyze-topic output)
+    //   - phaseId (unique ID to track this generation run)
+    // It outputs: SSE stream of the draft script text
+    // It does NOT score, refine, or save the script.
+    const runId = phaseId || crypto.randomUUID();
+    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min`);
 
     const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -41,19 +100,14 @@ serve(async (req) => {
         .order("effectiveness_score", { ascending: false }).limit(5),
       sb.from("audience_psychology_patterns").select("trigger_type,description,example_hooks,storytelling_pattern,retention_score")
         .order("retention_score", { ascending: false }).limit(8),
-      // NEW: hook_library
       sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
         .order("retention_score", { ascending: false }).limit(15),
-      // NEW: script_structures
       sb.from("script_structures").select("structure_name,intro_pattern,middle_pattern,cliffhanger_pattern,ending_pattern,avg_retention,niche")
         .order("effectiveness_score", { ascending: false }).limit(5),
-      // NEW: attention_engineering
       sb.from("attention_engineering").select("pattern_name,technique,category,retention_impact,psychological_basis,intensity_level")
         .order("retention_impact", { ascending: false }).limit(10),
-      // NEW: attention_library
       sb.from("attention_library").select("pattern_name,scene_type,example_text,retention_score,emotion,recovery_technique")
         .order("attention_score", { ascending: false }).limit(10),
-      // NEW: viral_titles_db — find similar topic titles
       sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
         .order("views", { ascending: false }).limit(20),
     ]);
@@ -81,27 +135,22 @@ serve(async (req) => {
       return `• ${r.trigger_type}: ${r.description?.slice(0, 150)}${hooks ? ` — Hooks: ${hooks}` : ''}`;
     }).join("\n");
 
-    // ========== NEW: Format hook_library ==========
     const hookLibrary = (hookRes.data || []).map((r: any) =>
       `• [${r.hook_type}] "${r.hook_text}" (retenção: ${r.retention_score}/10${r.niche ? `, nicho: ${r.niche}` : ''})`
     ).join("\n");
 
-    // ========== NEW: Format script_structures ==========
     const scriptStructures = (structRes.data || []).map((r: any) =>
       `📐 ${r.structure_name} (retenção: ${r.avg_retention}%${r.niche ? `, ${r.niche}` : ''}):\n  Intro: ${(r.intro_pattern || '').slice(0, 120)}\n  Meio: ${(r.middle_pattern || '').slice(0, 120)}\n  Cliffhanger: ${(r.cliffhanger_pattern || '').slice(0, 120)}\n  Final: ${(r.ending_pattern || '').slice(0, 120)}`
     ).join("\n\n");
 
-    // ========== NEW: Format attention_engineering ==========
     const attEngineering = (attEngRes.data || []).map((r: any) =>
       `⚡ ${r.pattern_name} [${r.category}]: ${r.technique.slice(0, 150)} (impacto: ${r.retention_impact}%, intensidade: ${r.intensity_level}/10${r.psychological_basis ? `, base: ${r.psychological_basis.slice(0, 60)}` : ''})`
     ).join("\n");
 
-    // ========== NEW: Format attention_library ==========
     const attLibrary = (attLibRes.data || []).map((r: any) =>
       `🎬 ${r.pattern_name} [${r.scene_type}]: "${(r.example_text || '').slice(0, 100)}" (retenção: ${r.retention_score}, emoção: ${r.emotion}${r.recovery_technique ? `, recuperação: ${r.recovery_technique.slice(0, 60)}` : ''})`
     ).join("\n");
 
-    // ========== NEW: Format viral_titles for topic-matching ==========
     const topicWords = (topic || '').toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
     const scoredTitles = (viralTitlesRes.data || []).map((t: any) => {
       let score = 0;
@@ -163,7 +212,6 @@ serve(async (req) => {
       const hooks = (ib.recommended_hooks || []).slice(0, 3).map((h: any) => `"${h.hook_text}" (${h.hook_type})`).join(', ');
       intelBlock = `\n🧠 BRIEFING: ${ca.top_channels_analyzed || '?'} canais analisados. Dominantes: ${(ca.dominant_styles || []).join(', ')}. Hooks: ${hooks}. Evitar: ${(ca.what_to_avoid || []).join('; ')}. Gaps: ${(ca.content_gaps || []).join('; ')}.\n`;
 
-      // Add YouTube competitor analysis
       const ytAnalysis = ib.youtube_real_time_analysis;
       if (ytAnalysis) {
         intelBlock += `\n📹 ANÁLISE DE COMPETIDORES YOUTUBE:\n`;
@@ -176,7 +224,6 @@ serve(async (req) => {
       }
     }
 
-    // Creative style warning
     const creativeWarning = isCreativeStyle ? `
 ⚠️ ATENÇÃO ESPECIAL — ESTILO CRIATIVO "${style?.toUpperCase()}":
 Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
@@ -188,13 +235,17 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
 - Priorize NARRATIVA MAGNÉTICA sobre precisão factual
 ` : '';
 
-    // ========== PHASE 0: GPT-5 Hook (fast, non-streaming) ==========
-    console.log("Phase 0: Hook generation with full knowledge...");
+    // ═══════════════════════════════════════════════════════
+    // PHASE 0: Hook Generation (non-streaming, fast model)
+    // CONTRACT: Receives topic+style+language → Returns 60s hook text
+    // OUTPUT: Pure narration text, no metadata, no instructions
+    // ═══════════════════════════════════════════════════════
+    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation...`);
     let hookText = '';
     try {
       const hookSystemPrompt = `Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR para YouTube. Idioma: ${language}. Estilo: ${style}.
 
-🎯 HOOKS DE REFERÊNCIA REAIS (use como inspiração):
+🎯 HOOKS DE REFERÊNCIA REAIS (use como inspiração, NÃO copie):
 ${hookLibrary.slice(0, 1500)}
 
 🧠 GATILHOS PSICOLÓGICOS:
@@ -202,7 +253,10 @@ ${psychTriggers.slice(0, 800)}
 
 ${viralInjection}${intelBlock}${creativeWarning}
 
-REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.`;
+${ANTI_SLOP_DIRECTIVE}
+
+REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
+Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
 
       const hookRes2 = await fetch(AI_URL, {
         method: "POST", headers: aiHeaders,
@@ -218,14 +272,28 @@ REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $
       if (hookRes2.ok) {
         const d = await hookRes2.json();
         hookText = d.choices?.[0]?.message?.content || '';
-        console.log("Phase 0 done:", hookText.length, "chars");
+        console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars`);
       }
-    } catch (e) { console.warn("Phase 0 error:", e); }
+    } catch (e) { console.warn(`[PHASE-0 HOOK] runId=${runId} Error:`, e); }
 
-    // ========== PHASE 1: Gemini Flash Draft (REAL STREAMING) ==========
-    const hookInjection = hookText ? `\n🎯 HOOK PRÉ-GERADO (USE COMO BASE dos primeiros 60s):\n${hookText}\n` : '';
+    // ═══════════════════════════════════════════════════════
+    // PHASE 1: Full Draft Generation (streaming, Gemini Flash)
+    // CONTRACT: Receives all knowledge + Phase 0 hook → Streams full script
+    // INPUT: Phase 0 hook is INJECTED as opening, not as instruction
+    // OUTPUT: Pure narration + ---EXTRAS--- + ---SCENE_BLUEPRINT---
+    // The draft is RAW and will be refined in Phase 2 (refine-script)
+    // This function does NOT call Phase 2 or Phase 3.
+    // ═══════════════════════════════════════════════════════
+    const hookInjection = hookText ? `\n🎯 HOOK PRÉ-GERADO (USE COMO BASE dos primeiros 60s — você pode melhorar mas NÃO descarte):\n${hookText}\n` : '';
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
+
+═══ SEU PAPEL NESTA FASE ═══
+Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do roteiro.
+- NÃO avalie o roteiro (isso é trabalho do FASE 3)
+- NÃO refine cirurgicamente (isso é trabalho do FASE 2)
+- FOQUE em criar narrativa com ALMA e estrutura sólida
+- O usuário vai editar seu texto antes de passar para a próxima fase
 
 🧠 CONHECIMENTO YOUTUBE (algoritmo):
 ${ytKnowledge.slice(0, 2500)}
@@ -264,6 +332,9 @@ ${viralInjection}
 ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
+
+${ANTI_SLOP_DIRECTIVE}
+
 Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'} | Formato: ${isShort ? 'SHORT (vertical 9:16)' : 'LONGFORM (16:9)'}
 
 ${isShort ? `
@@ -299,9 +370,15 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 ---END_SCENE_BLUEPRINT---
 
 ⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.
-`}`;
+`}
 
-    console.log("Phase 1: Streaming draft from Gemini Flash with FULL knowledge...");
+═══ LEMBRETE FINAL: ALMA DO ROTEIRO ═══
+O YouTube detecta e penaliza conteúdo genérico com baixo "Valued Watch Time".
+Seu roteiro deve fazer o espectador SENTIR algo — raiva, espanto, riso, medo, curiosidade genuína.
+Se ao ler seu texto você sente que "qualquer IA escreveria isso", REESCREVA.
+O teste é simples: uma pessoa real pausaria o que está fazendo para ouvir isso?`;
+
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from Gemini Flash with FULL knowledge...`);
     const phase1Res = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
       body: JSON.stringify({
@@ -321,11 +398,11 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
       if (phase1Res.status === 429) return errResp("Rate limit. Tente novamente.", 429);
       if (phase1Res.status === 402) return errResp("Créditos insuficientes.", 402);
       const t = await phase1Res.text();
-      console.error("Phase 1 error:", phase1Res.status, t);
+      console.error(`[PHASE-1 DRAFT] runId=${runId} Error:`, phase1Res.status, t);
       throw new Error("Script generation failed");
     }
 
-    console.log("Streaming Phase 1 to client...");
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client...`);
     return new Response(phase1Res.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });

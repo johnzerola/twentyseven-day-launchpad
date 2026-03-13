@@ -8,14 +8,54 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// ═══════════════════════════════════════════════════════════════
+// ANTI-AI-SLOP DETECTOR — Run BEFORE refinement to flag problems
+// ═══════════════════════════════════════════════════════════════
+const SLOP_PATTERNS = [
+  /neste vasto/gi, /mergulh(e|emos|ando)/gi, /é crucial/gi, /é importante notar/gi,
+  /jornada (incrível|fascinante)/gi, /no mundo (acelerado|dinâmico)/gi,
+  /desbloqueie? o potencial/gi, /sem mais delongas/gi, /apertem os cintos/gi,
+  /prepare-se para ter a mente/gi, /isso vai mudar tudo/gi,
+  /buckle up/gi, /let's dive in/gi, /without further ado/gi,
+  /imagine (um mundo|uma realidade|que)/gi,
+];
+
+function countSlopScore(text: string): { score: number; matches: string[] } {
+  const matches: string[] = [];
+  for (const p of SLOP_PATTERNS) {
+    const m = text.match(p);
+    if (m) matches.push(...m.map(s => s.trim()));
+  }
+  // Check for excessive superlatives
+  const superlatives = (text.match(/(incrível|impressionante|fantástic[oa]|extraordinári[oa]|surpreendente)/gi) || []);
+  if (superlatives.length > 3) matches.push(`${superlatives.length}x superlativos genéricos`);
+  
+  return { score: matches.length, matches };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements } = await req.json();
+    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!draft_script) throw new Error("draft_script is required");
+
+    // ═══ ORCHESTRATION CONTRACT ═══
+    // This function is PHASE 2 (Surgical Refinement). It receives:
+    //   - draft_script: The EXACT text the user approved from Phase 1
+    //   - rejection_feedback: Optional feedback from Phase 3 (score-script)
+    //   - consensus_improvements: Optional specific improvements both AIs agreed on
+    // It outputs: SSE stream of the IMPROVED script (80-90% preserved)
+    // It does NOT score the script (Phase 3's job)
+    // It does NOT generate from scratch (Phase 1's job)
+    const runId = phaseId || crypto.randomUUID();
+    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars`);
+
+    // Pre-flight: detect AI slop in the draft
+    const slopCheck = countSlopScore(draft_script);
+    console.log(`[PHASE-2 REFINE] runId=${runId} Slop score: ${slopCheck.score} (${slopCheck.matches.join(', ')})`);
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -60,9 +100,28 @@ ${consensus_improvements.map((imp: string, i: number) => `${i+1}. ${imp}`).join(
 APLIQUE TODAS essas melhorias de forma cirúrgica. Elas são a PRIORIDADE MÁXIMA.
 ` : '';
 
+    // Build anti-slop remediation context
+    const slopContext = slopCheck.score > 0 ? `
+🚫 ALERTA ANTI-AI-SLOP — ${slopCheck.score} PADRÕES GENÉRICOS DETECTADOS:
+Padrões encontrados no texto: ${slopCheck.matches.join(', ')}
+
+SUBSTITUA cada ocorrência por linguagem HUMANA, ESPECÍFICA e IMPREVISÍVEL.
+Exemplos de substituição:
+- "Neste vasto universo" → Frase específica sobre o tema
+- "Jornada fascinante" → Detalhe concreto do que acontece
+- "É importante notar" → Eliminir. Vá direto ao ponto
+- Superlativos genéricos → Dados específicos ou metáforas originais
+` : '';
+
     const systemPrompt = `Você é um EDITOR CIRÚRGICO de roteiros para YouTube viral. Sua missão é MELHORAR o roteiro existente SEM reescrevê-lo do zero.
 
-🚨 REGRA PRINCIPAL: PRESERVE 80-90% DO TEXTO ORIGINAL. Você NÃO é autor, é EDITOR.
+═══ SEU PAPEL: FASE 2 — EDITOR CIRÚRGICO ═══
+- Você recebe o rascunho que o USUÁRIO JÁ EDITOU e APROVOU
+- O usuário investiu tempo editando. RESPEITE o texto dele
+- Você NÃO é autor (isso foi Fase 1) nem avaliador (isso é Fase 3)
+- Sua ÚNICA missão: melhorar 3-5 pontos fracos sem descaracterizar
+
+🚨 REGRA PRINCIPAL: PRESERVE 80-90% DO TEXTO ORIGINAL.
 
 🔧 O QUE VOCÊ PODE FAZER:
 1. Melhorar o HOOK (primeiros 30s) — tornar mais impactante
@@ -97,12 +156,20 @@ ${topHooks.slice(0, 800)}
 ${structures.slice(0, 600)}
 ${rejectionContext}
 ${consensusContext}
+${slopContext}
+
+🚫 ANTI-AI-SLOP — DURANTE A EDIÇÃO:
+- NUNCA introduza frases clichê de IA (veja lista acima)
+- Se encontrar frases genéricas no original, SUBSTITUA por linguagem humana
+- Cada frase deve passar no teste: "Um humano FALARIA isso em uma conversa real?"
+- Injete pelo menos 2 elementos de "alma": analogia inesperada, número específico estranho, confissão do narrador, ou pausa narrativa abrupta
 
 📊 PROCESSO:
 1. Leia o roteiro COMPLETO
 2. Identifique os 3-5 pontos MAIS FRACOS
-3. Melhore APENAS esses pontos
-4. Mantenha TODO o resto intacto
+3. Verifique se há padrões AI-slop e elimine-os
+4. Melhore APENAS esses pontos
+5. Mantenha TODO o resto intacto
 
 ⚠️ FORMATO DE SAÍDA:
 RETORNE APENAS o roteiro COMPLETO com suas melhorias cirúrgicas integradas.
@@ -110,7 +177,7 @@ APENAS texto de narração. ZERO anotações técnicas, ZERO marcações de "mel
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
-    console.log("Refine: Streaming from Lovable AI Gateway (Gemini 2.5 Pro)...");
+    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from Gemini Pro...`);
 
     const refineRes = await fetch(AI_URL, {
       method: "POST",
@@ -130,13 +197,13 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
     if (!refineRes.ok) {
       const errText = await refineRes.text();
-      console.error("AI Gateway error:", refineRes.status, errText);
+      console.error(`[PHASE-2 REFINE] runId=${runId} Error:`, refineRes.status, errText);
       if (refineRes.status === 429) return errResp("Rate limit. Aguarde.", 429);
       if (refineRes.status === 402) return errResp("Créditos insuficientes.", 402);
       throw new Error(`AI Gateway error: ${refineRes.status}`);
     }
 
-    // Pass through SSE stream directly (already in OpenAI format)
+    // Pass through SSE stream directly
     return new Response(refineRes.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
