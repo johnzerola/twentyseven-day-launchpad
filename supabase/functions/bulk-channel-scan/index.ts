@@ -32,7 +32,7 @@ serve(async (req) => {
     
     // Resolve channel URL to ID if needed
     if (!resolvedChannelId && channel_url) {
-      const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+      const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
       if (!YT_KEY) throw new Error("YouTube API key not configured");
       
       // Try handle, username, or channel ID from URL

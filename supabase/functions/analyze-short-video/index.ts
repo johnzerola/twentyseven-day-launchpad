@@ -23,7 +23,8 @@ serve(async (req) => {
     const ytKey1 = Deno.env.get("YOUTUBE_API_KEY");
     const ytKey2 = Deno.env.get("YOUTUBE_API_KEY_2");
     const ytKey3 = Deno.env.get("YOUTUBE_API_KEY_3");
-    let ytKey = ytKey1 || ytKey2 || ytKey3;
+    const ytKey4 = Deno.env.get("YOUTUBE_API_KEY_4");
+    let ytKey = ytKey1 || ytKey2 || ytKey3 || ytKey4;
 
     let shortsData: any[] = [];
     if (ytKey) {

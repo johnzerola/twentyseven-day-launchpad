@@ -35,6 +35,7 @@ serve(async (req) => {
       Deno.env.get("YOUTUBE_API_KEY"),
       Deno.env.get("YOUTUBE_API_KEY_2"),
       Deno.env.get("YOUTUBE_API_KEY_3"),
+      Deno.env.get("YOUTUBE_API_KEY_4"),
     ].filter(Boolean) as string[];
     let ytKeyIndex = 0;
     const getYtKey = () => ytKeys[ytKeyIndex % ytKeys.length] || "";
