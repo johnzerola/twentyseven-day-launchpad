@@ -62,7 +62,13 @@ serve(async (req) => {
       console.log(`Skipping Brave Search for creative style "${style}" — YouTube analysis only`);
     }
 
-    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos, braveResults] = await Promise.all([
+    // Also fetch hook_library and viral_titles for deeper context
+    const hookLibPromise = sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
+      .order("retention_score", { ascending: false }).limit(15);
+    const viralTitlesPromise = sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
+      .order("views", { ascending: false }).limit(30);
+
+    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos, braveResults, hookLibRes, viralTitlesRes] = await Promise.all([
       sb.from("channel_intelligence")
         .select("channel_name,style,niche,avg_views,subscribers,growth_rate,viral_patterns,top_videos,visual_style_notes,upload_frequency,rpm_estimate")
         .order("avg_views", { ascending: false })
@@ -81,6 +87,8 @@ serve(async (req) => {
         .limit(20),
       youtubeSearchPromise,
       braveSearchPromise,
+      hookLibPromise,
+      viralTitlesPromise,
     ]);
 
     // ========== Filter channels by niche relevance ==========
