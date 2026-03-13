@@ -150,9 +150,21 @@ const KnowledgeAdmin = () => {
               {Object.values(data).reduce((s, d) => s + d.length, 0)} registros em 4 bases de conhecimento
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => { fetchAll(); toast.success('Dados atualizados'); }} className="gap-2">
-            <RefreshCw className="w-4 h-4" /> Atualizar
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => { fetchAll(); fetchEmbeddingCount(); toast.success('Dados atualizados'); }} className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Atualizar
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => runBackfill()} 
+              disabled={embeddingStatus.loading}
+              className="gap-2"
+            >
+              {embeddingStatus.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {embeddingStatus.loading ? 'Gerando...' : `Gerar Embeddings (${embeddingStatus.total} existentes)`}
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
