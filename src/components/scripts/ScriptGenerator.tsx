@@ -43,7 +43,7 @@ interface ScriptGeneratorProps {
   setLoading: (v: boolean) => void;
   scorecard: { hook: number; retention: number; emotion: number; flow: number; payoff: number } | null;
   setScorecard: (v: any) => void;
-  setActiveStep: (v: 'script' | 'style' | 'characters' | 'prompts') => void;
+  setActiveStep: (v: 'script' | 'style' | 'characters' | 'prompts' | 'titles') => void;
   getViralContext: () => string;
   getOrCreateProject: () => Promise<string>;
   intelligenceBriefing: any;

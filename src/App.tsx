@@ -63,6 +63,7 @@ const App = () => (
       </TooltipProvider>
     </LanguageProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
