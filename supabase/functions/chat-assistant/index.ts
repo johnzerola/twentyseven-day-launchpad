@@ -6,6 +6,72 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Generate query embedding using the same approach as backfill
+async function generateQueryEmbedding(text: string, apiKey: string): Promise<number[] | null> {
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `You are an embedding generator. Given text, output ONLY a JSON array of exactly 768 floating-point numbers between -1 and 1 that represent the semantic meaning of the text. Output ONLY the JSON array, nothing else.`
+          },
+          { role: "user", content: text.slice(0, 1000) }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "store_embedding",
+              description: "Store a 768-dimensional embedding vector",
+              parameters: {
+                type: "object",
+                properties: {
+                  embedding: {
+                    type: "array",
+                    items: { type: "number" },
+                    description: "768-dimensional embedding vector"
+                  }
+                },
+                required: ["embedding"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "store_embedding" } }
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) return null;
+
+    const args = JSON.parse(toolCall.function.arguments);
+    let embedding = args.embedding;
+    if (!Array.isArray(embedding)) return null;
+
+    if (embedding.length < 768) while (embedding.length < 768) embedding.push(0);
+    else if (embedding.length > 768) embedding = embedding.slice(0, 768);
+
+    const mag = Math.sqrt(embedding.reduce((s: number, v: number) => s + v * v, 0));
+    if (mag > 0) embedding = embedding.map((v: number) => v / mag);
+
+    return embedding;
+  } catch (e) {
+    console.error("Query embedding error:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -18,31 +84,79 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch ALL knowledge bases in parallel for deep RAG
-    const [
-      ytKnowledge, scriptKnowledge, channelIntel, viralTitles, nicheDb,
-      hookLibrary, attentionEng, audiencePsych, contentModels, scriptStructures,
-      hookPatterns, attentionLib, sceneKnowledge
-    ] = await Promise.all([
-      sb.from("youtube_knowledge").select("title, content, category, priority").order("priority", { ascending: false }).limit(25),
-      sb.from("script_knowledge").select("title, content, category, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(20),
-      sb.from("channel_intelligence").select("channel_name, niche, avg_views, subscribers, growth_rate, rpm_estimate, style, is_faceless, country, language, upload_frequency").limit(60),
-      sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern, channel_name, country, language, why_viral").order("views", { ascending: false }).limit(50),
+    // Extract the user's latest query for semantic search
+    const userMessages = (messages || []).filter((m: any) => m.role === 'user');
+    const latestQuery = userMessages.length > 0 ? userMessages[userMessages.length - 1].content : '';
+    
+    // Build search context from last 3 user messages for better semantic understanding
+    const recentContext = userMessages
+      .slice(-3)
+      .map((m: any) => m.content)
+      .join(' ');
+
+    // ===== SEMANTIC SEARCH (primary) + FALLBACK (score-based) =====
+    let semanticContext = '';
+    let usedSemantic = false;
+
+    // Try semantic search first
+    const queryEmbedding = await generateQueryEmbedding(recentContext || latestQuery, LOVABLE_API_KEY);
+    
+    if (queryEmbedding) {
+      const embeddingStr = `[${queryEmbedding.join(',')}]`;
+      
+      const { data: matches, error: matchError } = await sb.rpc('match_knowledge', {
+        query_embedding: embeddingStr,
+        match_count: 30,
+        match_threshold: 0.25,
+      });
+
+      if (!matchError && matches && matches.length > 0) {
+        usedSemantic = true;
+        
+        // Group by source table for organized context
+        const grouped: Record<string, typeof matches> = {};
+        for (const match of matches) {
+          if (!grouped[match.source_table]) grouped[match.source_table] = [];
+          grouped[match.source_table].push(match);
+        }
+
+        const tableLabels: Record<string, string> = {
+          youtube_knowledge: '📚 Algoritmo YouTube',
+          script_knowledge: '✍️ Técnicas de Roteiro',
+          hook_library: '🎣 Hooks',
+          audience_psychology_patterns: '🧬 Psicologia',
+          attention_engineering: '⚡ Engenharia de Atenção',
+          content_models: '🎬 Modelos de Conteúdo',
+          script_structures: '📐 Estruturas',
+          hook_patterns: '🧠 Padrões de Hook',
+          scene_prompt_knowledge: '🎥 Prompts Visuais',
+          niche_database: '📊 Nichos',
+          viral_titles_db: '🔥 Títulos Virais',
+          attention_library: '👁️ Biblioteca de Atenção',
+        };
+
+        const contextBlocks: string[] = [];
+        for (const [table, items] of Object.entries(grouped)) {
+          const label = tableLabels[table] || table;
+          const block = items
+            .sort((a: any, b: any) => b.similarity - a.similarity)
+            .map((m: any) => `  [sim:${(m.similarity * 100).toFixed(0)}%] ${m.content_text.slice(0, 300)}`)
+            .join('\n');
+          contextBlocks.push(`### ${label} (${items.length} matches):\n${block}`);
+        }
+
+        semanticContext = contextBlocks.join('\n\n');
+        console.log(`Semantic search: ${matches.length} matches from ${Object.keys(grouped).length} tables`);
+      }
+    }
+
+    // Always fetch essential real-time data (channels, some viral titles, niches) regardless of semantic search
+    const [channelIntel, viralTitles, nicheDb] = await Promise.all([
+      sb.from("channel_intelligence").select("channel_name, niche, avg_views, subscribers, growth_rate, rpm_estimate, style, is_faceless, country, language, upload_frequency").limit(40),
+      sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern, channel_name, country, language, why_viral").order("views", { ascending: false }).limit(30),
       sb.from("niche_database").select("name, rpm_estimate, difficulty, saturation, faceless_friendly, country, language, sub_niches").limit(60),
-      sb.from("hook_library").select("hook_text, hook_type, niche, retention_score, source_video").order("retention_score", { ascending: false }).limit(30),
-      sb.from("attention_engineering").select("pattern_name, technique, category, psychological_basis, retention_impact, intensity_level").order("retention_impact", { ascending: false }).limit(20),
-      sb.from("audience_psychology_patterns").select("trigger_type, description, example_hooks, example_titles, storytelling_pattern, retention_score, niches").order("retention_score", { ascending: false }).limit(20),
-      sb.from("content_models").select("model_name, model_type, description, hook_pattern, pacing_guide, effectiveness_score, video_type").order("effectiveness_score", { ascending: false }).limit(15),
-      sb.from("script_structures").select("structure_name, intro_pattern, middle_pattern, ending_pattern, cliffhanger_pattern, avg_retention, niche, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(15),
-      sb.from("hook_patterns").select("pattern_name, pattern_type, template, psychology_trigger, avg_retention_boost, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(20),
-      sb.from("attention_library").select("pattern_name, scene_type, attention_score, emotion, time_window, example_text, recovery_technique").order("attention_score", { ascending: false }).limit(20),
-      sb.from("scene_prompt_knowledge").select("title, category, prompt_template, viral_score").order("viral_score", { ascending: false }).limit(15),
     ]);
 
-    // Build rich context blocks
-    const ytContext = (ytKnowledge.data || []).map(k => `[${k.category}] ${k.title}: ${k.content.slice(0, 400)}`).join('\n');
-    const scriptContext = (scriptKnowledge.data || []).map(k => `[${k.category}] ${k.title} (score:${k.effectiveness_score}): ${k.content.slice(0, 300)}`).join('\n');
-    
     const channelContext = (channelIntel.data || []).map(c => 
       `${c.channel_name} (${c.niche}): ${(c.avg_views/1000).toFixed(0)}K views, ${(c.subscribers/1000).toFixed(0)}K subs, RPM $${c.rpm_estimate}, ${c.growth_rate}, ${c.is_faceless ? 'faceless' : 'facecam'}, ${c.country}, freq: ${c.upload_frequency || '?'}`
     ).join('\n');
@@ -55,37 +169,55 @@ serve(async (req) => {
       `${n.name}: RPM $${n.rpm_estimate}, dificuldade ${n.difficulty}, saturação ${n.saturation}, faceless: ${n.faceless_friendly ? 'sim' : 'não'}, ${n.country}, sub-nichos: ${JSON.stringify(n.sub_niches || [])}`
     ).join('\n');
 
-    const hookContext = (hookLibrary.data || []).map(h =>
-      `[${h.hook_type}] "${h.hook_text}" — retenção: ${h.retention_score}/10, nicho: ${h.niche || 'geral'}`
-    ).join('\n');
+    // If semantic search failed or returned too few results, do fallback score-based fetch
+    let fallbackContext = '';
+    if (!usedSemantic) {
+      console.log("Semantic search unavailable, using score-based fallback");
+      const [ytKnowledge, scriptKnowledge, hookLibrary, attentionEng, audiencePsych, 
+             contentModels, scriptStructures, hookPatterns, attentionLib, sceneKnowledge] = await Promise.all([
+        sb.from("youtube_knowledge").select("title, content, category, priority").order("priority", { ascending: false }).limit(25),
+        sb.from("script_knowledge").select("title, content, category, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(20),
+        sb.from("hook_library").select("hook_text, hook_type, niche, retention_score").order("retention_score", { ascending: false }).limit(30),
+        sb.from("attention_engineering").select("pattern_name, technique, category, psychological_basis, retention_impact").order("retention_impact", { ascending: false }).limit(20),
+        sb.from("audience_psychology_patterns").select("trigger_type, description, storytelling_pattern, retention_score").order("retention_score", { ascending: false }).limit(20),
+        sb.from("content_models").select("model_name, model_type, description, hook_pattern, pacing_guide, effectiveness_score, video_type").order("effectiveness_score", { ascending: false }).limit(15),
+        sb.from("script_structures").select("structure_name, intro_pattern, middle_pattern, ending_pattern, cliffhanger_pattern, avg_retention, niche").order("effectiveness_score", { ascending: false }).limit(15),
+        sb.from("hook_patterns").select("pattern_name, pattern_type, template, psychology_trigger, avg_retention_boost").order("effectiveness_score", { ascending: false }).limit(20),
+        sb.from("attention_library").select("pattern_name, scene_type, attention_score, emotion, time_window, example_text, recovery_technique").order("attention_score", { ascending: false }).limit(20),
+        sb.from("scene_prompt_knowledge").select("title, category, prompt_template, viral_score").order("viral_score", { ascending: false }).limit(15),
+      ]);
 
-    const attentionEngContext = (attentionEng.data || []).map(a =>
-      `${a.pattern_name} [${a.category}]: ${a.technique} | base psicológica: ${a.psychological_basis || 'N/A'} | impacto retenção: ${a.retention_impact}%`
-    ).join('\n');
+      fallbackContext = `
+### 📚 Algoritmo YouTube:
+${(ytKnowledge.data || []).map(k => `[${k.category}] ${k.title}: ${k.content.slice(0, 400)}`).join('\n')}
 
-    const psychContext = (audiencePsych.data || []).map(p =>
-      `[${p.trigger_type}] ${p.description.slice(0, 200)} | storytelling: ${p.storytelling_pattern || 'N/A'} | retenção: ${p.retention_score}/10 | nichos: ${(p.niches || []).join(', ')}`
-    ).join('\n');
+### ✍️ Técnicas de Roteiro:
+${(scriptKnowledge.data || []).map(k => `[${k.category}] ${k.title} (score:${k.effectiveness_score}): ${k.content.slice(0, 300)}`).join('\n')}
 
-    const modelContext = (contentModels.data || []).map(m =>
-      `${m.model_name} (${m.model_type}, ${m.video_type}): ${m.description.slice(0, 150)} | hook: ${m.hook_pattern.slice(0, 100)} | pacing: ${m.pacing_guide.slice(0, 100)}`
-    ).join('\n');
+### 🎣 Hooks:
+${(hookLibrary.data || []).map(h => `[${h.hook_type}] "${h.hook_text}" — retenção: ${h.retention_score}/10`).join('\n')}
 
-    const structContext = (scriptStructures.data || []).map(s =>
-      `${s.structure_name}: intro="${s.intro_pattern.slice(0, 80)}" | meio="${s.middle_pattern.slice(0, 80)}" | final="${s.ending_pattern.slice(0, 80)}" | cliffhanger="${s.cliffhanger_pattern.slice(0, 80)}" | retenção média: ${s.avg_retention}%`
-    ).join('\n');
+### ⚡ Engenharia de Atenção:
+${(attentionEng.data || []).map(a => `${a.pattern_name}: ${a.technique} | impacto: ${a.retention_impact}%`).join('\n')}
 
-    const hookPatContext = (hookPatterns.data || []).map(h =>
-      `${h.pattern_name} [${h.pattern_type}]: "${h.template}" | trigger: ${h.psychology_trigger} | boost retenção: +${h.avg_retention_boost}%`
-    ).join('\n');
+### 🧬 Psicologia:
+${(audiencePsych.data || []).map(p => `[${p.trigger_type}] ${p.description.slice(0, 200)}`).join('\n')}
 
-    const attLibContext = (attentionLib.data || []).map(a =>
-      `${a.pattern_name} [${a.scene_type}] ${a.time_window}: atenção ${a.attention_score}/10, emoção: ${a.emotion}, exemplo: "${(a.example_text || '').slice(0, 100)}", recuperação: ${a.recovery_technique || 'N/A'}`
-    ).join('\n');
+### 🎬 Modelos:
+${(contentModels.data || []).map(m => `${m.model_name} (${m.video_type}): ${m.description.slice(0, 150)}`).join('\n')}
 
-    const sceneKnowledgeContext = (sceneKnowledge.data || []).map(s =>
-      `[${s.category}] ${s.title} (viral:${s.viral_score}): ${s.prompt_template.slice(0, 150)}`
-    ).join('\n');
+### 📐 Estruturas:
+${(scriptStructures.data || []).map(s => `${s.structure_name}: intro="${s.intro_pattern.slice(0, 80)}" | retenção: ${s.avg_retention}%`).join('\n')}
+
+### 🧠 Padrões de Hook:
+${(hookPatterns.data || []).map(h => `${h.pattern_name}: "${h.template}" | boost: +${h.avg_retention_boost}%`).join('\n')}
+
+### 👁️ Atenção por Cena:
+${(attentionLib.data || []).map(a => `${a.pattern_name} ${a.time_window}: atenção ${a.attention_score}/10`).join('\n')}
+
+### 🎥 Prompts Visuais:
+${(sceneKnowledge.data || []).map(s => `[${s.category}] ${s.title}: ${s.prompt_template.slice(0, 150)}`).join('\n')}`;
+    }
 
     // Page-aware context
     const pageHints: Record<string, string> = {
@@ -121,17 +253,13 @@ ${od.preference ? `- Preferência: ${od.preference === 'passion' ? 'Fazer o que 
 
 ## BASE DE DADOS REAL
 
-### Nichos disponíveis com dados:
+### Nichos disponíveis:
 ${nicheContext}
 
 ### Canais de referência (${channelIntel.data?.length || 0}):
 ${channelContext.slice(0, 3000)}
 
-### Algoritmo YouTube:
-${ytContext.slice(0, 2000)}
-
-### Hooks de alta retenção:
-${hookContext.slice(0, 1500)}
+${usedSemantic ? `### 🔍 Conhecimento Relevante (busca semântica):\n${semanticContext.slice(0, 4000)}` : fallbackContext.slice(0, 4000)}
 
 ## FORMATO DO PLANO (OBRIGATÓRIO)
 
@@ -179,6 +307,18 @@ ${od.preference === 'both' ? '- Sugestão de como unir paixão com monetização
     }
 
     // ========== REGULAR CHAT MODE ==========
+    const knowledgeBlock = usedSemantic 
+      ? `## ═══════════════════════════════════════════
+## 🔍 CONHECIMENTO RELEVANTE (Busca Semântica — ${semanticContext.split('\n').length} resultados)
+## ═══════════════════════════════════════════
+
+${semanticContext}`
+      : `## ═══════════════════════════════════════════
+## BASE DE CONHECIMENTO (Fallback por Score)
+## ═══════════════════════════════════════════
+
+${fallbackContext}`;
+
     const systemPrompt = `Você é o **Dotti** — consultor estratégico de YouTube da plataforma Dotti. Você possui acesso a um banco de dados massivo com inteligência real sobre YouTube.
 
 ## SUA PERSONALIDADE
@@ -262,47 +402,15 @@ Use os estudos e insights do banco youtube_knowledge:
 ## CONTEXTO ATUAL
 ${pageContext}
 
-## ═══════════════════════════════════════════
-## BASE DE CONHECIMENTO COMPLETA (RAG)
-## ═══════════════════════════════════════════
+${knowledgeBlock}
 
-### 📚 Algoritmo & Estudos YouTube (${ytKnowledge.data?.length || 0} registros):
-${ytContext}
-
-### ✍️ Técnicas de Roteiro & Retenção (${scriptKnowledge.data?.length || 0} registros):
-${scriptContext}
-
-### 🎣 Hooks de Alta Retenção (${hookLibrary.data?.length || 0} registros):
-${hookContext}
-
-### 🧠 Padrões de Hook (${hookPatterns.data?.length || 0} registros):
-${hookPatContext}
-
-### 🧬 Psicologia de Audiência (${audiencePsych.data?.length || 0} registros):
-${psychContext}
-
-### ⚡ Engenharia de Atenção (${attentionEng.data?.length || 0} registros):
-${attentionEngContext}
-
-### 👁️ Biblioteca de Atenção por Cena (${attentionLib.data?.length || 0} registros):
-${attLibContext}
-
-### 🎬 Modelos de Conteúdo (${contentModels.data?.length || 0} registros):
-${modelContext}
-
-### 📐 Estruturas de Roteiro (${scriptStructures.data?.length || 0} registros):
-${structContext}
-
-### 🎥 Knowledge de Prompts Visuais (${sceneKnowledge.data?.length || 0} registros):
-${sceneKnowledgeContext}
-
-### 📺 Canais Analisados (${channelIntel.data?.length || 0} registros):
+### 📺 Canais Analisados (${channelIntel.data?.length || 0}):
 ${channelContext}
 
-### 🔥 Títulos Virais Reais (${viralTitles.data?.length || 0} registros):
+### 🔥 Títulos Virais (${viralTitles.data?.length || 0}):
 ${viralContext}
 
-### 📊 Banco de Nichos (${nicheDb.data?.length || 0} registros):
+### 📊 Banco de Nichos (${nicheDb.data?.length || 0}):
 ${nicheContext}
 
 ## FERRAMENTAS DA PLATAFORMA (sugira quando relevante):
@@ -324,7 +432,8 @@ ${nicheContext}
 7. Quando o assunto é monetização, seja BRUTAL com prazos realistas
 8. Nunca termine sem uma AÇÃO CONCRETA: "Próximo passo: faz X agora"
 9. Quando perguntarem sobre roteiros, CITE técnicas específicas do banco (nome do padrão + dados)
-10. Quando perguntarem sobre algoritmo, USE os estudos do youtube_knowledge`;
+10. Quando perguntarem sobre algoritmo, USE os estudos do youtube_knowledge
+11. ${usedSemantic ? 'O contexto RAG foi filtrado por BUSCA SEMÂNTICA — os resultados são os mais relevantes para a pergunta atual. Use-os com prioridade.' : 'O contexto RAG está ordenado por score. Filtre mentalmente o que é mais relevante para a pergunta.'}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

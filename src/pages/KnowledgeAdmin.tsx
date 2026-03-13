@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { getAuthHeaders } from '@/lib/auth-fetch';
 
 interface KnowledgeRecord {
   id: string;
@@ -44,6 +45,37 @@ const KnowledgeAdmin = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [embeddingStatus, setEmbeddingStatus] = useState<{ total: number; loading: boolean }>({ total: 0, loading: false });
+
+  const fetchEmbeddingCount = async () => {
+    const { count } = await supabase.from('knowledge_embeddings').select('*', { count: 'exact', head: true });
+    setEmbeddingStatus(prev => ({ ...prev, total: count || 0 }));
+  };
+
+  const runBackfill = async (tables?: string[]) => {
+    setEmbeddingStatus(prev => ({ ...prev, loading: true }));
+    toast.info('Gerando embeddings... isso pode levar alguns minutos');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/backfill-embeddings`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchSize: 2, tables }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        const totalProcessed = Object.values(result.report as Record<string, any>).reduce((s: number, r: any) => s + r.processed, 0);
+        toast.success(`${totalProcessed} embeddings gerados com sucesso!`);
+        fetchEmbeddingCount();
+      } else {
+        toast.error(result.error || 'Erro ao gerar embeddings');
+      }
+    } catch (e) {
+      toast.error('Erro de conexão ao gerar embeddings');
+    } finally {
+      setEmbeddingStatus(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -62,7 +94,7 @@ const KnowledgeAdmin = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); fetchEmbeddingCount(); }, []);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -118,9 +150,21 @@ const KnowledgeAdmin = () => {
               {Object.values(data).reduce((s, d) => s + d.length, 0)} registros em 4 bases de conhecimento
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => { fetchAll(); toast.success('Dados atualizados'); }} className="gap-2">
-            <RefreshCw className="w-4 h-4" /> Atualizar
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => { fetchAll(); fetchEmbeddingCount(); toast.success('Dados atualizados'); }} className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Atualizar
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => runBackfill()} 
+              disabled={embeddingStatus.loading}
+              className="gap-2"
+            >
+              {embeddingStatus.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {embeddingStatus.loading ? 'Gerando...' : `Gerar Embeddings (${embeddingStatus.total} existentes)`}
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}

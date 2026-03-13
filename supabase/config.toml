@@ -120,3 +120,10 @@ verify_jwt = false
 [functions.video-orchestrator]
 verify_jwt = false
 
+[functions.generate-embeddings]
+verify_jwt = false
+
+[functions.backfill-embeddings]
+verify_jwt = false
+
+
