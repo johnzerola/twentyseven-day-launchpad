@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe } from 'lucide-react';
+import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Youtube } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
