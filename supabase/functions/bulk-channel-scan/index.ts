@@ -59,7 +59,8 @@ serve(async (req) => {
     const YT_KEY = Deno.env.get("YOUTUBE_API_KEY");
     const YT_KEY_2 = Deno.env.get("YOUTUBE_API_KEY_2");
     const YT_KEY_3 = Deno.env.get("YOUTUBE_API_KEY_3");
-    if (!YT_KEY && !YT_KEY_2 && !YT_KEY_3) throw new Error("YouTube API key not configured");
+    const YT_KEY_4 = Deno.env.get("YOUTUBE_API_KEY_4");
+    if (!YT_KEY && !YT_KEY_2 && !YT_KEY_3 && !YT_KEY_4) throw new Error("YouTube API key not configured");
     
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
