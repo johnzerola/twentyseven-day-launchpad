@@ -119,12 +119,10 @@ ${a.growth_potential}`;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      const authH2 = await getAuthHeaders();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-plan`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authH2,
         body: JSON.stringify({
           answers: allAnswers,
           channelAnalysis: channelAnalysis?.analysis,

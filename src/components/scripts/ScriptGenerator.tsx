@@ -146,12 +146,10 @@ export const ScriptGenerator = ({
   const cleanAll = (text: string) => cleanShortMeta(cleanBlueprintFromScript(cleanScoresFromScript(text)));
 
   const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
+    const headers = await getAuthHeaders();
     const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

@@ -408,12 +408,10 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
     setLoading(true);
 
     try {
+      const authHeaders2 = await getAuthHeaders();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistant`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authHeaders2,
         body: JSON.stringify({
           messages: newMessages.filter((_, i) => i > 0),
           currentPage: location.pathname,

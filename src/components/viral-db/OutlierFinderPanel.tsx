@@ -49,12 +49,10 @@ export const OutlierFinderPanel = () => {
     setLoading(true);
     setSearched(true);
     try {
+      const authHeaders = await (await import('@/lib/auth-fetch')).getAuthHeaders();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/find-outliers`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           keywords: q,
           maxSubs: parseInt(maxSubs) || 50000,
