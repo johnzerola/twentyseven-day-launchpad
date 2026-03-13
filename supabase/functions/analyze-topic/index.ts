@@ -171,6 +171,25 @@ serve(async (req) => {
       `[${r.category}] ${r.title}: ${r.content.slice(0, 200)}`
     ).join('\n\n');
 
+    // ========== Format hook_library ==========
+    const hookLibBlock = (hookLibRes.data || []).map((r: any) =>
+      `• [${r.hook_type}] "${r.hook_text}" (retenção: ${r.retention_score}/10${r.niche ? `, ${r.niche}` : ''})`
+    ).join("\n");
+
+    // ========== Format viral_titles_db (topic-relevant) ==========
+    const topicWordsForTitles = topicLC.split(/\s+/).filter((w: string) => w.length > 3);
+    const scoredViralTitles = (viralTitlesRes.data || []).map((t: any) => {
+      let score = 0;
+      const tLC = (t.title || '').toLowerCase();
+      for (const w of topicWordsForTitles) { if (tLC.includes(w)) score += 10; }
+      if (nicheLC && (t.niche || '').toLowerCase().includes(nicheLC)) score += 15;
+      return { ...t, matchScore: score };
+    }).sort((a: any, b: any) => b.matchScore - a.matchScore);
+    const relevantViralTitles = scoredViralTitles.slice(0, 10);
+    const viralTitlesBlock = relevantViralTitles.map((t: any) =>
+      `• "${t.title}" (${(t.views || 0).toLocaleString()} views) — Pattern: ${t.title_pattern || '?'} | Why: ${t.why_viral || 'N/A'}`
+    ).join("\n");
+
     // ========== Format YouTube real-time videos ==========
     const ytVideosBlock = (youtubeVideos as any[]).length > 0
       ? (youtubeVideos as any[]).map((v: any, i: number) => {
