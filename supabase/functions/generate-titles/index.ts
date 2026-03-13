@@ -39,7 +39,13 @@ serve(async (req) => {
 
     // ========== GENERATE TITLES ==========
     if (type === "generate") {
-      const { niche, topic, language, country } = body;
+      const { niche, topic, language, country, scriptContext } = body;
+
+      // Script context block (when coming from script pipeline)
+      let scriptContextBlock = '';
+      if (scriptContext) {
+        scriptContextBlock = `\n\n📹 CONTEXTO COMPLETO DO VÍDEO (use para criar títulos PRECISOS que refletem o conteúdo real):\n${scriptContext}\n\nOs títulos DEVEM refletir o conteúdo acima. Não invente — extraia os ângulos mais clicáveis do roteiro real.`;
+      }
 
       // 1) Fetch ALL knowledge sources in parallel
       let viralRefBlock = '';
