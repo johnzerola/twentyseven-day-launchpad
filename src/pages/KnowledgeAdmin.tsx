@@ -45,6 +45,37 @@ const KnowledgeAdmin = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [embeddingStatus, setEmbeddingStatus] = useState<{ total: number; loading: boolean }>({ total: 0, loading: false });
+
+  const fetchEmbeddingCount = async () => {
+    const { count } = await supabase.from('knowledge_embeddings').select('*', { count: 'exact', head: true });
+    setEmbeddingStatus(prev => ({ ...prev, total: count || 0 }));
+  };
+
+  const runBackfill = async (tables?: string[]) => {
+    setEmbeddingStatus(prev => ({ ...prev, loading: true }));
+    toast.info('Gerando embeddings... isso pode levar alguns minutos');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/backfill-embeddings`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchSize: 2, tables }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        const totalProcessed = Object.values(result.report as Record<string, any>).reduce((s: number, r: any) => s + r.processed, 0);
+        toast.success(`${totalProcessed} embeddings gerados com sucesso!`);
+        fetchEmbeddingCount();
+      } else {
+        toast.error(result.error || 'Erro ao gerar embeddings');
+      }
+    } catch (e) {
+      toast.error('Erro de conexão ao gerar embeddings');
+    } finally {
+      setEmbeddingStatus(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchAll = async () => {
     setLoading(true);
