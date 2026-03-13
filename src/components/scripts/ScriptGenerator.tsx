@@ -53,6 +53,9 @@ interface ScriptGeneratorProps {
   onScriptGenerated?: () => void;
   videoType: VideoType;
   setVideoType: (v: VideoType) => void;
+  selectedChannelId: string | null;
+  setSelectedChannelId: (v: string | null) => void;
+  userChannels: any[];
 }
 
 const SPEECH_RATES: Record<string, number> = {
