@@ -476,6 +476,38 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
     }
   };
 
+  // ===== Save Dotti suggestion =====
+  const [savingIdx, setSavingIdx] = useState<number | null>(null);
+  const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string } | null>(null);
+
+  const saveSuggestion = async (msgContent: string, idx: number) => {
+    if (!userId) { toast.error('Faça login'); return; }
+    setSavingIdx(idx);
+    
+    // Extract a title from first line or first 60 chars
+    const firstLine = msgContent.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
+    const title = firstLine.slice(0, 80) || 'Sugestão do Dotti';
+
+    setEditingSuggestion({ idx, title, content: msgContent });
+  };
+
+  const confirmSaveSuggestion = async () => {
+    if (!editingSuggestion || !userId) return;
+    try {
+      await supabase.from('dotti_suggestions').insert({
+        user_id: userId,
+        title: editingSuggestion.title,
+        content: editingSuggestion.content,
+        topic: editingSuggestion.title,
+      } as any);
+      toast.success('💡 Sugestão salva! Acesse em Roteiros → Banco de Ideias');
+      setEditingSuggestion(null);
+    } catch {
+      toast.error('Erro ao salvar sugestão');
+    }
+    setSavingIdx(null);
+  };
+
   const clearChat = () => {
     startNewConversation();
   };
