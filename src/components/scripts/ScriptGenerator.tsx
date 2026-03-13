@@ -680,7 +680,7 @@ export const ScriptGenerator = ({
           </motion.div>
         )}
 
-        {/* ═══════ STEP 2: Claude Refine Review ═══════ */}
+        {/* ═══════ STEP 2: Gemini Pro Refine Review ═══════ */}
         {wizardStep === 2 && (
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             className="bg-card border border-border rounded-xl p-5">
