@@ -37,6 +37,7 @@ const VIDEO_STYLES: VideoStyleOption[] = [
 
 const Scripts = () => {
   const { t } = useLanguage();
+  const [videoType, setVideoType] = useState<VideoType>('long');
   const [topic, setTopic] = useState('');
   const [duration, setDuration] = useState('15');
   const [style, setStyle] = useState('dopaminérgico');
