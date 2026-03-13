@@ -184,9 +184,16 @@ export const ScriptGenerator = ({
     return fullText;
   };
 
+  // ═══════ ORCHESTRATION: Phase tracking ═══════
+  const phaseIdRef = useRef('');
+
   // ═══════ STEP 1: Generate Draft ═══════
   const runStep1_Draft = async (rejectionFeedback?: any) => {
     if (!topic.trim() || generating || !canClick()) return;
+    // Generate unique phase ID for this entire run (tracks across all phases)
+    phaseIdRef.current = crypto.randomUUID();
+    console.log(`[ORCHESTRATOR] New run: ${phaseIdRef.current}`);
+    
     setGenerating(true);
     setLoading(true);
     setDraftScript('');
