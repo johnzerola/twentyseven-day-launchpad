@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
 import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
 import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashboard';
+import { DashboardSkeleton } from '@/components/PageSkeletons';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,7 +40,11 @@ const Dashboard = () => {
       if (!session) { setLoading(false); return; }
       const uid = session.user.id;
 
-      const [ch, sc, proj, tracked, profile, progress, scripts, plan, titles, niches, channel, latestNicheData] = await Promise.all([
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+      const [ch, sc, proj, tracked, profile, progress, scripts, plan, titles, niches, channel, latestNicheData, allScriptsLast30] = await Promise.all([
         supabase.from('user_channels').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('saved_scripts').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('video_projects').select('id', { count: 'exact', head: true }).eq('user_id', uid),
@@ -52,6 +57,7 @@ const Dashboard = () => {
         supabase.from('saved_niche_analyses').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('user_channels').select('*').eq('user_id', uid).order('linked_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('saved_niche_analyses').select('niche, score, country, created_at, analysis_json').eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('saved_scripts').select('created_at').eq('user_id', uid).gte('created_at', thirtyDaysAgoStr),
       ]);
 
       setStats({
@@ -72,14 +78,14 @@ const Dashboard = () => {
       if (channel.data) setChannelData(channel.data);
       if (latestNicheData.data) setLatestNiche(latestNicheData.data);
 
-      // Build activity chart from scripts creation dates (last 30 days)
-      const allScripts = scripts.data || [];
+      // Build activity chart from ALL scripts creation dates (last 30 days)
+      const scriptsFor30d = allScriptsLast30.data || [];
       const days: Record<string, number> = {};
       for (let i = 29; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
         days[d.toISOString().slice(5, 10)] = 0;
       }
-      allScripts.forEach((s: any) => {
+      scriptsFor30d.forEach((s: any) => {
         const key = new Date(s.created_at).toISOString().slice(5, 10);
         if (days[key] !== undefined) days[key]++;
       });
@@ -127,9 +133,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }

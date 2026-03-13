@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { KanbanSkeleton } from '@/components/PageSkeletons';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, Loader2, Search, Rocket, Sparkles, Lightbulb, GripVertical, Trash2, Clock, FileText, Film, CheckCircle2, Edit3, Upload, MoreVertical, Link2, ChevronDown, ChevronUp, Eye, Wand2, Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -282,7 +283,7 @@ const Workflow = () => {
   };
 
   if (loading) {
-    return <DashboardLayout><div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></DashboardLayout>;
+    return <DashboardLayout><KanbanSkeleton /></DashboardLayout>;
   }
 
   return (
