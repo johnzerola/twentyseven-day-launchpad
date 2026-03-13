@@ -13,7 +13,7 @@ serve(async (req) => {
     const { video_id, language = "en" } = await req.json();
     if (!video_id) throw new Error("video_id required");
 
-    const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+    const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
     if (!YT_KEY) throw new Error("YouTube API key not configured");
 
     // Method 1: Try YouTube Data API captions list

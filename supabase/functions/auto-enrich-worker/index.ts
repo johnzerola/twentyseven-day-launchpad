@@ -15,7 +15,7 @@ serve(async (req) => {
   const startTime = Date.now();
   try {
     const { maxVideos = 10, niche, hours = 72 } = await req.json().catch(() => ({}));
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");

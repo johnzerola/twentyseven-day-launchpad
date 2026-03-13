@@ -25,7 +25,7 @@ serve(async (req) => {
 
   try {
     const { mode = "full_cycle", niche, maxVideos = 10 } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
     const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
