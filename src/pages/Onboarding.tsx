@@ -342,8 +342,8 @@ ${plan.monetization_path}
           {/* Done actions */}
           {step === 'done' && (
             <div className="flex gap-3">
-              <Button onClick={() => navigate('/plan')} className="flex-1 gradient-hero border-0 gap-2">
-                <ArrowRight className="w-4 h-4" /> Ver Meu Plano
+              <Button onClick={() => navigate('/dashboard')} className="flex-1 gradient-hero border-0 gap-2">
+                <ArrowRight className="w-4 h-4" /> Ir para o Dashboard
               </Button>
               <Button onClick={() => navigate('/scripts')} variant="outline" className="flex-1 gap-2">
                 Gerar Roteiro
