@@ -8,6 +8,9 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
+const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -18,17 +21,43 @@ serve(async (req) => {
 
     const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const styleLC = (style || '').toLowerCase();
+    const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
 
-    // ========== Fetch Knowledge (parallel) ==========
-    const [ytRes, scriptRes, channelRes, triggersRes, formatsRes, psychPatternsRes] = await Promise.all([
+    // ========== Fetch ALL Knowledge (parallel — 10 queries) ==========
+    const [
+      ytRes, scriptRes, channelRes, triggersRes, formatsRes, psychPatternsRes,
+      hookRes, structRes, attEngRes, attLibRes, viralTitlesRes
+    ] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(8),
-      sb.from("script_knowledge").select("category,title,content,examples").order("effectiveness_score", { ascending: false }).limit(10),
-      sb.from("channel_intelligence").select("channel_name,style,viral_patterns,visual_style_notes,avg_views,growth_rate").eq("is_faceless", true).order("avg_views", { ascending: false }).limit(5),
-      sb.from("viral_content_library").select("content_json,effectiveness_score,category").in("category", ["psychology_triggers", "storytelling_structure", "retention_technique"]).order("effectiveness_score", { ascending: false }).limit(10),
-      sb.from("viral_content_library").select("content_json,effectiveness_score").eq("category", "content_format").order("effectiveness_score", { ascending: false }).limit(5),
-      sb.from("audience_psychology_patterns").select("trigger_type,description,example_hooks,storytelling_pattern,retention_score").order("retention_score", { ascending: false }).limit(8),
+      sb.from("script_knowledge").select("category,title,content,examples").order("effectiveness_score", { ascending: false }).limit(12),
+      sb.from("channel_intelligence").select("channel_name,style,viral_patterns,visual_style_notes,avg_views,growth_rate,niche")
+        .eq("is_faceless", true).order("avg_views", { ascending: false }).limit(8),
+      sb.from("viral_content_library").select("content_json,effectiveness_score,category")
+        .in("category", ["psychology_triggers", "storytelling_structure", "retention_technique"])
+        .order("effectiveness_score", { ascending: false }).limit(12),
+      sb.from("viral_content_library").select("content_json,effectiveness_score").eq("category", "content_format")
+        .order("effectiveness_score", { ascending: false }).limit(5),
+      sb.from("audience_psychology_patterns").select("trigger_type,description,example_hooks,storytelling_pattern,retention_score")
+        .order("retention_score", { ascending: false }).limit(8),
+      // NEW: hook_library
+      sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
+        .order("retention_score", { ascending: false }).limit(15),
+      // NEW: script_structures
+      sb.from("script_structures").select("structure_name,intro_pattern,middle_pattern,cliffhanger_pattern,ending_pattern,avg_retention,niche")
+        .order("effectiveness_score", { ascending: false }).limit(5),
+      // NEW: attention_engineering
+      sb.from("attention_engineering").select("pattern_name,technique,category,retention_impact,psychological_basis,intensity_level")
+        .order("retention_impact", { ascending: false }).limit(10),
+      // NEW: attention_library
+      sb.from("attention_library").select("pattern_name,scene_type,example_text,retention_score,emotion,recovery_technique")
+        .order("attention_score", { ascending: false }).limit(10),
+      // NEW: viral_titles_db — find similar topic titles
+      sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
+        .order("views", { ascending: false }).limit(20),
     ]);
 
+    // ========== Format existing knowledge ==========
     const ytKnowledge = (ytRes.data || []).map((r: any) => `[${r.category.toUpperCase()}] ${r.title}: ${r.content}`).join("\n\n");
     const scriptKnowledge = (scriptRes.data || []).map((r: any) => {
       const examples = Array.isArray(r.examples) ? r.examples.slice(0, 2).join(" | ") : "";
@@ -36,7 +65,7 @@ serve(async (req) => {
     }).join("\n\n");
     const channelIntel = (channelRes.data || []).map((r: any) => {
       const hooks = r.viral_patterns?.hooks ? (r.viral_patterns.hooks as string[]).join(", ") : "";
-      return `🎯 ${r.channel_name} (${r.style}, avg ${r.avg_views} views): Hooks=[${hooks}]`;
+      return `🎯 ${r.channel_name} (${r.niche}, ${r.style}, avg ${r.avg_views} views): Hooks=[${hooks}]`;
     }).join("\n");
     const psychTriggers = (triggersRes.data || []).map((r: any) => {
       const c = r.content_json;
@@ -50,6 +79,48 @@ serve(async (req) => {
       const hooks = Array.isArray(r.example_hooks) ? r.example_hooks.slice(0, 2).join(' | ') : '';
       return `• ${r.trigger_type}: ${r.description?.slice(0, 150)}${hooks ? ` — Hooks: ${hooks}` : ''}`;
     }).join("\n");
+
+    // ========== NEW: Format hook_library ==========
+    const hookLibrary = (hookRes.data || []).map((r: any) =>
+      `• [${r.hook_type}] "${r.hook_text}" (retenção: ${r.retention_score}/10${r.niche ? `, nicho: ${r.niche}` : ''})`
+    ).join("\n");
+
+    // ========== NEW: Format script_structures ==========
+    const scriptStructures = (structRes.data || []).map((r: any) =>
+      `📐 ${r.structure_name} (retenção: ${r.avg_retention}%${r.niche ? `, ${r.niche}` : ''}):\n  Intro: ${(r.intro_pattern || '').slice(0, 120)}\n  Meio: ${(r.middle_pattern || '').slice(0, 120)}\n  Cliffhanger: ${(r.cliffhanger_pattern || '').slice(0, 120)}\n  Final: ${(r.ending_pattern || '').slice(0, 120)}`
+    ).join("\n\n");
+
+    // ========== NEW: Format attention_engineering ==========
+    const attEngineering = (attEngRes.data || []).map((r: any) =>
+      `⚡ ${r.pattern_name} [${r.category}]: ${r.technique.slice(0, 150)} (impacto: ${r.retention_impact}%, intensidade: ${r.intensity_level}/10${r.psychological_basis ? `, base: ${r.psychological_basis.slice(0, 60)}` : ''})`
+    ).join("\n");
+
+    // ========== NEW: Format attention_library ==========
+    const attLibrary = (attLibRes.data || []).map((r: any) =>
+      `🎬 ${r.pattern_name} [${r.scene_type}]: "${(r.example_text || '').slice(0, 100)}" (retenção: ${r.retention_score}, emoção: ${r.emotion}${r.recovery_technique ? `, recuperação: ${r.recovery_technique.slice(0, 60)}` : ''})`
+    ).join("\n");
+
+    // ========== NEW: Format viral_titles for topic-matching ==========
+    const topicWords = (topic || '').toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+    const scoredTitles = (viralTitlesRes.data || []).map((t: any) => {
+      let score = 0;
+      const titleLC = (t.title || '').toLowerCase();
+      const nicheLC = (t.niche || '').toLowerCase();
+      for (const w of topicWords) {
+        if (titleLC.includes(w)) score += 10;
+        if (nicheLC.includes(w)) score += 5;
+      }
+      if (niche && nicheLC.includes(niche.toLowerCase())) score += 15;
+      if (styleLC && (t.title_pattern || '').toLowerCase().includes(styleLC)) score += 5;
+      return { ...t, matchScore: score };
+    }).sort((a: any, b: any) => b.matchScore - a.matchScore);
+
+    const relevantTitles = scoredTitles.slice(0, 10);
+    const viralTitlesBlock = relevantTitles.length > 0
+      ? relevantTitles.map((t: any) =>
+        `• "${t.title}" (${(t.views || 0).toLocaleString()} views) — Padrão: ${t.title_pattern || '?'} | Viral porque: ${t.why_viral || 'N/A'}`
+      ).join("\n")
+      : '';
 
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
@@ -74,12 +145,12 @@ serve(async (req) => {
       'tutorial': 'TUTORIAL: Resultado final PRIMEIRO, passos numerados, "O erro #1 que 90% cometem..."',
       'documentário': 'DOCUMENTÁRIO: Dados impactantes, múltiplas perspectivas, revelações progressivas.',
       'listicle': 'LISTICLE: Preview do #1, escalada de impacto, "Mas o número X vai te deixar de queixo caído".',
-      'reddit': 'REDDIT: Tom 1ª pessoa, "Eu nunca contei isso...", detalhes sensoriais, plot twists, escalada de tensão.',
-      'conspiração': 'CONSPIRAÇÃO: Fato oficial → inconsistências → evidências alternativas → contra-argumentos → "Tire suas conclusões".',
-      'mitologia': 'MITOLOGIA: Tom épico, personagens míticos com motivações humanas, batalhas cinematográficas, conexões mito→moderno.',
-      'teorias': 'TEORIAS: Dado real impressionante + pergunta, ciência + mistério, múltiplas teorias, tom investigador.',
+      'reddit': 'REDDIT: Tom 1ª pessoa, "Eu nunca contei isso...", detalhes sensoriais, plot twists, escalada de tensão. NÃO use fatos reais — crie uma narrativa envolvente.',
+      'conspiração': 'CONSPIRAÇÃO: Fato oficial → inconsistências → evidências alternativas → contra-argumentos → "Tire suas conclusões". Pode misturar fatos reais com teorias alternativas. Tom investigador e misterioso.',
+      'mitologia': 'MITOLOGIA: Tom épico, personagens míticos com motivações humanas, batalhas cinematográficas, conexões mito→moderno. Use LENDAS e MITOS como base, não fatos científicos.',
+      'teorias': 'TEORIAS: Dado real impressionante + pergunta, ciência + mistério, múltiplas teorias, tom investigador. Explore hipóteses e mistérios sem necessidade de provas definitivas.',
     };
-    const selectedStyle = styleGuides[style?.toLowerCase()] || styleGuides['narração'];
+    const selectedStyle = styleGuides[styleLC] || styleGuides['narração'];
 
     const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
 
@@ -90,25 +161,61 @@ serve(async (req) => {
       const ca = ib.competitive_analysis || {};
       const hooks = (ib.recommended_hooks || []).slice(0, 3).map((h: any) => `"${h.hook_text}" (${h.hook_type})`).join(', ');
       intelBlock = `\n🧠 BRIEFING: ${ca.top_channels_analyzed || '?'} canais analisados. Dominantes: ${(ca.dominant_styles || []).join(', ')}. Hooks: ${hooks}. Evitar: ${(ca.what_to_avoid || []).join('; ')}. Gaps: ${(ca.content_gaps || []).join('; ')}.\n`;
+
+      // Add YouTube competitor analysis
+      const ytAnalysis = ib.youtube_real_time_analysis;
+      if (ytAnalysis) {
+        intelBlock += `\n📹 ANÁLISE DE COMPETIDORES YOUTUBE:\n`;
+        intelBlock += `• ${ytAnalysis.videos_found || 0} vídeos encontrados sobre este tópico\n`;
+        if (ytAnalysis.top_performing_video) intelBlock += `• Top vídeo: "${ytAnalysis.top_performing_video}"\n`;
+        if (ytAnalysis.why_top_videos_work?.length) intelBlock += `• Por que funcionam: ${ytAnalysis.why_top_videos_work.join('; ')}\n`;
+        if (ytAnalysis.successful_angles?.length) intelBlock += `• Ângulos de sucesso: ${ytAnalysis.successful_angles.join('; ')}\n`;
+        if (ytAnalysis.underexplored_angles?.length) intelBlock += `• Ângulos POUCO explorados (oportunidade): ${ytAnalysis.underexplored_angles.join('; ')}\n`;
+        intelBlock += `INSTRUÇÃO: Use os ângulos POUCO explorados para se diferenciar. Aprenda com o que funciona nos top vídeos mas NÃO copie.\n`;
+      }
     }
 
+    // Creative style warning
+    const creativeWarning = isCreativeStyle ? `
+⚠️ ATENÇÃO ESPECIAL — ESTILO CRIATIVO "${style?.toUpperCase()}":
+Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
+- Criar histórias, teorias e narrativas envolventes
+- Usar dramatização, suspense e mistério
+- Misturar fatos reais com especulação criativa
+- NÃO precisa ser 100% factual — o objetivo é ENTRETER e FASCINAR
+- Os dados de pesquisa web são REFERÊNCIA, não restrição
+- Priorize NARRATIVA MAGNÉTICA sobre precisão factual
+` : '';
+
     // ========== PHASE 0: GPT-5 Hook (fast, non-streaming) ==========
-    console.log("Phase 0: Hook generation...");
+    console.log("Phase 0: Hook generation with full knowledge...");
     let hookText = '';
     try {
-      const hookRes = await fetch(AI_URL, {
+      const hookSystemPrompt = `Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR para YouTube. Idioma: ${language}. Estilo: ${style}.
+
+🎯 HOOKS DE REFERÊNCIA REAIS (use como inspiração):
+${hookLibrary.slice(0, 1500)}
+
+🧠 GATILHOS PSICOLÓGICOS:
+${psychTriggers.slice(0, 800)}
+
+${viralInjection}${intelBlock}${creativeWarning}
+
+REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.`;
+
+      const hookRes2 = await fetch(AI_URL, {
         method: "POST", headers: aiHeaders,
         body: JSON.stringify({
           model: "openai/gpt-5-mini",
           messages: [
-            { role: "system", content: `Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR para YouTube. Idioma: ${language}. Estilo: ${style}. ${viralInjection}${intelBlock}\nREGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.` },
+            { role: "system", content: hookSystemPrompt },
             { role: "user", content: `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.` }
           ],
           stream: false,
         }),
       });
-      if (hookRes.ok) {
-        const d = await hookRes.json();
+      if (hookRes2.ok) {
+        const d = await hookRes2.json();
         hookText = d.choices?.[0]?.message?.content || '';
         console.log("Phase 0 done:", hookText.length, "chars");
       }
@@ -119,28 +226,43 @@ serve(async (req) => {
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
 
-🧠 CONHECIMENTO YOUTUBE:
-${ytKnowledge.slice(0, 3000)}
+🧠 CONHECIMENTO YOUTUBE (algoritmo):
+${ytKnowledge.slice(0, 2500)}
 
-📡 CANAIS VIRAIS:
+📡 CANAIS VIRAIS DE REFERÊNCIA:
 ${channelIntel || "N/A"}
 
+🎯 HOOKS REAIS DE ALTA PERFORMANCE (192 hooks testados):
+${hookLibrary.slice(0, 2000)}
+
+📐 ESTRUTURAS DE ROTEIRO VALIDADAS:
+${scriptStructures.slice(0, 2000)}
+
+⚡ ENGENHARIA DE ATENÇÃO (técnicas de retenção avançadas):
+${attEngineering.slice(0, 1500)}
+
+🎬 BIBLIOTECA DE ATENÇÃO (cenas que retêm):
+${attLibrary.slice(0, 1200)}
+
 🧠 GATILHOS PSICOLÓGICOS:
-${psychTriggers.slice(0, 2000) || "N/A"}
+${psychTriggers.slice(0, 1500)}
 
 🎬 FORMATOS VIRAIS:
-${viralFormats.slice(0, 1500) || "N/A"}
+${viralFormats.slice(0, 1000)}
 
 📝 TÉCNICAS DE ROTEIRO:
-${scriptKnowledge.slice(0, 3000)}
+${scriptKnowledge.slice(0, 2500)}
 
 🧪 PSICOLOGIA DA AUDIÊNCIA:
-${psychPatterns.slice(0, 1500) || "N/A"}
+${psychPatterns.slice(0, 1200)}
+
+${viralTitlesBlock ? `\n🏆 TÍTULOS VIRAIS SIMILARES (945 títulos, top 10 relevantes):\n${viralTitlesBlock}\n` : ''}
 
 ${selectedStyle}
 ${viralInjection}
 ${intelBlock}
 ${hookInjection}
+${creativeWarning}
 Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'}
 
 ✍️ DURAÇÃO: EXATAMENTE ${dur} minutos. Taxa: ${wpm} palavras/min. MÍNIMO: ${minWords} palavras. ALVO: ${targetWords} palavras.
@@ -150,6 +272,9 @@ REGRAS:
 2. APENAS texto falado. ZERO anotações, timestamps, "Narrador:", "Cena:"
 3. Parágrafos curtos (2-3 frases). Linguagem conversacional. Valores em $
 4. Hook EXPLOSIVO [0-8s] → Setup + Loops [8s-60s] → Microhooks a cada 45s → Escalada → Clímax → CTA
+5. USE as estruturas de roteiro validadas acima como esqueleto
+6. APLIQUE as técnicas de engenharia de atenção nos momentos certos
+7. INSPIRE-SE nos hooks reais de alta performance
 
 📝 NO FINAL, após "---EXTRAS---":
 - 5 títulos CTR 30%+
@@ -163,7 +288,7 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 
 ⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.`;
 
-    console.log("Phase 1: Streaming draft from Gemini Flash...");
+    console.log("Phase 1: Streaming draft from Gemini Flash with FULL knowledge...");
     const phase1Res = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
       body: JSON.stringify({
@@ -184,7 +309,6 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
       throw new Error("Script generation failed");
     }
 
-    // Pipe the streaming response directly to the client
     console.log("Streaming Phase 1 to client...");
     return new Response(phase1Res.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },

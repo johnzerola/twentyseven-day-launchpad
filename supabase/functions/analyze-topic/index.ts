@@ -21,12 +21,17 @@ serve(async (req) => {
     const styleLC = (style || '').toLowerCase();
     const topicLC = topic.toLowerCase();
 
+    // Styles where Brave web search would HURT creativity (fiction, theories, personal stories)
+    const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
+    const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
+
     // ========== Parallel: DB queries + YouTube + Brave Search ==========
+    // YouTube is ALWAYS useful — even for creative styles, we learn from successful videos
     const youtubeSearchPromise = YOUTUBE_API_KEY ? searchYouTubeVideos(YOUTUBE_API_KEY, topic, niche) : Promise.resolve([]);
     
-    // Brave Search RAG - fetch real web context
+    // Brave Search RAG — SKIP for creative styles (conspiração, mitologia, etc.)
     const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
-    const braveSearchPromise = BRAVE_API_KEY ? (async () => {
+    const braveSearchPromise = (BRAVE_API_KEY && !isCreativeStyle) ? (async () => {
       // Check cache first
       const cacheKey = `brave:analyze:${topic}:${niche || ''}`;
       const { data: cached } = await sb.from("research_cache")
@@ -44,7 +49,7 @@ serve(async (req) => {
         const results = (data.web?.results || []).slice(0, 8).map((r: any) => ({
           title: r.title, url: r.url, description: r.description,
         }));
-        // Cache 48h (validation mode: stretch Brave budget)
+        // Cache 48h
         await sb.from("research_cache").upsert({
           cache_key: cacheKey, source: "brave", result_json: { results },
           expires_at: new Date(Date.now() + 48 * 3600000).toISOString(),
@@ -52,8 +57,18 @@ serve(async (req) => {
         return results;
       } catch (e) { console.warn("Brave Search error:", e); return []; }
     })() : Promise.resolve([]);
+    
+    if (isCreativeStyle) {
+      console.log(`Skipping Brave Search for creative style "${style}" — YouTube analysis only`);
+    }
 
-    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos, braveResults] = await Promise.all([
+    // Also fetch hook_library and viral_titles for deeper context
+    const hookLibPromise = sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
+      .order("retention_score", { ascending: false }).limit(15);
+    const viralTitlesPromise = sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
+      .order("views", { ascending: false }).limit(30);
+
+    const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos, braveResults, hookLibRes, viralTitlesRes] = await Promise.all([
       sb.from("channel_intelligence")
         .select("channel_name,style,niche,avg_views,subscribers,growth_rate,viral_patterns,top_videos,visual_style_notes,upload_frequency,rpm_estimate")
         .order("avg_views", { ascending: false })
@@ -72,6 +87,8 @@ serve(async (req) => {
         .limit(20),
       youtubeSearchPromise,
       braveSearchPromise,
+      hookLibPromise,
+      viralTitlesPromise,
     ]);
 
     // ========== Filter channels by niche relevance ==========
@@ -153,6 +170,25 @@ serve(async (req) => {
     const ytBlock = (ytKnowledgeRes.data || []).slice(0, 10).map((r: any) =>
       `[${r.category}] ${r.title}: ${r.content.slice(0, 200)}`
     ).join('\n\n');
+
+    // ========== Format hook_library ==========
+    const hookLibBlock = (hookLibRes.data || []).map((r: any) =>
+      `• [${r.hook_type}] "${r.hook_text}" (retenção: ${r.retention_score}/10${r.niche ? `, ${r.niche}` : ''})`
+    ).join("\n");
+
+    // ========== Format viral_titles_db (topic-relevant) ==========
+    const topicWordsForTitles = topicLC.split(/\s+/).filter((w: string) => w.length > 3);
+    const scoredViralTitles = (viralTitlesRes.data || []).map((t: any) => {
+      let score = 0;
+      const tLC = (t.title || '').toLowerCase();
+      for (const w of topicWordsForTitles) { if (tLC.includes(w)) score += 10; }
+      if (nicheLC && (t.niche || '').toLowerCase().includes(nicheLC)) score += 15;
+      return { ...t, matchScore: score };
+    }).sort((a: any, b: any) => b.matchScore - a.matchScore);
+    const relevantViralTitles = scoredViralTitles.slice(0, 10);
+    const viralTitlesBlock = relevantViralTitles.map((t: any) =>
+      `• "${t.title}" (${(t.views || 0).toLocaleString()} views) — Pattern: ${t.title_pattern || '?'} | Why: ${t.why_viral || 'N/A'}`
+    ).join("\n");
 
     // ========== Format YouTube real-time videos ==========
     const ytVideosBlock = (youtubeVideos as any[]).length > 0
@@ -291,13 +327,19 @@ ${scriptBlock}
 ═══ YOUTUBE ALGORITHM KNOWLEDGE ═══
 ${ytBlock}
 
+═══ HOOK LIBRARY (${(hookLibRes.data || []).length} proven hooks) ═══
+${hookLibBlock || 'No hooks available'}
+
+═══ VIRAL TITLES DATABASE (top ${relevantViralTitles.length} topic-relevant from 945 total) ═══
+${viralTitlesBlock || 'No matching titles'}
+
 ═══ REAL-TIME YOUTUBE SEARCH RESULTS (${(youtubeVideos as any[]).length} videos with SIMILAR TOPICS found NOW) ═══
 ${ytVideosBlock}
 
-═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results) ═══
+═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results${isCreativeStyle ? ' — SKIPPED for creative style' : ''}) ═══
 ${(braveResults as any[]).length > 0 
   ? (braveResults as any[]).map((r: any, i: number) => `${i + 1}. "${r.title}" — ${r.description || ''} (${r.url})`).join('\n')
-  : 'No web results available'}
+  : isCreativeStyle ? 'Skipped — creative/narrative style does not need factual web research' : 'No web results available'}
 
 CRITICAL RULES:
 - The REAL-TIME YOUTUBE section contains ACTUAL videos that exist RIGHT NOW on YouTube about this EXACT topic or similar topics
@@ -305,8 +347,11 @@ CRITICAL RULES:
 - Identify what angles are SATURATED (many videos already cover) vs UNDEREXPLORED
 - Recommend differentiation strategies based on what's already out there
 - Extract the best title patterns and hooks from real successful videos
+- Use the HOOK LIBRARY to inspire powerful recommended_hooks
+- Use the VIRAL TITLES to understand what title patterns work for this topic
 - Base visual suggestions on what dominates this niche visually
 - Be specific, actionable, data-backed
+${isCreativeStyle ? '- This is a CREATIVE/NARRATIVE style — prioritize storytelling analysis over factual accuracy\n- Focus on what makes similar STORIES/THEORIES/MYTHS go viral, not fact-checking' : ''}
 - Language: ${language || 'português'}`
           },
           {
