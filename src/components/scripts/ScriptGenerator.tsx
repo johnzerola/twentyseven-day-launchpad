@@ -65,7 +65,7 @@ type WizardStep = 0 | 1 | 2 | 3;
 const WIZARD_STEPS = [
   { label: 'Configuração', icon: FileText, desc: 'Defina tópico, estilo e idioma' },
   { label: 'Rascunho IA', icon: Zap, desc: 'Gemini gera o rascunho — revise e edite' },
-  { label: 'Refinamento Claude', icon: Brain, desc: 'Claude melhora pontos fracos' },
+  { label: 'Refinamento IA', icon: Brain, desc: 'Gemini Pro melhora pontos fracos' },
   { label: 'Avaliação Dual', icon: Shield, desc: 'GPT + Gemini avaliam (mín. 14/20)' },
 ];
 
