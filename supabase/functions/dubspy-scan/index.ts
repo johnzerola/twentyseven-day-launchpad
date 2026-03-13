@@ -219,7 +219,7 @@ serve(async (req) => {
 
   try {
     const params: ScanParams = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
 

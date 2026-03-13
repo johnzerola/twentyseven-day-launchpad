@@ -32,7 +32,7 @@ serve(async (req) => {
     
     // Resolve channel URL to ID if needed
     if (!resolvedChannelId && channel_url) {
-      const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+      const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
       if (!YT_KEY) throw new Error("YouTube API key not configured");
       
       // Try handle, username, or channel ID from URL
@@ -59,7 +59,8 @@ serve(async (req) => {
     const YT_KEY = Deno.env.get("YOUTUBE_API_KEY");
     const YT_KEY_2 = Deno.env.get("YOUTUBE_API_KEY_2");
     const YT_KEY_3 = Deno.env.get("YOUTUBE_API_KEY_3");
-    if (!YT_KEY && !YT_KEY_2 && !YT_KEY_3) throw new Error("YouTube API key not configured");
+    const YT_KEY_4 = Deno.env.get("YOUTUBE_API_KEY_4");
+    if (!YT_KEY && !YT_KEY_2 && !YT_KEY_3 && !YT_KEY_4) throw new Error("YouTube API key not configured");
     
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -74,7 +75,7 @@ serve(async (req) => {
     }
 
     // Fetch channel info
-    const apiKey = YT_KEY || YT_KEY_2 || YT_KEY_3!;
+    const apiKey = YT_KEY || YT_KEY_2 || YT_KEY_3 || YT_KEY_4!;
     const channelRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${resolvedChannelId}&key=${apiKey}`
     );
@@ -106,7 +107,7 @@ serve(async (req) => {
       const plRes = await fetch(plUrl);
       if (!plRes.ok) {
         // Try backup keys
-        const backupKeys = [YT_KEY_2, YT_KEY_3].filter(k => k && k !== apiKey);
+        const backupKeys = [YT_KEY_2, YT_KEY_3, YT_KEY_4].filter(k => k && k !== apiKey);
         let resolved = false;
         for (const bk of backupKeys) {
           const plRes2 = await fetch(plUrl.replace(apiKey, bk!));

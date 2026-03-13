@@ -12,7 +12,7 @@ serve(async (req) => {
   try {
     const { keywords, maxResults = 50, minMultiplier = 5, maxSubs = 50000, minSubs = 500, publishedAfterDays = 30 } = await req.json();
     
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
 
     const publishedAfter = new Date(Date.now() - publishedAfterDays * 86400000).toISOString();
