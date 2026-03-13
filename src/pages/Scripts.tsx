@@ -677,7 +677,7 @@ const Scripts = () => {
                   {/* Standard Styles */}
                   <div>
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Estilos Padrão</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
                       {VIDEO_STYLES.map(vs => (
                         <button key={vs.value} onClick={() => { setVideoStyle(vs.value); setCustomStyleNotes(''); }}
                           className={`text-left p-3 rounded-xl border-2 transition-all ${
