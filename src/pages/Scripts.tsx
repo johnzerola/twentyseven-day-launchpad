@@ -67,6 +67,8 @@ const Scripts = () => {
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [showIntelligence, setShowIntelligence] = useState(false);
+  const [retentionPrediction, setRetentionPrediction] = useState<any>(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
 
   // Templates & Themes
   const [templates, setTemplates] = useState<any[]>([]);
