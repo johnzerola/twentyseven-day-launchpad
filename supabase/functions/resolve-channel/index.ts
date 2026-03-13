@@ -6,9 +6,11 @@ const corsHeaders = {
 };
 
 function getKeys() {
-  const k1 = Deno.env.get("YOUTUBE_API_KEY") || "";
-  const k2 = Deno.env.get("YOUTUBE_API_KEY_2") || "";
-  return [k1, k2].filter(Boolean);
+  return [
+    Deno.env.get("YOUTUBE_API_KEY"),
+    Deno.env.get("YOUTUBE_API_KEY_2"),
+    Deno.env.get("YOUTUBE_API_KEY_3"),
+  ].filter(Boolean) as string[];
 }
 
 async function ytFetch(url: string, keys: string[]): Promise<any> {

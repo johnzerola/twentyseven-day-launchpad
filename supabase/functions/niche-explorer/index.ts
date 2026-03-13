@@ -31,11 +31,11 @@ serve(async (req) => {
 
   try {
     const { niche, country, language } = await req.json();
-    const ytKeys: string[] = [];
-    const k1 = Deno.env.get("YOUTUBE_API_KEY");
-    const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
-    if (k1) ytKeys.push(k1);
-    if (k2) ytKeys.push(k2);
+    const ytKeys: string[] = [
+      Deno.env.get("YOUTUBE_API_KEY"),
+      Deno.env.get("YOUTUBE_API_KEY_2"),
+      Deno.env.get("YOUTUBE_API_KEY_3"),
+    ].filter(Boolean) as string[];
     let ytKeyIndex = 0;
     const getYtKey = () => ytKeys[ytKeyIndex % ytKeys.length] || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
