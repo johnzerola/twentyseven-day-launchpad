@@ -14,19 +14,41 @@ serve(async (req) => {
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
 
     let channelId = channelInput.trim();
-    const urlMatch = channelInput.match(/youtube\.com\/(channel\/|c\/|@)([^\/\?]+)/);
+    
+    // Extract handle or channel ID from URL
+    const urlMatch = channelInput.match(/youtube\.com\/(channel\/|c\/|@)([^\/\?\s]+)/);
     if (urlMatch) {
       if (urlMatch[1] === 'channel/') {
         channelId = urlMatch[2];
       } else {
-        const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(urlMatch[2])}&maxResults=1&key=${YOUTUBE_API_KEY}`);
+        // Handle URL with @ or /c/ - resolve via forHandle
+        const handle = urlMatch[2].replace(/^@/, '');
+        const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
         const data = await res.json();
-        channelId = data.items?.[0]?.snippet?.channelId || channelId;
+        if (data.items?.length) {
+          channelId = data.items[0].id;
+        }
       }
     } else if (channelInput.startsWith('@')) {
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelInput)}&maxResults=1&key=${YOUTUBE_API_KEY}`);
+      // Direct @handle input
+      const handle = channelInput.slice(1).trim();
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
       const data = await res.json();
-      channelId = data.items?.[0]?.snippet?.channelId || channelId;
+      if (data.items?.length) {
+        // Return directly since we already have snippet+statistics
+        const ch = data.items[0];
+        return new Response(JSON.stringify({
+          channelId: ch.id,
+          name: ch.snippet.title,
+          thumbnail: ch.snippet.thumbnails?.medium?.url,
+          subscribers: parseInt(ch.statistics.subscriberCount || '0'),
+          views: parseInt(ch.statistics.viewCount || '0'),
+          videos: parseInt(ch.statistics.videoCount || '0'),
+          country: ch.snippet.country,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`);
