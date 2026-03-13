@@ -632,6 +632,41 @@ export const ScriptGenerator = ({
             className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h3 className="font-semibold text-sm">1. Configurações do Roteiro</h3>
 
+            {/* ═══════ SUGGESTION BANK ═══════ */}
+            {suggestions.length > 0 && (
+              <div className="border border-primary/20 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowSuggestions(!showSuggestions)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-primary/5 hover:bg-primary/10 transition-colors text-xs"
+                >
+                  <span className="flex items-center gap-1.5 font-medium text-primary">
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    💡 Banco de Ideias do Dotti ({suggestions.length})
+                  </span>
+                  {showSuggestions ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                </button>
+                {showSuggestions && (
+                  <div className="max-h-[200px] overflow-y-auto p-2 space-y-1.5">
+                    {suggestions.map(s => (
+                      <div key={s.id} className="flex items-start gap-2 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors group">
+                        <button onClick={() => applySuggestion(s)} className="flex-1 text-left">
+                          <p className="text-xs font-medium text-foreground truncate">{s.title || s.topic || 'Sem título'}</p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{s.content?.slice(0, 120)}...</p>
+                          <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                            {new Date(s.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            {s.used_count > 0 && ` • usado ${s.used_count}x`}
+                          </p>
+                        </button>
+                        <button onClick={() => deleteSuggestion(s.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-destructive">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Video Type Toggle */}
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block">Tipo de conteúdo</label>
