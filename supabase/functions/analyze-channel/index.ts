@@ -5,46 +5,125 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
+
+function getYouTubeKeys() {
+  return [
+    Deno.env.get("YOUTUBE_API_KEY"),
+    Deno.env.get("YOUTUBE_API_KEY_2"),
+    Deno.env.get("YOUTUBE_API_KEY_3"),
+    Deno.env.get("YOUTUBE_API_KEY_4"),
+  ].filter(Boolean) as string[];
+}
+
+function getYouTubeErrorReason(data: any): string | undefined {
+  return data?.error?.errors?.[0]?.reason || data?.error?.status;
+}
+
+function getYouTubeErrorMessage(data: any): string | undefined {
+  return data?.error?.message;
+}
+
+function isQuotaError(status: number, reason?: string) {
+  return (
+    status === 429 ||
+    reason === "quotaExceeded" ||
+    reason === "dailyLimitExceeded" ||
+    reason === "rateLimitExceeded" ||
+    reason === "userRateLimitExceeded"
+  );
+}
+
+async function youtubeFetch(endpoint: string, keys: string[]) {
+  let lastError = "YouTube API request failed";
+
+  for (const key of keys) {
+    const separator = endpoint.includes("?") ? "&" : "?";
+    const url = `${YOUTUBE_API_BASE}/${endpoint}${separator}key=${encodeURIComponent(key)}`;
+
+    const response = await fetch(url);
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && !data?.error) {
+      return data;
+    }
+
+    const reason = getYouTubeErrorReason(data);
+    if (isQuotaError(response.status, reason)) {
+      console.info("Quota exceeded, trying next key...");
+      lastError = "Quota exceeded";
+      continue;
+    }
+
+    lastError = getYouTubeErrorMessage(data) || `YouTube API error (${response.status})`;
+    throw new Error(lastError);
+  }
+
+  throw new Error("Todas as chaves da API do YouTube atingiram limite de quota. Tente novamente mais tarde.");
+}
+
+async function resolveChannelId(channelInput: string, keys: string[]) {
+  const input = (channelInput || "").trim();
+  if (!input) throw new Error("Informe uma URL, @handle ou ID do canal.");
+
+  // Direct channel ID
+  if (/^UC[\w-]{20,}$/.test(input)) return input;
+
+  // URL with explicit channel ID
+  const channelIdFromUrl = input.match(/youtube\.com\/channel\/(UC[\w-]+)/i)?.[1];
+  if (channelIdFromUrl) return channelIdFromUrl;
+
+  // Handle from URL or direct @handle
+  const handleFromUrl = input.match(/youtube\.com\/@([^\/\?\s]+)/i)?.[1];
+  const handleFromInput = input.startsWith("@") ? input.slice(1) : "";
+  const handle = handleFromUrl || handleFromInput;
+
+  if (handle) {
+    const byHandle = await youtubeFetch(
+      `channels?part=id&forHandle=${encodeURIComponent(handle)}`,
+      keys,
+    );
+    const id = byHandle?.items?.[0]?.id;
+    if (id) return id;
+  }
+
+  // Legacy custom URL (youtube.com/c/... or /user/...)
+  const customPathIdentifier = input.match(/youtube\.com\/(?:c|user)\/([^\/\?\s]+)/i)?.[1];
+  const searchQuery = customPathIdentifier || input.replace(/^@/, "");
+
+  const searchData = await youtubeFetch(
+    `search?part=snippet&type=channel&q=${encodeURIComponent(searchQuery)}&maxResults=1`,
+    keys,
+  );
+  const fallbackId = searchData?.items?.[0]?.snippet?.channelId;
+
+  if (fallbackId) return fallbackId;
+  throw new Error("Canal não encontrado. Verifique a URL, @handle ou ID.");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { channelInput } = await req.json();
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
+    const youtubeKeys = getYouTubeKeys();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
+
+    if (youtubeKeys.length === 0) throw new Error("YOUTUBE_API_KEY not configured");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Extract channel ID from URL or use as-is
-    let channelId = channelInput.trim();
-    const urlMatch = channelInput.match(/youtube\.com\/(channel\/|c\/|@)([^\/\?]+)/);
-    if (urlMatch) {
-      const identifier = urlMatch[2];
-      if (urlMatch[1] === "channel/") {
-        channelId = identifier;
-      } else {
-        const searchRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(identifier)}&maxResults=1&key=${YOUTUBE_API_KEY}`
-        );
-        const searchData = await searchRes.json();
-        if (searchData.items?.[0]) channelId = searchData.items[0].snippet.channelId;
-      }
-    } else if (channelInput.startsWith("@")) {
-      const searchRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelInput)}&maxResults=1&key=${YOUTUBE_API_KEY}`
-      );
-      const searchData = await searchRes.json();
-      if (searchData.items?.[0]) channelId = searchData.items[0].snippet.channelId;
-    }
+    const channelId = await resolveChannelId(channelInput, youtubeKeys);
 
     // Get channel stats
-    const channelRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}&key=${YOUTUBE_API_KEY}`
+    const channelData = await youtubeFetch(
+      `channels?part=snippet,statistics,brandingSettings&id=${encodeURIComponent(channelId)}`,
+      youtubeKeys,
     );
-    const channelData = await channelRes.json();
+
     if (!channelData.items?.length) {
       return new Response(JSON.stringify({ error: "Canal não encontrado. Verifique a URL ou ID." }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -56,34 +135,34 @@ serve(async (req) => {
     const videoCount = parseInt(stats.videoCount || "0");
 
     // Get recent videos (last 30)
-    const videosRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=30&type=video&key=${YOUTUBE_API_KEY}`
+    const videosData = await youtubeFetch(
+      `search?part=snippet&channelId=${encodeURIComponent(channelId)}&order=date&maxResults=30&type=video`,
+      youtubeKeys,
     );
-    const videosData = await videosRes.json();
     const videoIds = videosData.items?.map((v: any) => v.id.videoId).filter(Boolean).join(",");
 
     let videoStats: any[] = [];
     if (videoIds) {
-      const vStatsRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoIds}&key=${YOUTUBE_API_KEY}`
+      const vStatsData = await youtubeFetch(
+        `videos?part=statistics,snippet,contentDetails&id=${encodeURIComponent(videoIds)}`,
+        youtubeKeys,
       );
-      const vStatsData = await vStatsRes.json();
       videoStats = vStatsData.items || [];
     }
 
     // Get top videos by views
-    const topVideosRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=viewCount&maxResults=10&type=video&key=${YOUTUBE_API_KEY}`
+    const topVideosData = await youtubeFetch(
+      `search?part=snippet&channelId=${encodeURIComponent(channelId)}&order=viewCount&maxResults=10&type=video`,
+      youtubeKeys,
     );
-    const topVideosData = await topVideosRes.json();
     const topVideoIds = topVideosData.items?.map((v: any) => v.id.videoId).filter(Boolean).join(",");
 
     let topVideoStats: any[] = [];
     if (topVideoIds) {
-      const tvRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${topVideoIds}&key=${YOUTUBE_API_KEY}`
+      const tvData = await youtubeFetch(
+        `videos?part=statistics,snippet,contentDetails&id=${encodeURIComponent(topVideoIds)}`,
+        youtubeKeys,
       );
-      const tvData = await tvRes.json();
       topVideoStats = tvData.items || [];
     }
 
@@ -95,7 +174,9 @@ serve(async (req) => {
       const duration = v.contentDetails?.duration || "";
       // Parse ISO 8601 duration
       const dMatch = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-      const durationSec = dMatch ? (parseInt(dMatch[1] || "0") * 3600 + parseInt(dMatch[2] || "0") * 60 + parseInt(dMatch[3] || "0")) : 0;
+      const durationSec = dMatch
+        ? (parseInt(dMatch[1] || "0") * 3600 + parseInt(dMatch[2] || "0") * 60 + parseInt(dMatch[3] || "0"))
+        : 0;
       return {
         title: v.snippet.title,
         views,
@@ -116,7 +197,9 @@ serve(async (req) => {
       const likes = parseInt(v.statistics?.likeCount || "0");
       const comments = parseInt(v.statistics?.commentCount || "0");
       const dMatch = (v.contentDetails?.duration || "").match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-      const durationSec = dMatch ? (parseInt(dMatch[1] || "0") * 3600 + parseInt(dMatch[2] || "0") * 60 + parseInt(dMatch[3] || "0")) : 0;
+      const durationSec = dMatch
+        ? (parseInt(dMatch[1] || "0") * 3600 + parseInt(dMatch[2] || "0") * 60 + parseInt(dMatch[3] || "0"))
+        : 0;
       return {
         title: v.snippet.title,
         views,
@@ -174,10 +257,10 @@ serve(async (req) => {
       dayAgg[d.day].total += d.views;
       dayAgg[d.day].count++;
     });
-    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
     const best_upload_day = Object.entries(dayAgg)
       .map(([day, data]) => ({ day: dayNames[parseInt(day)], avg: Math.round(data.total / data.count) }))
-      .sort((a, b) => b.avg - a.avg)[0]?.day || 'N/A';
+      .sort((a, b) => b.avg - a.avg)[0]?.day || "N/A";
 
     // Outlier detection: videos with 3x+ avg views
     const outlier_videos = recentVideos.filter((v: any) => avgViews > 0 && v.views >= avgViews * 3);
@@ -197,9 +280,9 @@ serve(async (req) => {
       total_recent_videos: recentVideos.length,
       avg_views: Math.round(avgViews),
       // Health indicators
-      consistency_score: avg_days_between_uploads <= 3 ? 'excelente' : avg_days_between_uploads <= 7 ? 'bom' : avg_days_between_uploads <= 14 ? 'regular' : 'fraco',
-      engagement_health: avg_engagement_rate >= 8 ? 'excelente' : avg_engagement_rate >= 4 ? 'bom' : avg_engagement_rate >= 2 ? 'regular' : 'fraco',
-      sub_loyalty: sub_watch_ratio >= 30 ? 'alta' : sub_watch_ratio >= 15 ? 'média' : sub_watch_ratio >= 5 ? 'baixa' : 'muito_baixa',
+      consistency_score: avg_days_between_uploads <= 3 ? "excelente" : avg_days_between_uploads <= 7 ? "bom" : avg_days_between_uploads <= 14 ? "regular" : "fraco",
+      engagement_health: avg_engagement_rate >= 8 ? "excelente" : avg_engagement_rate >= 4 ? "bom" : avg_engagement_rate >= 2 ? "regular" : "fraco",
+      sub_loyalty: sub_watch_ratio >= 30 ? "alta" : sub_watch_ratio >= 15 ? "média" : sub_watch_ratio >= 5 ? "baixa" : "muito_baixa",
     };
 
     // Prepare data for AI analysis
@@ -361,8 +444,16 @@ Seja MUITO específico e prático. Use os DADOS REAIS do canal.`
     });
   } catch (e) {
     console.error("analyze-channel error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const errorMessage = e instanceof Error ? e.message : "Unknown error";
+    const status = /canal não encontrado|informe uma url, @handle ou id/i.test(errorMessage)
+      ? 404
+      : /quota|rate limit/i.test(errorMessage)
+      ? 429
+      : 500;
+
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
