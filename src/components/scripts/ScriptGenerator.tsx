@@ -751,9 +751,12 @@ export const ScriptGenerator = ({
                   <Button variant="outline" size="sm" onClick={async () => { setScript(draftScript); await runStep3_DualScoreWithText(draftScript); }} className="gap-1 text-xs">
                     ⚡ Pular refinamento
                   </Button>
-                  <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">
-                    <Brain className="w-4 h-4" /> Refinar com IA
-                    <ArrowRight className="w-3 h-3" />
+                  {videoType !== 'short' && (
+                    <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">
+                      <Brain className="w-4 h-4" /> Refinar com IA
+                      <ArrowRight className="w-3 h-3" />
+                    </Button>
+                  )}
                   </Button>
                 </div>
               </div>
