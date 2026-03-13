@@ -92,10 +92,61 @@ const Scripts = () => {
 
   useEffect(() => {
     loadTemplates();
+    loadUserChannels();
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
     loadLastProjectCharacters();
   }, []);
+
+  // Load channel styles when channel changes
+  useEffect(() => {
+    if (selectedChannelId) loadChannelStyles(selectedChannelId);
+  }, [selectedChannelId]);
+
+  const loadUserChannels = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('user_channels').select('*').eq('user_id', user.id).order('channel_name');
+    setUserChannels(data || []);
+  };
+
+  const loadChannelStyles = async (channelId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('channel_styles').select('*').eq('user_id', user.id).eq('channel_id', channelId).order('created_at', { ascending: false });
+    setChannelStyles((data as any[]) || []);
+    // Auto-select default style
+    const defaultStyle = (data as any[])?.find((s: any) => s.is_default);
+    if (defaultStyle) {
+      setVideoStyle(defaultStyle.style_name);
+      setCustomStyleNotes(defaultStyle.visual_notes || '');
+      toast.success(`Estilo "${defaultStyle.style_name}" do canal aplicado`);
+    }
+  };
+
+  const saveChannelStyle = async () => {
+    if (!newStyleName.trim() || !selectedChannelId) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('channel_styles').insert({
+      user_id: user.id,
+      channel_id: selectedChannelId,
+      style_name: newStyleName,
+      style_description: newStyleDesc,
+      visual_notes: newStyleNotes,
+      is_default: channelStyles.length === 0,
+    } as any);
+    toast.success(`Estilo "${newStyleName}" salvo!`);
+    setNewStyleName(''); setNewStyleDesc(''); setNewStyleNotes('');
+    setShowCreateStyle(false);
+    loadChannelStyles(selectedChannelId);
+  };
+
+  const deleteChannelStyle = async (id: string) => {
+    await supabase.from('channel_styles').delete().eq('id', id);
+    if (selectedChannelId) loadChannelStyles(selectedChannelId);
+    toast.success('Estilo removido');
+  };
 
   // Debounced theme suggestions
   useEffect(() => {
