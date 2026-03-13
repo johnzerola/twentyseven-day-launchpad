@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Trash2, HelpCircle, ArrowRight, SkipForward, ImagePlus, Youtube, Save, History } from 'lucide-react';
+import { Bot, X, Send, Loader2, Trash2, HelpCircle, ArrowRight, SkipForward, ImagePlus, Youtube, Save, History, Bookmark, Edit3, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -476,6 +476,38 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
     }
   };
 
+  // ===== Save Dotti suggestion =====
+  const [savingIdx, setSavingIdx] = useState<number | null>(null);
+  const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string } | null>(null);
+
+  const saveSuggestion = async (msgContent: string, idx: number) => {
+    if (!userId) { toast.error('Faça login'); return; }
+    setSavingIdx(idx);
+    
+    // Extract a title from first line or first 60 chars
+    const firstLine = msgContent.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
+    const title = firstLine.slice(0, 80) || 'Sugestão do Dotti';
+
+    setEditingSuggestion({ idx, title, content: msgContent });
+  };
+
+  const confirmSaveSuggestion = async () => {
+    if (!editingSuggestion || !userId) return;
+    try {
+      await supabase.from('dotti_suggestions').insert({
+        user_id: userId,
+        title: editingSuggestion.title,
+        content: editingSuggestion.content,
+        topic: editingSuggestion.title,
+      } as any);
+      toast.success('💡 Sugestão salva! Acesse em Roteiros → Banco de Ideias');
+      setEditingSuggestion(null);
+    } catch {
+      toast.error('Erro ao salvar sugestão');
+    }
+    setSavingIdx(null);
+  };
+
   const clearChat = () => {
     startNewConversation();
   };
@@ -681,13 +713,55 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
                     msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary/80'
                   }`}>
                     {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm prose-invert max-w-none text-foreground [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_h3]:text-sm [&_h3]:mt-2 [&_h3]:mb-1 [&_strong]:text-primary">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
+                      <>
+                        <div className="prose prose-sm prose-invert max-w-none text-foreground [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_h3]:text-sm [&_h3]:mt-2 [&_h3]:mb-1 [&_strong]:text-primary">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                        {msg.content.length > 50 && i > 0 && !loading && (
+                          <button
+                            onClick={() => saveSuggestion(msg.content, i)}
+                            className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                            title="Salvar esta sugestão para usar em Roteiros"
+                          >
+                            {savingIdx === i ? <Check className="w-3 h-3 text-emerald-400" /> : <Bookmark className="w-3 h-3" />}
+                            {savingIdx === i ? 'Salvo!' : 'Salvar sugestão'}
+                          </button>
+                        )}
+                      </>
                     ) : msg.content}
                   </div>
                 </motion.div>
               ))}
+
+              {/* Edit suggestion modal inline */}
+              {editingSuggestion && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                  className="bg-card border border-primary/30 rounded-xl p-3 space-y-2 shadow-lg">
+                  <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                    <Edit3 className="w-3 h-3" /> Editar antes de salvar
+                  </p>
+                  <input
+                    value={editingSuggestion.title}
+                    onChange={e => setEditingSuggestion(prev => prev ? { ...prev, title: e.target.value } : null)}
+                    className="w-full bg-muted/30 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Título da sugestão"
+                  />
+                  <textarea
+                    value={editingSuggestion.content}
+                    onChange={e => setEditingSuggestion(prev => prev ? { ...prev, content: e.target.value } : null)}
+                    className="w-full bg-muted/30 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary min-h-[80px] max-h-[150px]"
+                    placeholder="Conteúdo da sugestão"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1 h-7 text-xs gap-1" onClick={confirmSaveSuggestion}>
+                      <Save className="w-3 h-3" /> Salvar
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setEditingSuggestion(null); setSavingIdx(null); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Quick Actions */}
               {showQuickActions && (

@@ -706,6 +706,59 @@ export type Database = {
         }
         Relationships: []
       }
+      dotti_suggestions: {
+        Row: {
+          channel_id: string | null
+          content: string
+          created_at: string
+          id: string
+          language: string | null
+          niche: string | null
+          style: string | null
+          title: string
+          topic: string | null
+          updated_at: string
+          used_count: number | null
+          user_id: string
+        }
+        Insert: {
+          channel_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          niche?: string | null
+          style?: string | null
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          used_count?: number | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          niche?: string | null
+          style?: string | null
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          used_count?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dotti_suggestions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emerging_channels: {
         Row: {
           channel_id: string
