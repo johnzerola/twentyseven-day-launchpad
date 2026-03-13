@@ -20,6 +20,7 @@ import { AudioProcessor } from '@/components/scripts/AudioProcessor';
 import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
+import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
