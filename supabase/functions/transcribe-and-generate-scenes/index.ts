@@ -186,25 +186,37 @@ RULES:
 You have the FULL TRANSCRIPTION with exact timestamps. Your job is to create visual scenes that PERFECTLY MATCH what is being said at each moment.
 
 CRITICAL TIMING RULES:
-- Each scene MUST be between 5 and 10 seconds long
+- Each scene MUST be 4, 6, or 8 seconds (Veo3 supported durations)
+- HOOK scene (first): always 8s for maximum impact
+- Action/transition: 6s for fast pacing
+- Emotional/descriptive: 8s for atmosphere
 - Cover the ENTIRE audio from 0.0s to ${audioDuration.toFixed(1)}s — NO GAPS
 - startTime/endTime MUST align with the transcript timestamps
-- You decide the optimal duration for each scene based on narrative pacing
 
-VISUAL CONTENT RULES:
+VEO3 MASTER PROMPT FORMULA v2.0:
+[SHOT_TYPE + CAMERA_MOTION], [LENS_SPEC] with [DOF_SETTING]. [CHARACTER if applicable]. [ACTION]. [ENVIRONMENT]. [LIGHTING_SETUP]. [ATMOSPHERIC — particles, fog, rain]. [COLOR_GRADE — film stock]. [ANTI_AI — skin pores, motion blur, film grain, lens artifacts]. Quality: masterpiece, award-winning, 8K UHD, Kodak Vision3, ACES. Audio: ambient + foley + music mood. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+
+NARRATION-VISUAL SYNC RULES:
 - EVERY visual prompt MUST directly illustrate what the narrator is saying at THAT EXACT MOMENT
-- Create VARIETY: if narrator talks about pyramids, show different angles/perspectives across scenes (aerial drone, close-up stones, wide landscape, person studying them, documentary screen, etc.)
+- Literal sync: concrete objects → show them. Metaphorical: abstract concepts → visual metaphors
+- Emotional sync: narration tone → color temperature (sad → cool blues, exciting → warm oranges)
+- Progressive: escalating tone → camera approaches, colors intensify, scale increases
+- NEVER show generic visuals disconnected from the narration
+
+VISUAL RETENTION RULES:
+- Create VARIETY: if narrator talks about pyramids, show different angles/perspectives across scenes
 - NEVER repeat the same visual concept in consecutive scenes
 - End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
-- Use 5+ different camera angles — never repeat consecutively
+- CAMERA VARIETY: Never repeat angles consecutively. Use 5+ different shot types. Every 4th scene = pattern interrupt
+- DOPAMINERGIC: First 3s of each scene must trigger curiosity. Camera ALWAYS moving
+- MULTI-MOMENT: For complex narratives, design 2-3 visual moments within 8s using "seamlessly transforms into" transitions
 
 VISUAL STYLE: ${selectedStyleGuide}${extraStyle}
 ${characterBlock}
 KNOWLEDGE BASE:
 ${knowledgeBlock}
 
-PROMPT FORMULA: [Cinematography/Camera] + [Subject matching narration] + [Action/Movement] + [Environment/Setting] + [Lighting/Mood] + [Style details] + anti-text block
-Quality: masterpiece, award-winning, 8K UHD
+PROMPT QUALITY: 100-200 words per prompt. Include exact lens (24mm/35mm/50mm/85mm/135mm/anamorphic), exact lighting (golden hour/Rembrandt/volumetric/chiaroscuro), anti-AI realism markers (skin pores, film grain, chromatic aberration, dust particles).
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT (use as reference for scene intent):\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 2000)}` : ''}`;
 
