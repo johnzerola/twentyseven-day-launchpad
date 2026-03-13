@@ -84,6 +84,102 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
 
+    // Extract user_id from JWT for personalized context
+    let currentUserId: string | null = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        // Decode JWT payload (base64url)
+        const payloadB64 = token.split('.')[1];
+        const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+        currentUserId = payload.sub || null;
+      } catch { /* ignore invalid tokens */ }
+    }
+
+    // ===== FETCH USER-SPECIFIC DATA (personalization) =====
+    let userProfileContext = '';
+    if (currentUserId) {
+      const [userChannels, savedSearches, savedScripts, savedTitles, outliers, onboardingPlan, plannerCards, trackedChannels] = await Promise.all([
+        sb.from("user_channels").select("channel_name, niche, subscribers, views, videos, youtube_channel_id, analysis_json").eq("user_id", currentUserId).limit(10),
+        sb.from("saved_searches").select("query, tab, notes, filters_json, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(15),
+        sb.from("saved_scripts").select("topic, style, video_type, duration, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(10),
+        sb.from("saved_titles").select("topic, niche, titles_json, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(10),
+        sb.from("outlier_channels").select("video_title, channel_name, views, multiplier, niche").eq("user_id", currentUserId).order("found_at", { ascending: false }).limit(10),
+        sb.from("onboarding_plans").select("niche, goal, language, content_type, time_per_day, plan_json").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(1),
+        sb.from("planner_cards").select("title, column_id, priority, tags").eq("user_id", currentUserId).order("updated_at", { ascending: false }).limit(15),
+        sb.from("tracked_channels").select("channel_name, youtube_channel_id, subscribers, folder").eq("user_id", currentUserId).limit(20),
+      ]);
+
+      const blocks: string[] = [];
+
+      // User's own channels
+      if (userChannels.data?.length) {
+        blocks.push(`### 📺 Canais do Usuário (${userChannels.data.length}):\n` +
+          userChannels.data.map(c => {
+            const analysis = c.analysis_json ? ` | Análise: ${JSON.stringify(c.analysis_json).slice(0, 200)}` : '';
+            return `- ${c.channel_name} (${c.niche || '?'}): ${(c.subscribers || 0)/1000}K subs, ${(c.views || 0)/1000}K views, ${c.videos || 0} vídeos${analysis}`;
+          }).join('\n'));
+      }
+
+      // Tracked competitor channels
+      if (trackedChannels.data?.length) {
+        blocks.push(`### 👀 Canais que o Usuário Rastreia (${trackedChannels.data.length}):\n` +
+          trackedChannels.data.map(c => `- ${c.channel_name} (${(c.subscribers || 0)/1000}K subs)${c.folder ? ` [pasta: ${c.folder}]` : ''}`).join('\n'));
+      }
+
+      // Onboarding plan
+      if (onboardingPlan.data?.length) {
+        const plan = onboardingPlan.data[0];
+        blocks.push(`### 🎯 Plano do Usuário:\n- Nicho: ${plan.niche || '?'}\n- Meta: ${plan.goal || '?'}\n- Idioma: ${plan.language || '?'}\n- Tipo conteúdo: ${plan.content_type || '?'}\n- Tempo/dia: ${plan.time_per_day || '?'}`);
+      }
+
+      // Saved searches (what the user has been researching)
+      if (savedSearches.data?.length) {
+        blocks.push(`### 🔍 Pesquisas Recentes do Usuário (${savedSearches.data.length}):\n` +
+          savedSearches.data.map(s => `- "${s.query}" (${s.tab})${s.notes ? ` — nota: ${s.notes}` : ''}`).join('\n'));
+      }
+
+      // Saved scripts (what topics they're writing about)
+      if (savedScripts.data?.length) {
+        blocks.push(`### ✍️ Roteiros Salvos do Usuário (${savedScripts.data.length}):\n` +
+          savedScripts.data.map(s => `- "${s.topic}" (${s.video_type}, ${s.duration}min, estilo: ${s.style || '?'})`).join('\n'));
+      }
+
+      // Saved titles
+      if (savedTitles.data?.length) {
+        blocks.push(`### 🏷️ Títulos Salvos do Usuário (${savedTitles.data.length}):\n` +
+          savedTitles.data.map(t => {
+            const titles = Array.isArray(t.titles_json) ? t.titles_json.slice(0, 3).map((tt: any) => typeof tt === 'string' ? tt : tt.title || '').join('; ') : '';
+            return `- Tópico: "${t.topic || '?'}" (nicho: ${t.niche || '?'}) → ${titles}`;
+          }).join('\n'));
+      }
+
+      // Outlier videos they found interesting
+      if (outliers.data?.length) {
+        blocks.push(`### 🚀 Outliers que o Usuário Encontrou (${outliers.data.length}):\n` +
+          outliers.data.map(o => `- "${o.video_title}" de ${o.channel_name || '?'} — ${(o.views || 0)/1000}K views, ${o.multiplier}x multiplicador, nicho: ${o.niche || '?'}`).join('\n'));
+      }
+
+      // Planner cards (what they're working on)
+      if (plannerCards.data?.length) {
+        const byColumn: Record<string, string[]> = {};
+        plannerCards.data.forEach(c => {
+          if (!byColumn[c.column_id]) byColumn[c.column_id] = [];
+          byColumn[c.column_id].push(`${c.title} [${c.priority || 'média'}]`);
+        });
+        blocks.push(`### 📋 Tarefas do Usuário:\n` +
+          Object.entries(byColumn).map(([col, items]) => `**${col}**: ${items.join(', ')}`).join('\n'));
+      }
+
+      if (blocks.length > 0) {
+        userProfileContext = `\n## ═══════════════════════════════════════════
+## 👤 PERFIL PERSONALIZADO DO USUÁRIO
+## ═══════════════════════════════════════════
+${blocks.join('\n\n')}`;
+      }
+    }
+
     // Extract the user's latest query for semantic search
     const userMessages = (messages || []).filter((m: any) => m.role === 'user');
     const latestQuery = userMessages.length > 0 ? userMessages[userMessages.length - 1].content : '';
