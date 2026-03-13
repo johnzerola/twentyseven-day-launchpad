@@ -64,6 +64,13 @@ const Scripts = () => {
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
   const [customStyleNotes, setCustomStyleNotes] = useState('');
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [userChannels, setUserChannels] = useState<any[]>([]);
+  const [channelStyles, setChannelStyles] = useState<any[]>([]);
+  const [showCreateStyle, setShowCreateStyle] = useState(false);
+  const [newStyleName, setNewStyleName] = useState('');
+  const [newStyleDesc, setNewStyleDesc] = useState('');
+  const [newStyleNotes, setNewStyleNotes] = useState('');
 
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
