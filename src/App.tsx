@@ -22,8 +22,8 @@ import Workflow from "./pages/Workflow";
 import MultiChannel from "./pages/MultiChannel";
 import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 import ChannelIntelligence from "./pages/ChannelIntelligence";
-
 import NotFound from "./pages/NotFound";
+import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +39,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <KeyboardShortcuts />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />

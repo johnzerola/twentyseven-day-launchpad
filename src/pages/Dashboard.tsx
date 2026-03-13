@@ -3,6 +3,8 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
 import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
 import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashboard';
+import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
+import { ScriptPerformanceHistory } from '@/components/dashboard/ScriptPerformanceHistory';
 import { DashboardSkeleton } from '@/components/PageSkeletons';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -167,6 +169,9 @@ const Dashboard = () => {
 
         {/* Productivity Dashboard */}
         <ProductivityDashboard />
+
+        {/* Trend Notifications */}
+        <TrendNotifications />
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left column */}
@@ -365,6 +370,9 @@ const Dashboard = () => {
                 </div>
               )}
             </motion.div>
+
+            {/* Script Performance History */}
+            <ScriptPerformanceHistory />
           </div>
 
           {/* Right: Quick Actions */}

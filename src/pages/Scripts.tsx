@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
+import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Ultra-realista, estilo filme, iluminação dramática' },
@@ -78,6 +79,7 @@ const Scripts = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showComparator, setShowComparator] = useState(false);
 
   useEffect(() => { loadHistory(); }, [scriptsPag.page]);
 
@@ -269,9 +271,14 @@ const Scripts = () => {
               <p className="text-sm text-muted-foreground">Roteiro → Estilo → Personagens → Prompts Sincronizados</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => setShowHistory(!showHistory)} size="sm" className="gap-2">
-            <History className="w-4 h-4" /> ({scriptsPag.totalCount})
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowHistory(!showHistory)} size="sm" className="gap-2">
+              <History className="w-4 h-4" /> ({scriptsPag.totalCount})
+            </Button>
+            <Button variant="outline" onClick={() => setShowComparator(!showComparator)} size="sm" className="gap-2">
+              <GitCompareArrows className="w-4 h-4" /> Comparar
+            </Button>
+          </div>
         </div>
 
         {/* History */}
@@ -292,6 +299,13 @@ const Scripts = () => {
             </div>
             <PaginationControls page={scriptsPag.page} totalCount={scriptsPag.totalCount} pageSize={PAGE_SIZE}
               hasMore={scriptsPag.hasMore} hasPrev={scriptsPag.hasPrev} onNext={scriptsPag.nextPage} onPrev={scriptsPag.prevPage} />
+          </div>
+        )}
+
+        {/* Comparator Panel */}
+        {showComparator && (
+          <div className="bg-card border border-border rounded-xl p-5">
+            <ScriptComparator />
           </div>
         )}
 

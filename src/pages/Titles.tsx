@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe } from 'lucide-react';
+import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Youtube } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
+import { YouTubeExportPanel } from '@/components/YouTubeExportPanel';
 
 interface TitleSuggestion {
   title: string;
@@ -472,6 +473,16 @@ const Titles = () => {
                   </div>
                 </div>
               </motion.div>
+            )}
+
+            {/* YouTube Export Panel — shows when we have SEO data */}
+            {seoResult && (
+              <YouTubeExportPanel
+                title={seoTitle}
+                description={seoResult.description}
+                tags={seoResult.keywords}
+                hashtags={seoResult.hashtags}
+              />
             )}
 
             {!seoResult && !seoLoading && (
