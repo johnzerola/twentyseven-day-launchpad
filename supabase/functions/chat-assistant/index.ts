@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, currentPage, mode, onboardingData } = await req.json();
+    const { messages, currentPage, mode, onboardingData, conversationId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -18,43 +18,87 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch knowledge bases in parallel
-    const [ytKnowledge, scriptKnowledge, channelIntel, viralTitles, nicheDb] = await Promise.all([
-      sb.from("youtube_knowledge").select("title, content, category").order("priority", { ascending: false }).limit(15),
-      sb.from("script_knowledge").select("title, content, category").order("effectiveness_score", { ascending: false }).limit(10),
-      sb.from("channel_intelligence").select("channel_name, niche, avg_views, subscribers, growth_rate, rpm_estimate, style, is_faceless, country").limit(50),
-      sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern, channel_name, country, language").order("views", { ascending: false }).limit(40),
-      sb.from("niche_database").select("name, rpm_estimate, difficulty, saturation, faceless_friendly, country, language").limit(50),
+    // Fetch ALL knowledge bases in parallel for deep RAG
+    const [
+      ytKnowledge, scriptKnowledge, channelIntel, viralTitles, nicheDb,
+      hookLibrary, attentionEng, audiencePsych, contentModels, scriptStructures,
+      hookPatterns, attentionLib, sceneKnowledge
+    ] = await Promise.all([
+      sb.from("youtube_knowledge").select("title, content, category, priority").order("priority", { ascending: false }).limit(25),
+      sb.from("script_knowledge").select("title, content, category, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(20),
+      sb.from("channel_intelligence").select("channel_name, niche, avg_views, subscribers, growth_rate, rpm_estimate, style, is_faceless, country, language, upload_frequency").limit(60),
+      sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern, channel_name, country, language, why_viral").order("views", { ascending: false }).limit(50),
+      sb.from("niche_database").select("name, rpm_estimate, difficulty, saturation, faceless_friendly, country, language, sub_niches").limit(60),
+      sb.from("hook_library").select("hook_text, hook_type, niche, retention_score, source_video").order("retention_score", { ascending: false }).limit(30),
+      sb.from("attention_engineering").select("pattern_name, technique, category, psychological_basis, retention_impact, intensity_level").order("retention_impact", { ascending: false }).limit(20),
+      sb.from("audience_psychology_patterns").select("trigger_type, description, example_hooks, example_titles, storytelling_pattern, retention_score, niches").order("retention_score", { ascending: false }).limit(20),
+      sb.from("content_models").select("model_name, model_type, description, hook_pattern, pacing_guide, effectiveness_score, video_type").order("effectiveness_score", { ascending: false }).limit(15),
+      sb.from("script_structures").select("structure_name, intro_pattern, middle_pattern, ending_pattern, cliffhanger_pattern, avg_retention, niche, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(15),
+      sb.from("hook_patterns").select("pattern_name, pattern_type, template, psychology_trigger, avg_retention_boost, effectiveness_score").order("effectiveness_score", { ascending: false }).limit(20),
+      sb.from("attention_library").select("pattern_name, scene_type, attention_score, emotion, time_window, example_text, recovery_technique").order("attention_score", { ascending: false }).limit(20),
+      sb.from("scene_prompt_knowledge").select("title, category, prompt_template, viral_score").order("viral_score", { ascending: false }).limit(15),
     ]);
 
-    // Build context blocks
-    const ytContext = (ytKnowledge.data || []).map(k => `[${k.category}] ${k.title}: ${k.content.slice(0, 300)}`).join('\n');
-    const scriptContext = (scriptKnowledge.data || []).map(k => `[${k.category}] ${k.title}: ${k.content.slice(0, 200)}`).join('\n');
+    // Build rich context blocks
+    const ytContext = (ytKnowledge.data || []).map(k => `[${k.category}] ${k.title}: ${k.content.slice(0, 400)}`).join('\n');
+    const scriptContext = (scriptKnowledge.data || []).map(k => `[${k.category}] ${k.title} (score:${k.effectiveness_score}): ${k.content.slice(0, 300)}`).join('\n');
     
     const channelContext = (channelIntel.data || []).map(c => 
-      `${c.channel_name} (${c.niche}): ${(c.avg_views/1000).toFixed(0)}K views, ${(c.subscribers/1000).toFixed(0)}K subs, RPM $${c.rpm_estimate}, ${c.growth_rate}, ${c.is_faceless ? 'faceless' : 'facecam'}, ${c.country}`
+      `${c.channel_name} (${c.niche}): ${(c.avg_views/1000).toFixed(0)}K views, ${(c.subscribers/1000).toFixed(0)}K subs, RPM $${c.rpm_estimate}, ${c.growth_rate}, ${c.is_faceless ? 'faceless' : 'facecam'}, ${c.country}, freq: ${c.upload_frequency || '?'}`
     ).join('\n');
 
     const viralContext = (viralTitles.data || []).map(v =>
-      `"${v.title}" — ${(v.views/1000).toFixed(0)}K views, ${v.niche}, ${v.country || '?'}, triggers: ${(v.emotional_triggers || []).join(', ')}, padrão: ${v.title_pattern || 'N/A'}`
+      `"${v.title}" — ${(v.views/1000).toFixed(0)}K views, ${v.niche}, ${v.country || '?'}, triggers: ${(v.emotional_triggers || []).join(', ')}, padrão: ${v.title_pattern || 'N/A'}${v.why_viral ? `, viral_reason: ${v.why_viral}` : ''}`
     ).join('\n');
 
     const nicheContext = (nicheDb.data || []).map(n =>
-      `${n.name}: RPM $${n.rpm_estimate}, dificuldade ${n.difficulty}, saturação ${n.saturation}, faceless: ${n.faceless_friendly ? 'sim' : 'não'}, ${n.country}`
+      `${n.name}: RPM $${n.rpm_estimate}, dificuldade ${n.difficulty}, saturação ${n.saturation}, faceless: ${n.faceless_friendly ? 'sim' : 'não'}, ${n.country}, sub-nichos: ${JSON.stringify(n.sub_niches || [])}`
+    ).join('\n');
+
+    const hookContext = (hookLibrary.data || []).map(h =>
+      `[${h.hook_type}] "${h.hook_text}" — retenção: ${h.retention_score}/10, nicho: ${h.niche || 'geral'}`
+    ).join('\n');
+
+    const attentionEngContext = (attentionEng.data || []).map(a =>
+      `${a.pattern_name} [${a.category}]: ${a.technique} | base psicológica: ${a.psychological_basis || 'N/A'} | impacto retenção: ${a.retention_impact}%`
+    ).join('\n');
+
+    const psychContext = (audiencePsych.data || []).map(p =>
+      `[${p.trigger_type}] ${p.description.slice(0, 200)} | storytelling: ${p.storytelling_pattern || 'N/A'} | retenção: ${p.retention_score}/10 | nichos: ${(p.niches || []).join(', ')}`
+    ).join('\n');
+
+    const modelContext = (contentModels.data || []).map(m =>
+      `${m.model_name} (${m.model_type}, ${m.video_type}): ${m.description.slice(0, 150)} | hook: ${m.hook_pattern.slice(0, 100)} | pacing: ${m.pacing_guide.slice(0, 100)}`
+    ).join('\n');
+
+    const structContext = (scriptStructures.data || []).map(s =>
+      `${s.structure_name}: intro="${s.intro_pattern.slice(0, 80)}" | meio="${s.middle_pattern.slice(0, 80)}" | final="${s.ending_pattern.slice(0, 80)}" | cliffhanger="${s.cliffhanger_pattern.slice(0, 80)}" | retenção média: ${s.avg_retention}%`
+    ).join('\n');
+
+    const hookPatContext = (hookPatterns.data || []).map(h =>
+      `${h.pattern_name} [${h.pattern_type}]: "${h.template}" | trigger: ${h.psychology_trigger} | boost retenção: +${h.avg_retention_boost}%`
+    ).join('\n');
+
+    const attLibContext = (attentionLib.data || []).map(a =>
+      `${a.pattern_name} [${a.scene_type}] ${a.time_window}: atenção ${a.attention_score}/10, emoção: ${a.emotion}, exemplo: "${(a.example_text || '').slice(0, 100)}", recuperação: ${a.recovery_technique || 'N/A'}`
+    ).join('\n');
+
+    const sceneKnowledgeContext = (sceneKnowledge.data || []).map(s =>
+      `[${s.category}] ${s.title} (viral:${s.viral_score}): ${s.prompt_template.slice(0, 150)}`
     ).join('\n');
 
     // Page-aware context
     const pageHints: Record<string, string> = {
-      '/scripts': 'O usuário está na página de ROTEIROS.',
-      '/titles': 'O usuário está na página de TÍTULOS.',
-      '/search': 'O usuário está no DubSpy (pesquisa de canais).',
-      '/niches': 'O usuário está no Niche Explorer.',
-      '/branding': 'O usuário está no Growth Center.',
-      '/workflow': 'O usuário está no Production Hub.',
-      '/channels': 'O usuário está em Meus Canais.',
-      '/viral-db': 'O usuário está na Viral Database.',
-      '/dashboard': 'O usuário está no Dashboard.',
-      '/multichannel': 'O usuário está no Multichannel Manager.',
+      '/scripts': 'O usuário está na página de ROTEIROS. Ajude com estrutura, hooks, retenção.',
+      '/titles': 'O usuário está na página de TÍTULOS. Ajude com CTR, padrões virais.',
+      '/search': 'O usuário está no DubSpy (pesquisa de canais). Ajude a encontrar oportunidades.',
+      '/niches': 'O usuário está no Niche Explorer. Ajude com análise de nicho.',
+      '/branding': 'O usuário está no Growth Center. Ajude com branding e projeções.',
+      '/workflow': 'O usuário está no Production Hub. Ajude com organização.',
+      '/channels': 'O usuário está em Meus Canais. Ajude com diagnóstico.',
+      '/viral-db': 'O usuário está na Viral Database. Ajude a encontrar padrões.',
+      '/dashboard': 'O usuário está no Dashboard. Dê visão geral e próximos passos.',
+      '/multichannel': 'O usuário está no Multichannel Manager. Ajude com estratégia multi-país.',
     };
     const pageContext = pageHints[currentPage] || '';
 
@@ -85,6 +129,9 @@ ${channelContext.slice(0, 3000)}
 
 ### Algoritmo YouTube:
 ${ytContext.slice(0, 2000)}
+
+### Hooks de alta retenção:
+${hookContext.slice(0, 1500)}
 
 ## FORMATO DO PLANO (OBRIGATÓRIO)
 
@@ -132,7 +179,7 @@ ${od.preference === 'both' ? '- Sugestão de como unir paixão com monetização
     }
 
     // ========== REGULAR CHAT MODE ==========
-    const systemPrompt = `Você é o **Dotti** — consultor estratégico de YouTube da plataforma Dotti.
+    const systemPrompt = `Você é o **Dotti** — consultor estratégico de YouTube da plataforma Dotti. Você possui acesso a um banco de dados massivo com inteligência real sobre YouTube.
 
 ## SUA PERSONALIDADE
 Você é um CONSULTOR ESTRATÉGICO, não um assistente passivo. Você:
@@ -165,13 +212,24 @@ Você é um CONSULTOR ESTRATÉGICO, não um assistente passivo. Você:
 1. Use dados REAIS do banco de nichos
 2. Diga: "Esse nicho X no país Y tem RPM de $Z, saturação [alta/baixa], e existem apenas N canais faceless de qualidade fazendo isso"
 3. Se o nicho está saturado: "Horror no Brasil tá LOTADO. Mas Horror na Polônia? Quase ninguém. Mesmo conteúdo, 10x menos competição"
-4. Sempre sugira a RÉPLICA INTERNACIONAL: "Esse nicho bombou nos EUA com [canal exemplo]. Ninguém fez isso em [país]. É ouro"
+4. Sempre sugira a RÉPLICA INTERNACIONAL
 
 ### Quando DISCORDAR do usuário:
 - NÃO seja grosso, seja ESTRATÉGICO
-- Exemplo: "Entendo que você gosta de [tema], mas os dados mostram que [outro tema] tem 3x mais potencial no [país]. Minha sugestão: teste os dois nos primeiros 5 vídeos e veja qual performa melhor"
-- Exemplo: "Índia? Olha, eu não recomendo como primeiro canal. Crescimento é rápido SIM, mas monetização é brutal — RPM $0.80. Você ia precisar de 600K views/mês pra ganhar $500. Na Turquia, com 200K views/mês já ganha o mesmo. O que acha?"
-- Exemplo: "Brasil é ótimo se você já fala português, mas a competição é FORTE. Sabe o que pouca gente faz? O mesmo nicho em tcheco ou húngaro — audiência menor mas ZERO competição e RPM 2x maior"
+- Exemplo: "Entendo que você gosta de [tema], mas os dados mostram que [outro tema] tem 3x mais potencial no [país]."
+
+### Quando perguntarem sobre ROTEIROS:
+Use as técnicas avançadas do banco de conhecimento:
+1. Cite estruturas de roteiro ESPECÍFICAS (nome da estrutura + padrão de retenção)
+2. Recomende hooks baseados nos hooks de alta retenção do banco
+3. Explique técnicas de attention engineering com base psicológica
+4. Sugira modelos de conteúdo adequados ao tipo de vídeo
+
+### Quando perguntarem sobre ALGORITMO DO YOUTUBE:
+Use os estudos e insights do banco youtube_knowledge:
+1. Cite dados específicos sobre como o algoritmo funciona em 2025-2026
+2. Explique CTR, retenção, session watch time com números reais
+3. Desmistifique mitos comuns com evidências do banco
 
 ## INTELIGÊNCIA DE MERCADO (USE PROATIVAMENTE)
 
@@ -185,96 +243,88 @@ Você é um CONSULTOR ESTRATÉGICO, não um assistente passivo. Você:
 | 🇨🇭 Suíça | $10-14 | 9M | ~1-2 canais | DE/FR/IT | RPM mais alto do mundo |
 | 🇩🇰 Dinamarca | $8-10 | 6M | ~0 canais | Dinamarquês | País rico, zero competição |
 
-#### 🥇 TIER A — Excelente (Bom RPM + Escala Razoável):
+#### 🥇 TIER A — Excelente:
 | País | RPM | Pop. | Competição | Idioma | Nota |
 |------|-----|------|-----------|--------|------|
-| 🇳🇱 Holanda | $7-9 | 17M | Baixa | Holandês | Audiência educada, alta retenção |
-| 🇵🇱 Polônia | $4-6 | 38M | Muito baixa | Polonês | MELHOR custo-benefício da Europa |
-| 🇨🇿 Tchéquia | $3-5 | 11M | ~0 | Tcheco | Mercado completamente virgem |
-| 🇦🇹 Áustria | $7-9 | 9M | Baixa | Alemão | Pode usar mesmo conteúdo da Alemanha |
+| 🇳🇱 Holanda | $7-9 | 17M | Baixa | Holandês | Audiência educada |
+| 🇵🇱 Polônia | $4-6 | 38M | Muito baixa | Polonês | MELHOR custo-benefício |
+| 🇨🇿 Tchéquia | $3-5 | 11M | ~0 | Tcheco | Completamente virgem |
+| 🇦🇹 Áustria | $7-9 | 9M | Baixa | Alemão | Reusar conteúdo alemão |
 
-#### 🥈 TIER B — Volume (RPM Médio/Baixo + Escala Massiva):
+#### 🥈 TIER B — Volume:
 | País | RPM | Pop. | Competição | Idioma | Nota |
 |------|-----|------|-----------|--------|------|
-| 🇹🇷 Turquia | $2-4 | 85M | Baixa | Turco | YouTube é #1, volume compensa RPM |
+| 🇹🇷 Turquia | $2-4 | 85M | Baixa | Turco | YouTube é #1 |
 | 🇮🇩 Indonésia | $1-2 | 270M | Baixa | Indonésio | Escala ABSURDA |
 | 🇻🇳 Vietnã | $1-3 | 100M | ~0 | Vietnamita | YouTube explodindo |
-| 🇹🇭 Tailândia | $2-3 | 70M | Baixa | Tailandês | Horror/curiosidades bombam |
-
-#### 🇧🇷 BRASIL (para contexto):
-- RPM $3-5 | 210M pessoas | Competição ALTA | Português
-- Funciona, mas é 5-10x mais competitivo que Polônia/Tchéquia
-- Para quem JÁ fala português e tem experiência, é ok
-- Para INICIANTES: melhores chances em mercados menos saturados
-
-#### ❌ NÃO RECOMENDADOS (a menos que o usuário insista):
-| País | RPM | Problema |
-|------|-----|---------|
-| 🇮🇳 Índia | $0.50-1.00 | RPM muito baixo, precisa de volume absurdo |
-| 🇧🇩 Bangladesh | $0.30-0.80 | RPM ainda pior que Índia |
-| 🇵🇰 Paquistão | $0.50-1.00 | Mesmo problema da Índia |
-| 🇵🇭 Filipinas | $1-2 | RPM baixo, competição crescente |
-
-### NICHOS QUE BOMBAM PARA REPLICAR INTERNACIONALMENTE:
-1. **Horror/True Crime** → Bombou nos EUA (MrBallen, Lazy Masquerade). Replicar em: Polônia, Tchéquia, Hungria, Turquia
-2. **Estoicismo/Self-Improvement** → Explodiu em inglês. Quase ninguém faz em: Turco, Polonês, Tcheco
-3. **Curiosidades Científicas** (estilo Kurzgesagt) → ZERO competição em: Norueguês, Sueco, Holandês
-4. **Finanças/Investimento** → RPM altíssimo ($15-25 em inglês). Em polonês/tcheco: RPM $8-12, ZERO competição
-5. **AI/Tecnologia** → Nicho emergente. Crescendo em TODOS os idiomas
-6. **Enigmas/Mistérios** → Universal, fácil de dublar. Pouca competição em mercados europeus menores
-
-### ESTRATÉGIAS MULTI-CANAL RECOMENDADAS:
-- **Conservador (2 canais)**: 1 em Polônia + 1 em Turquia
-- **Agressivo (3 canais)**: Noruega (RPM) + Turquia (volume) + Tchéquia (equilíbrio)  
-- **Brasileiro (2 canais)**: Brasil + 1 país europeu (Polônia ou Tchéquia)
-- **Máximo (5 canais)**: Noruega + Suécia + Polônia + Turquia + Indonésia
-
-### TEMPO PARA MONETIZAR (estimativa realista):
-- Mercados virgens (Noruega, Tchéquia): 2-4 meses com 3 vídeos/semana
-- Mercados médios (Polônia, Turquia): 3-5 meses
-- Mercados saturados (Brasil, EUA): 6-12 meses
-- Mercados de volume (Indonésia): 1-3 meses para YPP, mas receita baixa
+| 🇹🇭 Tailândia | $2-3 | 70M | Baixa | Tailandês | Horror bombam |
 
 ## CONTEXTO ATUAL
 ${pageContext}
 
-## BASE DE CONHECIMENTO REAL
+## ═══════════════════════════════════════════
+## BASE DE CONHECIMENTO COMPLETA (RAG)
+## ═══════════════════════════════════════════
 
-### Algoritmo & Estratégia YouTube:
+### 📚 Algoritmo & Estudos YouTube (${ytKnowledge.data?.length || 0} registros):
 ${ytContext}
 
-### Técnicas de Roteiro & Retenção:
+### ✍️ Técnicas de Roteiro & Retenção (${scriptKnowledge.data?.length || 0} registros):
 ${scriptContext}
 
-### Canais Analisados (${channelIntel.data?.length || 0}):
+### 🎣 Hooks de Alta Retenção (${hookLibrary.data?.length || 0} registros):
+${hookContext}
+
+### 🧠 Padrões de Hook (${hookPatterns.data?.length || 0} registros):
+${hookPatContext}
+
+### 🧬 Psicologia de Audiência (${audiencePsych.data?.length || 0} registros):
+${psychContext}
+
+### ⚡ Engenharia de Atenção (${attentionEng.data?.length || 0} registros):
+${attentionEngContext}
+
+### 👁️ Biblioteca de Atenção por Cena (${attentionLib.data?.length || 0} registros):
+${attLibContext}
+
+### 🎬 Modelos de Conteúdo (${contentModels.data?.length || 0} registros):
+${modelContext}
+
+### 📐 Estruturas de Roteiro (${scriptStructures.data?.length || 0} registros):
+${structContext}
+
+### 🎥 Knowledge de Prompts Visuais (${sceneKnowledge.data?.length || 0} registros):
+${sceneKnowledgeContext}
+
+### 📺 Canais Analisados (${channelIntel.data?.length || 0} registros):
 ${channelContext}
 
-### Títulos Virais Reais (${viralTitles.data?.length || 0}):
+### 🔥 Títulos Virais Reais (${viralTitles.data?.length || 0} registros):
 ${viralContext}
 
-### Banco de Nichos:
+### 📊 Banco de Nichos (${nicheDb.data?.length || 0} registros):
 ${nicheContext}
 
 ## FERRAMENTAS DA PLATAFORMA (sugira quando relevante):
 - **DubSpy** (/search): Encontrar canais emergentes em QUALQUER país
 - **Niche Explorer** (/niches): Dados reais de RPM, saturação por país
-- **Roteiros** (/scripts): Gerar roteiros em 23 idiomas
+- **Roteiros** (/scripts): Gerar roteiros em 23 idiomas com IA
 - **Títulos Virais** (/titles): Gerar títulos com CTR estimado
-- **Meus Canais** (/channels): Vincular canais e ver métricas REAIS (sub_watch_ratio, engagement, etc.)
+- **Meus Canais** (/channels): Vincular canais e ver métricas REAIS
 - **Viral Database** (/viral-db): 900+ títulos virais reais com padrões
-- **Multichannel** (/multichannel): Gerenciar múltiplos canais com rollouts em escala
+- **Multichannel** (/multichannel): Gerenciar múltiplos canais
 
 ## REGRAS ABSOLUTAS:
 1. Responda SEMPRE em português brasileiro, tom de MENTOR/CONSULTOR
 2. DISCORDA quando necessário — você é pago para dar resultados, não para agradar
-3. Use DADOS REAIS do banco — nunca invente números
+3. Use DADOS REAIS do banco — nunca invente números. Cite as tabelas internamente mas apresente naturalmente
 4. Sempre que mencionar um país, diga o RPM E a competição
-5. SEMPRE ofereça alternativa quando discordar: "Eu faria diferente. Em vez de X, faria Y porque..."
-6. Se o usuário está perdido, TOME A INICIATIVA: "Olha, com base no que me falou, eu faria isso: [plano em 3 passos]"
-7. Quando o assunto é monetização, seja BRUTAL: "Nos primeiros 2 meses, receita ZERO. Mês 3-4 começa a pingar. Mês 6+ se consistente"
-8. Se o usuário falar de um canal morto, analise e dê o VEREDITO: salvar ou abandonar
-9. Nunca termine sem uma AÇÃO CONCRETA: "Próximo passo: faz X agora"
-10. Se o usuário mencionar 3-5 canais, apresente a ESTRATÉGIA MULTI-PAÍS com dados`;
+5. SEMPRE ofereça alternativa quando discordar
+6. Se o usuário está perdido, TOME A INICIATIVA
+7. Quando o assunto é monetização, seja BRUTAL com prazos realistas
+8. Nunca termine sem uma AÇÃO CONCRETA: "Próximo passo: faz X agora"
+9. Quando perguntarem sobre roteiros, CITE técnicas específicas do banco (nome do padrão + dados)
+10. Quando perguntarem sobre algoritmo, USE os estudos do youtube_knowledge`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
