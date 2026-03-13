@@ -9,6 +9,11 @@ const corsHeaders = {
 const MAX_CONCURRENCY = parseInt(Deno.env.get("TASK_WORKER_CONCURRENCY") || "2");
 const BACKOFF_BASE_MS = 5000;
 
+// ═══════════════════════════════════════════════════════════════════
+// ECONOMY CONFIG — Global daily limits for background tasks
+// ═══════════════════════════════════════════════════════════════════
+const MAX_TASK_WORKER_RUNS_PER_DAY = 10; // Was unlimited
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -16,6 +21,26 @@ serve(async (req) => {
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  // ═══════════════════════════════════════════════════════════════
+  // THROTTLE — Limit total runs per day
+  // ═══════════════════════════════════════════════════════════════
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: todayLogs } = await sb.from("execution_logs")
+    .select("id")
+    .eq("function_name", "task-worker")
+    .eq("success", true)
+    .gte("created_at", `${today}T00:00:00Z`);
+
+  if ((todayLogs?.length || 0) >= MAX_TASK_WORKER_RUNS_PER_DAY) {
+    return new Response(JSON.stringify({
+      success: true,
+      throttled: true,
+      reason: `Task worker daily limit reached (${todayLogs?.length}/${MAX_TASK_WORKER_RUNS_PER_DAY})`,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const callFn = async (fnName: string, payload: any) => {
     const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
@@ -90,7 +115,6 @@ serve(async (req) => {
             break;
         }
 
-        // Mark done
         await sb.from("task_queue")
           .update({ status: "done", result, completed_at: new Date().toISOString() })
           .eq("id", task.id);
@@ -122,7 +146,7 @@ serve(async (req) => {
       metadata: { tasks_processed: results.length, results },
     }).catch(() => {});
 
-    return new Response(JSON.stringify({ success: true, processed: results }), {
+    return new Response(JSON.stringify({ success: true, processed: results, economy_mode: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

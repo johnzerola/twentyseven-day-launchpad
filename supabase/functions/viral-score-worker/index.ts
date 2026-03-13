@@ -10,6 +10,14 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const BREAKOUT_SCORE = 0.70;
 const STRONG_SCORE = 0.50;
 
+// ═══════════════════════════════════════════════════════════════════
+// ECONOMY CONFIG — Prevent runaway costs
+// ═══════════════════════════════════════════════════════════════════
+const MAX_RUNS_PER_DAY = 3;           // Max 3 scans per day (was unlimited!)
+const MAX_YOUTUBE_CALLS_PER_RUN = 15; // Max 15 YouTube enrichments per run (was 50+)
+const MIN_INTERVAL_HOURS = 6;         // Minimum 6h between runs
+const MAX_BATCH_SIZE = 50;            // Process max 50 videos per run (was 200)
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -20,10 +28,28 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { hours = 72, niche, limit = 200, action = "scan" } = body;
+    const { hours = 72, niche, limit = MAX_BATCH_SIZE, action = "scan", force = false } = body;
+
+    // ═══════════════════════════════════════════════════════════════
+    // THROTTLE CHECK — Prevent runaway execution
+    // ═══════════════════════════════════════════════════════════════
+    if (action === "scan" && !force) {
+      const throttleCheck = await checkThrottle(sb);
+      if (!throttleCheck.allowed) {
+        return jsonResponse({
+          success: true,
+          throttled: true,
+          reason: throttleCheck.reason,
+          next_allowed_at: throttleCheck.nextAllowedAt,
+          runs_today: throttleCheck.runsToday,
+          message: `Economia ativa: ${throttleCheck.reason}`,
+        });
+      }
+    }
 
     if (action === "scan") {
-      let query = sb.from("viral_titles_db").select("*").order("views", { ascending: false }).limit(limit);
+      const effectiveLimit = Math.min(limit, MAX_BATCH_SIZE);
+      let query = sb.from("viral_titles_db").select("*").order("views", { ascending: false }).limit(effectiveLimit);
       if (niche) query = query.eq("niche", niche);
 
       const { data: videos, error: vErr } = await query;
@@ -38,6 +64,7 @@ serve(async (req) => {
       const results: any[] = [];
       let breakouts = 0;
       let enriched_count = 0;
+      let youtube_calls = 0;
 
       for (let i = 0; i < videos.length; i += 10) {
         const batch = videos.slice(i, i + 10);
@@ -45,14 +72,22 @@ serve(async (req) => {
         for (const video of batch) {
           try {
             let enrichedVideo = { ...video };
-            if (YOUTUBE_API_KEY && video.channel_id) {
-              enrichedVideo = await enrichWithYouTube(video, YOUTUBE_API_KEY);
-              enriched_count++;
+            
+            // ECONOMY: Only enrich with YouTube if under call limit
+            if (YOUTUBE_API_KEY && video.channel_id && youtube_calls < MAX_YOUTUBE_CALLS_PER_RUN) {
+              // Check YouTube API quota before calling
+              const { data: ytAllowed } = await sb.rpc("check_and_increment_api_usage", { _api_name: "youtube" });
+              if (ytAllowed) {
+                enrichedVideo = await enrichWithYouTube(video, YOUTUBE_API_KEY);
+                enriched_count++;
+                youtube_calls++;
+              }
             }
 
             let thumbnailCtr = 0.05;
-            if (LOVABLE_API_KEY && video.channel_id) {
-              thumbnailCtr = await enrichThumbnailScore(sb, LOVABLE_API_KEY, video);
+            // ECONOMY: Skip thumbnail AI analysis — use cached or default
+            if (video.channel_id) {
+              thumbnailCtr = await getCachedThumbnailScore(sb, video);
             }
             enrichedVideo.thumbnail_ctr = thumbnailCtr;
 
@@ -131,21 +166,34 @@ serve(async (req) => {
         function_name: "viral-score-worker",
         success: true,
         duration_ms: Date.now() - startTime,
-        api_calls_made: enriched_count,
-        metadata: { action: "scan", videos_processed: results.length, breakouts, enriched: enriched_count, niche: niche || "all", formula: "v3" },
+        api_calls_made: youtube_calls,
+        metadata: {
+          action: "scan",
+          videos_processed: results.length,
+          breakouts,
+          enriched: enriched_count,
+          youtube_calls,
+          youtube_limit: MAX_YOUTUBE_CALLS_PER_RUN,
+          niche: niche || "all",
+          formula: "v3",
+          economy_mode: true,
+        },
       });
 
       if (breakouts > 0) {
         await sb.from("ai_learning").insert({
           topic: "viral_detection_v3",
-          insight: `V3 Scan: ${results.length} vídeos → ${breakouts} breakouts (nicho: ${niche || "all"}). Top: ${Math.max(...results.map(r => r.score))}/100. Fórmula: 9-signal com recency_decay + engagement_quality + cross_niche_momentum.`,
+          insight: `V3 Scan: ${results.length} vídeos → ${breakouts} breakouts (nicho: ${niche || "all"}). Top: ${Math.max(...results.map(r => r.score))}/100.`,
           source: "viral-score-worker-v3",
         });
       }
 
       return jsonResponse({
         success: true, processed: results.length, breakouts, enriched: enriched_count,
+        youtube_calls_used: youtube_calls,
+        youtube_calls_limit: MAX_YOUTUBE_CALLS_PER_RUN,
         formula_version: "v3",
+        economy_mode: true,
         top_results: results.filter(r => r.score >= 50).sort((a, b) => b.score - a.score).slice(0, 20),
         cluster_signals: clusterScores,
         cross_niche_momentum: crossNicheMomentum,
@@ -155,7 +203,7 @@ serve(async (req) => {
 
     if (action === "recalculate_batch") {
       const { data: channels } = await sb.from("emerging_channels")
-        .select("*").order("viral_score", { ascending: false }).limit(100);
+        .select("*").order("viral_score", { ascending: false }).limit(50); // Was 100
 
       if (!channels?.length) return jsonResponse({ success: true, message: "No channels to recalculate" });
 
@@ -195,20 +243,54 @@ serve(async (req) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// THROTTLE — Self-protection against runaway crons
+// ═══════════════════════════════════════════════════════════════════
+async function checkThrottle(sb: any): Promise<{ allowed: boolean; reason?: string; runsToday?: number; nextAllowedAt?: string }> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Count runs today
+  const { data: todayLogs } = await sb.from("execution_logs")
+    .select("created_at")
+    .eq("function_name", "viral-score-worker")
+    .eq("success", true)
+    .gte("created_at", `${today}T00:00:00Z`)
+    .order("created_at", { ascending: false });
+
+  const runsToday = todayLogs?.length || 0;
+
+  if (runsToday >= MAX_RUNS_PER_DAY) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    return {
+      allowed: false,
+      reason: `Limite diário atingido (${runsToday}/${MAX_RUNS_PER_DAY} runs)`,
+      runsToday,
+      nextAllowedAt: tomorrow.toISOString(),
+    };
+  }
+
+  // Check minimum interval
+  if (todayLogs && todayLogs.length > 0) {
+    const lastRun = new Date(todayLogs[0].created_at);
+    const hoursSinceLastRun = (Date.now() - lastRun.getTime()) / 3600000;
+    if (hoursSinceLastRun < MIN_INTERVAL_HOURS) {
+      const nextAllowed = new Date(lastRun.getTime() + MIN_INTERVAL_HOURS * 3600000);
+      return {
+        allowed: false,
+        reason: `Intervalo mínimo: ${MIN_INTERVAL_HOURS}h (última run: ${hoursSinceLastRun.toFixed(1)}h atrás)`,
+        runsToday,
+        nextAllowedAt: nextAllowed.toISOString(),
+      };
+    }
+  }
+
+  return { allowed: true, runsToday };
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // V3 VIRAL SCORE — 9-Signal Algorithm
 // ═══════════════════════════════════════════════════════════════════
-//
-// viral_score = 
-//   0.20 × view_ratio         (views vs channel median)
-//   0.15 × velocity            (views per hour, normalized)
-//   0.12 × velocity_accel      (acceleration: current vs previous velocity)
-//   0.12 × estimated_retention (AVD / video_length proxy)
-//   0.10 × recency_decay       (NEW: fresher content scores higher, exponential decay)
-//   0.10 × engagement_quality  (NEW: like-to-view + comment-to-view quality ratio)
-//   0.08 × comment_velocity    (comments_per_hour / views_per_hour)
-//   0.08 × thumbnail_score     (AI-analyzed CTR estimate)
-//   0.05 × cross_niche_signal  (NEW: momentum across related niches)
-//
 function computeViralScoreV3(
   video: any,
   channelMedianViews: number,
@@ -225,55 +307,39 @@ function computeViralScoreV3(
   const hoursSincePublish = Math.max((Date.now() - publishedAt.getTime()) / 3600000, 1);
   const daysSincePublish = hoursSincePublish / 24;
 
-  // ── Signal 1: View Ratio (0.20) ──
   const viewsRatio = views / Math.max(1, channelMedianViews);
   const normViewRatio = Math.tanh(viewsRatio / 4);
 
-  // ── Signal 2: Velocity (0.15) ──
   const viewsPerHour = views / hoursSincePublish;
   const normVelocity = Math.tanh(viewsPerHour / 1000);
 
-  // ── Signal 3: Velocity Acceleration (0.12) ──
   const prevVph = velocityHistory.length > 0
     ? velocityHistory.reduce((a, b) => a + b, 0) / velocityHistory.length
     : viewsPerHour * 0.8;
   const velocityAccel = prevVph > 0 ? (viewsPerHour - prevVph) / prevVph : 0;
   const normVelocityAccel = Math.tanh(Math.max(0, velocityAccel));
 
-  // ── Signal 4: Estimated Retention (0.12) ──
   const engagementRate = (likes + comments * 3) / Math.max(1, views);
   const estimatedAvdRatio = Math.min(1, 0.25 + engagementRate * 10);
   const normRetention = estimatedAvdRatio;
 
-  // ── Signal 5: Recency Decay (0.10) — NEW ──
-  // Exponential decay: videos within 7 days score highest, 30+ days penalized heavily
-  // half-life = 14 days
   const recencyDecay = Math.exp(-0.693 * daysSincePublish / 14);
   const normRecency = Math.min(1, recencyDecay);
 
-  // ── Signal 6: Engagement Quality (0.10) — NEW ──
-  // Combines like-to-view ratio and comment-to-view ratio with quality weighting
-  // High-quality engagement = lots of comments relative to views (indicates discussion)
   const likeRatio = likes / Math.max(1, views);
   const commentRatio = comments / Math.max(1, views);
-  // Ideal: 4%+ likes, 0.5%+ comments
   const likeQuality = Math.min(1, likeRatio / 0.04);
   const commentQuality = Math.min(1, commentRatio / 0.005);
   const normEngagementQuality = likeQuality * 0.5 + commentQuality * 0.5;
 
-  // ── Signal 7: Comment Velocity (0.08) ──
   const commentsPerHour = comments / hoursSincePublish;
   const commentVelocity = viewsPerHour > 0 ? commentsPerHour / viewsPerHour : 0;
   const normCommentVelocity = Math.tanh(commentVelocity * 50);
 
-  // ── Signal 8: Thumbnail Score (0.08) ──
   const thumbScore = Math.min(1, (video.thumbnail_ctr || 0.05) / 10);
 
-  // ── Signal 9: Cross-Niche Momentum (0.05) — NEW ──
-  // If related niches are also growing, this niche has broader momentum
   const normCrossNiche = Math.min(1, (clusterScore * 0.6 + crossNicheMomentum * 0.4));
 
-  // ── Weighted Sum ──
   const W = { w1: 0.20, w2: 0.15, w3: 0.12, w4: 0.12, w5: 0.10, w6: 0.10, w7: 0.08, w8: 0.08, w9: 0.05 };
   const score =
     W.w1 * normViewRatio +
@@ -314,7 +380,7 @@ function computeViralScoreV3(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Cluster Detection: 3+ small channels exploding in same niche
+// Cluster Detection
 // ═══════════════════════════════════════════════════════════════════
 async function computeClusterScores(sb: any): Promise<Record<string, number>> {
   const scores: Record<string, number> = {};
@@ -355,12 +421,11 @@ async function computeClusterScores(sb: any): Promise<Record<string, number>> {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// NEW: Cross-Niche Momentum — detects broader trends
+// Cross-Niche Momentum
 // ═══════════════════════════════════════════════════════════════════
 async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number>> {
   const momentum: Record<string, number> = {};
 
-  // Get niches with recent viral activity
   const { data: recentViral } = await sb.from("viral_titles_db")
     .select("niche, views")
     .gte("published_at", new Date(Date.now() - 14 * 86400_000).toISOString())
@@ -369,7 +434,6 @@ async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number
 
   if (!recentViral?.length) return momentum;
 
-  // Count viral videos per niche in last 14 days
   const nicheActivity: Record<string, { count: number; totalViews: number }> = {};
   for (const v of recentViral) {
     const n = v.niche || "general";
@@ -378,12 +442,10 @@ async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number
     nicheActivity[n].totalViews += Number(v.views || 0);
   }
 
-  // Niches with 3+ viral videos in 14 days create momentum for related niches
   const activeNiches = Object.entries(nicheActivity).filter(([_, v]) => v.count >= 3);
   const totalActiveNiches = activeNiches.length;
 
   for (const [niche] of Object.entries(nicheActivity)) {
-    // Cross-niche signal: how many OTHER niches are also active
     const otherActive = activeNiches.filter(([n]) => n !== niche).length;
     momentum[niche] = Math.min(1, otherActive / Math.max(1, totalActiveNiches) + (nicheActivity[niche].count >= 5 ? 0.2 : 0));
   }
@@ -392,7 +454,7 @@ async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Velocity History
+// Helpers
 // ═══════════════════════════════════════════════════════════════════
 async function getVelocityHistory(sb: any, channelId: string | null): Promise<number[]> {
   if (!channelId) return [];
@@ -403,24 +465,20 @@ async function getVelocityHistory(sb: any, channelId: string | null): Promise<nu
   return [];
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Thumbnail Enrichment
-// ═══════════════════════════════════════════════════════════════════
-async function enrichThumbnailScore(sb: any, lovableKey: string, video: any): Promise<number> {
+// ECONOMY: Only use cached thumbnail scores, no AI calls
+async function getCachedThumbnailScore(sb: any, video: any): Promise<number> {
   const { data: existing } = await sb.from("thumbnail_features")
     .select("ctr_estimate").eq("video_id", video.channel_id || video.id || "").maybeSingle();
   if (existing?.ctr_estimate) return existing.ctr_estimate;
   return 0.05;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// YouTube Stats Enrichment
-// ═══════════════════════════════════════════════════════════════════
 async function enrichWithYouTube(video: any, apiKey: string): Promise<any> {
   try {
     const channelId = video.channel_id;
     if (!channelId) return video;
 
+    // ECONOMY: Single API call instead of 2 — use channel's latest video stats
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&channelId=${channelId}&type=video&order=date&maxResults=1&key=${apiKey}`;
     const searchRes = await fetch(searchUrl);
     if (!searchRes.ok) return video;
