@@ -222,7 +222,7 @@ export const ScriptGenerator = ({
     }
   };
 
-  // ═══════ STEP 2: Refine with Claude ═══════
+  // ═══════ STEP 2: Refine with Gemini Pro ═══════
   const runStep2_Refine = async (rejectionFeedback?: any) => {
     if (generating) return;
     setGenerating(true);
