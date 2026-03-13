@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle, RefreshCw, Smartphone, Monitor } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ interface ScriptGeneratorProps {
   setLoading: (v: boolean) => void;
   scorecard: { hook: number; retention: number; emotion: number; flow: number; payoff: number } | null;
   setScorecard: (v: any) => void;
-  setActiveStep: (v: 'script' | 'style' | 'characters' | 'prompts') => void;
+  setActiveStep: (v: 'script' | 'style' | 'characters' | 'prompts' | 'titles') => void;
   getViralContext: () => string;
   getOrCreateProject: () => Promise<string>;
   intelligenceBriefing: any;
@@ -101,6 +101,15 @@ export const ScriptGenerator = ({
   const [dualScore, setDualScore] = useState<DualScore | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
+  const lastClickRef = useRef(0);
+
+  // Debounce guard for generation buttons (3s cooldown)
+  const canClick = useCallback(() => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 3000) return false;
+    lastClickRef.current = now;
+    return true;
+  }, []);
 
   const wpm = SPEECH_RATES[language] || 150;
   const currentScript = wizardStep === 1 ? draftScript : script;
@@ -178,7 +187,7 @@ export const ScriptGenerator = ({
 
   // ═══════ STEP 1: Generate Draft ═══════
   const runStep1_Draft = async (rejectionFeedback?: any) => {
-    if (!topic.trim() || generating) return;
+    if (!topic.trim() || generating || !canClick()) return;
     setGenerating(true);
     setLoading(true);
     setDraftScript('');
@@ -259,7 +268,7 @@ export const ScriptGenerator = ({
 
   // ═══════ STEP 2: Refine with Gemini Pro ═══════
   const runStep2_Refine = async (rejectionFeedback?: any) => {
-    if (generating) return;
+    if (generating || !canClick()) return;
     setGenerating(true);
     setLoading(true);
     setScript('');
