@@ -67,17 +67,30 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoResult, setSeoResult] = useState<SEODescription | null>(null);
 
-  // Build script context summary for the AI
-  const buildScriptContext = () => {
+  // Build script context with timestamps for SEO chapters
+  const buildScriptContext = (forSEO = false) => {
     const parts: string[] = [];
     if (script) {
-      // Extract first 500 chars as summary + key themes
       parts.push(`ROTEIRO COMPLETO (resumo): ${script.slice(0, 800)}`);
     }
     if (videoStyle) parts.push(`ESTILO VISUAL: ${videoStyle}`);
     if (syncedScenes?.length) {
-      const sceneTexts = syncedScenes.slice(0, 5).map((s: any) => s.tts_text || s.text_content || '').filter(Boolean);
-      if (sceneTexts.length) parts.push(`CENAS DO VÍDEO (narração):\n${sceneTexts.join('\n')}`);
+      // Build timestamped transcript from scenes
+      let accTime = 0;
+      const timestampedLines: string[] = [];
+      syncedScenes.forEach((s: any) => {
+        const text = s.tts_text || s.text_content || '';
+        if (!text) return;
+        const mins = Math.floor(accTime / 60);
+        const secs = Math.floor(accTime % 60);
+        const ts = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        timestampedLines.push(`[${ts}] ${text}`);
+        accTime += (s.duration_sec || 8);
+      });
+      if (timestampedLines.length) {
+        const totalMins = Math.ceil(accTime / 60);
+        parts.push(`TRANSCRIÇÃO COM TIMESTAMPS (${timestampedLines.length} cenas, ~${totalMins}min total):\n${timestampedLines.join('\n')}`);
+      }
     }
     return parts.join('\n\n');
   };
