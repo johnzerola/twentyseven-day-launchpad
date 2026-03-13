@@ -65,7 +65,7 @@ type WizardStep = 0 | 1 | 2 | 3;
 const WIZARD_STEPS = [
   { label: 'Configuração', icon: FileText, desc: 'Defina tópico, estilo e idioma' },
   { label: 'Rascunho IA', icon: Zap, desc: 'Gemini gera o rascunho — revise e edite' },
-  { label: 'Refinamento Claude', icon: Brain, desc: 'Claude melhora pontos fracos' },
+  { label: 'Refinamento IA', icon: Brain, desc: 'Gemini Pro melhora pontos fracos' },
   { label: 'Avaliação Dual', icon: Shield, desc: 'GPT + Gemini avaliam (mín. 14/20)' },
 ];
 
@@ -222,7 +222,7 @@ export const ScriptGenerator = ({
     }
   };
 
-  // ═══════ STEP 2: Refine with Claude ═══════
+  // ═══════ STEP 2: Refine with Gemini Pro ═══════
   const runStep2_Refine = async (rejectionFeedback?: any) => {
     if (generating) return;
     setGenerating(true);
@@ -230,7 +230,7 @@ export const ScriptGenerator = ({
     setScript('');
     setWizardStep(2);
     setEditMode(false);
-    setPhaseLabel('🧠 Claude está melhorando os pontos fracos...');
+    setPhaseLabel('🧠 Gemini Pro está melhorando os pontos fracos...');
 
     try {
       const refinedRaw = await streamFromFunction('refine-script', {
@@ -247,7 +247,7 @@ export const ScriptGenerator = ({
       if (refinedBlueprint.length > 0) setSceneBlueprintJson(refinedBlueprint);
       setScript(cleanAll(refinedRaw));
       setPhaseLabel('');
-      toast.success('🧠 Claude melhorou os pontos fracos! Revise e clique em "Avaliar".');
+      toast.success('🧠 Gemini Pro melhorou os pontos fracos! Revise e clique em "Avaliar".');
 
     } catch (err: any) {
       toast.error(`Refinamento falhou: ${err.message}. Usando rascunho.`);
@@ -671,7 +671,7 @@ export const ScriptGenerator = ({
                     ⚡ Pular refinamento
                   </Button>
                   <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">
-                    <Brain className="w-4 h-4" /> Refinar com Claude
+                    <Brain className="w-4 h-4" /> Refinar com IA
                     <ArrowRight className="w-3 h-3" />
                   </Button>
                 </div>
@@ -680,7 +680,7 @@ export const ScriptGenerator = ({
           </motion.div>
         )}
 
-        {/* ═══════ STEP 2: Claude Refine Review ═══════ */}
+        {/* ═══════ STEP 2: Gemini Pro Refine Review ═══════ */}
         {wizardStep === 2 && (
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
             className="bg-card border border-border rounded-xl p-5">
@@ -688,7 +688,7 @@ export const ScriptGenerator = ({
               <div>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
                   <Brain className="w-4 h-4 text-purple-400" />
-                  3. Refinado pelo Claude
+                  3. Refinado pela IA
                 </h3>
                 {script && (
                   <p className="text-xs text-muted-foreground mt-1">
@@ -716,7 +716,7 @@ export const ScriptGenerator = ({
             {generating && !script && (
               <div className="text-center py-12">
                 <Brain className="w-10 h-10 mx-auto mb-3 text-purple-400 animate-pulse" />
-                <p className="text-sm text-muted-foreground">Claude está melhorando os pontos fracos...</p>
+                <p className="text-sm text-muted-foreground">Gemini Pro está melhorando os pontos fracos...</p>
               </div>
             )}
 
