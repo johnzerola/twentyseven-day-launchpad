@@ -230,7 +230,7 @@ export const ScriptGenerator = ({
     setScript('');
     setWizardStep(2);
     setEditMode(false);
-    setPhaseLabel('🧠 Claude está melhorando os pontos fracos...');
+    setPhaseLabel('🧠 Gemini Pro está melhorando os pontos fracos...');
 
     try {
       const refinedRaw = await streamFromFunction('refine-script', {
