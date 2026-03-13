@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -415,6 +416,73 @@ serve(async (req) => {
         uniqueChannelsAnalyzed: channelIds.length,
       },
     };
+
+    // ═══════ VIRAL ENGINE FEEDBACK LOOP ═══════
+    // Auto-feed discovered data back into knowledge bases
+    try {
+      const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+      // Feed top video titles into viral_titles_db
+      const topVideos = channels
+        .flatMap((ch: any) => (ch.topVideos || []).map((v: any) => ({ ...v, channelName: ch.name, channelNiche: ch.estimatedNiche })))
+        .sort((a: any, b: any) => (b.views || 0) - (a.views || 0))
+        .slice(0, 20);
+
+      if (topVideos.length > 0) {
+        const titlesToInsert = topVideos
+          .filter((v: any) => v.title && v.views > 50000)
+          .map((v: any) => ({
+            title: v.title,
+            views: v.views || 0,
+            niche: v.channelNiche || niche || 'unknown',
+            source: 'dubspy',
+            why_viral: `Discovered via DubSpy ${mode} scan. Channel: ${v.channelName}`,
+            title_pattern: 'auto-detected',
+          }));
+
+        if (titlesToInsert.length > 0) {
+          await sb.from("viral_titles_db" as any).upsert(titlesToInsert, { onConflict: 'title' as any, ignoreDuplicates: true } as any);
+          console.log(`Fed ${titlesToInsert.length} titles to viral_titles_db`);
+        }
+      }
+
+      // Feed hook patterns from top-performing video titles
+      const hookCandidates = topVideos
+        .filter((v: any) => v.views > 100000 && v.title)
+        .slice(0, 5);
+      
+      if (hookCandidates.length > 0) {
+        const hooksToInsert = hookCandidates.map((v: any) => ({
+          hook_text: v.title,
+          hook_type: 'title_hook',
+          retention_score: Math.min(10, Math.round(Math.log10(v.views || 1))),
+          niche: v.channelNiche || niche || 'unknown',
+          source_video: v.id || null,
+        }));
+
+        await sb.from("hook_library").upsert(hooksToInsert, { onConflict: 'hook_text' as any, ignoreDuplicates: true } as any);
+        console.log(`Fed ${hooksToInsert.length} hooks to hook_library`);
+      }
+
+      // Feed hook_patterns table
+      if (clusters.length > 0) {
+        const patternsToInsert = clusters.slice(0, 5).map((c: any) => ({
+          pattern_name: `DubSpy: ${c.name}`,
+          pattern_type: 'topic_cluster',
+          template: `Cluster "${c.name}" com ${c.videoCount || 0} vídeos. Padrão detectado em ${mode} scan.`,
+          example_hooks: (c.sampleVideos || []).slice(0, 3).map((v: any) => ({ title: v, source: 'dubspy' })),
+          best_for_niches: [niche || 'unknown'],
+          effectiveness_score: Math.min(10, Math.round((c.totalViews || 0) / 500000) + 4),
+          source: 'dubspy_auto',
+        }));
+
+        await sb.from("hook_patterns" as any).upsert(patternsToInsert, { onConflict: 'pattern_name' as any, ignoreDuplicates: true } as any);
+        console.log(`Fed ${patternsToInsert.length} hook patterns`);
+      }
+
+    } catch (feedErr) {
+      console.warn("Viral Engine feedback failed (non-critical):", feedErr);
+    }
 
     console.log(`DubSpy result: ${result.channels.length} channels, ${clusters.length} clusters`);
 

@@ -502,6 +502,60 @@ export type Database = {
           },
         ]
       }
+      content_models: {
+        Row: {
+          best_for_duration: string | null
+          best_for_niches: Json | null
+          created_at: string | null
+          description: string
+          effectiveness_score: number | null
+          examples: Json | null
+          hook_pattern: string
+          id: string
+          model_name: string
+          model_type: string
+          pacing_guide: string
+          retention_profile: Json
+          source: string | null
+          structure_json: Json
+          video_type: Database["public"]["Enums"]["video_type"]
+        }
+        Insert: {
+          best_for_duration?: string | null
+          best_for_niches?: Json | null
+          created_at?: string | null
+          description?: string
+          effectiveness_score?: number | null
+          examples?: Json | null
+          hook_pattern?: string
+          id?: string
+          model_name: string
+          model_type?: string
+          pacing_guide?: string
+          retention_profile?: Json
+          source?: string | null
+          structure_json?: Json
+          video_type?: Database["public"]["Enums"]["video_type"]
+        }
+        Update: {
+          best_for_duration?: string | null
+          best_for_niches?: Json | null
+          created_at?: string | null
+          description?: string
+          effectiveness_score?: number | null
+          examples?: Json | null
+          hook_pattern?: string
+          id?: string
+          model_name?: string
+          model_type?: string
+          pacing_guide?: string
+          retention_profile?: Json
+          source?: string | null
+          structure_json?: Json
+          video_type?: Database["public"]["Enums"]["video_type"]
+        }
+        Relationships: []
+      }
       content_queue: {
         Row: {
           channel_id: string | null
@@ -760,6 +814,51 @@ export type Database = {
           niche?: string | null
           retention_score?: number | null
           source_video?: string | null
+        }
+        Relationships: []
+      }
+      hook_patterns: {
+        Row: {
+          avg_retention_boost: number | null
+          best_for_niches: Json | null
+          best_for_video_type: Database["public"]["Enums"]["video_type"] | null
+          created_at: string | null
+          effectiveness_score: number | null
+          example_hooks: Json | null
+          id: string
+          pattern_name: string
+          pattern_type: string
+          psychology_trigger: string | null
+          source: string | null
+          template: string
+        }
+        Insert: {
+          avg_retention_boost?: number | null
+          best_for_niches?: Json | null
+          best_for_video_type?: Database["public"]["Enums"]["video_type"] | null
+          created_at?: string | null
+          effectiveness_score?: number | null
+          example_hooks?: Json | null
+          id?: string
+          pattern_name: string
+          pattern_type?: string
+          psychology_trigger?: string | null
+          source?: string | null
+          template?: string
+        }
+        Update: {
+          avg_retention_boost?: number | null
+          best_for_niches?: Json | null
+          best_for_video_type?: Database["public"]["Enums"]["video_type"] | null
+          created_at?: string | null
+          effectiveness_score?: number | null
+          example_hooks?: Json | null
+          id?: string
+          pattern_name?: string
+          pattern_type?: string
+          psychology_trigger?: string | null
+          source?: string | null
+          template?: string
         }
         Relationships: []
       }
@@ -1352,6 +1451,60 @@ export type Database = {
           titles_json?: Json | null
           topic?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      scene_patterns: {
+        Row: {
+          aspect_ratio: string | null
+          camera_movements: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          effectiveness_score: number | null
+          id: string
+          lighting_setup: string | null
+          mood: string | null
+          pattern_name: string
+          scene_type: string
+          sound_design: string | null
+          source: string | null
+          vfx_suggestions: Json | null
+          video_type: Database["public"]["Enums"]["video_type"] | null
+          visual_template: string
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          camera_movements?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          effectiveness_score?: number | null
+          id?: string
+          lighting_setup?: string | null
+          mood?: string | null
+          pattern_name: string
+          scene_type?: string
+          sound_design?: string | null
+          source?: string | null
+          vfx_suggestions?: Json | null
+          video_type?: Database["public"]["Enums"]["video_type"] | null
+          visual_template?: string
+        }
+        Update: {
+          aspect_ratio?: string | null
+          camera_movements?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          effectiveness_score?: number | null
+          id?: string
+          lighting_setup?: string | null
+          mood?: string | null
+          pattern_name?: string
+          scene_type?: string
+          sound_design?: string | null
+          source?: string | null
+          vfx_suggestions?: Json | null
+          video_type?: Database["public"]["Enums"]["video_type"] | null
+          visual_template?: string
         }
         Relationships: []
       }
