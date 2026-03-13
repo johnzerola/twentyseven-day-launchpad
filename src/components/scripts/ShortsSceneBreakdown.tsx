@@ -106,6 +106,54 @@ export const ShortsSceneBreakdown = ({
     setEditingIndex(null);
   };
 
+  // ═══ Score Short Script ═══
+  const scoreShort = async () => {
+    if (!script.trim()) return;
+    setScoring(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('score-script', {
+        body: { script, videoType: 'short', duration: durationSeconds },
+      });
+      if (error) throw error;
+      const scores = data?.scorecard || data;
+      setScorecard({
+        hook: scores.hook || scores.hook_strength || 7,
+        retention: scores.retention || scores.retention_prediction || 7,
+        loop: scores.loop_potential || scores.payoff || 7,
+        pacing: scores.flow || scores.pacing || 7,
+        total: scores.total || Math.round(((scores.hook || 7) + (scores.retention || 7) + (scores.payoff || 7) + (scores.flow || 7)) / 4),
+      });
+      toast.success('Short scored!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao pontuar');
+    } finally { setScoring(false); }
+  };
+
+  // ═══ TTS Preview for Short ═══
+  const generateTTS = async () => {
+    if (!script.trim()) return;
+    setTtsLoading(true);
+    try {
+      const cleanScript = script.replace(/^#+\s.*/gm, '').replace(/\*\*.*?\*\*/g, '').replace(/[*_#>`~]/g, '').trim();
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: cleanScript.slice(0, 1000), voiceId: 'onwK4e9ZLuTAKqWW03F9' }),
+      });
+      if (!resp.ok) throw new Error('TTS failed');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      setTtsAudioUrl(url);
+      toast.success('Narração gerada!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro TTS');
+    } finally { setTtsLoading(false); }
+  };
+
   const lastSceneIndex = scenes.length - 1;
   const loopScene = scenes.length > 0 ? scenes[lastSceneIndex] : null;
   const hookScene = scenes.length > 0 ? scenes[0] : null;
