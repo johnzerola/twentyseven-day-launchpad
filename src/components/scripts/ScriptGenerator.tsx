@@ -716,7 +716,7 @@ export const ScriptGenerator = ({
             {generating && !script && (
               <div className="text-center py-12">
                 <Brain className="w-10 h-10 mx-auto mb-3 text-purple-400 animate-pulse" />
-                <p className="text-sm text-muted-foreground">Claude está melhorando os pontos fracos...</p>
+                <p className="text-sm text-muted-foreground">Gemini Pro está melhorando os pontos fracos...</p>
               </div>
             )}
 
