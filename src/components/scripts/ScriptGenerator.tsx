@@ -206,8 +206,10 @@ export const ScriptGenerator = ({
       const viralContext = getViralContext();
       
       const rawDraft = await streamFromFunction('generate-script', {
-        topic, duration: parseInt(duration), style, niche, language,
+        topic, duration: videoType === 'short' ? parseInt(duration) / 60 : parseInt(duration),
+        style, niche, language,
         viralContext, intelligenceBriefing: briefing,
+        videoType,
       }, (fullText) => {
         setDraftScript(cleanAll(fullText));
       });
