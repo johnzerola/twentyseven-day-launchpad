@@ -160,7 +160,7 @@ export const ShortsSceneBreakdown = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Smartphone className="w-5 h-5 text-primary" />
           <h3 className="font-semibold text-sm">Cenas do Short (9:16)</h3>
@@ -170,11 +170,61 @@ export const ShortsSceneBreakdown = ({
             </Badge>
           )}
         </div>
-        <Button size="sm" onClick={generateScenes} disabled={loading || !script.trim()} className="gap-1.5">
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          {scenes.length > 0 ? 'Regenerar' : 'Gerar Cenas'}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" onClick={generateScenes} disabled={loading || !script.trim()} className="gap-1.5">
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {scenes.length > 0 ? 'Regenerar' : 'Gerar Cenas'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={scoreShort} disabled={scoring || !script.trim()} className="gap-1">
+            {scoring ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+            <span className="hidden sm:inline">Score</span>
+          </Button>
+          <Button size="sm" variant="outline" onClick={generateTTS} disabled={ttsLoading || !script.trim()} className="gap-1">
+            {ttsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mic className="w-3 h-3" />}
+            <span className="hidden sm:inline">TTS</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Scorecard */}
+      {scorecard && (
+        <div className="bg-muted/30 border border-border rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <Brain className="w-3.5 h-3.5 text-primary" /> Score do Short
+            </span>
+            <Badge className={`text-xs ${scorecard.total >= 8 ? 'bg-chart-2/20 text-chart-2' : scorecard.total >= 6 ? 'bg-chart-4/20 text-chart-4' : 'bg-destructive/20 text-destructive'}`}>
+              {scorecard.total}/10
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: '🎣 Hook (0-2s)', value: scorecard.hook },
+              { label: '📈 Retenção', value: scorecard.retention },
+              { label: '♾️ Loop', value: scorecard.loop },
+              { label: '⚡ Pacing', value: scorecard.pacing },
+            ].map(item => (
+              <div key={item.label} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">{item.label}</span>
+                  <span className="text-[10px] font-bold">{item.value}/10</span>
+                </div>
+                <Progress value={item.value * 10} className="h-1" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TTS Audio Player */}
+      {ttsAudioUrl && (
+        <div className="bg-muted/30 border border-border rounded-xl p-3">
+          <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Mic className="w-3 h-3" /> Preview de Narração
+          </p>
+          <audio controls src={ttsAudioUrl} className="w-full h-8" />
+        </div>
+      )}
 
       {scenes.length === 0 && !loading && (
         <div className="bg-muted/20 border border-dashed border-border rounded-xl p-8 text-center">
