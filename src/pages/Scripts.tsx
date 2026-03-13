@@ -320,6 +320,7 @@ const Scripts = () => {
               intelligenceBriefing={intelligenceBriefing} setIntelligenceBriefing={setIntelligenceBriefing}
               setSceneBlueprintJson={setSceneBlueprintJson}
               onScriptGenerated={() => { loadHistory(); setSyncedScenes([]); }}
+              videoType={videoType} setVideoType={setVideoType}
             />
 
             {/* Intelligence Briefing Panel */}
