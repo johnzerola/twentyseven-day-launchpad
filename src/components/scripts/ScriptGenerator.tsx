@@ -247,7 +247,7 @@ export const ScriptGenerator = ({
       if (refinedBlueprint.length > 0) setSceneBlueprintJson(refinedBlueprint);
       setScript(cleanAll(refinedRaw));
       setPhaseLabel('');
-      toast.success('🧠 Claude melhorou os pontos fracos! Revise e clique em "Avaliar".');
+      toast.success('🧠 Gemini Pro melhorou os pontos fracos! Revise e clique em "Avaliar".');
 
     } catch (err: any) {
       toast.error(`Refinamento falhou: ${err.message}. Usando rascunho.`);
