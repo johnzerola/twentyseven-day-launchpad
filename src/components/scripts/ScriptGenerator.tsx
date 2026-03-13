@@ -359,6 +359,7 @@ export const ScriptGenerator = ({
         niche, language, duration: parseInt(duration), style,
         target_words: targetWords,
         consensus_improvements: improvements,
+        phaseId: phaseIdRef.current,
       }, (fullText) => {
         setScript(cleanAll(fullText));
       });
