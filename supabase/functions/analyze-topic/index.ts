@@ -327,13 +327,19 @@ ${scriptBlock}
 ═══ YOUTUBE ALGORITHM KNOWLEDGE ═══
 ${ytBlock}
 
+═══ HOOK LIBRARY (${(hookLibRes.data || []).length} proven hooks) ═══
+${hookLibBlock || 'No hooks available'}
+
+═══ VIRAL TITLES DATABASE (top ${relevantViralTitles.length} topic-relevant from 945 total) ═══
+${viralTitlesBlock || 'No matching titles'}
+
 ═══ REAL-TIME YOUTUBE SEARCH RESULTS (${(youtubeVideos as any[]).length} videos with SIMILAR TOPICS found NOW) ═══
 ${ytVideosBlock}
 
-═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results) ═══
+═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results${isCreativeStyle ? ' — SKIPPED for creative style' : ''}) ═══
 ${(braveResults as any[]).length > 0 
-  ? (braveResults as any[]).map((r: any, i: number) => `${i + 1}. "${r.title}" — ${r.description || ''} (${r.url})`).join('\n')
-  : 'No web results available'}
+  ? (braveResults as any[]).map((r: any, i: number) => \`\${i + 1}. "\${r.title}" — \${r.description || ''} (\${r.url})\`).join('\n')
+  : isCreativeStyle ? 'Skipped — creative/narrative style does not need factual web research' : 'No web results available'}
 
 CRITICAL RULES:
 - The REAL-TIME YOUTUBE section contains ACTUAL videos that exist RIGHT NOW on YouTube about this EXACT topic or similar topics
@@ -341,9 +347,12 @@ CRITICAL RULES:
 - Identify what angles are SATURATED (many videos already cover) vs UNDEREXPLORED
 - Recommend differentiation strategies based on what's already out there
 - Extract the best title patterns and hooks from real successful videos
+- Use the HOOK LIBRARY to inspire powerful recommended_hooks
+- Use the VIRAL TITLES to understand what title patterns work for this topic
 - Base visual suggestions on what dominates this niche visually
 - Be specific, actionable, data-backed
-- Language: ${language || 'português'}`
+${isCreativeStyle ? '- This is a CREATIVE/NARRATIVE style — prioritize storytelling analysis over factual accuracy\n- Focus on what makes similar STORIES/THEORIES/MYTHS go viral, not fact-checking' : ''}
+- Language: \${language || 'português'}\`
           },
           {
             role: "user",
