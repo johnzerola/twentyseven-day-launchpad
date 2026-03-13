@@ -470,7 +470,7 @@ export const ScriptGenerator = ({
     if (!textToSave) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Faça login'); return; }
-    await supabase.from('saved_scripts').insert({ user_id: user.id, topic, duration: parseInt(duration), style, script_content: textToSave } as any);
+    await supabase.from('saved_scripts').insert({ user_id: user.id, topic, duration: parseInt(duration), style, script_content: textToSave, video_type: videoType } as any);
     toast.success('Roteiro salvo!');
   };
 
