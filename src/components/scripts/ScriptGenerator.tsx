@@ -537,16 +537,46 @@ export const ScriptGenerator = ({
           <motion.div key="step0" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h3 className="font-semibold text-sm">1. Configurações do Roteiro</h3>
+
+            {/* Video Type Toggle */}
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Tipo de conteúdo</label>
+              <div className="grid grid-cols-2 gap-2">
+                {VIDEO_TYPES.map(vt => (
+                  <button key={vt.value} onClick={() => {
+                    setVideoType(vt.value);
+                    const defaults = VIDEO_TYPE_DEFAULTS[vt.value];
+                    setDuration(String(defaults.defaultDuration));
+                  }}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all text-xs ${
+                      videoType === vt.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+                    }`}>
+                    {vt.value === 'long' ? <Monitor className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
+                    <div className="text-left">
+                      <span className="font-medium">{vt.label}</span>
+                      <p className="text-[10px] text-muted-foreground">{vt.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Tópico *</label>
-              <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex: Como ganhar dinheiro online em 2026" className="bg-muted/30" />
+              <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder={videoType === 'short' ? 'Ex: 3 fatos sobre buracos negros' : 'Ex: Como ganhar dinheiro online em 2026'} className="bg-muted/30" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Duração (minutos)</label>
+              <label className="text-xs text-muted-foreground mb-1 block">{videoType === 'short' ? 'Duração (segundos)' : 'Duração (minutos)'}</label>
               <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-                {[5, 10, 15, 20, 30, 40, 60].map(d => (
-                  <option key={d} value={String(d)}>{d} min (~{d * wpm} palavras)</option>
-                ))}
+                {videoType === 'short' ? (
+                  [15, 30, 45, 60].map(d => (
+                    <option key={d} value={String(d)}>{d}s (~{Math.round(d * wpm / 60)} palavras)</option>
+                  ))
+                ) : (
+                  [5, 10, 15, 20, 30, 40, 60].map(d => (
+                    <option key={d} value={String(d)}>{d} min (~{d * wpm} palavras)</option>
+                  ))
+                )}
               </select>
             </div>
             <div>
