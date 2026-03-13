@@ -39,7 +39,13 @@ serve(async (req) => {
 
     // ========== GENERATE TITLES ==========
     if (type === "generate") {
-      const { niche, topic, language, country } = body;
+      const { niche, topic, language, country, scriptContext } = body;
+
+      // Script context block (when coming from script pipeline)
+      let scriptContextBlock = '';
+      if (scriptContext) {
+        scriptContextBlock = `\n\n📹 CONTEXTO COMPLETO DO VÍDEO (use para criar títulos PRECISOS que refletem o conteúdo real):\n${scriptContext}\n\nOs títulos DEVEM refletir o conteúdo acima. Não invente — extraia os ângulos mais clicáveis do roteiro real.`;
+      }
 
       // 1) Fetch ALL knowledge sources in parallel
       let viralRefBlock = '';
@@ -155,6 +161,7 @@ ${hooksBlock}
 ${psychologyBlock}
 ${formatsBlock}
 ${learningBlock}
+${scriptContextBlock}
 
 REGRAS PARA CTR MÁXIMO:
 1. Cada título deve ter entre 45-65 caracteres (sweet spot para YouTube)
@@ -306,10 +313,11 @@ Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), sco
 
     // ========== SEO DESCRIPTION ==========
     if (type === "seo-description") {
-      const { title, niche, language } = body;
+      const { title, niche, language, scriptContext } = body;
       const langNote = language ? `\nIdioma: ${language}. Escreva a descrição neste idioma.` : '';
+      const scriptNote = scriptContext ? `\n\nCONTEXTO DO VÍDEO (use para SEO preciso):\n${scriptContext}` : '';
       const prompt = `Gere uma descrição SEO completa e otimizada para um vídeo do YouTube com o título: "${title}"
-${niche ? `Nicho: ${niche}` : ''}${langNote}
+${niche ? `Nicho: ${niche}` : ''}${langNote}${scriptNote}
 
 A descrição deve incluir:
 1. Primeira linha: keyword principal + benefício (aparece no search)

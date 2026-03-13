@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import { CharacterManager } from '@/components/scripts/CharacterManager';
 import { AudioProcessor } from '@/components/scripts/AudioProcessor';
 import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
+import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
@@ -52,7 +53,7 @@ const Scripts = () => {
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
 
   // Pipeline
-  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts'>('script');
+  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts' | 'titles'>('script');
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -243,8 +244,9 @@ const Scripts = () => {
   const pipelineSteps = [
     { key: 'script', label: '1. Roteiro', icon: FileText, done: !!script },
     { key: 'style', label: '2. Estilo Visual', icon: Film, done: !!videoStyle && activeStep !== 'script' },
-    { key: 'characters', label: '3. Personagens', icon: Users, done: characters.length > 0 || activeStep === 'prompts' },
-    { key: 'prompts', label: '4. Prompts Visuais', icon: Image, done: syncedScenes.length > 0 },
+    { key: 'characters', label: '3. Personagens', icon: Users, done: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles' },
+    { key: 'prompts', label: '4. Cenas', icon: Image, done: syncedScenes.length > 0 },
+    { key: 'titles', label: '5. Títulos & SEO', icon: Sparkles, done: false },
   ] as const;
 
   return (
@@ -566,10 +568,15 @@ const Scripts = () => {
                 <motion.div key="prompts" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <div>
+                <div>
                       <h3 className="font-semibold text-sm flex items-center gap-2"><Image className="w-4 h-4 text-accent" /> Gerador de Cenas Visuais</h3>
                       <p className="text-xs text-muted-foreground mt-0.5">A IA analisa o roteiro e cria prompts visuais cinematográficos</p>
                     </div>
+                    {syncedScenes.length > 0 && (
+                      <Button size="sm" onClick={() => setActiveStep('titles')} className="gap-1 h-7 text-xs gradient-hero border-0">
+                        Próximo: Títulos & SEO <Sparkles className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                   <AudioProcessor
                     script={script} videoStyle={videoStyle} videoStyles={VIDEO_STYLES}
@@ -587,6 +594,23 @@ const Scripts = () => {
                       }} />
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {/* Step 5: Titles & SEO */}
+              {activeStep === 'titles' && script && (
+                <motion.div key="titles" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-400" /> Títulos Virais & SEO</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">Títulos otimizados com base no roteiro, cenas e estilo do vídeo</p>
+                    </div>
+                  </div>
+                  <TitleSEOStep
+                    topic={topic} niche={niche} language={language}
+                    script={script} videoStyle={videoStyle} syncedScenes={syncedScenes}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
