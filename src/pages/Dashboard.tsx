@@ -40,7 +40,11 @@ const Dashboard = () => {
       if (!session) { setLoading(false); return; }
       const uid = session.user.id;
 
-      const [ch, sc, proj, tracked, profile, progress, scripts, plan, titles, niches, channel, latestNicheData] = await Promise.all([
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+      const [ch, sc, proj, tracked, profile, progress, scripts, plan, titles, niches, channel, latestNicheData, allScriptsLast30] = await Promise.all([
         supabase.from('user_channels').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('saved_scripts').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('video_projects').select('id', { count: 'exact', head: true }).eq('user_id', uid),
@@ -53,6 +57,7 @@ const Dashboard = () => {
         supabase.from('saved_niche_analyses').select('id', { count: 'exact', head: true }).eq('user_id', uid),
         supabase.from('user_channels').select('*').eq('user_id', uid).order('linked_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('saved_niche_analyses').select('niche, score, country, created_at, analysis_json').eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('saved_scripts').select('created_at').eq('user_id', uid).gte('created_at', thirtyDaysAgoStr),
       ]);
 
       setStats({
