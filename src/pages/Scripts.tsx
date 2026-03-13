@@ -53,7 +53,7 @@ const Scripts = () => {
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
 
   // Pipeline
-  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts'>('script');
+  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts' | 'titles'>('script');
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
