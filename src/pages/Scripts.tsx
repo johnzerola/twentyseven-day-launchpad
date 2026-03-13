@@ -397,6 +397,8 @@ const Scripts = () => {
               setSceneBlueprintJson={setSceneBlueprintJson}
               onScriptGenerated={() => { loadHistory(); setSyncedScenes([]); }}
               videoType={videoType} setVideoType={setVideoType}
+              selectedChannelId={selectedChannelId} setSelectedChannelId={setSelectedChannelId}
+              userChannels={userChannels}
             />
 
             {/* Intelligence Briefing Panel */}
