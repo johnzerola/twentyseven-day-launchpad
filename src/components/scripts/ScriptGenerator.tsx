@@ -639,6 +639,35 @@ export const ScriptGenerator = ({
             className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h3 className="font-semibold text-sm">1. Configurações do Roteiro</h3>
 
+            {/* ═══════ CHANNEL SELECTOR ═══════ */}
+            {userChannels.length > 0 && (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Canal (opcional)</label>
+                <select
+                  value={selectedChannelId || ''}
+                  onChange={e => {
+                    const id = e.target.value || null;
+                    setSelectedChannelId(id);
+                    if (id) {
+                      const ch = userChannels.find((c: any) => c.id === id);
+                      if (ch) {
+                        if (ch.niche && !niche) setNiche(ch.niche);
+                        if (ch.language) setLanguage(ch.language === 'en' ? 'inglês' : ch.language === 'pt' ? 'português' : ch.language === 'es' ? 'espanhol' : ch.language);
+                      }
+                    }
+                  }}
+                  className="w-full h-9 rounded-md border border-input bg-muted/30 px-3 text-sm"
+                >
+                  <option value="">Nenhum canal selecionado</option>
+                  {userChannels.map((ch: any) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.channel_name} {ch.niche ? `(${ch.niche})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* ═══════ SUGGESTION BANK ═══════ */}
             {suggestions.length > 0 && (
               <div className="border border-primary/20 rounded-lg overflow-hidden">
