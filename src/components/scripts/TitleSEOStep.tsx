@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe } from 'lucide-react';
+import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Search, Zap, Brain } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,20 +14,24 @@ interface TitleSuggestion {
   estimatedCTR: number;
   hook_used?: string;
   psychological_trigger?: string;
+  differentiation?: string;
   liked?: boolean;
 }
 
 interface ABResult {
   winner: string;
-  titleA: { ctr: number; emotionalTriggers: string[]; seoScore: number; lengthScore: number };
-  titleB: { ctr: number; emotionalTriggers: string[]; seoScore: number; lengthScore: number };
+  titleA: { ctr: number; emotionalTriggers: string[]; seoScore: number; lengthScore: number; curiosityGapScore?: number };
+  titleB: { ctr: number; emotionalTriggers: string[]; seoScore: number; lengthScore: number; curiosityGapScore?: number };
   analysis: string;
+  improvement_suggestion?: string;
 }
 
 interface SEODescription {
   description: string;
   hashtags: string[];
   keywords: string[];
+  seo_score?: number;
+  keyword_density_note?: string;
 }
 
 const getStyleColor = (style: string): string => {
@@ -55,6 +59,8 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
   const [activeTab, setActiveTab] = useState<'generate' | 'ab-test' | 'seo-desc'>('generate');
   const [loading, setLoading] = useState(false);
   const [titles, setTitles] = useState<TitleSuggestion[]>([]);
+  const [competitorAnalysis, setCompetitorAnalysis] = useState('');
+  const [researchInfo, setResearchInfo] = useState<{ competitors_analyzed: boolean; brave_trends_used: boolean } | null>(null);
 
   // A/B
   const [titleA, setTitleA] = useState('');
@@ -67,15 +73,11 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoResult, setSeoResult] = useState<SEODescription | null>(null);
 
-  // Build script context with timestamps for SEO chapters
-  const buildScriptContext = (forSEO = false) => {
+  const buildScriptContext = () => {
     const parts: string[] = [];
-    if (script) {
-      parts.push(`ROTEIRO COMPLETO (resumo): ${script.slice(0, 800)}`);
-    }
+    if (script) parts.push(`ROTEIRO COMPLETO (resumo): ${script.slice(0, 800)}`);
     if (videoStyle) parts.push(`ESTILO VISUAL: ${videoStyle}`);
     if (syncedScenes?.length) {
-      // Build timestamped transcript from scenes
       let accTime = 0;
       const timestampedLines: string[] = [];
       syncedScenes.forEach((s: any) => {
@@ -105,6 +107,8 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
 
   const generateTitles = async () => {
     setLoading(true);
+    setCompetitorAnalysis('');
+    setResearchInfo(null);
     try {
       const scriptContext = buildScriptContext();
       const { data, error } = await supabase.functions.invoke('generate-titles', {
@@ -114,9 +118,13 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
       if (data?.error) throw new Error(data.error);
       const generated = (data?.titles || []).map((t: any) => ({ ...t, liked: false }));
       setTitles(generated);
+      if (data?.competitor_analysis) setCompetitorAnalysis(data.competitor_analysis);
+      if (data?.research) setResearchInfo(data.research);
       if (generated.length) {
-        toast.success(`${generated.length} títulos gerados com contexto do roteiro!`);
-        // Auto-save
+        const sources = [];
+        if (data?.research?.competitors_analyzed) sources.push('YouTube');
+        if (data?.research?.brave_trends_used) sources.push('Brave');
+        toast.success(`${generated.length} títulos gerados! Fontes: DB + ${sources.join(' + ') || 'IA'}`);
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase.from('saved_titles').insert({
@@ -148,7 +156,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
     setAbResult(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-titles', {
-        body: { type: 'ab-test', titleA, titleB, language },
+        body: { type: 'ab-test', titleA, titleB, language, niche },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -201,11 +209,14 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
       {/* Context Banner */}
       {contextInfo.length > 0 && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-          <p className="text-[10px] font-medium text-emerald-400 mb-1">🧠 A IA tem contexto completo do seu vídeo:</p>
+          <p className="text-[10px] font-medium text-emerald-400 mb-1">🧠 A IA tem contexto completo + pesquisa concorrentes em tempo real:</p>
           <div className="flex flex-wrap gap-2">
             {contextInfo.map((info, i) => (
               <Badge key={i} variant="secondary" className="text-[10px]">{info}</Badge>
             ))}
+            <Badge className="bg-primary/20 text-primary text-[10px]">🔍 YouTube API</Badge>
+            <Badge className="bg-orange-500/20 text-orange-400 text-[10px]">🌐 Brave Search</Badge>
+            <Badge className="bg-violet-500/20 text-violet-400 text-[10px]">🧪 Gemini Pro</Badge>
           </div>
         </div>
       )}
@@ -234,8 +245,38 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
         <>
           <Button onClick={generateTitles} disabled={loading} className="w-full gradient-hero border-0 gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {loading ? 'Gerando títulos com contexto do roteiro...' : 'Gerar 20 Títulos Virais (CTR 15-30%)'}
+            {loading ? 'Pesquisando concorrentes + gerando títulos...' : 'Gerar 20 Títulos (Gemini Pro + YouTube + Brave)'}
           </Button>
+
+          {/* Research indicators */}
+          {researchInfo && (
+            <div className="flex gap-2 flex-wrap">
+              {researchInfo.competitors_analyzed && (
+                <Badge className="bg-emerald-500/15 text-emerald-400 text-[9px] gap-1">
+                  <Search className="w-3 h-3" /> Concorrentes YouTube analisados
+                </Badge>
+              )}
+              {researchInfo.brave_trends_used && (
+                <Badge className="bg-orange-500/15 text-orange-400 text-[9px] gap-1">
+                  <Globe className="w-3 h-3" /> Tendências Brave detectadas
+                </Badge>
+              )}
+              <Badge className="bg-violet-500/15 text-violet-400 text-[9px] gap-1">
+                <Brain className="w-3 h-3" /> Gemini Pro + 945 títulos DB
+              </Badge>
+            </div>
+          )}
+
+          {/* Competitor Analysis */}
+          {competitorAnalysis && (
+            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+              <p className="text-[10px] font-medium text-amber-400 mb-1 flex items-center gap-1">
+                <Zap className="w-3 h-3" /> Análise dos Concorrentes
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{competitorAnalysis}</p>
+            </motion.div>
+          )}
 
           {titles.length > 0 && (
             <div className="space-y-2">
@@ -266,7 +307,13 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                         {t.psychological_trigger && (
                           <Badge variant="secondary" className="text-[8px]">🧠 {t.psychological_trigger}</Badge>
                         )}
+                        {t.hook_used && (
+                          <Badge variant="secondary" className="text-[8px]">🔥 {t.hook_used}</Badge>
+                        )}
                       </div>
+                      {t.differentiation && (
+                        <p className="text-[8px] text-muted-foreground mt-0.5 italic">💡 {t.differentiation}</p>
+                      )}
                     </div>
                     <div className="flex gap-0.5">
                       <Button variant="ghost" size="sm" className={`h-7 w-7 ${t.liked ? 'text-rose-400' : 'opacity-0 group-hover:opacity-100'}`}
@@ -309,7 +356,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
           </div>
           <Button onClick={runABTest} disabled={abLoading} size="sm" className="gradient-hero border-0 gap-2">
             {abLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
-            {abLoading ? 'Analisando...' : 'Comparar'}
+            {abLoading ? 'Analisando com Gemini Pro...' : 'Comparar (Gemini Pro)'}
           </Button>
           {abResult && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
@@ -325,6 +372,10 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between"><span className="text-muted-foreground">CTR</span><span className="font-bold text-primary">{data.ctr}%</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">SEO</span><span className="font-bold">{data.seoScore}/10</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Comprimento</span><span className="font-bold">{data.lengthScore}/10</span></div>
+                        {data.curiosityGapScore && (
+                          <div className="flex justify-between"><span className="text-muted-foreground">Curiosity Gap</span><span className="font-bold">{data.curiosityGapScore}/10</span></div>
+                        )}
                         <div className="flex flex-wrap gap-1 mt-1">
                           {data.emotionalTriggers.map((t, i) => (
                             <Badge key={i} variant="secondary" className="text-[8px]">{t}</Badge>
@@ -336,6 +387,12 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                 })}
               </div>
               <p className="text-[10px] text-muted-foreground bg-muted/20 rounded-lg p-2">{abResult.analysis}</p>
+              {abResult.improvement_suggestion && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                  <p className="text-[9px] font-medium text-primary mb-0.5">💡 Sugestão de melhoria:</p>
+                  <p className="text-[10px] text-muted-foreground">{abResult.improvement_suggestion}</p>
+                </div>
+              )}
             </motion.div>
           )}
         </div>
@@ -350,12 +407,23 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
           </div>
           <Button onClick={generateSEODesc} disabled={seoLoading} size="sm" className="gradient-hero border-0 gap-2">
             {seoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-            {seoLoading ? 'Gerando...' : 'Gerar Descrição SEO (com contexto do roteiro)'}
+            {seoLoading ? 'Pesquisando keywords + gerando...' : 'Gerar Descrição SEO (Gemini Pro + Brave)'}
           </Button>
           {seoResult && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+              {/* SEO Score */}
+              {seoResult.seo_score && (
+                <div className="flex items-center gap-2">
+                  <Badge className={`${seoResult.seo_score >= 8 ? 'bg-emerald-500/20 text-emerald-400' : seoResult.seo_score >= 6 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-destructive/20 text-destructive'} text-xs`}>
+                    SEO Score: {seoResult.seo_score}/10
+                  </Badge>
+                  {seoResult.keyword_density_note && (
+                    <span className="text-[9px] text-muted-foreground">{seoResult.keyword_density_note}</span>
+                  )}
+                </div>
+              )}
               <div className="relative">
-                <Textarea value={seoResult.description} readOnly rows={10} className="bg-secondary/50 text-[11px] font-mono" />
+                <Textarea value={seoResult.description} readOnly rows={12} className="bg-secondary/50 text-[11px] font-mono" />
                 <Button variant="outline" size="sm" className="absolute top-2 right-2 h-6 text-[9px]"
                   onClick={() => copyText(seoResult.description)}>
                   <Copy className="w-3 h-3 mr-1" /> Copiar
@@ -363,7 +431,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-muted/30 rounded-lg p-2">
-                  <p className="text-[9px] font-medium text-muted-foreground mb-1">Keywords</p>
+                  <p className="text-[9px] font-medium text-muted-foreground mb-1">Keywords ({seoResult.keywords.length})</p>
                   <div className="flex flex-wrap gap-1">
                     {seoResult.keywords.map((k, i) => <Badge key={i} variant="secondary" className="text-[8px]">{k}</Badge>)}
                   </div>
