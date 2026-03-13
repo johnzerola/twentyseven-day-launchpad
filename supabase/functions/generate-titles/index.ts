@@ -313,10 +313,11 @@ Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), sco
 
     // ========== SEO DESCRIPTION ==========
     if (type === "seo-description") {
-      const { title, niche, language } = body;
+      const { title, niche, language, scriptContext } = body;
       const langNote = language ? `\nIdioma: ${language}. Escreva a descrição neste idioma.` : '';
+      const scriptNote = scriptContext ? `\n\nCONTEXTO DO VÍDEO (use para SEO preciso):\n${scriptContext}` : '';
       const prompt = `Gere uma descrição SEO completa e otimizada para um vídeo do YouTube com o título: "${title}"
-${niche ? `Nicho: ${niche}` : ''}${langNote}
+${niche ? `Nicho: ${niche}` : ''}${langNote}${scriptNote}
 
 A descrição deve incluir:
 1. Primeira linha: keyword principal + benefício (aparece no search)
