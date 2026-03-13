@@ -15,7 +15,7 @@ serve(async (req) => {
 
   const startTime = Date.now();
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+  const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
   try {
