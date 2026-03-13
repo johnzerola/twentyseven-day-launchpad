@@ -75,7 +75,7 @@ serve(async (req) => {
     }
 
     // Fetch channel info
-    const apiKey = YT_KEY || YT_KEY_2 || YT_KEY_3!;
+    const apiKey = YT_KEY || YT_KEY_2 || YT_KEY_3 || YT_KEY_4!;
     const channelRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${resolvedChannelId}&key=${apiKey}`
     );
