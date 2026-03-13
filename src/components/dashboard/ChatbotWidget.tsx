@@ -63,10 +63,48 @@ export const ChatbotWidget = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [savedConversations, setSavedConversations] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [proactiveNudge, setProactiveNudge] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+  const idleTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastActivity = useRef<number>(Date.now());
 
+  // Proactive nudge system — detect 2+ min idle
+  useEffect(() => {
+    const NUDGE_MESSAGES: Record<string, string> = {
+      '/dashboard': '💡 Dica: verifique as tendências do seu nicho hoje! Posso ajudar.',
+      '/scripts': '✍️ Precisa de ajuda com o roteiro? Posso sugerir hooks de alta retenção.',
+      '/titles': '🏷️ Quer que eu analise seus títulos? Tenho dados de 900+ títulos virais.',
+      '/search': '🔍 Encontrou algo interessante? Posso fazer engenharia reversa de qualquer canal.',
+      '/niches': '📊 Indeciso sobre o nicho? Me pergunte — tenho dados de RPM e saturação.',
+      '/workflow': '📋 Seu pipeline está atualizado? Posso sugerir prioridades.',
+    };
+
+    const resetIdle = () => {
+      lastActivity.current = Date.now();
+      setProactiveNudge(null);
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      if (!open) {
+        idleTimer.current = setTimeout(() => {
+          const nudge = NUDGE_MESSAGES[location.pathname];
+          if (nudge) setProactiveNudge(nudge);
+        }, 120_000); // 2 minutes
+      }
+    };
+
+    window.addEventListener('mousemove', resetIdle);
+    window.addEventListener('keydown', resetIdle);
+    window.addEventListener('click', resetIdle);
+    resetIdle();
+
+    return () => {
+      window.removeEventListener('mousemove', resetIdle);
+      window.removeEventListener('keydown', resetIdle);
+      window.removeEventListener('click', resetIdle);
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, [location.pathname, open]);
   // Get user and check onboarding
   useEffect(() => {
     const checkOnboarding = async () => {
