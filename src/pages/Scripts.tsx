@@ -302,6 +302,13 @@ const Scripts = () => {
           </div>
         )}
 
+        {/* Comparator Panel */}
+        {showComparator && (
+          <div className="bg-card border border-border rounded-xl p-5">
+            <ScriptComparator />
+          </div>
+        )}
+
         {/* Pipeline Progress */}
         {script && (
           <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-2">
