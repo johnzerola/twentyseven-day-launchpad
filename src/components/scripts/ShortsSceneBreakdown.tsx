@@ -54,6 +54,10 @@ export const ShortsSceneBreakdown = ({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [previewScene, setPreviewScene] = useState<number | null>(null);
+  const [scorecard, setScorecard] = useState<{ hook: number; retention: number; loop: number; pacing: number; total: number } | null>(null);
+  const [scoring, setScoring] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(null);
 
   const generateScenes = async () => {
     if (!script.trim()) { toast.error('Gere o roteiro primeiro'); return; }
