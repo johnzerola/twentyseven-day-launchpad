@@ -688,7 +688,7 @@ export const ScriptGenerator = ({
               <div>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
                   <Brain className="w-4 h-4 text-purple-400" />
-                  3. Refinado pelo Claude
+                  3. Refinado pela IA
                 </h3>
                 {script && (
                   <p className="text-xs text-muted-foreground mt-1">
