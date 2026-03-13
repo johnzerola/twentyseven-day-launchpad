@@ -125,17 +125,21 @@ export const ScriptGenerator = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setLoadingSuggestions(true);
-      const { data } = await supabase
+      let query = supabase
         .from('dotti_suggestions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(30);
+      if (selectedChannelId) {
+        query = query.eq('channel_id', selectedChannelId);
+      }
+      const { data } = await query;
       setSuggestions((data as any[]) || []);
       setLoadingSuggestions(false);
     };
     loadSuggestions();
-  }, []);
+  }, [selectedChannelId]);
 
   const applySuggestion = (s: any) => {
     setTopic(s.title || s.topic || '');
