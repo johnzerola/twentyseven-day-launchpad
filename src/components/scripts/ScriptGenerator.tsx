@@ -258,6 +258,7 @@ export const ScriptGenerator = ({
           style, niche, language,
           viralContext, intelligenceBriefing: briefing,
           videoType,
+          phaseId: phaseIdRef.current,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
