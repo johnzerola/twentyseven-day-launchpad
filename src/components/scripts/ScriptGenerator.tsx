@@ -94,7 +94,7 @@ export const ScriptGenerator = ({
   loading, setLoading, scorecard, setScorecard, setActiveStep,
   getViralContext, getOrCreateProject, intelligenceBriefing,
   setIntelligenceBriefing, setSceneBlueprintJson, onScriptGenerated,
-  videoType, setVideoType,
+  videoType, setVideoType, selectedChannelId, setSelectedChannelId, userChannels,
 }: ScriptGeneratorProps) => {
   const [editMode, setEditMode] = useState(false);
   const [copied, setCopied] = useState(false);
