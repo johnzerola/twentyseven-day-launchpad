@@ -259,6 +259,59 @@ export const ScriptGenerator = ({
     }
   };
 
+  // ═══════ Find consensus between GPT & Gemini ═══════
+  const findConsensusImprovements = (gptWeaknesses: string[], geminiWeaknesses: string[], gptImprovements: string[], geminiImprovements: string[]): string[] => {
+    const all = [...gptWeaknesses, ...gptImprovements, ...geminiWeaknesses, ...geminiImprovements];
+    const consensus: string[] = [];
+    const normalize = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    
+    // Find items that appear in BOTH AI outputs (similar meaning)
+    const gptItems = [...gptWeaknesses, ...gptImprovements].map(normalize);
+    const geminiItems = [...geminiWeaknesses, ...geminiImprovements].map(normalize);
+    
+    for (const gItem of gptItems) {
+      for (const gemItem of geminiItems) {
+        // Check for keyword overlap (at least 2 shared words of 4+ chars)
+        const gWords = gItem.split(/\s+/).filter(w => w.length >= 4);
+        const gemWords = gemItem.split(/\s+/).filter(w => w.length >= 4);
+        const shared = gWords.filter(w => gemWords.some(gw => gw.includes(w) || w.includes(gw)));
+        if (shared.length >= 2) {
+          // Find the original (non-normalized) version
+          const original = all.find(a => normalize(a) === gItem || normalize(a) === gemItem);
+          if (original && !consensus.includes(original)) consensus.push(original);
+        }
+      }
+    }
+    
+    // If no keyword overlap found, merge all unique improvements
+    if (consensus.length === 0) {
+      return [...new Set([...gptImprovements, ...geminiImprovements])].slice(0, 5);
+    }
+    return consensus.slice(0, 5);
+  };
+
+  // ═══════ Auto-refine with consensus improvements ═══════
+  const autoRefineWithConsensus = async (textToRefine: string, improvements: string[]): Promise<string> => {
+    setPhaseLabel('🔧 Aplicando melhorias consensuais automaticamente...');
+    toast.info('🔧 Ambas IAs concordaram em melhorias — aplicando automaticamente...');
+    
+    try {
+      const refined = await streamFromFunction('refine-script', {
+        draft_script: textToRefine,
+        niche, language, duration: parseInt(duration), style,
+        target_words: targetWords,
+        consensus_improvements: improvements,
+      }, (fullText) => {
+        setScript(cleanAll(fullText));
+      });
+      
+      return cleanAll(refined);
+    } catch (err: any) {
+      console.warn('Auto-refine failed, using original:', err);
+      return textToRefine;
+    }
+  };
+
   // ═══════ STEP 3: Dual AI Scoring ═══════
   const runStep3_DualScoreWithText = async (scriptText?: string) => {
     const textToScore = scriptText || script;
@@ -277,10 +330,36 @@ export const ScriptGenerator = ({
       if (error) throw new Error(error.message || 'Erro na avaliação');
 
       const result: DualScore = data;
-      setDualScore(result);
 
       if (result.approved) {
-        toast.success(`✅ APROVADO! Score: ${result.combinedScore}/20 (GPT: ${result.gpt_score} + Gemini: ${result.gemini_score})`);
+        // Check if both AIs agree on improvements even though approved
+        const consensusImprovements = findConsensusImprovements(
+          result.weaknesses || [], [], result.improvements || [], []
+        );
+
+        if (consensusImprovements.length > 0 && result.combinedScore < 18) {
+          // Auto-improve before delivering
+          setPhaseLabel('🔧 Aplicando melhorias consensuais...');
+          const improvedText = await autoRefineWithConsensus(textToScore, consensusImprovements);
+          setScript(improvedText);
+          
+          // Re-score the improved version
+          setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
+          const { data: reScoreData } = await supabase.functions.invoke('score-script', {
+            body: { script: improvedText.slice(0, 12000), niche, style, language, topic },
+          });
+          
+          if (reScoreData && reScoreData.approved) {
+            setDualScore(reScoreData);
+            toast.success(`✅ APROVADO (melhorado)! Score: ${reScoreData.combinedScore}/20 (era ${result.combinedScore}/20)`);
+          } else {
+            setDualScore(reScoreData || result);
+            toast.success(`✅ APROVADO! Score: ${result.combinedScore}/20`);
+          }
+        } else {
+          setDualScore(result);
+          toast.success(`✅ APROVADO! Score: ${result.combinedScore}/20 (GPT: ${result.gpt_score} + Gemini: ${result.gemini_score})`);
+        }
         
         // Save to project
         try {
@@ -291,14 +370,58 @@ export const ScriptGenerator = ({
           } as any).eq('id', pid);
         } catch { /* non-critical */ }
 
-        // Save learning: approved script patterns
         supabase.functions.invoke('learn-from-user', {
           body: { type: 'script_approved', data: { topic, niche, style, duration, combined_score: result.combinedScore } },
         }).catch(() => {});
 
         onScriptGenerated?.();
       } else {
-        toast.error(`❌ REPROVADO: ${result.combinedScore}/20 (mínimo 14). GPT: ${result.gpt_score} | Gemini: ${result.gemini_score}`);
+        // REJECTED — find consensus improvements
+        const gptW = result.gpt_details?.weaknesses || result.weaknesses?.slice(0, 3) || [];
+        const gemW = result.gemini_details?.weaknesses || result.weaknesses?.slice(3) || [];
+        const gptI = result.gpt_details?.improvements || result.improvements?.slice(0, 3) || [];
+        const gemI = result.gemini_details?.improvements || result.improvements?.slice(3) || [];
+        
+        const consensusImprovements = findConsensusImprovements(gptW, gemW, gptI, gemI);
+        
+        if (consensusImprovements.length > 0 && retryCount < MAX_RETRIES) {
+          // Auto-refine with consensus and re-evaluate
+          toast.info(`🔄 Ambas IAs concordaram em ${consensusImprovements.length} melhorias — aplicando automaticamente...`);
+          setRetryCount(prev => prev + 1);
+          
+          const improvedText = await autoRefineWithConsensus(textToScore, consensusImprovements);
+          setScript(improvedText);
+          
+          // Re-score
+          setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
+          const { data: reScoreData } = await supabase.functions.invoke('score-script', {
+            body: { script: improvedText.slice(0, 12000), niche, style, language, topic },
+          });
+          
+          if (reScoreData) {
+            setDualScore(reScoreData);
+            if (reScoreData.approved) {
+              toast.success(`✅ APROVADO após melhoria! Score: ${reScoreData.combinedScore}/20 (era ${result.combinedScore}/20)`);
+              
+              try {
+                const pid = await getOrCreateProject();
+                await supabase.from('video_projects').update({
+                  intelligence_json: intelligenceBriefing || {},
+                } as any).eq('id', pid);
+              } catch { /* non-critical */ }
+              
+              onScriptGenerated?.();
+            } else {
+              toast.error(`❌ Ainda reprovado: ${reScoreData.combinedScore}/20. Edite manualmente ou refaça.`);
+            }
+          } else {
+            setDualScore(result);
+            toast.error(`❌ REPROVADO: ${result.combinedScore}/20 (mínimo 14)`);
+          }
+        } else {
+          setDualScore(result);
+          toast.error(`❌ REPROVADO: ${result.combinedScore}/20 (mínimo 14). GPT: ${result.gpt_score} | Gemini: ${result.gemini_score}`);
+        }
       }
 
       setPhaseLabel('');

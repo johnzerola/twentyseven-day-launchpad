@@ -6,13 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { draft_script, niche, language, duration, style, target_words, rejection_feedback } = await req.json();
-    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
-    if (!CLAUDE_API_KEY) throw new Error("CLAUDE_API_KEY not configured");
+    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!draft_script) throw new Error("draft_script is required");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -47,6 +49,15 @@ Score GPT anterior: ${rejection_feedback.gpt_score}/10
 Score Gemini anterior: ${rejection_feedback.gemini_score}/10
 
 VOCÊ DEVE corrigir ESPECIFICAMENTE esses pontos fracos. Não repita os mesmos erros.
+` : '';
+
+    // Build consensus improvements context
+    const consensusContext = consensus_improvements?.length > 0 ? `
+🎯 CONSENSO DAS IAs — MELHORIAS OBRIGATÓRIAS:
+Ambas as IAs (GPT e Gemini) concordaram que esses pontos DEVEM ser melhorados:
+${consensus_improvements.map((imp: string, i: number) => `${i+1}. ${imp}`).join('\n')}
+
+APLIQUE TODAS essas melhorias de forma cirúrgica. Elas são a PRIORIDADE MÁXIMA.
 ` : '';
 
     const systemPrompt = `Você é um EDITOR CIRÚRGICO de roteiros para YouTube viral. Sua missão é MELHORAR o roteiro existente SEM reescrevê-lo do zero.
@@ -85,6 +96,7 @@ ${topHooks.slice(0, 800)}
 📊 ESTRUTURAS VIRAIS:
 ${structures.slice(0, 600)}
 ${rejectionContext}
+${consensusContext}
 
 📊 PROCESSO:
 1. Leia o roteiro COMPLETO
@@ -93,92 +105,39 @@ ${rejectionContext}
 4. Mantenha TODO o resto intacto
 
 ⚠️ FORMATO DE SAÍDA:
-PRIMEIRO: ---SCORES--- hook:X retention:X emotion:X flow:X payoff:X ---END_SCORES---
-(scores de 1-10 HONESTOS do roteiro APÓS suas melhorias)
-
-DEPOIS: O roteiro COMPLETO com suas melhorias cirúrgicas integradas.
-APENAS texto de narração. ZERO anotações técnicas. Valores em $.
-
-DEPOIS: ---SCENE_BLUEPRINT--- [JSON array de blocos ~30-45s] ---END_SCENE_BLUEPRINT---
+RETORNE APENAS o roteiro COMPLETO com suas melhorias cirúrgicas integradas.
+APENAS texto de narração. ZERO anotações técnicas, ZERO marcações de "melhorado", ZERO comentários. Valores em $.
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
-    console.log("Phase 2: Streaming refine from Claude...");
+    console.log("Refine: Streaming from Lovable AI Gateway (Gemini 2.5 Pro)...");
 
-    const refineRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const refineRes = await fetch(AI_URL, {
       method: "POST",
       headers: {
-        "x-api-key": CLAUDE_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 16000,
-        system: systemPrompt,
-        messages: [
-          { role: "user", content: `ROTEIRO PARA EDIÇÃO CIRÚRGICA (NÃO reescreva do zero!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Identifique os 3-5 pontos FRACOS e melhore APENAS esses pontos. Preserve 80-90% do texto original. Retorne o roteiro COMPLETO com melhorias integradas.` }
-        ],
+        model: "google/gemini-2.5-pro",
         stream: true,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `ROTEIRO PARA EDIÇÃO CIRÚRGICA (NÃO reescreva do zero!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Identifique os 3-5 pontos FRACOS e melhore APENAS esses pontos. Preserve 80-90% do texto original. Retorne o roteiro COMPLETO com melhorias integradas.` },
+        ],
       }),
     });
 
     if (!refineRes.ok) {
       const errText = await refineRes.text();
-      console.error("Claude error:", refineRes.status, errText);
-      if (refineRes.status === 429) return errResp("Rate limit Claude. Aguarde.", 429);
-      if (refineRes.status === 402) return errResp("Créditos Claude insuficientes.", 402);
-      throw new Error(`Claude API error: ${refineRes.status}`);
+      console.error("AI Gateway error:", refineRes.status, errText);
+      if (refineRes.status === 429) return errResp("Rate limit. Aguarde.", 429);
+      if (refineRes.status === 402) return errResp("Créditos insuficientes.", 402);
+      throw new Error(`AI Gateway error: ${refineRes.status}`);
     }
 
-    // Transform Claude SSE stream to OpenAI-compatible SSE format
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const encoder = new TextEncoder();
-
-    (async () => {
-      try {
-        const reader = refineRes.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          let idx: number;
-          while ((idx = buffer.indexOf("\n")) !== -1) {
-            const line = buffer.slice(0, idx).trim();
-            buffer = buffer.slice(idx + 1);
-
-            if (!line.startsWith("data: ")) continue;
-            const json = line.slice(6).trim();
-            if (!json || json === "[DONE]") continue;
-
-            try {
-              const evt = JSON.parse(json);
-              if (evt.type === "content_block_delta" && evt.delta?.text) {
-                const openaiChunk = {
-                  choices: [{ delta: { content: evt.delta.text }, index: 0 }],
-                };
-                await writer.write(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
-              }
-              if (evt.type === "message_stop") {
-                await writer.write(encoder.encode("data: [DONE]\n\n"));
-              }
-            } catch { /* skip malformed */ }
-          }
-        }
-        await writer.write(encoder.encode("data: [DONE]\n\n"));
-      } catch (e) {
-        console.error("Stream transform error:", e);
-      } finally {
-        await writer.close();
-      }
-    })();
-
-    return new Response(readable, {
+    // Pass through SSE stream directly (already in OpenAI format)
+    return new Response(refineRes.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
 
