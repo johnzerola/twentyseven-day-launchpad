@@ -268,9 +268,10 @@ const Channels = () => {
       const compContext = competitors.length > 0
         ? `Concorrentes: ${competitors.slice(0, 5).map(c => `${c.channelName} (${formatNumber(c.subscribers)} subs)`).join('; ')}`
         : '';
+      const authH = await (await import('@/lib/auth-fetch')).getAuthHeaders();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistant`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: authH,
         body: JSON.stringify({ messages: [
           { role: 'user', content: `[CONTEXTO] ${channelContext}. ${compContext}. Foque em vídeos LONGOS. Use dados reais.` },
           ...newMessages.slice(1).map(m => ({ role: m.role, content: m.content })),

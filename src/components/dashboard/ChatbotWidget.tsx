@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getAuthHeaders } from '@/lib/auth-fetch';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -316,12 +317,10 @@ export const ChatbotWidget = () => {
   const generatePlan = async (state: OnboardingState) => {
     setLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistant`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           messages: [{ role: 'user', content: `MODO ONBOARDING: Gere um plano personalizado de 30 dias.
 Dados do usuário:
@@ -410,12 +409,10 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
     setLoading(true);
 
     try {
+      const authHeaders2 = await getAuthHeaders();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistant`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: authHeaders2,
         body: JSON.stringify({
           messages: newMessages.filter((_, i) => i > 0),
           currentPage: location.pathname,
