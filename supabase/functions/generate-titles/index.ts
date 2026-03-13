@@ -315,17 +315,20 @@ Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), sco
     if (type === "seo-description") {
       const { title, niche, language, scriptContext } = body;
       const langNote = language ? `\nIdioma: ${language}. Escreva a descrição neste idioma.` : '';
-      const scriptNote = scriptContext ? `\n\nCONTEXTO DO VÍDEO (use para SEO preciso):\n${scriptContext}` : '';
+      const hasTimestamps = scriptContext && scriptContext.includes('[');
+      const scriptNote = scriptContext ? `\n\nCONTEXTO DO VÍDEO COM TRANSCRIÇÃO TIMESTAMPED (use para SEO e capítulos REAIS):\n${scriptContext}` : '';
       const prompt = `Gere uma descrição SEO completa e otimizada para um vídeo do YouTube com o título: "${title}"
 ${niche ? `Nicho: ${niche}` : ''}${langNote}${scriptNote}
 
 A descrição deve incluir:
 1. Primeira linha: keyword principal + benefício (aparece no search)
 2. Parágrafo de contexto (2-3 linhas)
-3. Timestamps/capítulos sugeridos (00:00 formato)
+3. ${hasTimestamps ? 'Timestamps/capítulos REAIS baseados na transcrição acima — use os timestamps [MM:SS] da transcrição para criar capítulos que refletem o conteúdo real de cada momento do vídeo. Comece com 00:00 Introdução.' : 'Timestamps/capítulos sugeridos (00:00 formato)'}
 4. Links placeholder para redes sociais
 5. 3 hashtags relevantes
-6. 8-12 keywords SEO relevantes
+6. 8-12 keywords SEO extraídas do conteúdo real do vídeo
+
+IMPORTANTE sobre timestamps: Os capítulos do YouTube (timestamps na descrição) aumentam MUITO o SEO e CTR. ${hasTimestamps ? 'Use os timestamps REAIS da transcrição para criar capítulos precisos. Agrupe cenas relacionadas em capítulos de 1-3 minutos.' : 'Crie timestamps estimados baseados no conteúdo.'}
 
 Formato profissional, 200-400 palavras.`;
 
