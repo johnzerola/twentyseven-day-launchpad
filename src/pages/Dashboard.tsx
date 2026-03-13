@@ -370,6 +370,9 @@ const Dashboard = () => {
                 </div>
               )}
             </motion.div>
+
+            {/* Script Performance History */}
+            <ScriptPerformanceHistory />
           </div>
 
           {/* Right: Quick Actions */}
