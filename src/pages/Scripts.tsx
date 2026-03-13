@@ -271,9 +271,14 @@ const Scripts = () => {
               <p className="text-sm text-muted-foreground">Roteiro → Estilo → Personagens → Prompts Sincronizados</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => setShowHistory(!showHistory)} size="sm" className="gap-2">
-            <History className="w-4 h-4" /> ({scriptsPag.totalCount})
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowHistory(!showHistory)} size="sm" className="gap-2">
+              <History className="w-4 h-4" /> ({scriptsPag.totalCount})
+            </Button>
+            <Button variant="outline" onClick={() => setShowComparator(!showComparator)} size="sm" className="gap-2">
+              <GitCompareArrows className="w-4 h-4" /> Comparar
+            </Button>
+          </div>
         </div>
 
         {/* History */}
