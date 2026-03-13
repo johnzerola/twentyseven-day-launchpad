@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { getAuthHeaders } from '@/lib/auth-fetch';
 
 interface KnowledgeRecord {
   id: string;
