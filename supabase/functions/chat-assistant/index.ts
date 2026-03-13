@@ -498,6 +498,8 @@ Use os estudos e insights do banco youtube_knowledge:
 ## CONTEXTO ATUAL
 ${pageContext}
 
+${userProfileContext}
+
 ${knowledgeBlock}
 
 ### 📺 Canais Analisados (${channelIntel.data?.length || 0}):
@@ -529,7 +531,9 @@ ${nicheContext}
 8. Nunca termine sem uma AÇÃO CONCRETA: "Próximo passo: faz X agora"
 9. Quando perguntarem sobre roteiros, CITE técnicas específicas do banco (nome do padrão + dados)
 10. Quando perguntarem sobre algoritmo, USE os estudos do youtube_knowledge
-11. ${usedSemantic ? 'O contexto RAG foi filtrado por BUSCA SEMÂNTICA — os resultados são os mais relevantes para a pergunta atual. Use-os com prioridade.' : 'O contexto RAG está ordenado por score. Filtre mentalmente o que é mais relevante para a pergunta.'}`;
+11. ${usedSemantic ? 'O contexto RAG foi filtrado por BUSCA SEMÂNTICA — os resultados são os mais relevantes para a pergunta atual. Use-os com prioridade.' : 'O contexto RAG está ordenado por score. Filtre mentalmente o que é mais relevante para a pergunta.'}
+12. Quando tiver dados do PERFIL DO USUÁRIO, USE-OS proativamente. Refira-se aos canais dele, pesquisas recentes, roteiros salvos e outliers encontrados. Personalize TODA resposta com base no que ele já fez na plataforma.
+13. Se o usuário tem canais vinculados, ANALISE os dados (subs, views, nicho) e dê feedback específico SEM que ele precise pedir.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
