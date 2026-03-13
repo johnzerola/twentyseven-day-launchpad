@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle, Lock, CreditCard, Database, Brain } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle, Lock, CreditCard, Database, Brain, X } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +31,7 @@ const navItems = [
 const TIER_COLORS: Record<string, string> = {
   starter: 'bg-muted text-muted-foreground',
   pro: 'bg-primary/20 text-primary',
-  full: 'bg-chart-4/20 text-chart-4',
+  full: 'bg-accent/20 text-accent',
 };
 
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
@@ -51,9 +51,10 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     ? (subscription.credits_remaining / subscription.credits_monthly_limit) * 100
     : 0;
 
-  const Sidebar = () => (
+  const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 flex items-center gap-2 border-b border-sidebar-border">
+      {/* Logo */}
+      <div className="p-4 flex items-center gap-2 border-b border-sidebar-border shrink-0">
         <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
           <Zap className="w-5 h-5 text-primary-foreground" />
         </div>
@@ -63,7 +64,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </Badge>
       </div>
 
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      {/* Nav */}
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto scrollbar-thin">
         {navItems.map(({ key, icon: Icon, path }) => {
           const active = location.pathname === path;
           const tooltip = PAGE_TOOLTIPS[path];
@@ -75,7 +77,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
               {locked ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground/50 cursor-not-allowed relative select-none">
+                    <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground/50 cursor-not-allowed relative select-none">
                       <Icon className="w-4 h-4" />
                       <span className="line-through decoration-muted-foreground/30">{key}</span>
                       <Lock className="w-3 h-3 ml-auto text-muted-foreground/40" />
@@ -83,16 +85,19 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-[200px] text-xs">
                     <p className="font-semibold text-primary">🔒 Plano {tierLabel(requiredTier)} necessário</p>
-                    <p className="text-muted-foreground mt-0.5">Faça upgrade para desbloquear esta funcionalidade.</p>
+                    <p className="text-muted-foreground mt-0.5">Faça upgrade para desbloquear.</p>
                   </TooltipContent>
                 </Tooltip>
               ) : (
                 <Link to={path} onClick={() => setSidebarOpen(false)}
-                  className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                    active ? 'bg-sidebar-accent text-sidebar-primary font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  className={`flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                    active
+                      ? 'bg-sidebar-accent text-sidebar-primary font-medium shadow-sm'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
                   }`}>
-                  <Icon className="w-4 h-4" />
+                  <Icon className={`w-4 h-4 ${active ? 'text-sidebar-primary' : ''}`} />
                   {key}
+                  {active && <div className="w-1.5 h-1.5 rounded-full bg-sidebar-primary ml-auto" />}
                 </Link>
               )}
               {tooltip && !locked && (
@@ -114,18 +119,22 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       </nav>
 
       {/* Credits meter */}
-      <div className="px-4 py-2 border-t border-sidebar-border">
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+      <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
           <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" /> Créditos</span>
-          <span>{subscription.credits_remaining}/{subscription.credits_monthly_limit}</span>
+          <span className="font-mono">{subscription.credits_remaining}/{subscription.credits_monthly_limit}</span>
         </div>
         <Progress value={creditsPercent} className="h-1.5" />
+        {creditsPercent < 20 && (
+          <p className="text-[10px] text-destructive mt-1">⚠️ Créditos quase esgotados</p>
+        )}
       </div>
 
-      <div className="p-3 border-t border-sidebar-border space-y-2">
+      {/* Footer */}
+      <div className="p-3 border-t border-sidebar-border space-y-1.5 shrink-0">
         <LanguageSwitcher />
         <button onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 w-full transition-all">
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 w-full transition-all">
           <LogOut className="w-4 h-4" /> Logout
         </button>
       </div>
@@ -134,25 +143,39 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
   return (
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden lg:block w-64 bg-sidebar-background border-r border-sidebar-border fixed inset-y-0">
-        <Sidebar />
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:block w-64 bg-sidebar-background border-r border-sidebar-border fixed inset-y-0 z-30">
+        <SidebarContent />
       </aside>
+
+      {/* Mobile sidebar */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative w-64 h-full bg-sidebar-background border-r border-sidebar-border">
-            <Sidebar />
+          <aside className="relative w-72 h-full bg-sidebar-background border-r border-sidebar-border shadow-2xl">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-4 right-4 p-1 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <SidebarContent />
           </aside>
         </div>
       )}
-      <div className="flex-1 lg:ml-64">
-        <header className="h-14 border-b border-border flex items-center px-4 lg:hidden">
-          <button onClick={() => setSidebarOpen(true)}>
+
+      {/* Main content */}
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        <header className="h-14 border-b border-border flex items-center px-4 lg:hidden sticky top-0 bg-background/80 backdrop-blur-md z-20 shrink-0">
+          <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
             <Menu className="w-5 h-5" />
           </button>
           <span className="ml-3 font-semibold font-['Space_Grotesk']">{APP_NAME}</span>
+          <Badge className={`ml-auto text-[9px] px-1.5 py-0 ${TIER_COLORS[subscription.tier]}`}>
+            {tierLabel(subscription.tier)}
+          </Badge>
         </header>
-        <main className="p-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
       <ChatbotWidget />
     </div>
