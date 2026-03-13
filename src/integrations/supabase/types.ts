@@ -461,6 +461,56 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_styles: {
+        Row: {
+          channel_id: string | null
+          color_palette: Json | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          reference_images: Json | null
+          style_description: string | null
+          style_name: string
+          updated_at: string
+          user_id: string
+          visual_notes: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          color_palette?: Json | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          reference_images?: Json | null
+          style_description?: string | null
+          style_name: string
+          updated_at?: string
+          user_id: string
+          visual_notes?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          color_palette?: Json | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          reference_images?: Json | null
+          style_description?: string | null
+          style_name?: string
+          updated_at?: string
+          user_id?: string
+          visual_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_styles_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           created_at: string | null

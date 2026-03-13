@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +64,13 @@ const Scripts = () => {
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
   const [customStyleNotes, setCustomStyleNotes] = useState('');
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [userChannels, setUserChannels] = useState<any[]>([]);
+  const [channelStyles, setChannelStyles] = useState<any[]>([]);
+  const [showCreateStyle, setShowCreateStyle] = useState(false);
+  const [newStyleName, setNewStyleName] = useState('');
+  const [newStyleDesc, setNewStyleDesc] = useState('');
+  const [newStyleNotes, setNewStyleNotes] = useState('');
 
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
@@ -85,10 +92,61 @@ const Scripts = () => {
 
   useEffect(() => {
     loadTemplates();
+    loadUserChannels();
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
     loadLastProjectCharacters();
   }, []);
+
+  // Load channel styles when channel changes
+  useEffect(() => {
+    if (selectedChannelId) loadChannelStyles(selectedChannelId);
+  }, [selectedChannelId]);
+
+  const loadUserChannels = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('user_channels').select('*').eq('user_id', user.id).order('channel_name');
+    setUserChannels(data || []);
+  };
+
+  const loadChannelStyles = async (channelId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('channel_styles').select('*').eq('user_id', user.id).eq('channel_id', channelId).order('created_at', { ascending: false });
+    setChannelStyles((data as any[]) || []);
+    // Auto-select default style
+    const defaultStyle = (data as any[])?.find((s: any) => s.is_default);
+    if (defaultStyle) {
+      setVideoStyle(defaultStyle.style_name);
+      setCustomStyleNotes(defaultStyle.visual_notes || '');
+      toast.success(`Estilo "${defaultStyle.style_name}" do canal aplicado`);
+    }
+  };
+
+  const saveChannelStyle = async () => {
+    if (!newStyleName.trim() || !selectedChannelId) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('channel_styles').insert({
+      user_id: user.id,
+      channel_id: selectedChannelId,
+      style_name: newStyleName,
+      style_description: newStyleDesc,
+      visual_notes: newStyleNotes,
+      is_default: channelStyles.length === 0,
+    } as any);
+    toast.success(`Estilo "${newStyleName}" salvo!`);
+    setNewStyleName(''); setNewStyleDesc(''); setNewStyleNotes('');
+    setShowCreateStyle(false);
+    loadChannelStyles(selectedChannelId);
+  };
+
+  const deleteChannelStyle = async (id: string) => {
+    await supabase.from('channel_styles').delete().eq('id', id);
+    if (selectedChannelId) loadChannelStyles(selectedChannelId);
+    toast.success('Estilo removido');
+  };
 
   // Debounced theme suggestions
   useEffect(() => {
@@ -339,6 +397,8 @@ const Scripts = () => {
               setSceneBlueprintJson={setSceneBlueprintJson}
               onScriptGenerated={() => { loadHistory(); setSyncedScenes([]); }}
               videoType={videoType} setVideoType={setVideoType}
+              selectedChannelId={selectedChannelId} setSelectedChannelId={setSelectedChannelId}
+              userChannels={userChannels}
             />
 
             {/* Intelligence Briefing Panel */}
@@ -549,27 +609,94 @@ const Scripts = () => {
               {/* Step 2: Video Style */}
               {activeStep === 'style' && script && (
                 <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  className="bg-card border border-border rounded-xl p-5">
-                  <div className="flex items-center justify-between mb-4">
+                  className="bg-card border border-border rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-sm flex items-center gap-2"><Film className="w-4 h-4 text-accent" /> Estilo Visual do Vídeo</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">Escolha como as imagens/cenas serão geradas</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Escolha um estilo padrão ou use o estilo personalizado do seu canal</p>
                     </div>
                     <Button size="sm" onClick={() => setActiveStep('characters')} className="gap-1 h-7 text-xs">
                       Próximo <Users className="w-3 h-3" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                    {VIDEO_STYLES.map(vs => (
-                      <button key={vs.value} onClick={() => setVideoStyle(vs.value)}
-                        className={`text-left p-3 rounded-xl border-2 transition-all ${
-                          videoStyle === vs.value ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-border hover:border-primary/30'
-                        }`}>
-                        <span className="text-lg block mb-1">{vs.label.split(' ')[0]}</span>
-                        <p className="text-[10px] font-medium text-foreground">{vs.label.split(' ').slice(1).join(' ')}</p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">{vs.desc}</p>
-                      </button>
-                    ))}
+
+                  {/* Channel Custom Styles */}
+                  {selectedChannelId && channelStyles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                        <Palette className="w-3 h-3" /> Estilos do Canal
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {channelStyles.map((cs: any) => (
+                          <div key={cs.id} className="relative group">
+                            <button onClick={() => { setVideoStyle(cs.style_name); setCustomStyleNotes(cs.visual_notes || ''); }}
+                              className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                                videoStyle === cs.style_name ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-accent/30 hover:border-primary/30 bg-accent/5'
+                              }`}>
+                              <span className="text-lg block mb-1">🎨</span>
+                              <p className="text-[10px] font-medium text-foreground">{cs.style_name}</p>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2">{cs.style_description || cs.visual_notes || 'Estilo personalizado'}</p>
+                              {cs.is_default && <Badge className="mt-1 text-[8px] bg-accent/20 text-accent border-accent/30">Padrão</Badge>}
+                            </button>
+                            <button onClick={() => deleteChannelStyle(cs.id)}
+                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 rounded-full bg-destructive/10 hover:bg-destructive/20 transition-all">
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Create Custom Style */}
+                  {selectedChannelId && (
+                    <div>
+                      {!showCreateStyle ? (
+                        <Button variant="outline" size="sm" onClick={() => setShowCreateStyle(true)} className="gap-1.5 text-xs">
+                          <Plus className="w-3 h-3" /> Criar Estilo Personalizado
+                        </Button>
+                      ) : (
+                        <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+                          <p className="text-xs font-semibold">Novo Estilo para o Canal</p>
+                          <Input value={newStyleName} onChange={e => setNewStyleName(e.target.value)} placeholder="Ex: Wojak Amarelo, Macacos Dark..." className="bg-background text-xs h-8" />
+                          <Input value={newStyleDesc} onChange={e => setNewStyleDesc(e.target.value)} placeholder="Descrição curta do estilo" className="bg-background text-xs h-8" />
+                          <textarea value={newStyleNotes} onChange={e => setNewStyleNotes(e.target.value)}
+                            placeholder="Notas visuais detalhadas: cores, personagens, fundos, referências..."
+                            className="w-full min-h-[60px] bg-background border border-input rounded-md p-2 text-xs resize-none" />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={saveChannelStyle} disabled={!newStyleName.trim()} className="gap-1 text-xs h-7">
+                              <Save className="w-3 h-3" /> Salvar
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setShowCreateStyle(false)} className="text-xs h-7">Cancelar</Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Standard Styles */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Estilos Padrão</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                      {VIDEO_STYLES.map(vs => (
+                        <button key={vs.value} onClick={() => { setVideoStyle(vs.value); setCustomStyleNotes(''); }}
+                          className={`text-left p-3 rounded-xl border-2 transition-all ${
+                            videoStyle === vs.value && !channelStyles.some((cs: any) => cs.style_name === videoStyle) ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-border hover:border-primary/30'
+                          }`}>
+                          <span className="text-lg block mb-1">{vs.label.split(' ')[0]}</span>
+                          <p className="text-[10px] font-medium text-foreground">{vs.label.split(' ').slice(1).join(' ')}</p>
+                          <p className="text-[9px] text-muted-foreground mt-0.5">{vs.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Style Notes */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">Notas visuais adicionais (opcional)</label>
+                    <textarea value={customStyleNotes} onChange={e => setCustomStyleNotes(e.target.value)}
+                      placeholder="Ex: fundo branco, personagens estilo macaco com roupa de terno, cores neon..."
+                      className="w-full min-h-[50px] bg-muted/20 border border-border rounded-md p-2 text-xs resize-none" />
                   </div>
                 </motion.div>
               )}
