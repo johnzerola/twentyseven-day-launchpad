@@ -671,7 +671,7 @@ export const ScriptGenerator = ({
                     ⚡ Pular refinamento
                   </Button>
                   <Button size="sm" onClick={() => runStep2_Refine()} disabled={generating} className="gap-2 text-xs">
-                    <Brain className="w-4 h-4" /> Refinar com Claude
+                    <Brain className="w-4 h-4" /> Refinar com IA
                     <ArrowRight className="w-3 h-3" />
                   </Button>
                 </div>
