@@ -15,7 +15,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing } = await req.json();
+    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType } = await req.json();
+    const isShort = videoType === 'short';
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -263,8 +264,19 @@ ${viralInjection}
 ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
-Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'}
+Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'} | Formato: ${isShort ? 'SHORT (vertical 9:16)' : 'LONGFORM (16:9)'}
 
+${isShort ? `
+✍️ FORMATO SHORT (15-60 segundos):
+- Duração: ${dur} minutos (=${Math.round(dur * 60)}s). Taxa: ${wpm} palavras/min. ALVO: ${targetWords} palavras.
+- Hook DEVASTADOR nos primeiros 2 segundos — texto na tela + voz
+- UMA ideia central, ZERO enrolação
+- Ritmo RÁPIDO, frases curtíssimas (máx 8 palavras)
+- CTA direto: "Segue pra mais" / "Salva esse vídeo"
+- NÃO inclua seção EXTRAS (títulos, tags, thumbnails)
+- NÃO inclua SCENE_BLUEPRINT
+- Linguagem ULTRA coloquial e dinâmica
+` : `
 ✍️ DURAÇÃO: EXATAMENTE ${dur} minutos. Taxa: ${wpm} palavras/min. MÍNIMO: ${minWords} palavras. ALVO: ${targetWords} palavras.
 
 REGRAS:
@@ -286,7 +298,8 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 [{"block":1,"narrative_summary":"...","mood":"tense","visual_hint":"...","camera_suggestion":"...","characters_present":[]}]
 ---END_SCENE_BLUEPRINT---
 
-⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.`;
+⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.
+`}`;
 
     console.log("Phase 1: Streaming draft from Gemini Flash with FULL knowledge...");
     const phase1Res = await fetch(AI_URL, {
@@ -295,7 +308,10 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!` }
+          { role: "user", content: isShort
+            ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
+            : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!`
+          }
         ],
         stream: true,
       }),

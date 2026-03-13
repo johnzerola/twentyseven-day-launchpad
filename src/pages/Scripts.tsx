@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles } from 'lucide-react';
+import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +37,7 @@ const VIDEO_STYLES: VideoStyleOption[] = [
 
 const Scripts = () => {
   const { t } = useLanguage();
+  const [videoType, setVideoType] = useState<VideoType>('long');
   const [topic, setTopic] = useState('');
   const [duration, setDuration] = useState('15');
   const [style, setStyle] = useState('dopaminérgico');
@@ -120,6 +122,7 @@ const Scripts = () => {
     if (!user) throw new Error('Login required');
     const { data: proj } = await supabase.from('video_projects').insert({
       user_id: user.id, title: topic || 'Script Project', script: script.slice(0, 500), niche: niche || undefined,
+      video_type: videoType,
     } as any).select('id').single();
     if (!proj) throw new Error('Failed to create project');
     setProjectId(proj.id);
@@ -318,6 +321,7 @@ const Scripts = () => {
               intelligenceBriefing={intelligenceBriefing} setIntelligenceBriefing={setIntelligenceBriefing}
               setSceneBlueprintJson={setSceneBlueprintJson}
               onScriptGenerated={() => { loadHistory(); setSyncedScenes([]); }}
+              videoType={videoType} setVideoType={setVideoType}
             />
 
             {/* Intelligence Briefing Panel */}
