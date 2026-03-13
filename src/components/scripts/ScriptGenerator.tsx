@@ -187,7 +187,7 @@ export const ScriptGenerator = ({
 
   // ═══════ STEP 1: Generate Draft ═══════
   const runStep1_Draft = async (rejectionFeedback?: any) => {
-    if (!topic.trim() || generating) return;
+    if (!topic.trim() || generating || !canClick()) return;
     setGenerating(true);
     setLoading(true);
     setDraftScript('');
