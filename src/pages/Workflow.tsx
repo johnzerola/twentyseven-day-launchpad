@@ -282,7 +282,7 @@ const Workflow = () => {
   };
 
   if (loading) {
-    return <DashboardLayout><div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></DashboardLayout>;
+    return <DashboardLayout><KanbanSkeleton /></DashboardLayout>;
   }
 
   return (
