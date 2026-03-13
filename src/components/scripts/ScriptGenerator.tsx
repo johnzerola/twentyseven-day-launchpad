@@ -106,9 +106,10 @@ export const ScriptGenerator = ({
   const currentScript = wizardStep === 1 ? draftScript : script;
   const wordCount = currentScript.split(/\s+/).filter(Boolean).length;
   const charCount = currentScript.length;
+  const durationMinutes = videoType === 'short' ? parseInt(duration) / 60 : parseInt(duration);
   const estimatedMinutes = wordCount > 0 ? (wordCount / wpm) : 0;
   const estimatedMinutesDisplay = `${Math.floor(estimatedMinutes)}:${String(Math.round((estimatedMinutes % 1) * 60)).padStart(2, '0')}`;
-  const targetWords = parseInt(duration) * wpm;
+  const targetWords = Math.round(durationMinutes * wpm);
   const progressPercent = Math.min(100, Math.round((wordCount / targetWords) * 100));
 
   const parseScorecard = (text: string) => {
