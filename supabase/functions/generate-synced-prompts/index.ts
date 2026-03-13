@@ -229,15 +229,24 @@ OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'snea
 NEVER include ANY of these in prompts:
 - NO subtitles, NO text, NO titles, NO captions
 - NO logos, NO watermarks, NO signatures  
-- NO on-screen graphics, NO lower thirds
-- NO burned-in text, NO UI elements
+- NO on-screen graphics, NO lower thirds, NO burned-in text, NO UI elements
 - NO letters, NO words, NO writing of ANY kind
 - EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
 - EVERY negativePrompt MUST include: "subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements"
 ═══════════════════════════════════════
 
-VEO 3 PROMPT FORMULA (use for EVERY prompt):
-[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance] + [Anti-text block]
+VEO 3 MASTER PROMPT FORMULA v2.0 (use for EVERY prompt):
+[SHOT_TYPE + CAMERA_MOTION], [LENS_SPEC] with [DOF_SETTING].
+[CHARACTER — FULL identity VERBATIM if applicable].
+[ACTION — cinematic description of what happens].
+[ENVIRONMENT — specific, sensory, atmospheric details].
+[LIGHTING_SETUP — exact type + modifiers].
+[ATMOSPHERIC_ELEMENTS — particles, fog, rain, dust, embers].
+[COLOR_GRADE — specific film stock or palette reference].
+[ANTI_AI_REALISM — skin pores, motion blur, film grain, lens artifacts].
+[QUALITY_TAGS]: masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3, ACES color science.
+[AUDIO_DIRECTION]: ambient sounds + foley SFX + music mood.
+(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)
 
 MASTER VISUAL STYLE:
 ${selectedStyleGuide}
@@ -253,33 +262,57 @@ ${blueprintBlock}
 
 YOUR COMMANDMENTS:
 
-1. DYNAMIC SCENE DURATION: 5-8 seconds per Veo3 generation:
-   - HOOK SCENE (Scene 1): 8s — MOST spectacular, impossible-to-ignore Netflix opening shot
-   - Action/transition: 5-6s
-   - Emotional/descriptive: 7-8s
+1. DYNAMIC SCENE DURATION: Veo3 generates 4, 6, or 8 second clips:
+   - HOOK SCENE (Scene 1): 8s — MOST spectacular, impossible-to-ignore opening shot
+   - Action/transition scenes: 6s — fast-paced, energetic
+   - Emotional/descriptive scenes: 8s — lingering, atmospheric
+   - Quick cuts/pattern interrupts: 4s — sharp visual change
    - Calculate startTime/endTime cumulatively
 
-2. SCENE 1 = HOOK: Must be the single most visually arresting shot. Use: extreme close-up rack focus reveal, dramatic volumetric lighting, atmospheric particles (dust/embers/rain), anamorphic bokeh, cinematic lens flare. Add "HOOK SCENE" prefix.
+2. SCENE 1 = HOOK (MAGNETIC HOOK FORMULA): Must combine:
+   - MYSTERY (what is this?) — partial reveal, obscured subject
+   - SCALE (epic/impossible) — massive landscape, extreme macro
+   - MOTION (dynamic camera) — dolly, crane, or drone movement
+   - DETAIL (micro-textures that prove quality) — pores, dust, water droplets
+   Prefix with "HOOK SCENE —"
 
-3. PROMPT LENGTH: 100-200 words. Use professional film terminology Veo3 understands: dolly, steadicam, crane, rack focus, Dutch angle, push-in, pull-out, orbit.
+3. PROMPT LENGTH: 100-200 words. Use EXACT professional film terminology that Veo3 understands best:
+   Camera: dolly-in, tracking shot, crane shot, steadicam, slow pan, orbit shot, push-in, pull-out, rack focus, Dutch angle, POV, handheld
+   Lens: 24mm wide, 35mm, 50mm, 85mm portrait, 135mm telephoto, anamorphic
+   Lighting: golden hour, Rembrandt, butterfly, split, rim/edge, volumetric/god rays, chiaroscuro, practical lights, neon glow
 
-4. LENS SPECIFICATION: Every prompt must specify exact lens (24mm, 35mm, 50mm, 85mm, 135mm, or anamorphic).
+4. MULTI-MOMENT TECHNIQUE: For scenes requiring visual variety within 8 seconds, describe 2-3 visual moments with natural transitions:
+   - Use connectors: "seamlessly transforms into", "camera pushes through into", "rack focus pulls to reveal"
+   - First moment: 2-3s (hook/setup)
+   - Transition: 1s (natural, not jarring)
+   - Final moment: most impactful payoff
+   - Maintain color palette continuity across moments
 
-5. LIGHTING: Every prompt must specify exact lighting setup (golden hour, Rembrandt, butterfly, split, rim, volumetric, chiaroscuro, practical).
+5. ANTI-AI REALISM (include in every prompt): natural skin pores and micro-imperfections, asymmetric composition, motion blur (180-degree shutter), lens breathing on focus pulls, chromatic aberration on highlight edges, Kodak Vision3 500T film grain, atmospheric dust particles, subtle camera shake on handheld, cloth wrinkles, environmental wear/age/dirt.
 
-6. ANTI-AI REALISM: Include in every prompt: natural skin pores, asymmetric compositions, motion blur, lens breathing, chromatic aberration, film grain, dust particles, subtle camera shake on handheld, cloth wrinkles, environmental imperfections.
+6. CAMERA VARIETY (STRICT): Never repeat camera angles in consecutive scenes.
+   Mandatory rotation pattern: ECU → Wide → Tracking → Drone/Aerial → MCU → OTS → Crane → POV
+   Use 5+ different shot types across the video.
+   Every 4th scene: mandatory "pattern interrupt" — radically different visual from previous 3.
+   Never 3 consecutive scenes without a human close-up.
 
-7. CAMERA VARIETY: Never repeat camera angles in consecutive scenes. Use 5+ different shot types across the video.
+7. DOPAMINERGIC VISUALS: DOPAMINE = (NOVELTY × BEAUTY × MOTION) / PREDICTABILITY
+   - First 3 seconds of EACH scene must trigger curiosity or dopamine
+   - Each scene must show something the viewer has NEVER seen before
+   - Camera ALWAYS in motion (never static >2s)
+   - Alternate between slow-motion moments and normal speed
+   - Use visual "pattern interrupts" — unexpected angle changes, dramatic reveals, contrast shifts
 
-8. AUDIO DIRECTION: Specify ambient sounds, foley SFX, and music mood. NEVER describe on-screen text or subtitles in audio.
+8. NARRATION-VISUAL SYNC: Each scene's visual MUST directly illustrate the narrated content:
+   - Literal sync: concrete objects mentioned → show them
+   - Metaphorical: abstract concepts → visual metaphors (fear → growing shadows)
+   - Emotional: narration tone → color temperature (sad → cool blues, exciting → warm oranges)
+   - Progressive: escalating tone → camera approaches, colors intensify, scale increases
+   - NEVER show generic visuals disconnected from the narration
 
-9. ALL PROMPTS IN ENGLISH.
+9. AUDIO DIRECTION: Specify ambient sounds, foley SFX, and music mood per scene. NEVER describe on-screen text.
 
-10. QUALITY TAGS: End every visualPrompt (before anti-text block) with: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain, ACES color science"
-
-11. DOPAMINERGIC VISUALS: Apply retention techniques to visuals — first 3 seconds of EACH scene must trigger curiosity or dopamine. Use visual "pattern interrupts" (unexpected angle changes, dramatic reveals, contrast shifts).
-
-12. MAGNETIC HOOK FORMULA: Scene 1 must combine: MYSTERY (what is this?) + SCALE (epic/impossible) + MOTION (dynamic camera) + DETAIL (micro-textures that prove quality).
+10. ALL PROMPTS IN ENGLISH.
 
 ═══ AUTOFLOW FORMAT RULES ═══
 The output will be used in the AutoFlow extension (Frame-to-Video). The visualPrompt becomes the IMAGE prompt (left side of |||) and cameraAngle+lensSpec+lightingSetup+mood become the VIDEO prompt (right side of |||).
@@ -289,10 +322,8 @@ FORMAT: [V1-S#] {visualPrompt} ||| [V1-S#] {camera movement}, {lens}, {lighting}
 - Tags: [V#-S#] where V=video number, S=scene number
 - LEFT of ||| = image generation prompt (the visualPrompt field — describe the STILL frame)
 - RIGHT of ||| = video animation prompt (camera movement, lens spec, lighting, mood — describe HOW to animate the still)
-- The VIDEO prompt (right side) must be CAMERA MOTION focused: dolly-in, tracking shot, crane-up, slow pan, orbit, push-in, pull-out, rack focus, handheld, tilt, steadicam
+- The VIDEO prompt (right side) must be CAMERA MOTION focused
 - NEVER put scene descriptions in the video prompt — only camera/motion/lighting/mood
-- Example: [V1-S1] Neon city skyline in rain, reflective rooftops, dramatic clouds ||| [V1-S1] Cinematic tilt from skyline to street with rainfall streaking across lens.
-- Example: [V1-S2] Close-up data chip in gloved hand, water droplets, amber glow ||| [V1-S2] Macro rack-focus from droplets to glowing chip core.
 ═══════════════════════════════════════`
           },
           {
