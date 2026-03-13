@@ -98,7 +98,6 @@ const Dashboard = () => {
 
   const workflowPercent = Math.round((workflowProgress / workflowTotal) * 100);
 
-  // Smart next actions based on user state
   const getNextActions = () => {
     const actions: { icon: any; label: string; desc: string; path: string; priority: 'alta' | 'média' | 'baixa' }[] = [];
     if (stats.channels === 0) actions.push({ icon: Youtube, label: 'Vincular Canal', desc: 'Conecte seu canal para análise automática', path: '/channels', priority: 'alta' });
@@ -111,24 +110,25 @@ const Dashboard = () => {
   };
 
   const STAT_CARDS = [
-    { label: 'Roteiros', value: stats.scripts, icon: FileText, color: 'text-violet-400' },
-    { label: 'Canais', value: stats.channels, icon: Youtube, color: 'text-red-400' },
-    { label: 'Rastreados', value: stats.trackedChannels, icon: Eye, color: 'text-blue-400' },
-    { label: 'Projetos', value: stats.projects, icon: Target, color: 'text-emerald-400' },
-    { label: 'Títulos', value: stats.titles, icon: Sparkles, color: 'text-amber-400' },
-    { label: 'Análises', value: stats.nicheAnalyses, icon: Brain, color: 'text-primary' },
+    { label: 'Roteiros', value: stats.scripts, icon: FileText, color: 'text-primary' },
+    { label: 'Canais', value: stats.channels, icon: Youtube, color: 'text-destructive' },
+    { label: 'Rastreados', value: stats.trackedChannels, icon: Eye, color: 'text-accent' },
+    { label: 'Projetos', value: stats.projects, icon: Target, color: 'text-chart-2' },
+    { label: 'Títulos', value: stats.titles, icon: Sparkles, color: 'text-chart-3' },
+    { label: 'Análises', value: stats.nicheAnalyses, icon: Brain, color: 'text-chart-4' },
   ];
 
   const QUICK_ACTIONS = [
-    { icon: Youtube, label: 'DubSpy', path: '/search', color: 'from-red-500 to-red-600', desc: 'Espionar canais virais' },
-    { icon: Sparkles, label: 'Títulos Virais', path: '/titles', color: 'from-amber-500 to-orange-500', desc: 'Gerar títulos + SEO' },
-    { icon: FileText, label: 'Roteiros', path: '/scripts', color: 'from-violet-500 to-purple-600', desc: 'Criar roteiro com IA' },
-    { icon: BarChart3, label: 'Niche Explorer', path: '/niches', color: 'from-emerald-500 to-emerald-600', desc: 'Explorar nichos lucrativos' },
-    { icon: Rocket, label: 'Growth Center', path: '/branding', color: 'from-blue-500 to-cyan-500', desc: 'Revenue + Brand Kit' },
-    { icon: Layout, label: 'Workflow', path: '/workflow', color: 'from-pink-500 to-rose-500', desc: 'Pipeline de produção' },
+    { icon: Youtube, label: 'DubSpy', path: '/search', desc: 'Espionar canais virais' },
+    { icon: Sparkles, label: 'Títulos Virais', path: '/titles', desc: 'Gerar títulos + SEO' },
+    { icon: FileText, label: 'Roteiros', path: '/scripts', desc: 'Criar roteiro com IA' },
+    { icon: BarChart3, label: 'Niche Explorer', path: '/niches', desc: 'Explorar nichos lucrativos' },
+    { icon: Rocket, label: 'Growth Center', path: '/branding', desc: 'Revenue + Brand Kit' },
+    { icon: Layout, label: 'Workflow', path: '/workflow', desc: 'Pipeline de produção' },
   ];
 
   const nextActions = getNextActions();
+  const hasAnyActivity = activityData.some(d => d.atividade > 0);
 
   if (loading) {
     return (
@@ -144,10 +144,10 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold font-['Space_Grotesk']">
+            <h1 className="text-2xl sm:text-3xl font-bold font-['Space_Grotesk']">
               Olá, <span className="gradient-text">{displayName}</span> 👋
             </h1>
-            <p className="text-muted-foreground mt-1">Seu hub de crescimento no YouTube — dados reais, ações concretas</p>
+            <p className="text-sm text-muted-foreground mt-1">Seu hub de crescimento no YouTube — dados reais, ações concretas</p>
           </div>
         </div>
 
@@ -155,11 +155,11 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {STAT_CARDS.map((s, i) => (
             <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-              className="glass rounded-xl p-4 flex items-center gap-3">
-              <s.icon className={`w-5 h-5 ${s.color}`} />
-              <div>
+              className="glass rounded-xl p-4 flex items-center gap-3 hover:border-primary/20 transition-colors">
+              <s.icon className={`w-5 h-5 ${s.color} shrink-0`} />
+              <div className="min-w-0">
                 <p className="text-2xl font-bold">{s.value}</p>
-                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{s.label}</p>
               </div>
             </motion.div>
           ))}
@@ -175,7 +175,7 @@ const Dashboard = () => {
             {nextActions.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 className="glass rounded-xl p-5 border border-primary/20">
-                <h3 className="font-semibold flex items-center gap-2 mb-3">
+                <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm">
                   <Lightbulb className="w-4 h-4 text-accent" /> Próximas Ações Recomendadas
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -191,7 +191,7 @@ const Dashboard = () => {
                           <p className="text-sm font-semibold">{action.label}</p>
                           <p className="text-[10px] text-muted-foreground">{action.desc}</p>
                         </div>
-                        <Badge className={`text-[9px] shrink-0 ${action.priority === 'alta' ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+                        <Badge className={`text-[9px] shrink-0 ${action.priority === 'alta' ? 'bg-primary/20 text-primary border-primary/20' : 'bg-secondary text-muted-foreground'}`}>
                           {action.priority}
                         </Badge>
                       </Link>
@@ -205,7 +205,7 @@ const Dashboard = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
               className="glass rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
                   <Rocket className="w-4 h-4 text-primary" /> Production Workflow
                 </h3>
                 <Link to="/workflow">
@@ -223,16 +223,16 @@ const Dashboard = () => {
 
             {/* Channel Summary + Latest Niche */}
             <div className="grid sm:grid-cols-2 gap-4">
-              {channelData && (
+              {channelData ? (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
                   className="glass rounded-xl p-5">
-                  <h3 className="font-semibold flex items-center gap-2 mb-3">
-                    <Youtube className="w-4 h-4 text-red-400" /> Seu Canal
+                  <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm">
+                    <Youtube className="w-4 h-4 text-destructive" /> Seu Canal
                   </h3>
                   <div className="flex items-center gap-3 mb-3">
-                    {channelData.thumbnail && <img src={channelData.thumbnail} className="w-10 h-10 rounded-full" alt="" />}
-                    <div>
-                      <p className="text-sm font-semibold">{channelData.channel_name}</p>
+                    {channelData.thumbnail && <img src={channelData.thumbnail} className="w-10 h-10 rounded-full object-cover" alt={channelData.channel_name} />}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{channelData.channel_name}</p>
                       <p className="text-[10px] text-muted-foreground">{channelData.niche || 'Nicho não detectado'}</p>
                     </div>
                   </div>
@@ -250,24 +250,36 @@ const Dashboard = () => {
                       <p className="text-[9px] text-muted-foreground">Vídeos</p>
                     </div>
                   </div>
-                  <Link to="/channels" className="text-[10px] text-primary hover:underline mt-2 block">Ver detalhes →</Link>
+                  <Link to="/channels" className="text-[10px] text-primary hover:underline mt-3 block">Ver detalhes →</Link>
+                </motion.div>
+              ) : (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                  className="glass rounded-xl p-5 flex flex-col items-center justify-center text-center min-h-[180px]">
+                  <Youtube className="w-8 h-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Nenhum canal vinculado</p>
+                  <p className="text-[10px] text-muted-foreground/60 mb-3">Vincule seu canal para ver métricas aqui</p>
+                  <Link to="/channels">
+                    <Button size="sm" variant="outline" className="text-xs gap-1">
+                      <Youtube className="w-3 h-3" /> Vincular Canal
+                    </Button>
+                  </Link>
                 </motion.div>
               )}
 
-              {latestNiche && (
+              {latestNiche ? (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }}
                   className="glass rounded-xl p-5">
-                  <h3 className="font-semibold flex items-center gap-2 mb-3">
+                  <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm">
                     <Brain className="w-4 h-4 text-primary" /> Última Análise de Nicho
                   </h3>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black ${
-                      latestNiche.score >= 75 ? 'bg-emerald-500/20 text-emerald-400' : latestNiche.score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-destructive/20 text-destructive'
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black shrink-0 ${
+                      latestNiche.score >= 75 ? 'bg-chart-2/20 text-chart-2' : latestNiche.score >= 50 ? 'bg-chart-3/20 text-chart-3' : 'bg-destructive/20 text-destructive'
                     }`}>
                       {latestNiche.score}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold capitalize">{latestNiche.niche}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold capitalize truncate">{latestNiche.niche}</p>
                       <p className="text-[10px] text-muted-foreground">{latestNiche.country} · {new Date(latestNiche.created_at).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
@@ -279,14 +291,26 @@ const Dashboard = () => {
                   )}
                   <Link to="/niches" className="text-[10px] text-primary hover:underline mt-2 block">Ver análise completa →</Link>
                 </motion.div>
+              ) : (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }}
+                  className="glass rounded-xl p-5 flex flex-col items-center justify-center text-center min-h-[180px]">
+                  <Brain className="w-8 h-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Nenhuma análise de nicho</p>
+                  <p className="text-[10px] text-muted-foreground/60 mb-3">Explore nichos para encontrar oportunidades</p>
+                  <Link to="/niches">
+                    <Button size="sm" variant="outline" className="text-xs gap-1">
+                      <Brain className="w-3 h-3" /> Explorar Nichos
+                    </Button>
+                  </Link>
+                </motion.div>
               )}
             </div>
 
-            {/* Activity Chart */}
-            {activityData.length > 0 && (
+            {/* Activity Chart — only show if there's actual data */}
+            {hasAnyActivity && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="glass rounded-xl p-5">
-                <h3 className="font-semibold flex items-center gap-2 mb-3">
+                <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm">
                   <BarChart3 className="w-4 h-4 text-muted-foreground" /> Atividade — Últimos 30 dias
                 </h3>
                 <ResponsiveContainer width="100%" height={120}>
@@ -311,7 +335,7 @@ const Dashboard = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
               className="glass rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-muted-foreground" /> Atividade Recente
                 </h3>
                 <Link to="/scripts" className="text-xs text-primary hover:underline">Ver todos</Link>
@@ -320,12 +344,12 @@ const Dashboard = () => {
                 <div className="space-y-2">
                   {recentScripts.map((s) => (
                     <div key={s.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-violet-400 shrink-0" />
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="w-4 h-4 text-primary shrink-0" />
                         <p className="text-sm truncate">{s.topic}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {s.style && <Badge variant="secondary" className="text-[10px]">{s.style}</Badge>}
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        {s.style && <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">{s.style}</Badge>}
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                           {new Date(s.created_at).toLocaleDateString('pt-BR')}
                         </span>
@@ -334,10 +358,11 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum roteiro criado ainda.{' '}
-                  <Link to="/scripts" className="text-primary hover:underline">Criar primeiro roteiro →</Link>
-                </p>
+                <div className="text-center py-6">
+                  <FileText className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground mb-1">Nenhum roteiro criado ainda</p>
+                  <Link to="/scripts" className="text-xs text-primary hover:underline">Criar primeiro roteiro →</Link>
+                </div>
               )}
             </motion.div>
           </div>
@@ -345,14 +370,14 @@ const Dashboard = () => {
           {/* Right: Quick Actions */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
             className="space-y-3">
-            <h3 className="font-semibold flex items-center gap-2">
+            <h3 className="font-semibold flex items-center gap-2 text-sm">
               <Zap className="w-4 h-4 text-primary" /> Ações Rápidas
             </h3>
             {QUICK_ACTIONS.map((card, i) => (
               <motion.div key={card.path} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.04 }}>
                 <Link to={card.path} className="glass rounded-xl p-4 flex items-center gap-3 hover:border-primary/30 transition-all group block">
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center shrink-0`}>
-                    <card.icon className="w-5 h-5 text-primary-foreground" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <card.icon className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold">{card.label}</p>
@@ -382,7 +407,7 @@ const Dashboard = () => {
 
         {/* Pro Tip */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="glass rounded-xl p-4 border-accent/20 flex items-start gap-3">
+          className="glass rounded-xl p-4 border border-accent/20 flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center shrink-0">
             <DollarSign className="w-4 h-4 text-accent" />
           </div>
@@ -397,7 +422,7 @@ const Dashboard = () => {
 
         {/* Infrastructure Monitoring */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-          className="bg-card border border-border rounded-xl p-5">
+          className="glass rounded-xl p-5">
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" /> Infraestrutura & Monitoramento
           </h3>
