@@ -454,7 +454,7 @@ export const ScriptGenerator = ({
           // Re-score
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
           const { data: reScoreData } = await supabase.functions.invoke('score-script', {
-            body: { script: improvedText.slice(0, 12000), niche, style, language, topic },
+            body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
           });
           
           if (reScoreData) {
