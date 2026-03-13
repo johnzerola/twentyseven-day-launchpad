@@ -338,7 +338,7 @@ ${ytVideosBlock}
 
 ═══ WEB RESEARCH (Brave Search - ${(braveResults as any[]).length} results${isCreativeStyle ? ' — SKIPPED for creative style' : ''}) ═══
 ${(braveResults as any[]).length > 0 
-  ? (braveResults as any[]).map((r: any, i: number) => \`\${i + 1}. "\${r.title}" — \${r.description || ''} (\${r.url})\`).join('\n')
+  ? (braveResults as any[]).map((r: any, i: number) => `${i + 1}. "${r.title}" — ${r.description || ''} (${r.url})`).join('\n')
   : isCreativeStyle ? 'Skipped — creative/narrative style does not need factual web research' : 'No web results available'}
 
 CRITICAL RULES:
@@ -352,7 +352,7 @@ CRITICAL RULES:
 - Base visual suggestions on what dominates this niche visually
 - Be specific, actionable, data-backed
 ${isCreativeStyle ? '- This is a CREATIVE/NARRATIVE style — prioritize storytelling analysis over factual accuracy\n- Focus on what makes similar STORIES/THEORIES/MYTHS go viral, not fact-checking' : ''}
-- Language: \${language || 'português'}\`
+- Language: ${language || 'português'}`
           },
           {
             role: "user",
