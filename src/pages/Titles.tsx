@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, ArrowRight } from 'lucide-react';
+import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface TitleSuggestion {
   title: string;
   style: string;
   estimatedCTR: number;
+  hook_used?: string;
+  psychological_trigger?: string;
+  liked?: boolean;
 }
 
 interface ABResult {
@@ -28,13 +32,35 @@ interface SEODescription {
   keywords: string[];
 }
 
-const STYLE_COLORS: Record<string, string> = {
-  curiosidade: 'bg-primary/20 text-primary',
-  urgência: 'bg-destructive/20 text-destructive',
-  números: 'bg-accent/20 text-accent',
-  contraintuitivo: 'bg-yellow-500/20 text-yellow-400',
-  storytelling: 'bg-emerald-500/20 text-emerald-400',
-  polêmica: 'bg-pink-500/20 text-pink-400',
+const LANGUAGES = [
+  { value: '', label: 'Auto-detectar' },
+  { value: 'pt', label: '🇧🇷 Português' },
+  { value: 'en', label: '🇺🇸 English' },
+  { value: 'es', label: '🇪🇸 Español' },
+  { value: 'fr', label: '🇫🇷 Français' },
+  { value: 'de', label: '🇩🇪 Deutsch' },
+  { value: 'it', label: '🇮🇹 Italiano' },
+  { value: 'pl', label: '🇵🇱 Polski' },
+  { value: 'ko', label: '🇰🇷 한국어' },
+  { value: 'ar', label: '🇸🇦 العربية' },
+];
+
+// Dynamic color generation for styles
+const getStyleColor = (style: string): string => {
+  const hash = style.split('').reduce((acc, c) => c.charCodeAt(0) + ((acc << 5) - acc), 0);
+  const colors = [
+    'bg-primary/20 text-primary',
+    'bg-destructive/20 text-destructive',
+    'bg-yellow-500/20 text-yellow-400',
+    'bg-emerald-500/20 text-emerald-400',
+    'bg-pink-500/20 text-pink-400',
+    'bg-cyan-500/20 text-cyan-400',
+    'bg-violet-500/20 text-violet-400',
+    'bg-orange-500/20 text-orange-400',
+    'bg-rose-500/20 text-rose-400',
+    'bg-teal-500/20 text-teal-400',
+  ];
+  return colors[Math.abs(hash) % colors.length];
 };
 
 type ActiveTab = 'generate' | 'ab-test' | 'seo-desc';
@@ -45,6 +71,7 @@ const Titles = () => {
   // Generate tab
   const [niche, setNiche] = useState('');
   const [topic, setTopic] = useState('');
+  const [language, setLanguage] = useState('');
   const [loading, setLoading] = useState(false);
   const [titles, setTitles] = useState<TitleSuggestion[]>([]);
 
@@ -60,7 +87,6 @@ const Titles = () => {
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoResult, setSeoResult] = useState<SEODescription | null>(null);
 
-  // Load saved data on mount
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -93,18 +119,29 @@ const Titles = () => {
     } as any);
   };
 
+  // Learning feedback — fires when user likes/copies a title
+  const saveLearn = async (title: TitleSuggestion, action: 'chosen' | 'copied') => {
+    try {
+      await supabase.functions.invoke('generate-titles', {
+        body: { type: 'learn', title: title.title, style: title.style, ctr: title.estimatedCTR, niche, action },
+      });
+    } catch { /* non-blocking */ }
+  };
+
   const generateTitles = async () => {
     if (!niche.trim() && !topic.trim()) return toast.error('Preencha nicho ou tema');
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-titles', {
-        body: { niche, topic, type: 'generate' },
+        body: { niche, topic, language, type: 'generate' },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setTitles(data?.titles || []);
-      if (data?.titles?.length) {
-        await saveTitles(data.titles, topic, niche);
+      const generated = (data?.titles || []).map((t: any) => ({ ...t, liked: false }));
+      setTitles(generated);
+      if (generated.length) {
+        await saveTitles(generated, topic, niche);
+        toast.success(`${generated.length} títulos gerados!`);
       } else {
         toast.info('Nenhum título gerado');
       }
@@ -115,13 +152,24 @@ const Titles = () => {
     }
   };
 
+  const toggleLike = (index: number) => {
+    setTitles(prev => prev.map((t, i) => {
+      if (i === index) {
+        const liked = !t.liked;
+        if (liked) saveLearn(t, 'chosen');
+        return { ...t, liked };
+      }
+      return t;
+    }));
+  };
+
   const runABTest = async () => {
     if (!titleA.trim() || !titleB.trim()) return toast.error('Preencha ambos os títulos');
     setAbLoading(true);
     setAbResult(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-titles', {
-        body: { type: 'ab-test', titleA, titleB },
+        body: { type: 'ab-test', titleA, titleB, language },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -139,7 +187,7 @@ const Titles = () => {
     setSeoResult(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-titles', {
-        body: { type: 'seo-description', title: seoTitle, niche: seoNiche },
+        body: { type: 'seo-description', title: seoTitle, niche: seoNiche, language },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -151,9 +199,10 @@ const Titles = () => {
     }
   };
 
-  const copyTitle = (title: string) => {
+  const copyTitle = (title: string, titleObj?: TitleSuggestion) => {
     navigator.clipboard.writeText(title);
     toast.success('Copiado!');
+    if (titleObj) saveLearn(titleObj, 'copied');
   };
 
   const TABS = [
@@ -161,6 +210,8 @@ const Titles = () => {
     { id: 'ab-test' as const, label: 'A/B Tester', icon: FlaskConical },
     { id: 'seo-desc' as const, label: 'Descrição SEO', icon: FileText },
   ];
+
+  const avgCTR = titles.length ? (titles.reduce((a, t) => a + t.estimatedCTR, 0) / titles.length).toFixed(1) : '0';
 
   return (
     <DashboardLayout>
@@ -171,7 +222,7 @@ const Titles = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold font-['Space_Grotesk']">Títulos Virais & SEO</h1>
-            <p className="text-sm text-muted-foreground">Títulos, A/B testing e descrições SEO otimizadas</p>
+            <p className="text-sm text-muted-foreground">Títulos com CTR 15-30%, A/B testing e descrições SEO</p>
           </div>
         </div>
 
@@ -194,7 +245,7 @@ const Titles = () => {
         {activeTab === 'generate' && (
           <>
             <div className="glass rounded-xl p-5 space-y-4">
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Nicho</label>
                   <Input placeholder="Ex: finanças, gaming, horror..." value={niche}
@@ -206,10 +257,23 @@ const Titles = () => {
                     onChange={e => setTopic(e.target.value)} className="bg-secondary/50"
                     onKeyDown={e => e.key === 'Enter' && generateTitles()} />
                 </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <Globe className="w-3 h-3" /> Idioma / País
+                  </label>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="bg-secondary/50"><SelectValue placeholder="Auto-detectar" /></SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map(l => (
+                        <SelectItem key={l.value} value={l.value || '_auto'}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button onClick={generateTitles} disabled={loading} className="gradient-hero border-0 gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {loading ? 'Gerando 20 títulos...' : 'Gerar Títulos Virais'}
+                {loading ? 'Gerando 20 títulos virais...' : 'Gerar Títulos (CTR 15-30%)'}
               </Button>
             </div>
 
@@ -217,7 +281,7 @@ const Titles = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" /> {titles.length} Títulos Gerados
+                    <TrendingUp className="w-4 h-4 text-primary" /> {titles.length} Títulos — CTR Médio: {avgCTR}%
                   </h2>
                   <Button variant="outline" size="sm" onClick={() => {
                     navigator.clipboard.writeText(titles.map(t => t.title).join('\n'));
@@ -227,21 +291,30 @@ const Titles = () => {
                   </Button>
                 </div>
                 <div className="grid gap-2">
-                  {titles.map((t, i) => (
+                  {titles.sort((a, b) => b.estimatedCTR - a.estimatedCTR).map((t, i) => (
                     <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.03 }}
                       className="glass rounded-lg p-4 flex items-center gap-3 group hover:border-primary/30 transition-all">
                       <span className="text-lg font-bold text-muted-foreground w-6">#{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{t.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge className={`text-[10px] ${STYLE_COLORS[t.style] || 'bg-secondary text-secondary-foreground'}`}>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge className={`text-[10px] ${getStyleColor(t.style)}`}>
                             {t.style}
                           </Badge>
-                          <span className="text-[10px] text-muted-foreground">CTR estimado: {t.estimatedCTR}%</span>
+                          <span className={`text-[10px] font-bold ${t.estimatedCTR >= 20 ? 'text-emerald-400' : t.estimatedCTR >= 15 ? 'text-yellow-400' : 'text-muted-foreground'}`}>
+                            CTR: {t.estimatedCTR}%
+                          </span>
+                          {t.psychological_trigger && (
+                            <Badge variant="secondary" className="text-[9px]">🧠 {t.psychological_trigger}</Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => toggleLike(i)}
+                          className={`transition-all ${t.liked ? 'text-rose-400' : 'opacity-0 group-hover:opacity-100 text-muted-foreground'}`}>
+                          <Heart className={`w-3 h-3 ${t.liked ? 'fill-rose-400' : ''}`} />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => { setTitleA(t.title); setActiveTab('ab-test'); }}
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] px-2" title="Testar A/B">
                           <FlaskConical className="w-3 h-3" />
@@ -250,7 +323,7 @@ const Titles = () => {
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] px-2" title="Gerar SEO">
                           <FileText className="w-3 h-3" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => copyTitle(t.title)}
+                        <Button variant="ghost" size="sm" onClick={() => copyTitle(t.title, t)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <Copy className="w-3 h-3" />
                         </Button>
@@ -274,7 +347,7 @@ const Titles = () => {
         {activeTab === 'ab-test' && (
           <>
             <div className="glass rounded-xl p-5 space-y-4">
-              <p className="text-sm text-muted-foreground">Compare dois títulos lado a lado — a IA analisa CTR, gatilhos emocionais, SEO e comprimento ideal.</p>
+              <p className="text-sm text-muted-foreground">Compare dois títulos — a IA analisa CTR, gatilhos emocionais, SEO e comprimento ideal.</p>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Título A</label>
