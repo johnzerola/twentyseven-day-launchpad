@@ -223,7 +223,13 @@ export const ScriptGenerator = ({
 
         setDraftScript(cleanAll(rawDraft));
         setPhaseLabel('');
-        toast.success('📱 Short pronto! Revise e clique em "Próxima Etapa".');
+
+        // Shorts auto-skip refinement → go straight to scoring
+        toast.success('📱 Short pronto! Avaliando automaticamente...');
+        setScript(cleanAll(rawDraft));
+        setGenerating(false);
+        setLoading(false);
+        await runStep3_DualScoreWithText(cleanAll(rawDraft));
       } else {
         setPhaseLabel('🔍 Analisando inteligência competitiva...');
         let briefing = null;
