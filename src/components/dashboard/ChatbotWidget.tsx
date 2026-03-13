@@ -165,7 +165,7 @@ export const ChatbotWidget = () => {
 
   const loadConversation = (convo: any) => {
     setConversationId(convo.id);
-    setMessages(convo.messages as Msg[]);
+    setMessages(convo.messages as unknown as Msg[]);
     setShowHistory(false);
     setOnboarding({ step: 'idle' });
   };
