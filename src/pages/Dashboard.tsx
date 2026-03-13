@@ -5,6 +5,7 @@ import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
 import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashboard';
 import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
 import { ScriptPerformanceHistory } from '@/components/dashboard/ScriptPerformanceHistory';
+import { DailyPlanner } from '@/components/dashboard/DailyPlanner';
 import { DashboardSkeleton } from '@/components/PageSkeletons';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
