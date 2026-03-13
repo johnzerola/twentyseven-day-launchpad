@@ -244,8 +244,9 @@ const Scripts = () => {
   const pipelineSteps = [
     { key: 'script', label: '1. Roteiro', icon: FileText, done: !!script },
     { key: 'style', label: '2. Estilo Visual', icon: Film, done: !!videoStyle && activeStep !== 'script' },
-    { key: 'characters', label: '3. Personagens', icon: Users, done: characters.length > 0 || activeStep === 'prompts' },
-    { key: 'prompts', label: '4. Prompts Visuais', icon: Image, done: syncedScenes.length > 0 },
+    { key: 'characters', label: '3. Personagens', icon: Users, done: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles' },
+    { key: 'prompts', label: '4. Cenas', icon: Image, done: syncedScenes.length > 0 },
+    { key: 'titles', label: '5. Títulos & SEO', icon: Sparkles, done: false },
   ] as const;
 
   return (
