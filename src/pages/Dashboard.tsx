@@ -168,6 +168,9 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* Daily Planner */}
+        <DailyPlanner />
+
         {/* Productivity Dashboard */}
         <ProductivityDashboard />
 

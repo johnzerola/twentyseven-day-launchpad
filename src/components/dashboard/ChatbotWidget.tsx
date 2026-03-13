@@ -566,22 +566,38 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
 
   return (
     <>
+      {/* Proactive Nudge Bubble */}
+      <AnimatePresence>
+        {!open && proactiveNudge && (
+          <motion.div initial={{ opacity: 0, y: 10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            className="fixed bottom-24 right-6 z-50 max-w-[260px] bg-card border border-primary/20 rounded-xl p-3 shadow-xl cursor-pointer"
+            onClick={() => { setOpen(true); setProactiveNudge(null); setPulseVisible(false); }}>
+            <p className="text-xs text-foreground leading-relaxed">{proactiveNudge}</p>
+            <p className="text-[9px] text-primary mt-1 font-medium">Clique para conversar →</p>
+            <button onClick={e => { e.stopPropagation(); setProactiveNudge(null); }}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground hover:text-foreground">
+              <X className="w-3 h-3" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating Button */}
       <AnimatePresence>
         {!open && (
           <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-            onClick={() => { setOpen(true); setPulseVisible(false); setTimeout(() => inputRef.current?.focus(), 300); }}
+            onClick={() => { setOpen(true); setPulseVisible(false); setProactiveNudge(null); setTimeout(() => inputRef.current?.focus(), 300); }}
             className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full gradient-hero flex items-center justify-center shadow-2xl hover:scale-105 transition-transform group">
             <Bot className="w-6 h-6 text-primary-foreground" />
-            {!hasSeenOnboarding && pulseVisible && (
+            {(!hasSeenOnboarding && pulseVisible) || proactiveNudge ? (
               <span className="absolute -top-1 -right-1 flex h-5 w-5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-2 opacity-75" />
                 <span className="relative inline-flex rounded-full h-5 w-5 bg-chart-2 items-center justify-center text-[9px] font-bold text-primary-foreground">!</span>
               </span>
-            )}
-            {hasSeenOnboarding && (
+            ) : hasSeenOnboarding ? (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-chart-2 rounded-full border-2 border-background" />
-            )}
+            ) : null}
           </motion.button>
         )}
       </AnimatePresence>
