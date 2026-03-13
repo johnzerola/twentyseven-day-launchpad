@@ -85,7 +85,7 @@ const Dashboard = () => {
         const d = new Date(); d.setDate(d.getDate() - i);
         days[d.toISOString().slice(5, 10)] = 0;
       }
-      allScripts.forEach((s: any) => {
+      scriptsFor30d.forEach((s: any) => {
         const key = new Date(s.created_at).toISOString().slice(5, 10);
         if (days[key] !== undefined) days[key]++;
       });
