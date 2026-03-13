@@ -382,7 +382,7 @@ export const ScriptGenerator = ({
 
     try {
       const { data, error } = await supabase.functions.invoke('score-script', {
-        body: { script: textToScore.slice(0, 12000), niche, style, language, topic },
+        body: { script: textToScore.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
       });
 
       if (error) throw new Error(error.message || 'Erro na avaliação');
