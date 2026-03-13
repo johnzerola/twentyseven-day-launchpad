@@ -32,7 +32,7 @@ serve(async (req) => {
     
     // Resolve channel URL to ID if needed
     if (!resolvedChannelId && channel_url) {
-      const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2");
+      const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
       if (!YT_KEY) throw new Error("YouTube API key not configured");
       
       // Try handle, username, or channel ID from URL
@@ -58,7 +58,8 @@ serve(async (req) => {
     
     const YT_KEY = Deno.env.get("YOUTUBE_API_KEY");
     const YT_KEY_2 = Deno.env.get("YOUTUBE_API_KEY_2");
-    if (!YT_KEY && !YT_KEY_2) throw new Error("YouTube API key not configured");
+    const YT_KEY_3 = Deno.env.get("YOUTUBE_API_KEY_3");
+    if (!YT_KEY && !YT_KEY_2 && !YT_KEY_3) throw new Error("YouTube API key not configured");
     
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -73,7 +74,7 @@ serve(async (req) => {
     }
 
     // Fetch channel info
-    const apiKey = YT_KEY || YT_KEY_2!;
+    const apiKey = YT_KEY || YT_KEY_2 || YT_KEY_3!;
     const channelRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${resolvedChannelId}&key=${apiKey}`
     );
@@ -104,14 +105,20 @@ serve(async (req) => {
       
       const plRes = await fetch(plUrl);
       if (!plRes.ok) {
-        // Try backup key
-        if (YT_KEY_2 && apiKey === YT_KEY) {
-          const plRes2 = await fetch(plUrl.replace(apiKey, YT_KEY_2));
-          if (!plRes2.ok) break;
-          const plData2 = await plRes2.json();
-          allVideos.push(...(plData2.items || []).map((i: any) => i.contentDetails.videoId));
-          nextPageToken = plData2.nextPageToken || "";
-        } else break;
+        // Try backup keys
+        const backupKeys = [YT_KEY_2, YT_KEY_3].filter(k => k && k !== apiKey);
+        let resolved = false;
+        for (const bk of backupKeys) {
+          const plRes2 = await fetch(plUrl.replace(apiKey, bk!));
+          if (plRes2.ok) {
+            const plData2 = await plRes2.json();
+            allVideos.push(...(plData2.items || []).map((i: any) => i.contentDetails.videoId));
+            nextPageToken = plData2.nextPageToken || "";
+            resolved = true;
+            break;
+          }
+        }
+        if (!resolved) break;
       } else {
         const plData = await plRes.json();
         allVideos.push(...(plData.items || []).map((i: any) => i.contentDetails.videoId));

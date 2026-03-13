@@ -163,7 +163,7 @@ serve(async (req) => {
     // ========== GENERATE TITLES (UPGRADED) ==========
     if (type === "generate") {
       const { niche, topic, language, country, scriptContext } = body;
-      const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+      const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
 
       // Script context block
       let scriptContextBlock = '';

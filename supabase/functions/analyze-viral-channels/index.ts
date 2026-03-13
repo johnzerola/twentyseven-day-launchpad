@@ -10,12 +10,11 @@ let _ytKeys: string[] = [];
 let _currentKeyIndex = 0;
 
 function getYouTubeKeys(): string[] {
-  const keys: string[] = [];
-  const k1 = Deno.env.get("YOUTUBE_API_KEY");
-  const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
-  if (k1) keys.push(k1);
-  if (k2) keys.push(k2);
-  return keys;
+  return [
+    Deno.env.get("YOUTUBE_API_KEY"),
+    Deno.env.get("YOUTUBE_API_KEY_2"),
+    Deno.env.get("YOUTUBE_API_KEY_3"),
+  ].filter(Boolean) as string[];
 }
 
 function getCurrentKey(): string {

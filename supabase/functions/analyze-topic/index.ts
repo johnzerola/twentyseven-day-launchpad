@@ -12,7 +12,7 @@ serve(async (req) => {
   try {
     const { topic, niche, style, language } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
+    const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!topic?.trim()) throw new Error("Topic is required");
 

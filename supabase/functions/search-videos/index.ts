@@ -19,12 +19,11 @@ function parseYouTubeInput(input: string): { type: 'channel_id' | 'handle' | 'vi
 }
 
 function getYouTubeKeys(): string[] {
-  const keys: string[] = [];
-  const k1 = Deno.env.get("YOUTUBE_API_KEY");
-  const k2 = Deno.env.get("YOUTUBE_API_KEY_2");
-  if (k1) keys.push(k1);
-  if (k2) keys.push(k2);
-  return keys;
+  return [
+    Deno.env.get("YOUTUBE_API_KEY"),
+    Deno.env.get("YOUTUBE_API_KEY_2"),
+    Deno.env.get("YOUTUBE_API_KEY_3"),
+  ].filter(Boolean) as string[];
 }
 
 let _ytKeys: string[] = [];
