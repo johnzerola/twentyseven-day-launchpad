@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
 import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
+import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashboard';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -159,6 +160,9 @@ const Dashboard = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Productivity Dashboard */}
+        <ProductivityDashboard />
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left column */}
