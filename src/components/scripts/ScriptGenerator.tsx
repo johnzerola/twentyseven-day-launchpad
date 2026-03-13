@@ -268,7 +268,7 @@ export const ScriptGenerator = ({
 
   // ═══════ STEP 2: Refine with Gemini Pro ═══════
   const runStep2_Refine = async (rejectionFeedback?: any) => {
-    if (generating) return;
+    if (generating || !canClick()) return;
     setGenerating(true);
     setLoading(true);
     setScript('');
