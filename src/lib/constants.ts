@@ -220,6 +220,19 @@ export const COUNTRY_LANGUAGE: Record<string, string> = {
   VN: 'vi', NG: 'en', ZA: 'en',
 };
 
+/** Video content types */
+export type VideoType = 'long' | 'short';
+
+export const VIDEO_TYPES = [
+  { value: 'long' as const, label: '📺 Vídeo Longo', desc: 'Conteúdo longform (8-60 min)', icon: '📺' },
+  { value: 'short' as const, label: '📱 Short', desc: 'Conteúdo vertical (15-60s)', icon: '📱' },
+] as const;
+
+export const VIDEO_TYPE_DEFAULTS: Record<VideoType, { minDuration: number; maxDuration: number; defaultDuration: number; aspectRatio: string }> = {
+  long: { minDuration: 8, maxDuration: 60, defaultDuration: 15, aspectRatio: '16:9' },
+  short: { minDuration: 15, maxDuration: 60, defaultDuration: 45, aspectRatio: '9:16' },
+};
+
 /** Growth curve: monthly view multiplier for months 1-12 (faceless channel avg) */
 export const GROWTH_CURVE = [0.05, 0.1, 0.18, 0.3, 0.45, 0.6, 0.72, 0.82, 0.88, 0.93, 0.97, 1.0] as const;
 

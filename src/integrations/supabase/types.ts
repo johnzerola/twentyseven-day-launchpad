@@ -523,6 +523,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          video_type: Database["public"]["Enums"]["video_type"]
         }
         Insert: {
           channel_id?: string | null
@@ -544,6 +545,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id: string
+          video_type?: Database["public"]["Enums"]["video_type"]
         }
         Update: {
           channel_id?: string | null
@@ -565,6 +567,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          video_type?: Database["public"]["Enums"]["video_type"]
         }
         Relationships: [
           {
@@ -1256,6 +1259,7 @@ export type Database = {
           style: string | null
           topic: string
           user_id: string
+          video_type: Database["public"]["Enums"]["video_type"]
         }
         Insert: {
           created_at?: string
@@ -1265,6 +1269,7 @@ export type Database = {
           style?: string | null
           topic: string
           user_id: string
+          video_type?: Database["public"]["Enums"]["video_type"]
         }
         Update: {
           created_at?: string
@@ -1274,6 +1279,7 @@ export type Database = {
           style?: string | null
           topic?: string
           user_id?: string
+          video_type?: Database["public"]["Enums"]["video_type"]
         }
         Relationships: []
       }
@@ -1929,6 +1935,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          video_type: Database["public"]["Enums"]["video_type"]
         }
         Insert: {
           channel_id?: string | null
@@ -1943,6 +1950,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id: string
+          video_type?: Database["public"]["Enums"]["video_type"]
         }
         Update: {
           channel_id?: string | null
@@ -1957,6 +1965,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          video_type?: Database["public"]["Enums"]["video_type"]
         }
         Relationships: []
       }
@@ -2226,6 +2235,7 @@ export type Database = {
     }
     Enums: {
       subscription_tier: "starter" | "pro" | "full"
+      video_type: "long" | "short"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2354,6 +2364,7 @@ export const Constants = {
   public: {
     Enums: {
       subscription_tier: ["starter", "pro", "full"],
+      video_type: ["long", "short"],
     },
   },
 } as const
