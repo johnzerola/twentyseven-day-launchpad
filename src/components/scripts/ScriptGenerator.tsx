@@ -50,6 +50,8 @@ interface ScriptGeneratorProps {
   setIntelligenceBriefing: (v: any) => void;
   setSceneBlueprintJson: (v: any[]) => void;
   onScriptGenerated?: () => void;
+  videoType: VideoType;
+  setVideoType: (v: VideoType) => void;
 }
 
 const SPEECH_RATES: Record<string, number> = {
