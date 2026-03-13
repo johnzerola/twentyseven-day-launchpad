@@ -21,12 +21,17 @@ serve(async (req) => {
     const styleLC = (style || '').toLowerCase();
     const topicLC = topic.toLowerCase();
 
+    // Styles where Brave web search would HURT creativity (fiction, theories, personal stories)
+    const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
+    const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
+
     // ========== Parallel: DB queries + YouTube + Brave Search ==========
+    // YouTube is ALWAYS useful — even for creative styles, we learn from successful videos
     const youtubeSearchPromise = YOUTUBE_API_KEY ? searchYouTubeVideos(YOUTUBE_API_KEY, topic, niche) : Promise.resolve([]);
     
-    // Brave Search RAG - fetch real web context
+    // Brave Search RAG — SKIP for creative styles (conspiração, mitologia, etc.)
     const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
-    const braveSearchPromise = BRAVE_API_KEY ? (async () => {
+    const braveSearchPromise = (BRAVE_API_KEY && !isCreativeStyle) ? (async () => {
       // Check cache first
       const cacheKey = `brave:analyze:${topic}:${niche || ''}`;
       const { data: cached } = await sb.from("research_cache")
@@ -44,7 +49,7 @@ serve(async (req) => {
         const results = (data.web?.results || []).slice(0, 8).map((r: any) => ({
           title: r.title, url: r.url, description: r.description,
         }));
-        // Cache 48h (validation mode: stretch Brave budget)
+        // Cache 48h
         await sb.from("research_cache").upsert({
           cache_key: cacheKey, source: "brave", result_json: { results },
           expires_at: new Date(Date.now() + 48 * 3600000).toISOString(),
@@ -52,6 +57,10 @@ serve(async (req) => {
         return results;
       } catch (e) { console.warn("Brave Search error:", e); return []; }
     })() : Promise.resolve([]);
+    
+    if (isCreativeStyle) {
+      console.log(`Skipping Brave Search for creative style "${style}" — YouTube analysis only`);
+    }
 
     const [channelsRes, sceneKnowledgeRes, scriptKnowledgeRes, ytKnowledgeRes, youtubeVideos, braveResults] = await Promise.all([
       sb.from("channel_intelligence")
