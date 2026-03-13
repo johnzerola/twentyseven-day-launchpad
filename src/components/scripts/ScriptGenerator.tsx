@@ -112,6 +112,45 @@ export const ScriptGenerator = ({
     return true;
   }, []);
 
+  // ═══════ SUGGESTION BANK (from Dotti) ═══════
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  useEffect(() => {
+    const loadSuggestions = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setLoadingSuggestions(true);
+      const { data } = await supabase
+        .from('dotti_suggestions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      setSuggestions((data as any[]) || []);
+      setLoadingSuggestions(false);
+    };
+    loadSuggestions();
+  }, []);
+
+  const applySuggestion = (s: any) => {
+    setTopic(s.title || s.topic || '');
+    if (s.niche) setNiche(s.niche);
+    if (s.style) setStyle(s.style);
+    if (s.language) setLanguage(s.language);
+    setShowSuggestions(false);
+    toast.success('💡 Sugestão aplicada! Ajuste e gere o roteiro.');
+    // Increment used_count
+    supabase.from('dotti_suggestions').update({ used_count: (s.used_count || 0) + 1, updated_at: new Date().toISOString() } as any).eq('id', s.id).then();
+  };
+
+  const deleteSuggestion = async (id: string) => {
+    await supabase.from('dotti_suggestions').delete().eq('id', id);
+    setSuggestions(prev => prev.filter(s => s.id !== id));
+    toast.success('Sugestão removida');
+  };
+
   const wpm = SPEECH_RATES[language] || 150;
   const currentScript = wizardStep === 1 ? draftScript : script;
   const wordCount = currentScript.split(/\s+/).filter(Boolean).length;
