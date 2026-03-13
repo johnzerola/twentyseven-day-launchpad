@@ -79,6 +79,7 @@ const Scripts = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showComparator, setShowComparator] = useState(false);
 
   useEffect(() => { loadHistory(); }, [scriptsPag.page]);
 
