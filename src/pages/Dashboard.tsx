@@ -78,8 +78,8 @@ const Dashboard = () => {
       if (channel.data) setChannelData(channel.data);
       if (latestNicheData.data) setLatestNiche(latestNicheData.data);
 
-      // Build activity chart from scripts creation dates (last 30 days)
-      const allScripts = scripts.data || [];
+      // Build activity chart from ALL scripts creation dates (last 30 days)
+      const scriptsFor30d = allScriptsLast30.data || [];
       const days: Record<string, number> = {};
       for (let i = 29; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
