@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Bot, User, Send, Sparkles, Youtube, ArrowRight } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/auth-fetch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
