@@ -18,7 +18,7 @@ export const WorkspaceStats = ({ total, thisWeek, withScript, withScenes, publis
   ];
 
   return (
-    <div className="grid grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
       {stats.map(s => (
         <div key={s.label} className="bg-card border border-border rounded-xl p-3 text-center">
           <s.icon className={`w-4 h-4 mx-auto mb-1 ${s.color}`} />

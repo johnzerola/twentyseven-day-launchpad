@@ -367,13 +367,14 @@ const Scripts = () => {
           </div>
         )}
 
-        {/* Pipeline Progress */}
-        {script && (
-          <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-2">
-            {pipelineSteps.map((step) => (
-              <button key={step.key} onClick={() => setActiveStep(step.key as any)}
+        {/* Pipeline Progress — always visible */}
+        <div className="bg-card border border-border rounded-xl p-2 space-y-2">
+          <div className="flex items-center gap-1">
+            {pipelineSteps.map((step, i) => (
+              <button key={step.key} onClick={() => script ? setActiveStep(step.key as any) : null}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                  activeStep === step.key ? 'bg-primary text-primary-foreground'
+                  !script ? 'text-muted-foreground/40 cursor-not-allowed'
+                  : activeStep === step.key ? 'bg-primary text-primary-foreground'
                     : step.done ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/30'
                 }`}>
                 <step.icon className="w-3.5 h-3.5" />
@@ -382,7 +383,15 @@ const Scripts = () => {
               </button>
             ))}
           </div>
-        )}
+          {script && (
+            <div className="flex items-center gap-2 px-2">
+              <Progress value={(pipelineSteps.filter(s => s.done).length / pipelineSteps.length) * 100} className="h-1.5 flex-1" />
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                {pipelineSteps.filter(s => s.done).length}/{pipelineSteps.length} — Faltam {pipelineSteps.filter(s => !s.done).length} passos
+              </span>
+            </div>
+          )}
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-4">
           {/* Left: Config + Panels */}
