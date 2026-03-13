@@ -475,6 +475,16 @@ const Titles = () => {
               </motion.div>
             )}
 
+            {/* YouTube Export Panel — shows when we have SEO data */}
+            {seoResult && (
+              <YouTubeExportPanel
+                title={seoTitle}
+                description={seoResult.description}
+                tags={seoResult.keywords}
+                hashtags={seoResult.hashtags}
+              />
+            )}
+
             {!seoResult && !seoLoading && (
               <div className="text-center py-16 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
