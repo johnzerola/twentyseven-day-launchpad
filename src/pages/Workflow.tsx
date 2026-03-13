@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { KanbanSkeleton } from '@/components/PageSkeletons';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, Loader2, Search, Rocket, Sparkles, Lightbulb, GripVertical, Trash2, Clock, FileText, Film, CheckCircle2, Edit3, Upload, MoreVertical, Link2, ChevronDown, ChevronUp, Eye, Wand2, Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';

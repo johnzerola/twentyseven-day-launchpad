@@ -383,7 +383,11 @@ const Channels = () => {
           {/* Channel list sidebar */}
           <div className="w-64 flex-shrink-0 space-y-2">
             {loading ? (
-              <div className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></div>
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
             ) : channels.length === 0 ? (
               <div className="glass rounded-xl p-6 text-center">
                 <Youtube className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-30" />
