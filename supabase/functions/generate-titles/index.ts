@@ -6,6 +6,129 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+// ========== HELPER: Search YouTube for competing videos ==========
+async function searchYouTubeCompetitors(topic: string, niche: string, language: string, YOUTUBE_API_KEY: string): Promise<string> {
+  try {
+    const queries = [
+      topic,
+      `${niche} ${topic}`.slice(0, 80),
+    ];
+    const allResults: any[] = [];
+
+    for (const q of queries) {
+      const params = new URLSearchParams({
+        part: 'snippet',
+        q,
+        type: 'video',
+        order: 'viewCount',
+        maxResults: '10',
+        relevanceLanguage: language === 'pt' ? 'pt' : language === 'es' ? 'es' : 'en',
+        key: YOUTUBE_API_KEY,
+      });
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.items?.length) allResults.push(...data.items);
+      }
+    }
+
+    if (!allResults.length) return '';
+
+    // Get video stats for the found videos
+    const videoIds = [...new Set(allResults.map((r: any) => r.id?.videoId).filter(Boolean))].slice(0, 15);
+    if (!videoIds.length) return '';
+
+    const statsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds.join(',')}&key=${YOUTUBE_API_KEY}`);
+    if (!statsRes.ok) return '';
+    const statsData = await statsRes.json();
+
+    const competitors = (statsData.items || [])
+      .map((v: any) => ({
+        title: v.snippet.title,
+        channel: v.snippet.channelTitle,
+        views: parseInt(v.statistics.viewCount || '0'),
+        likes: parseInt(v.statistics.likeCount || '0'),
+      }))
+      .sort((a: any, b: any) => b.views - a.views)
+      .slice(0, 12);
+
+    if (!competitors.length) return '';
+
+    return `\n\n🔍 ANÁLISE DE CONCORRENTES EM TEMPO REAL (${competitors.length} vídeos encontrados no YouTube AGORA sobre este tema):\n${competitors.map((c: any, i: number) => `${i + 1}. "${c.title}" — ${c.channel} (${c.views.toLocaleString()} views, ${c.likes.toLocaleString()} likes)`).join('\n')}\n\n⚡ ESTRATÉGIA: Seus títulos devem ser MELHORES que estes. Analise o que funciona neles e SUPERE. Diferencie-se — não repita o mesmo ângulo. Encontre gaps que eles não cobriram.`;
+  } catch (e) {
+    console.error("YouTube competitor search error:", e);
+    return '';
+  }
+}
+
+// ========== HELPER: Brave Search for trending keywords ==========
+async function searchBraveTrending(topic: string, niche: string, language: string, sb: any): Promise<string> {
+  try {
+    const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
+    if (!BRAVE_API_KEY) return '';
+
+    // Check cache first
+    const cacheKey = `titles_brave:${topic}:${niche}:${language}`;
+    const { data: cached } = await sb
+      .from("research_cache")
+      .select("result_json")
+      .eq("cache_key", cacheKey)
+      .eq("source", "brave")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (cached?.result_json) {
+      return cached.result_json as string;
+    }
+
+    const queries = [
+      `${topic} ${language === 'pt' ? 'youtube viral' : 'youtube trending'}`,
+      `${niche} ${topic} ${language === 'pt' ? 'dicas 2025 2026' : 'tips 2025 2026'}`,
+    ];
+
+    const allSnippets: string[] = [];
+
+    for (const q of queries) {
+      const params = new URLSearchParams({ q, count: '5' });
+      if (language) params.set("search_lang", language);
+
+      const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
+        headers: {
+          Accept: "application/json",
+          "X-Subscription-Token": BRAVE_API_KEY,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const results = data.web?.results || [];
+        results.forEach((r: any) => {
+          allSnippets.push(`• "${r.title}" — ${r.description?.slice(0, 120) || ''}`);
+        });
+      }
+    }
+
+    if (!allSnippets.length) return '';
+
+    const block = `\n\n🌐 TENDÊNCIAS WEB EM TEMPO REAL (Brave Search):\n${allSnippets.slice(0, 8).join('\n')}\n\nUse estas tendências para criar títulos que capturam o zeitgeist atual. Incorpore termos trending nos títulos.`;
+
+    // Cache for 24h
+    await sb.from("research_cache").upsert({
+      cache_key: cacheKey,
+      source: "brave",
+      result_json: block,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    }, { onConflict: "cache_key,source" }).catch(() => {});
+
+    return block;
+  } catch (e) {
+    console.error("Brave trending search error:", e);
+    return '';
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -37,80 +160,89 @@ serve(async (req) => {
       });
     }
 
-    // ========== GENERATE TITLES ==========
+    // ========== GENERATE TITLES (UPGRADED) ==========
     if (type === "generate") {
       const { niche, topic, language, country, scriptContext } = body;
+      const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
 
-      // Script context block (when coming from script pipeline)
+      // Script context block
       let scriptContextBlock = '';
       if (scriptContext) {
-        scriptContextBlock = `\n\n📹 CONTEXTO COMPLETO DO VÍDEO (use para criar títulos PRECISOS que refletem o conteúdo real):\n${scriptContext}\n\nOs títulos DEVEM refletir o conteúdo acima. Não invente — extraia os ângulos mais clicáveis do roteiro real.`;
+        scriptContextBlock = `\n\n📹 CONTEXTO COMPLETO DO VÍDEO (use para criar títulos PRECISOS):\n${scriptContext}\n\nOs títulos DEVEM refletir o conteúdo acima. Extraia os ângulos mais clicáveis do roteiro real.`;
       }
 
-      // 1) Fetch ALL knowledge sources in parallel
+      // ===== PARALLEL: Knowledge DB + YouTube Competitors + Brave Trends =====
       let viralRefBlock = '';
       let psychologyBlock = '';
       let formatsBlock = '';
       let hooksBlock = '';
       let dynamicPatternsBlock = '';
       let learningBlock = '';
+      let competitorBlock = '';
+      let braveBlock = '';
+
+      const searchTopic = topic || niche || '';
 
       try {
-        // Build viral titles query — up to 80 most relevant refs (not just 30)
+        // Build all queries
         let titlesQuery = sb.from('viral_titles_db')
           .select('title,views,why_viral,title_pattern,niche,language,emotional_triggers')
           .order('views', { ascending: false })
           .limit(80);
-
-        // Filter by language if provided
         if (language) titlesQuery = titlesQuery.eq('language', language);
-        // Filter by niche if provided
         if (niche) titlesQuery = titlesQuery.ilike('niche', `%${niche}%`);
 
-        // Hooks query — filter by niche if relevant
         let hooksQuery = sb.from('hook_library')
           .select('hook_text,hook_type,retention_score,niche')
           .order('retention_score', { ascending: false })
           .limit(25);
         if (niche) hooksQuery = hooksQuery.or(`niche.ilike.%${niche}%,niche.is.null`);
 
-        const [titlesRes, triggersRes, formatsRes, psychPatternsRes, hooksRes, patternsRes, learningRes] = await Promise.all([
+        // Fire ALL searches in parallel (DB + YouTube + Brave)
+        const [
+          titlesRes, triggersRes, formatsRes, psychPatternsRes, hooksRes, patternsRes, learningRes,
+          ytCompetitors, braveTrending
+        ] = await Promise.all([
           titlesQuery,
           sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'psychology_triggers').order('effectiveness_score', { ascending: false }).limit(10),
           sb.from('viral_content_library').select('content_json,effectiveness_score').eq('category', 'content_format').order('effectiveness_score', { ascending: false }).limit(8),
           sb.from('audience_psychology_patterns').select('trigger_type,description,example_titles,retention_score').order('retention_score', { ascending: false }).limit(10),
-          hooksRes ?? hooksQuery,
-          // Dynamic patterns: extract unique title_pattern values from DB
+          hooksQuery,
           sb.from('viral_titles_db').select('title_pattern').not('title_pattern', 'is', null).limit(500),
-          // Previous user learning
           sb.from('ai_learning').select('insight').eq('topic', 'title_chosen').order('created_at', { ascending: false }).limit(15),
+          // Real-time competitor research
+          YOUTUBE_API_KEY && searchTopic ? searchYouTubeCompetitors(searchTopic, niche || '', language || 'pt', YOUTUBE_API_KEY) : Promise.resolve(''),
+          searchTopic ? searchBraveTrending(searchTopic, niche || '', language || 'pt', sb) : Promise.resolve(''),
         ]);
 
-        // --- Viral titles refs (up to 80) ---
+        competitorBlock = ytCompetitors;
+        braveBlock = braveTrending;
+
+        // --- Viral titles refs ---
         const viralTitles = titlesRes.data;
         if (viralTitles?.length) {
           viralRefBlock = `\n\nTÍTULOS VIRAIS REAIS DE REFERÊNCIA (${viralTitles.length} títulos comprovados):\n${viralTitles.map((t: any) => `• "${t.title}" (${t.views?.toLocaleString()} views) — Pattern: ${t.title_pattern || '?'} | Why: ${t.why_viral || 'N/A'} | Triggers: ${(t.emotional_triggers || []).join(', ')}`).join('\n')}\n\nAplique as mesmas técnicas. Não copie, adapte.`;
         }
 
-        // --- Dynamic patterns from real data (not hardcoded 6!) ---
+        // --- Dynamic patterns ---
         const allPatterns = patternsRes.data;
         if (allPatterns?.length) {
           const uniquePatterns = [...new Set(allPatterns.map((p: any) => p.title_pattern?.toLowerCase()).filter(Boolean))];
           if (uniquePatterns.length > 0) {
-            dynamicPatternsBlock = `\n\n🎯 PADRÕES DE TÍTULO REAIS EXTRAÍDOS DA BASE (${uniquePatterns.length} padrões únicos):\n${uniquePatterns.map(p => `• ${p}`).join('\n')}\n\nUse ESTES padrões reais como estilos. Distribua os 20 títulos entre vários padrões.`;
+            dynamicPatternsBlock = `\n\n🎯 PADRÕES DE TÍTULO REAIS (${uniquePatterns.length} padrões):\n${uniquePatterns.map(p => `• ${p}`).join('\n')}\n\nDistribua os 20 títulos entre vários padrões.`;
           }
         }
 
-        // --- Hooks library ---
+        // --- Hooks ---
         const hooks = hooksRes.data;
         if (hooks?.length) {
-          hooksBlock = `\n\n🔥 HOOKS VIRAIS COMPROVADOS (use como inspiração para início dos títulos):\n${hooks.map((h: any) => `• [${h.hook_type}] "${h.hook_text}" (retenção: ${h.retention_score}/10)`).join('\n')}`;
+          hooksBlock = `\n\n🔥 HOOKS VIRAIS COMPROVADOS:\n${hooks.map((h: any) => `• [${h.hook_type}] "${h.hook_text}" (retenção: ${h.retention_score}/10)`).join('\n')}`;
         }
 
         // --- Psychology triggers ---
         const triggers = triggersRes.data;
         if (triggers?.length) {
-          psychologyBlock = `\n\n🧠 GATILHOS PSICOLÓGICOS (aplique nos títulos):\n${triggers.map((t: any) => {
+          psychologyBlock = `\n\n🧠 GATILHOS PSICOLÓGICOS:\n${triggers.map((t: any) => {
             const c = t.content_json;
             return `• ${c.name || c.trigger}: ${c.description || c.tip || ''} (score: ${t.effectiveness_score}/10)`;
           }).join('\n')}`;
@@ -119,7 +251,7 @@ serve(async (req) => {
         // --- Content formats ---
         const formats = formatsRes.data;
         if (formats?.length) {
-          formatsBlock = `\n\n🎬 FORMATOS DE CONTEÚDO VIRAL:\n${formats.map((f: any) => {
+          formatsBlock = `\n\n🎬 FORMATOS VIRAL:\n${formats.map((f: any) => {
             const c = f.content_json;
             return `• ${c.name || c.format}: ${c.description || c.hook_style || ''} — Título ideal: ${c.title_pattern || c.example_title || 'N/A'}`;
           }).join('\n')}`;
@@ -134,7 +266,7 @@ serve(async (req) => {
           }).join('\n')}`;
         }
 
-        // --- Learning from user choices ---
+        // --- User learning ---
         const learnings = learningRes.data;
         if (learnings?.length) {
           const parsed = learnings.map((l: any) => { try { return JSON.parse(l.insight); } catch { return null; } }).filter(Boolean);
@@ -143,18 +275,19 @@ serve(async (req) => {
             const styleCounts: Record<string, number> = {};
             preferredStyles.forEach((s: string) => { styleCounts[s] = (styleCounts[s] || 0) + 1; });
             const topStyles = Object.entries(styleCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
-            learningBlock = `\n\n📊 PREFERÊNCIAS DO USUÁRIO (baseado em escolhas anteriores):\n• Estilos preferidos: ${topStyles.map(([s, c]) => `${s} (${c}x)`).join(', ')}\n• Títulos que o usuário gostou: ${parsed.slice(0, 5).map((p: any) => `"${p.title}"`).join(', ')}\nPriorize estes estilos mas mantenha diversidade.`;
+            learningBlock = `\n\n📊 PREFERÊNCIAS DO USUÁRIO:\n• Estilos preferidos: ${topStyles.map(([s, c]) => `${s} (${c}x)`).join(', ')}\n• Títulos que o usuário gostou: ${parsed.slice(0, 5).map((p: any) => `"${p.title}"`).join(', ')}\nPriorize estes estilos mas mantenha diversidade.`;
           }
         }
       } catch { /* knowledge sources optional */ }
 
-      // Language/country context
       const langContext = language ? `\nIdioma do título: ${language}` : '';
       const countryContext = country ? `\nPaís alvo: ${country}` : '';
 
       const prompt = `Gere exatamente 20 títulos virais para YouTube com CTR potencial de 15-30%.
 ${niche ? `Nicho: ${niche}` : ''}
 ${topic ? `Tema específico: ${topic}` : ''}${langContext}${countryContext}
+${competitorBlock}
+${braveBlock}
 ${viralRefBlock}
 ${dynamicPatternsBlock}
 ${hooksBlock}
@@ -173,44 +306,49 @@ REGRAS PARA CTR MÁXIMO:
 7. Evite clickbait puro — prometa algo que o vídeo entrega
 8. Adapte ao idioma/cultura do público-alvo${language ? ` (${language})` : ''}
 9. Cada título deve usar um padrão/estilo DIFERENTE — máxima diversidade
-10. Integre hooks comprovados da biblioteca nos inícios dos títulos
+10. Integre hooks comprovados nos inícios dos títulos
+11. DIFERENCIE-SE dos concorrentes acima — encontre ângulos que eles NÃO usaram
+12. Incorpore termos trending detectados pelo Brave Search
 
-Para cada título, classifique o estilo (use os padrões reais da base, não apenas 6 fixos) e estime o CTR de 5 a 30%.`;
+Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      // Use Gemini Pro for title generation (higher quality)
+      const response = await fetch(AI_URL, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           messages: [
-            { role: "system", content: "Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores do mundo." },
+            { role: "system", content: "Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados." },
             { role: "user", content: prompt },
           ],
           tools: [{
             type: "function",
             function: {
               name: "return_titles",
-              description: "Return viral title suggestions with dynamic styles",
+              description: "Return viral title suggestions with competitive analysis",
               parameters: {
                 type: "object",
                 properties: {
+                  competitor_analysis: { type: "string", description: "Brief analysis of what competitors are doing right/wrong with their titles" },
                   titles: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
                         title: { type: "string" },
-                        style: { type: "string", description: "Dynamic style/pattern name from the real database patterns" },
+                        style: { type: "string", description: "Dynamic style/pattern name" },
                         estimatedCTR: { type: "number", description: "Estimated CTR between 5 and 30" },
                         hook_used: { type: "string", description: "Which hook technique was applied" },
                         psychological_trigger: { type: "string", description: "Primary psychological trigger used" },
+                        differentiation: { type: "string", description: "How this title differentiates from competitors" },
                       },
-                      required: ["title", "style", "estimatedCTR"],
+                      required: ["title", "style", "estimatedCTR", "hook_used", "psychological_trigger", "differentiation"],
                       additionalProperties: false,
                     },
                   },
                 },
-                required: ["titles"],
+                required: ["competitor_analysis", "titles"],
                 additionalProperties: false,
               },
             },
@@ -229,36 +367,69 @@ Para cada título, classifique o estilo (use os padrões reais da base, não ape
       const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
       if (!toolCall) throw new Error("No tool call response");
       const parsed = JSON.parse(toolCall.function.arguments);
-      return new Response(JSON.stringify({ titles: parsed.titles }), {
+
+      // Log execution for monitoring
+      await sb.from('execution_logs').insert({
+        function_name: 'generate-titles',
+        success: true,
+        api_calls_made: (competitorBlock ? 3 : 1) + (braveBlock ? 2 : 0),
+        metadata: {
+          topic, niche, language,
+          competitors_found: competitorBlock ? true : false,
+          brave_used: braveBlock ? true : false,
+          titles_count: parsed.titles?.length || 0,
+          model: 'gemini-2.5-pro',
+        },
+      }).catch(() => {});
+
+      return new Response(JSON.stringify({
+        titles: parsed.titles,
+        competitor_analysis: parsed.competitor_analysis,
+        research: {
+          competitors_analyzed: competitorBlock ? true : false,
+          brave_trends_used: braveBlock ? true : false,
+        }
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ========== A/B TEST ==========
+    // ========== A/B TEST (UPGRADED: multi-perspective) ==========
     if (type === "ab-test") {
-      const { titleA, titleB, language } = body;
-      const langNote = language ? `\nIdioma dos títulos: ${language}. Analise considerando o público deste idioma.` : '';
-      const prompt = `Analise estes 2 títulos de YouTube e determine qual performaria melhor:
+      const { titleA, titleB, language, niche } = body;
+      const langNote = language ? `\nIdioma dos títulos: ${language}.` : '';
+
+      // Fetch relevant competitor titles for context
+      let competitorContext = '';
+      const { data: compTitles } = await sb.from('viral_titles_db')
+        .select('title,views,title_pattern')
+        .order('views', { ascending: false })
+        .limit(10);
+      if (compTitles?.length) {
+        competitorContext = `\n\nTítulos top do YouTube para referência:\n${compTitles.map((t: any) => `• "${t.title}" (${t.views?.toLocaleString()} views)`).join('\n')}`;
+      }
+
+      const prompt = `Analise estes 2 títulos de YouTube como um especialista em CTR:
 
 Título A: "${titleA}"
-Título B: "${titleB}"${langNote}
+Título B: "${titleB}"${langNote}${competitorContext}
 
-Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), score de comprimento (1-10, ideal 50-65 chars), e uma análise comparativa detalhada de 2-3 frases explicando por que o vencedor é melhor.`;
+Analise com profundidade: CTR estimado (5-30%), gatilhos emocionais, SEO score (1-10), score de comprimento (1-10, ideal 50-65 chars), curiosity gap score (1-10), e uma análise comparativa detalhada de 3-4 frases. Compare com os títulos top de referência.`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch(AI_URL, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           messages: [
-            { role: "system", content: "Você é um especialista em YouTube analytics e CTR optimization." },
+            { role: "system", content: "Você é um especialista em YouTube analytics, CTR optimization e psicologia de cliques. Analise com dados reais e padrões comprovados." },
             { role: "user", content: prompt },
           ],
           tools: [{
             type: "function",
             function: {
               name: "return_ab_result",
-              description: "Return A/B test comparison result",
+              description: "Return A/B test comparison",
               parameters: {
                 type: "object",
                 properties: {
@@ -270,8 +441,9 @@ Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), sco
                       emotionalTriggers: { type: "array", items: { type: "string" } },
                       seoScore: { type: "number" },
                       lengthScore: { type: "number" },
+                      curiosityGapScore: { type: "number" },
                     },
-                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore"],
+                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore", "curiosityGapScore"],
                     additionalProperties: false,
                   },
                   titleB: {
@@ -281,13 +453,15 @@ Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), sco
                       emotionalTriggers: { type: "array", items: { type: "string" } },
                       seoScore: { type: "number" },
                       lengthScore: { type: "number" },
+                      curiosityGapScore: { type: "number" },
                     },
-                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore"],
+                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore", "curiosityGapScore"],
                     additionalProperties: false,
                   },
                   analysis: { type: "string" },
+                  improvement_suggestion: { type: "string", description: "Suggestion to create an even better title combining the best of both" },
                 },
-                required: ["winner", "titleA", "titleB", "analysis"],
+                required: ["winner", "titleA", "titleB", "analysis", "improvement_suggestion"],
                 additionalProperties: false,
               },
             },
@@ -311,49 +485,93 @@ Analise: CTR estimado (5-30%), gatilhos emocionais usados, SEO score (1-10), sco
       });
     }
 
-    // ========== SEO DESCRIPTION ==========
+    // ========== SEO DESCRIPTION (UPGRADED: Brave + competitive keywords) ==========
     if (type === "seo-description") {
       const { title, niche, language, scriptContext } = body;
-      const langNote = language ? `\nIdioma: ${language}. Escreva a descrição neste idioma.` : '';
+      const langNote = language ? `\nIdioma: ${language}. Escreva neste idioma.` : '';
       const hasTimestamps = scriptContext && scriptContext.includes('[');
-      const scriptNote = scriptContext ? `\n\nCONTEXTO DO VÍDEO COM TRANSCRIÇÃO TIMESTAMPED (use para SEO e capítulos REAIS):\n${scriptContext}` : '';
-      const prompt = `Gere uma descrição SEO completa e otimizada para um vídeo do YouTube com o título: "${title}"
-${niche ? `Nicho: ${niche}` : ''}${langNote}${scriptNote}
+      const scriptNote = scriptContext ? `\n\nCONTEXTO DO VÍDEO COM TRANSCRIÇÃO TIMESTAMPED:\n${scriptContext}` : '';
+
+      // Brave Search for trending SEO keywords
+      let seoTrends = '';
+      try {
+        const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
+        if (BRAVE_API_KEY && title) {
+          // Check cache
+          const cacheKey = `seo_brave:${title.slice(0, 50)}:${niche || ''}`;
+          const { data: cached } = await sb.from("research_cache")
+            .select("result_json")
+            .eq("cache_key", cacheKey)
+            .eq("source", "brave")
+            .gt("expires_at", new Date().toISOString())
+            .maybeSingle();
+
+          if (cached?.result_json) {
+            seoTrends = cached.result_json as string;
+          } else {
+            const params = new URLSearchParams({ q: `${title} ${niche || ''} site:youtube.com`, count: '5' });
+            if (language) params.set("search_lang", language);
+            const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
+              headers: { Accept: "application/json", "X-Subscription-Token": BRAVE_API_KEY },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const results = data.web?.results || [];
+              if (results.length) {
+                seoTrends = `\n\n🔍 PESQUISA WEB PARA SEO (keywords reais encontradas):\n${results.slice(0, 5).map((r: any) => `• "${r.title}" — ${r.description?.slice(0, 100) || ''}`).join('\n')}\n\nExtraia keywords destes resultados para a descrição SEO.`;
+                await sb.from("research_cache").upsert({
+                  cache_key: cacheKey, source: "brave", result_json: seoTrends,
+                  expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                }, { onConflict: "cache_key,source" }).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      const prompt = `Gere uma descrição SEO COMPLETA e PROFISSIONAL para um vídeo do YouTube.
+
+Título: "${title}"
+${niche ? `Nicho: ${niche}` : ''}${langNote}${scriptNote}${seoTrends}
 
 A descrição deve incluir:
-1. Primeira linha: keyword principal + benefício (aparece no search)
-2. Parágrafo de contexto (2-3 linhas)
-3. ${hasTimestamps ? 'Timestamps/capítulos REAIS baseados na transcrição acima — use os timestamps [MM:SS] da transcrição para criar capítulos que refletem o conteúdo real de cada momento do vídeo. Comece com 00:00 Introdução.' : 'Timestamps/capítulos sugeridos (00:00 formato)'}
-4. Links placeholder para redes sociais
-5. 3 hashtags relevantes
-6. 8-12 keywords SEO extraídas do conteúdo real do vídeo
+1. Primeira linha: keyword principal + benefício (aparece no search — CRUCIAL para SEO)
+2. Parágrafo de contexto (2-3 linhas com keywords naturais)
+3. ${hasTimestamps ? 'Timestamps/capítulos REAIS baseados na transcrição — use os timestamps [MM:SS] para criar capítulos que refletem o conteúdo real. Comece com 00:00. Agrupe cenas relacionadas em capítulos de 1-3 minutos.' : 'Timestamps/capítulos sugeridos (00:00 formato)'}
+4. Seção "Neste vídeo você vai aprender:" com 3-5 bullet points
+5. CTA para inscrição + like
+6. Links placeholder para redes sociais
+7. 3-5 hashtags relevantes (trending se possível)
+8. 10-15 keywords SEO extraídas do conteúdo real + tendências web
 
-IMPORTANTE sobre timestamps: Os capítulos do YouTube (timestamps na descrição) aumentam MUITO o SEO e CTR. ${hasTimestamps ? 'Use os timestamps REAIS da transcrição para criar capítulos precisos. Agrupe cenas relacionadas em capítulos de 1-3 minutos.' : 'Crie timestamps estimados baseados no conteúdo.'}
+IMPORTANTE: Os capítulos (timestamps) aumentam MUITO o SEO e CTR. ${hasTimestamps ? 'Use os timestamps REAIS.' : 'Crie timestamps estimados.'} 
+O YouTube usa as primeiras 2-3 linhas da descrição para ranking — otimize com keywords de alto volume.
+Formato profissional, 250-500 palavras.`;
 
-Formato profissional, 200-400 palavras.`;
-
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch(AI_URL, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           messages: [
-            { role: "system", content: "Você é um especialista em YouTube SEO. Gere descrições otimizadas para máximo alcance." },
+            { role: "system", content: "Você é um especialista em YouTube SEO com conhecimento profundo do algoritmo 2025-2026. Gere descrições que maximizam alcance, impressões e ranking. Use keywords de alto volume de busca e otimize cada linha para o algoritmo." },
             { role: "user", content: prompt },
           ],
           tools: [{
             type: "function",
             function: {
               name: "return_seo_description",
-              description: "Return SEO optimized description",
+              description: "Return SEO optimized description with enhanced data",
               parameters: {
                 type: "object",
                 properties: {
                   description: { type: "string" },
                   hashtags: { type: "array", items: { type: "string" } },
                   keywords: { type: "array", items: { type: "string" } },
+                  seo_score: { type: "number", description: "Overall SEO score 1-10" },
+                  keyword_density_note: { type: "string", description: "Note about keyword density and placement" },
                 },
-                required: ["description", "hashtags", "keywords"],
+                required: ["description", "hashtags", "keywords", "seo_score", "keyword_density_note"],
                 additionalProperties: false,
               },
             },
