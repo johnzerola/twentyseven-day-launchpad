@@ -132,7 +132,8 @@ export const ScriptGenerator = ({
   };
 
   const cleanBlueprintFromScript = (text: string): string => text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
-  const cleanAll = (text: string) => cleanBlueprintFromScript(cleanScoresFromScript(text));
+  const cleanShortMeta = (text: string): string => text.replace(/---SHORT_META---[\s\S]*?---END_SHORT_META---\s*/g, '').trim();
+  const cleanAll = (text: string) => cleanShortMeta(cleanBlueprintFromScript(cleanScoresFromScript(text)));
 
   const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
     const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
@@ -189,36 +190,63 @@ export const ScriptGenerator = ({
     setEditMode(false);
 
     try {
-      setPhaseLabel('🔍 Analisando inteligência competitiva...');
-      let briefing = null;
-      try {
-        const { data, error } = await supabase.functions.invoke('analyze-topic', {
-          body: { topic, niche, style, language },
+      // Shorts use dedicated ShortSpy analysis; Longform uses analyze-topic
+      if (videoType === 'short') {
+        setPhaseLabel('📱 Analisando Shorts virais do nicho...');
+        try {
+          const { data, error } = await supabase.functions.invoke('analyze-short-video', {
+            body: { topic, niche, language, count: 8 },
+          });
+          if (!error && data?.analysis) {
+            setIntelligenceBriefing({ shortspy: data.analysis, shorts: data.shorts, metadata: data.metadata });
+            toast.success(`📱 ${data.metadata?.shorts_found || 0} Shorts virais analisados`);
+          }
+        } catch (err) { console.warn('ShortSpy failed:', err); }
+
+        setPhaseLabel(retryCount > 0 ? `📱 Gerando Short (tentativa ${retryCount + 1})...` : '📱 Gerando roteiro de Short viral...');
+        const viralContext = getViralContext();
+
+        const rawDraft = await streamFromFunction('generate-script-short', {
+          topic, durationSeconds: parseInt(duration), style, niche, language, viralContext,
+        }, (fullText) => {
+          setDraftScript(cleanAll(fullText));
         });
-        if (!error && data?.briefing) {
-          briefing = data.briefing;
-          setIntelligenceBriefing(data);
-          toast.success(`📊 ${data.metadata?.channelsAnalyzed || 0} canais + ${data.metadata?.youtubeVideosFound || 0} vídeos analisados`);
-        }
-      } catch (err) { console.warn('Intelligence failed:', err); }
 
-      setPhaseLabel(retryCount > 0 ? `✍️ Gemini gerando novo rascunho (tentativa ${retryCount + 1})...` : '✍️ Gemini está gerando seu rascunho...');
-      const viralContext = getViralContext();
-      
-      const rawDraft = await streamFromFunction('generate-script', {
-        topic, duration: videoType === 'short' ? parseInt(duration) / 60 : parseInt(duration),
-        style, niche, language,
-        viralContext, intelligenceBriefing: briefing,
-        videoType,
-      }, (fullText) => {
-        setDraftScript(cleanAll(fullText));
-      });
+        setDraftScript(cleanAll(rawDraft));
+        setPhaseLabel('');
+        toast.success('📱 Short pronto! Revise e clique em "Próxima Etapa".');
+      } else {
+        setPhaseLabel('🔍 Analisando inteligência competitiva...');
+        let briefing = null;
+        try {
+          const { data, error } = await supabase.functions.invoke('analyze-topic', {
+            body: { topic, niche, style, language },
+          });
+          if (!error && data?.briefing) {
+            briefing = data.briefing;
+            setIntelligenceBriefing(data);
+            toast.success(`📊 ${data.metadata?.channelsAnalyzed || 0} canais + ${data.metadata?.youtubeVideosFound || 0} vídeos analisados`);
+          }
+        } catch (err) { console.warn('Intelligence failed:', err); }
 
-      const blueprint = parseSceneBlueprint(rawDraft);
-      if (blueprint.length > 0) setSceneBlueprintJson(blueprint);
-      setDraftScript(cleanAll(rawDraft));
-      setPhaseLabel('');
-      toast.success('✍️ Rascunho pronto! Revise, edite e clique em "Próxima Etapa".');
+        setPhaseLabel(retryCount > 0 ? `✍️ Gemini gerando novo rascunho (tentativa ${retryCount + 1})...` : '✍️ Gemini está gerando seu rascunho...');
+        const viralContext = getViralContext();
+        
+        const rawDraft = await streamFromFunction('generate-script', {
+          topic, duration: parseInt(duration),
+          style, niche, language,
+          viralContext, intelligenceBriefing: briefing,
+          videoType,
+        }, (fullText) => {
+          setDraftScript(cleanAll(fullText));
+        });
+
+        const blueprint = parseSceneBlueprint(rawDraft);
+        if (blueprint.length > 0) setSceneBlueprintJson(blueprint);
+        setDraftScript(cleanAll(rawDraft));
+        setPhaseLabel('');
+        toast.success('✍️ Rascunho pronto! Revise, edite e clique em "Próxima Etapa".');
+      }
 
     } catch (err: any) {
       toast.error(err.message);
@@ -632,7 +660,8 @@ export const ScriptGenerator = ({
             </div>
 
             <Button onClick={() => runStep1_Draft()} disabled={loading || generating || !topic.trim()} className="w-full gap-2">
-              <Sparkles className="w-4 h-4" /> Gerar Rascunho com IA
+              {videoType === 'short' ? <Smartphone className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+              {videoType === 'short' ? 'Gerar Short com IA' : 'Gerar Rascunho com IA'}
               <ArrowRight className="w-4 h-4 ml-auto" />
             </Button>
 
