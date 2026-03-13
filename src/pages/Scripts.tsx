@@ -784,9 +784,25 @@ const Scripts = () => {
 
             {/* Script output is now inside ScriptGenerator but displayed here when active */}
             {(activeStep === 'script' || !script) && !loading && !script && (
-              <div className="bg-card border border-border rounded-xl p-5 text-center py-12 text-muted-foreground">
-                <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Configure e gere seu roteiro viral</p>
+              <div className="bg-card border border-border rounded-xl p-5 text-center py-16 text-muted-foreground">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-primary/60" />
+                </div>
+                <h3 className="text-base font-semibold text-foreground mb-1">Comece seu vídeo viral</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                  Preencha o tópico, nicho e estilo ao lado, depois clique em "Gerar Roteiro" para começar o pipeline de produção.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                  <Badge variant="outline" className="text-[10px]">1. Roteiro</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">2. Estilo</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">3. Personagens</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">4. Cenas</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">5. SEO</Badge>
+                </div>
               </div>
             )}
           </div>
