@@ -889,6 +889,36 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_embeddings: {
+        Row: {
+          content_text: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          content_text: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          content_text?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       micro_niches: {
         Row: {
           avg_views: number | null
@@ -2411,6 +2441,22 @@ export type Database = {
       get_user_tier: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["subscription_tier"]
+      }
+      match_knowledge: {
+        Args: {
+          filter_tables?: string[]
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          content_text: string
+          id: string
+          metadata: Json
+          similarity: number
+          source_id: string
+          source_table: string
+        }[]
       }
     }
     Enums: {
