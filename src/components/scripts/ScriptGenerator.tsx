@@ -295,6 +295,7 @@ export const ScriptGenerator = ({
         niche, language, duration: parseInt(duration), style,
         target_words: targetWords,
         rejection_feedback: rejectionFeedback || null,
+        phaseId: phaseIdRef.current,
       }, (fullText) => {
         setScript(cleanAll(fullText));
       });
