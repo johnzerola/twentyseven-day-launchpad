@@ -450,6 +450,100 @@ async function executeTool(
         break;
       }
 
+      // ===== NEW TOOLS =====
+      case "brave_search": {
+        result = await callFn("brave-search", {
+          query: args.query,
+          count: args.count || 10,
+        });
+        break;
+      }
+
+      case "suggest_video_ideas": {
+        result = await callFn("generate-ideas", {
+          niche: args.niche,
+          channelName: args.channelName || "",
+          existingIdeas: args.existingIdeas || [],
+          count: args.count || 10,
+        });
+        break;
+      }
+
+      case "suggest_themes": {
+        result = await callFn("suggest-themes", {
+          niche: args.niche,
+          style: args.style || "",
+          language: args.language || "português",
+          count: args.count || 10,
+          topic: args.topic || "",
+          narrativeStyle: args.narrativeStyle || "",
+        });
+        break;
+      }
+
+      case "seo_analyze": {
+        result = await callFn("seo-analyzer", {
+          title: args.title,
+          description: args.description || "",
+          tags: args.tags || [],
+          niche: args.niche || "",
+        });
+        break;
+      }
+
+      case "find_competitors": {
+        result = await callFn("find-competitors", {
+          channelId: args.channelId || "",
+          channelName: args.channelName || "",
+          niche: args.niche,
+        });
+        break;
+      }
+
+      case "extract_content_dna": {
+        result = await callFn("extract-content-dna", {
+          videoId: args.videoId,
+          videoTitle: args.videoTitle || "",
+          niche: args.niche || "",
+        });
+        break;
+      }
+
+      case "detect_pre_viral": {
+        result = await callFn("pre-viral-detection", {
+          niche: args.niche,
+          country: args.country || "BR",
+          language: args.language || "pt",
+        });
+        break;
+      }
+
+      case "analyze_topic_research": {
+        result = await callFn("analyze-topic", {
+          topic: args.topic,
+          niche: args.niche || "",
+          language: args.language || "pt",
+          style: args.style || "investigativo",
+        });
+        break;
+      }
+
+      case "search_emerging_channels": {
+        result = await callFn("detect-emerging-channels", {
+          niche: args.niche,
+          country: args.country || "BR",
+        });
+        break;
+      }
+
+      case "bulk_channel_scan": {
+        result = await callFn("bulk-channel-scan", {
+          channelId: args.channelId || "",
+          channelName: args.channelName || "",
+        });
+        break;
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
