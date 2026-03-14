@@ -1290,7 +1290,7 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
 
 ## 🧠 REGRA SUPREMA: AUTONOMIA TOTAL
 Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO peça confirmação.
-**IMPORTANTE**: Use no MÁXIMO 8 ferramentas por vez. Priorize as mais importantes primeiro. Se precisar de mais, use em rodadas.
+**IMPORTANTE**: Use no MÁXIMO 5 ferramentas por vez. Priorize as mais importantes primeiro. Se precisar de mais, use em rodadas.
 
 **NUNCA FAÇA ISSO:**
 - "Preciso de um nicho definido" → ESCOLHA o melhor nicho você mesmo
