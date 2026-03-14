@@ -27,11 +27,12 @@ async function queryPerplexity(
     messages: [
       {
         role: "system",
-        content: `Você é um pesquisador especialista em YouTube, monetização e crescimento de canais. Responda SEMPRE em português brasileiro com dados específicos, números reais, exemplos concretos e estratégias acionáveis. Não seja genérico — cite canais reais, métricas reais e tendências de 2025-2026. Formate com markdown.`,
+        content: `Pesquisador expert em YouTube e monetização. Responda em português brasileiro com dados específicos, números, exemplos e estratégias acionáveis. Cite canais reais e métricas. Markdown. Seja conciso e direto.`,
       },
       { role: "user", content: query },
     ],
     temperature: 0.1,
+    max_tokens: 2000,
   };
 
   if (searchRecency) {
