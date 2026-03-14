@@ -5,15 +5,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const styleGuides: Record<string, string> = {
+  'cinematográfico': 'Ultra-realistic cinematic. Camera angles like a movie. Dramatic lighting, shallow DOF, film grain.',
+  '2d': '2D flat animation, Kurzgesagt-style. Vibrant flat colors, clean vector shapes, parallax depth, NO 3D, NO photorealistic.',
+  '3d': 'Pixar/DreamWorks 3D render. Stylized characters, subsurface scattering, global illumination.',
+  'anime': 'Anime/manga style. Ufotable/MAPPA quality, cel-shading, expressive faces, dynamic poses.',
+  'wojak': 'Wojak/meme internet art style. Simple drawn faces with strong emotional expressions, flat colors, minimalist backgrounds.',
+  'stickmen': 'Stick figure art. Minimalist black line drawings, simple backgrounds, humor through simplicity.',
+  'realista': 'Hyper-photorealistic. Natural lighting, 8K detail, lifelike.',
+  'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accents, atmospheric fog, Blade Runner mood.',
+  'whiteboard': 'Whiteboard animation. Hand-drawn sketches, black ink on white, educational.',
+  'comic': 'Comic book / graphic novel. Bold ink outlines, halftone, dynamic panels, saturated colors.',
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { segments } = await req.json();
+    const { segments, videoStyle, customStyleNotes } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     if (!segments?.length) throw new Error("Segments array required");
+
+    const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
+    const selectedStyle = styleGuides[styleKey] || styleGuides['cinematográfico'];
 
     const segmentTexts = segments.map((s: any, i: number) => `Segment ${i + 1}: "${s.text}"`).join("\n");
 
@@ -29,7 +45,7 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "set_visual_prompts",
-            description: "Set cinematic visual prompts for each script segment",
+            description: "Set visual prompts for each script segment matching the chosen art style",
             parameters: {
               type: "object",
               properties: {
@@ -55,19 +71,27 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a cinematic director. For each script segment, create a vivid, detailed visual prompt that would make an amazing AI-generated image. Think like a movie cinematographer:
-- Describe camera angle (close-up, wide shot, aerial, tracking)
-- Describe lighting (golden hour, dramatic shadows, neon, volumetric)
-- Describe mood and atmosphere
-- Include specific visual elements that match the narration
+            content: `You are a visual director creating prompts for AI image generation. You MUST follow the chosen art style EXACTLY.
+
+═══════════════════════════════════════
+🎨 MANDATORY ART STYLE: ${selectedStyle}
+${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
+═══════════════════════════════════════
+
+RULES:
+- EVERY prompt MUST match the art style above — do NOT default to photorealistic/cinematic unless that's the chosen style
+- For 2D styles: describe flat colors, clean lines, animation-style characters
+- For Wojak/meme: describe simple drawn faces, emotional expressions, internet meme look
+- For anime: describe anime aesthetic, cel-shading, expressive eyes
+- Describe composition, mood, and visual elements matching the narration
 - Make each scene visually distinct from the others
-- Style: ultra-realistic, cinematic, 16:9, movie-quality
-- Keep each prompt to 1-2 sentences, max 50 words
-- Write prompts in English for best AI image generation results`
+- Keep each prompt to 1-3 sentences, max 80 words
+- Write prompts in English for best AI image generation results
+- Always START the prompt with the art style descriptor`
           },
           {
             role: "user",
-            content: `Generate cinematic visual prompts for these ${segments.length} narration segments:\n\n${segmentTexts}`
+            content: `Generate visual prompts in "${styleKey}" style for these ${segments.length} narration segments:\n\n${segmentTexts}`
           }
         ],
       }),
