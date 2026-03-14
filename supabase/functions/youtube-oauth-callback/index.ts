@@ -10,13 +10,13 @@ serve(async (req) => {
 
     if (error) {
       return new Response(redirectHtml("Autorização cancelada."), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
 
     if (!code || !userId) {
       return new Response(redirectHtml("Parâmetros inválidos."), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
 
@@ -41,13 +41,13 @@ serve(async (req) => {
     if (tokens.error) {
       console.error("Token exchange error:", tokens);
       return new Response(redirectHtml(`Erro: ${tokens.error_description || tokens.error}`), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
 
-    // Get channel info using the access token
+    // Get channel info with snippet AND statistics
     const channelRes = await fetch(
-      "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+      "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
       { headers: { Authorization: `Bearer ${tokens.access_token}` } }
     );
     const channelData = await channelRes.json();
@@ -55,11 +55,10 @@ serve(async (req) => {
 
     if (!channel) {
       return new Response(redirectHtml("Nenhum canal encontrado nesta conta Google."), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
 
-    // Store tokens in DB using service role
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -67,6 +66,7 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString();
 
+    // 1. Save OAuth tokens
     const { error: dbError } = await supabase
       .from("youtube_oauth_tokens")
       .upsert({
@@ -86,17 +86,42 @@ serve(async (req) => {
     if (dbError) {
       console.error("DB error:", dbError);
       return new Response(redirectHtml("Erro ao salvar conexão."), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
 
+    // 2. Also sync to user_channels so the channel gets ALL platform features
+    const stats = channel.statistics;
+    try {
+      const { error: syncError } = await supabase
+        .from("user_channels")
+        .upsert({
+          user_id: userId,
+          youtube_channel_id: channel.id,
+          channel_name: channel.snippet.title,
+          thumbnail: channel.snippet.thumbnails?.default?.url,
+          subscribers: parseInt(stats?.subscriberCount || "0"),
+          views: parseInt(stats?.viewCount || "0"),
+          videos: parseInt(stats?.videoCount || "0"),
+        }, {
+          onConflict: "user_id,youtube_channel_id",
+          ignoreDuplicates: false,
+        });
+
+      if (syncError) {
+        console.error("Sync to user_channels error:", syncError);
+      }
+    } catch (syncErr) {
+      console.error("Failed to sync to user_channels:", syncErr);
+    }
+
     return new Response(redirectHtml(`Canal "${channel.snippet.title}" conectado com sucesso! ✅`, true), {
-      headers: { "Content-Type": "text/html" },
+      headers: { "Content-Type": "text/html; charset=UTF-8" },
     });
   } catch (e) {
     console.error("youtube-oauth-callback error:", e);
     return new Response(redirectHtml("Erro interno."), {
-      headers: { "Content-Type": "text/html" },
+      headers: { "Content-Type": "text/html; charset=UTF-8" },
     });
   }
 });
