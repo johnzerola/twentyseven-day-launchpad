@@ -655,6 +655,46 @@ export const ScriptGenerator = ({
             className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h3 className="font-semibold text-sm">1. Configurações do Roteiro</h3>
 
+            {/* ═══════ NICHE QUICK-START PRESETS ═══════ */}
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">⚡ Quick Start — Escolha seu nicho</label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                {Object.entries(NICHE_PRESETS).map(([key, preset]) => (
+                  <button key={key} onClick={() => {
+                    setNiche(key);
+                    if (!style || !preset.styles.includes(style)) setStyle(preset.styles[0]);
+                    if (videoType === 'long') setDuration(String(preset.defaultDuration));
+                    toast.success(`${preset.emoji} Nicho "${preset.label}" configurado! Escolha um tópico abaixo.`);
+                  }}
+                    className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-[10px] ${
+                      niche === key ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+                    }`}>
+                    <span className="text-base">{preset.emoji}</span>
+                    <span className="font-medium truncate w-full text-center">{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ═══════ NICHE TOPIC SUGGESTIONS ═══════ */}
+            {niche && NICHE_PRESETS[niche] && (
+              <div className="border border-accent/20 rounded-lg p-3 bg-accent/5 space-y-2">
+                <p className="text-xs font-medium text-accent flex items-center gap-1">
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  Tópicos sugeridos para {NICHE_PRESETS[niche].label}
+                </p>
+                <div className="space-y-1">
+                  {NICHE_PRESETS[niche].topics.map((t, i) => (
+                    <button key={i} onClick={() => { setTopic(t); toast.success('Tópico aplicado!'); }}
+                      className="w-full text-left p-1.5 rounded-md hover:bg-secondary/50 transition-colors text-xs text-foreground/80 hover:text-foreground">
+                      {NICHE_PRESETS[niche].emoji} {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">💡 Dica: {NICHE_PRESETS[niche].tips}</p>
+              </div>
+            )}
+
             {/* ═══════ CHANNEL SELECTOR ═══════ */}
             {userChannels.length > 0 && (
               <div>
