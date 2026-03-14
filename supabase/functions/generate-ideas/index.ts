@@ -3,27 +3,41 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * IDEA ENGINE V2
+ * 
+ * Flow: tema → gerar 20 ideias → ranquear → top N
+ * Each idea gets: curiosity_score, viral_potential, competition_score, novelty_score → idea_score
+ * Uses real data from prediction_vs_result and score_calibration to improve rankings
+ */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { niche, channelName, existingIdeas, count } = await req.json();
+    const { niche, channelName, existingIdeas, count = 5 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Get viral patterns from DB
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const sb = createClient(supabaseUrl, supabaseKey);
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const [viralRes, channelRes] = await Promise.all([
+    // ═══ Gather intelligence from multiple sources ═══
+    const [viralRes, channelRes, emergingRes, calibRes, learningRes, hookRes] = await Promise.all([
       sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern")
         .ilike("niche", `%${niche || ""}%`).order("views", { ascending: false }).limit(20),
       sb.from("channel_intelligence").select("channel_name, niche, avg_views, style, viral_patterns")
         .ilike("niche", `%${niche || ""}%`).limit(10),
+      sb.from("emerging_videos").select("title, views, pre_viral_score, velocity_score, niche")
+        .eq("status", "pre_viral").order("pre_viral_score", { ascending: false }).limit(10),
+      sb.from("score_calibration").select("score_type, niche, avg_error, bias_correction")
+        .eq("score_type", "viral_probability").limit(10),
+      sb.from("ai_learning").select("insight")
+        .in("topic", ["calibration_meta", "backtest_meta_analysis"])
+        .order("created_at", { ascending: false }).limit(3),
+      sb.from("hook_library").select("hook_text, hook_type, retention_score")
+        .ilike("niche", `%${niche || ""}%`).order("retention_score", { ascending: false }).limit(10),
     ]);
 
     const viralExamples = (viralRes.data || []).map(v => 
@@ -34,8 +48,21 @@ serve(async (req) => {
       `${c.channel_name}: estilo ${c.style}, ${(c.avg_views/1000).toFixed(0)}K avg views`
     ).join('\n');
 
+    const emergingTrends = (emergingRes.data || []).map(e =>
+      `"${e.title}" (${e.views} views, pre-viral score: ${e.pre_viral_score}, velocity: ${e.velocity_score})`
+    ).join('\n');
+
+    const calibrationContext = (calibRes.data || []).map(c =>
+      `Nicho ${c.niche}: erro médio ${c.avg_error}%, bias ${c.bias_correction > 0 ? '+' : ''}${c.bias_correction}`
+    ).join('\n');
+
+    const learningInsights = (learningRes.data || []).map(l => l.insight?.slice(0, 200)).join('\n');
+
+    const topHooks = (hookRes.data || []).map(h => `[${h.hook_type}] "${h.hook_text}" (score: ${h.retention_score})`).join('\n');
+
     const existingList = (existingIdeas || []).map((i: string) => `- ${i}`).join('\n');
 
+    // ═══ Generate 20 ideas with full scoring ═══
     const prompt = `Você é um estrategista de YouTube especializado em canais faceless de alto crescimento.
 
 CONTEXTO:
@@ -43,19 +70,31 @@ CONTEXTO:
 ${channelName ? `- Canal do usuário: ${channelName}` : ''}
 ${existingList ? `- Ideias que o usuário JÁ tem (NÃO repetir):\n${existingList}` : ''}
 
-DADOS DE MERCADO (títulos virais reais):
+DADOS DE MERCADO (títulos virais REAIS com views confirmados):
 ${viralExamples || 'Nenhum dado disponível'}
 
 CANAIS DE REFERÊNCIA:
 ${channelPatterns || 'Nenhum dado disponível'}
 
-Gere ${count || 5} ideias de vídeo ÚNICAS e ESPECÍFICAS que:
-1. Tenham potencial viral comprovado (baseado nos padrões acima)
-2. Sejam diferentes das ideias existentes do usuário
-3. Incluam o gancho emocional principal
-4. Tenham um título sugerido já otimizado para CTR
+${emergingTrends ? `VÍDEOS PRÉ-VIRAIS DETECTADOS (tendências emergentes):\n${emergingTrends}\n` : ''}
 
-Para cada ideia, retorne título, descrição curta do conceito (1-2 frases), e prioridade (alta/média/baixa baseada no potencial viral).`;
+${topHooks ? `HOOKS DE ALTA PERFORMANCE:\n${topHooks}\n` : ''}
+
+${calibrationContext ? `CALIBRAÇÃO DO MODELO (erros conhecidos):\n${calibrationContext}\n` : ''}
+
+${learningInsights ? `APRENDIZADOS RECENTES DO SISTEMA:\n${learningInsights}\n` : ''}
+
+IMPORTANTE: Seus scores devem ser CALIBRADOS com base nos dados reais acima. NÃO invente scores otimistas sem base.
+
+Gere EXATAMENTE 20 ideias de vídeo ÚNICAS e ranqueie cada uma com scores de 0-100:
+- curiosity_score: quão curioso o público ficaria (baseado nos hooks que funcionam)
+- viral_potential: probabilidade de viralizar (baseado nos dados reais de views)
+- competition_score: quão saturado é o tópico (0=muito saturado, 100=oceano azul)
+- novelty_score: quão original é a ideia
+
+Calcule: idea_score = (curiosity * 0.3) + (viral_potential * 0.3) + (competition * 0.2) + (novelty * 0.2)
+
+Ordene por idea_score decrescente.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -64,13 +103,13 @@ Para cada ideia, retorne título, descrição curta do conceito (1-2 frases), e 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-2.5-flash",
         messages: [{ role: "user", content: prompt }],
         tools: [{
           type: "function",
           function: {
-            name: "return_ideas",
-            description: "Return video ideas",
+            name: "return_ranked_ideas",
+            description: "Return ranked video ideas with scores",
             parameters: {
               type: "object",
               properties: {
@@ -81,10 +120,15 @@ Para cada ideia, retorne título, descrição curta do conceito (1-2 frases), e 
                     properties: {
                       title: { type: "string" },
                       concept: { type: "string" },
-                      priority: { type: "string", enum: ["alta", "média", "baixa"] },
                       hook: { type: "string" },
+                      priority: { type: "string", enum: ["alta", "média", "baixa"] },
+                      curiosity_score: { type: "number" },
+                      viral_potential: { type: "number" },
+                      competition_score: { type: "number" },
+                      novelty_score: { type: "number" },
+                      idea_score: { type: "number" },
                     },
-                    required: ["title", "concept", "priority", "hook"],
+                    required: ["title", "concept", "hook", "priority", "curiosity_score", "viral_potential", "competition_score", "novelty_score", "idea_score"],
                     additionalProperties: false,
                   }
                 }
@@ -94,7 +138,7 @@ Para cada ideia, retorne título, descrição curta do conceito (1-2 frases), e 
             }
           }
         }],
-        tool_choice: { type: "function", function: { name: "return_ideas" } },
+        tool_choice: { type: "function", function: { name: "return_ranked_ideas" } },
       }),
     });
 
@@ -108,17 +152,36 @@ Para cada ideia, retorne título, descrição curta do conceito (1-2 frases), e 
 
     const aiData = await aiRes.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    let ideas = [];
+    let allIdeas: any[] = [];
     if (toolCall) {
-      ideas = JSON.parse(toolCall.function.arguments).ideas;
+      allIdeas = JSON.parse(toolCall.function.arguments).ideas || [];
     }
 
-    return new Response(JSON.stringify({ ideas, viral_count: viralRes.data?.length || 0, channel_count: channelRes.data?.length || 0 }), {
+    // Sort by idea_score descending and return top N
+    allIdeas.sort((a: any, b: any) => (b.idea_score || 0) - (a.idea_score || 0));
+    const topIdeas = allIdeas.slice(0, count);
+
+    return new Response(JSON.stringify({ 
+      ideas: topIdeas,
+      total_generated: allIdeas.length,
+      all_ideas: allIdeas,  // Full ranked list available
+      viral_count: viralRes.data?.length || 0, 
+      channel_count: channelRes.data?.length || 0,
+      emerging_count: emergingRes.data?.length || 0,
+      data_sources: {
+        viral_titles: viralRes.data?.length || 0,
+        channels: channelRes.data?.length || 0,
+        emerging_videos: emergingRes.data?.length || 0,
+        calibration_data: calibRes.data?.length || 0,
+        learning_insights: learningRes.data?.length || 0,
+        hooks: hookRes.data?.length || 0,
+      }
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-ideas error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

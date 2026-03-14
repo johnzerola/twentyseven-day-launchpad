@@ -7,14 +7,14 @@ const corsHeaders = {
 };
 
 /**
- * AUTO-INTELLIGENCE CRON V2
+ * AUTO-INTELLIGENCE CRON V3
  * 
  * Single entry point that orchestrates ALL auto-feeding tasks.
  * Called by pg_cron — no manual intervention needed.
  * 
  * Schedule:
- *   - Daily 06:00 UTC: light tasks (performance tracking, embeddings, learning)
- *   - Daily 12:00 UTC: mid-day velocity snapshots
+ *   - Daily 06:00 UTC: light tasks (performance, backtesting, learning, calibration)
+ *   - Daily 12:00 UTC: mid-day velocity + pre-viral detection
  *   - Sunday 02:00 UTC: weekly deep (full cycle, research, evolution)
  */
 serve(async (req) => {
@@ -50,7 +50,7 @@ serve(async (req) => {
   try {
     // ═══ DAILY TASKS (every day at 06:00 UTC) ═══
     if (schedule === "daily" || schedule === "weekly") {
-      // 1. Track video performance for all users (feeds ai_learning)
+      // 1. Track video performance for all users
       await invokeFunction("track-video-performance", { mode: "check_all" });
 
       // 2. Daily data ingestion (Brave search + task queue)
@@ -59,7 +59,7 @@ serve(async (req) => {
       // 3. Light self-learning (scan trending + update patterns)
       await invokeFunction("self-learning-engine", { mode: "scan_trending", maxVideos: 5 });
 
-      // 4. Daily backfill embeddings (small batch to keep RAG fresh)
+      // 4. Daily backfill embeddings
       await invokeFunction("backfill-embeddings", { batchSize: 3 });
 
       // 5. Intelligence sync (user activity feed)
@@ -68,20 +68,32 @@ serve(async (req) => {
       // 6. Ranking check for tracked videos
       await invokeFunction("track-video-performance", { mode: "check_rankings" });
 
-      // 7. ★ NEW: Backtesting — compare predictions vs reality
+      // 7. Backtesting — compare predictions vs reality
       await invokeFunction("backtest-scores", {});
 
-      // 8. ★ NEW: Pattern evolution — adjust hooks/patterns based on real results
+      // 8. Pattern evolution — adjust hooks/patterns based on real results
       await invokeFunction("evolve-patterns", {});
 
-      // 9. ★ NEW: Velocity snapshots — mid-check for trending content
+      // 9. Velocity snapshots
       await invokeFunction("velocity-tracker", {});
+
+      // 10. ★ NEW: Self-learning worker — close feedback loop & calibrate weights
+      await invokeFunction("self-learning-worker", {});
+
+      // 11. ★ NEW: Pre-viral detection — find videos about to explode
+      await invokeFunction("pre-viral-detection", {});
     }
 
     // ═══ MIDDAY VELOCITY CHECK (12:00 UTC) ═══
     if (schedule === "midday") {
       await invokeFunction("velocity-tracker", {});
       await invokeFunction("track-video-performance", { mode: "check_all" });
+
+      // ★ NEW: Pre-viral detection on midday for faster detection
+      await invokeFunction("pre-viral-detection", {});
+
+      // ★ NEW: Self-learning worker for fresh calibration data
+      await invokeFunction("self-learning-worker", {});
     }
 
     // ═══ WEEKLY TASKS (Sunday 02:00 UTC) ═══
@@ -102,16 +114,29 @@ serve(async (req) => {
       // Detect emerging channels
       await invokeFunction("detect-emerging-channels", {});
 
-      // ★ NEW: Knowledge base health check — ensure RAG is populated
+      // Knowledge base health check
       const { data: embCount } = await sb.from("knowledge_embeddings")
         .select("id", { count: "exact", head: true });
       if ((embCount as any)?.length < 100 || !embCount) {
-        // Force full backfill if knowledge base is sparse
         await invokeFunction("backfill-embeddings", { batchSize: 20 });
       }
 
-      // ★ NEW: Title score calibration
+      // Title score calibration
       await invokeFunction("title-score", { mode: "calibrate" });
+
+      // ★ NEW: Refresh materialized views for fresh aggregated data
+      try {
+        await sb.rpc("refresh_materialized_views");
+        report.push({ function: "refresh_materialized_views", success: true });
+      } catch (e) {
+        report.push({ function: "refresh_materialized_views", success: false, error: (e as Error).message });
+      }
+
+      // ★ NEW: Update confirmed viral status on emerging_videos
+      await sb.from("emerging_videos")
+        .update({ status: "confirmed_viral", confirmed_viral_at: new Date().toISOString() })
+        .eq("status", "pre_viral")
+        .gt("views", 100000);
     }
 
     await sb.from("execution_logs").insert({

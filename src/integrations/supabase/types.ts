@@ -588,41 +588,53 @@ export type Database = {
       }
       channel_voice_profiles: {
         Row: {
+          average_video_length: number | null
           avg_sentence_length: number | null
           channel_id: string | null
+          common_hooks: string[] | null
           created_at: string | null
           id: string
           last_analyzed_at: string | null
           sample_scripts_analyzed: number | null
+          story_structure: string | null
           style_markers: string[] | null
           tone_keywords: string[] | null
           user_id: string
+          visual_style: string | null
           vocabulary_richness: number | null
           voice_signature: Json | null
         }
         Insert: {
+          average_video_length?: number | null
           avg_sentence_length?: number | null
           channel_id?: string | null
+          common_hooks?: string[] | null
           created_at?: string | null
           id?: string
           last_analyzed_at?: string | null
           sample_scripts_analyzed?: number | null
+          story_structure?: string | null
           style_markers?: string[] | null
           tone_keywords?: string[] | null
           user_id: string
+          visual_style?: string | null
           vocabulary_richness?: number | null
           voice_signature?: Json | null
         }
         Update: {
+          average_video_length?: number | null
           avg_sentence_length?: number | null
           channel_id?: string | null
+          common_hooks?: string[] | null
           created_at?: string | null
           id?: string
           last_analyzed_at?: string | null
           sample_scripts_analyzed?: number | null
+          story_structure?: string | null
           style_markers?: string[] | null
           tone_keywords?: string[] | null
           user_id?: string
+          visual_style?: string | null
           vocabulary_richness?: number | null
           voice_signature?: Json | null
         }
@@ -1094,6 +1106,99 @@ export type Database = {
           niche?: string | null
           sample_video_id?: string | null
           viral_score?: number | null
+        }
+        Relationships: []
+      }
+      emerging_videos: {
+        Row: {
+          channel_id: string | null
+          channel_name: string | null
+          comments: number | null
+          confirmed_viral_at: string | null
+          created_at: string | null
+          detected_at: string | null
+          duration_seconds: number | null
+          engagement_rate: number | null
+          growth_acceleration: number | null
+          id: string
+          likes: number | null
+          metadata: Json | null
+          niche: string | null
+          peak_views: number | null
+          pre_viral_score: number | null
+          published_at: string | null
+          recency_factor: number | null
+          snapshots_count: number | null
+          status: string | null
+          subscribers: number | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string | null
+          velocity_score: number | null
+          video_id: string
+          view_ratio: number | null
+          views: number | null
+          views_per_hour: number | null
+        }
+        Insert: {
+          channel_id?: string | null
+          channel_name?: string | null
+          comments?: number | null
+          confirmed_viral_at?: string | null
+          created_at?: string | null
+          detected_at?: string | null
+          duration_seconds?: number | null
+          engagement_rate?: number | null
+          growth_acceleration?: number | null
+          id?: string
+          likes?: number | null
+          metadata?: Json | null
+          niche?: string | null
+          peak_views?: number | null
+          pre_viral_score?: number | null
+          published_at?: string | null
+          recency_factor?: number | null
+          snapshots_count?: number | null
+          status?: string | null
+          subscribers?: number | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string | null
+          velocity_score?: number | null
+          video_id: string
+          view_ratio?: number | null
+          views?: number | null
+          views_per_hour?: number | null
+        }
+        Update: {
+          channel_id?: string | null
+          channel_name?: string | null
+          comments?: number | null
+          confirmed_viral_at?: string | null
+          created_at?: string | null
+          detected_at?: string | null
+          duration_seconds?: number | null
+          engagement_rate?: number | null
+          growth_acceleration?: number | null
+          id?: string
+          likes?: number | null
+          metadata?: Json | null
+          niche?: string | null
+          peak_views?: number | null
+          pre_viral_score?: number | null
+          published_at?: string | null
+          recency_factor?: number | null
+          snapshots_count?: number | null
+          status?: string | null
+          subscribers?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string | null
+          velocity_score?: number | null
+          video_id?: string
+          view_ratio?: number | null
+          views?: number | null
+          views_per_hour?: number | null
         }
         Relationships: []
       }
@@ -1597,6 +1702,104 @@ export type Database = {
         }
         Relationships: []
       }
+      prediction_vs_result: {
+        Row: {
+          calibrated_at: string | null
+          created_at: string | null
+          error_breakdown: Json | null
+          hook_type: string | null
+          id: string
+          niche: string | null
+          predicted_attention_score: number | null
+          predicted_ctr: number | null
+          predicted_dopamine_score: number | null
+          predicted_engagement: number | null
+          predicted_retention: number | null
+          predicted_viral_score: number | null
+          prediction_error_score: number | null
+          project_id: string | null
+          real_comments: number | null
+          real_ctr: number | null
+          real_engagement_rate: number | null
+          real_likes: number | null
+          real_retention: number | null
+          real_subscribers_at_publish: number | null
+          real_view_velocity: number | null
+          real_views: number | null
+          title_pattern: string | null
+          updated_at: string | null
+          user_id: string
+          video_id: string
+          video_type: string | null
+        }
+        Insert: {
+          calibrated_at?: string | null
+          created_at?: string | null
+          error_breakdown?: Json | null
+          hook_type?: string | null
+          id?: string
+          niche?: string | null
+          predicted_attention_score?: number | null
+          predicted_ctr?: number | null
+          predicted_dopamine_score?: number | null
+          predicted_engagement?: number | null
+          predicted_retention?: number | null
+          predicted_viral_score?: number | null
+          prediction_error_score?: number | null
+          project_id?: string | null
+          real_comments?: number | null
+          real_ctr?: number | null
+          real_engagement_rate?: number | null
+          real_likes?: number | null
+          real_retention?: number | null
+          real_subscribers_at_publish?: number | null
+          real_view_velocity?: number | null
+          real_views?: number | null
+          title_pattern?: string | null
+          updated_at?: string | null
+          user_id: string
+          video_id: string
+          video_type?: string | null
+        }
+        Update: {
+          calibrated_at?: string | null
+          created_at?: string | null
+          error_breakdown?: Json | null
+          hook_type?: string | null
+          id?: string
+          niche?: string | null
+          predicted_attention_score?: number | null
+          predicted_ctr?: number | null
+          predicted_dopamine_score?: number | null
+          predicted_engagement?: number | null
+          predicted_retention?: number | null
+          predicted_viral_score?: number | null
+          prediction_error_score?: number | null
+          project_id?: string | null
+          real_comments?: number | null
+          real_ctr?: number | null
+          real_engagement_rate?: number | null
+          real_likes?: number | null
+          real_retention?: number | null
+          real_subscribers_at_publish?: number | null
+          real_view_velocity?: number | null
+          real_views?: number | null
+          title_pattern?: string | null
+          updated_at?: string | null
+          user_id?: string
+          video_id?: string
+          video_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prediction_vs_result_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -2071,6 +2274,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      score_calibration: {
+        Row: {
+          avg_error: number | null
+          bias_correction: number | null
+          confidence: number | null
+          created_at: string | null
+          id: string
+          last_calibrated_at: string | null
+          metadata: Json | null
+          niche: string | null
+          samples_count: number | null
+          score_type: string
+          weight_adjustment: number | null
+        }
+        Insert: {
+          avg_error?: number | null
+          bias_correction?: number | null
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          last_calibrated_at?: string | null
+          metadata?: Json | null
+          niche?: string | null
+          samples_count?: number | null
+          score_type: string
+          weight_adjustment?: number | null
+        }
+        Update: {
+          avg_error?: number | null
+          bias_correction?: number | null
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          last_calibrated_at?: string | null
+          metadata?: Json | null
+          niche?: string | null
+          samples_count?: number | null
+          score_type?: string
+          weight_adjustment?: number | null
+        }
+        Relationships: []
       }
       script_knowledge: {
         Row: {
@@ -3077,9 +3322,59 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_avg_scores_by_niche: {
+        Row: {
+          avg_attention_score: number | null
+          avg_dopamine_score: number | null
+          avg_gold_score: number | null
+          avg_multiplier: number | null
+          avg_retention: number | null
+          avg_viral_score: number | null
+          niche: string | null
+          total_videos: number | null
+        }
+        Relationships: []
+      }
+      mv_top_hooks_by_niche: {
+        Row: {
+          hook_text: string | null
+          hook_type: string | null
+          niche: string | null
+          retention_score: number | null
+          source_video: string | null
+        }
+        Relationships: []
+      }
+      mv_top_titles_by_views: {
+        Row: {
+          channel_name: string | null
+          emotional_triggers: string[] | null
+          niche: string | null
+          title: string | null
+          title_pattern: string | null
+          views: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_pre_viral_score: {
+        Args: {
+          _engagement_rate: number
+          _recency_factor: number
+          _velocity_score: number
+          _view_ratio: number
+        }
+        Returns: number
+      }
+      calculate_velocity_score: {
+        Args: {
+          _engagement_rate: number
+          _growth_acceleration: number
+          _views_per_hour: number
+        }
+        Returns: number
+      }
       check_and_increment_api_usage: {
         Args: { _api_name: string }
         Returns: boolean
@@ -3108,6 +3403,7 @@ export type Database = {
           source_table: string
         }[]
       }
+      refresh_materialized_views: { Args: never; Returns: undefined }
     }
     Enums: {
       subscription_tier: "starter" | "pro" | "full"
