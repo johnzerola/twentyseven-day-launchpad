@@ -104,7 +104,12 @@ const Scripts = () => {
 
   // Load channel styles when channel changes
   useEffect(() => {
-    if (selectedChannelId) loadChannelStyles(selectedChannelId);
+    if (selectedChannelId) {
+      loadChannelStyles(selectedChannelId);
+      analyzeChannelVisualStyle(selectedChannelId);
+    } else {
+      setChannelVisualProfile(null);
+    }
   }, [selectedChannelId]);
 
   const loadUserChannels = async () => {
