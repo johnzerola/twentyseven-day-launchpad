@@ -644,6 +644,289 @@ async function executeTool(
         break;
       }
 
+      // ===== YOUTUBE DATA API DIRECT =====
+      case "youtube_channel_stats": {
+        const ytKeys = [
+          Deno.env.get("YOUTUBE_API_KEY"),
+          Deno.env.get("YOUTUBE_API_KEY_2"),
+          Deno.env.get("YOUTUBE_API_KEY_3"),
+          Deno.env.get("YOUTUBE_API_KEY_4"),
+        ].filter(Boolean);
+        
+        let channelId = args.channelId;
+        
+        // Resolve handle to channel ID if needed
+        if (!channelId && args.handle) {
+          const handle = args.handle.replace('@', '');
+          for (const key of ytKeys) {
+            try {
+              // Try forHandle first
+              let searchUrl = `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${handle}&key=${key}`;
+              let resp = await fetch(searchUrl);
+              let data = await resp.json();
+              if (data.items?.length > 0) { channelId = data.items[0].id; break; }
+              
+              // Fallback: search
+              searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&type=channel&q=${encodeURIComponent(args.handle)}&maxResults=1&key=${key}`;
+              resp = await fetch(searchUrl);
+              data = await resp.json();
+              if (data.items?.length > 0) { channelId = data.items[0].id?.channelId || data.items[0].snippet?.channelId; break; }
+            } catch { continue; }
+          }
+        }
+        
+        if (!channelId) { result = { error: "Could not resolve channel" }; break; }
+        
+        for (const key of ytKeys) {
+          try {
+            const resp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings,contentDetails&id=${channelId}&key=${key}`);
+            const data = await resp.json();
+            if (data.error?.errors?.[0]?.reason === 'quotaExceeded') continue;
+            if (data.items?.length > 0) {
+              const ch = data.items[0];
+              result = {
+                channelId: ch.id,
+                title: ch.snippet?.title,
+                description: ch.snippet?.description?.slice(0, 500),
+                country: ch.snippet?.country,
+                publishedAt: ch.snippet?.publishedAt,
+                subscribers: parseInt(ch.statistics?.subscriberCount || '0'),
+                totalViews: parseInt(ch.statistics?.viewCount || '0'),
+                videoCount: parseInt(ch.statistics?.videoCount || '0'),
+                uploadsPlaylistId: ch.contentDetails?.relatedPlaylists?.uploads,
+                keywords: ch.brandingSettings?.channel?.keywords,
+              };
+              break;
+            }
+          } catch { continue; }
+        }
+        if (!result) result = { error: "YouTube API quota exceeded on all keys" };
+        break;
+      }
+
+      case "youtube_video_stats": {
+        const ytKeys2 = [
+          Deno.env.get("YOUTUBE_API_KEY"),
+          Deno.env.get("YOUTUBE_API_KEY_2"),
+          Deno.env.get("YOUTUBE_API_KEY_3"),
+          Deno.env.get("YOUTUBE_API_KEY_4"),
+        ].filter(Boolean);
+        
+        let videoId = args.videoId;
+        if (!videoId && args.videoUrl) {
+          videoId = args.videoUrl.replace(/.*(?:v=|youtu\.be\/)/, '').replace(/[&?].*/, '');
+        }
+        if (!videoId) { result = { error: "No video ID" }; break; }
+        
+        for (const key of ytKeys2) {
+          try {
+            const resp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${key}`);
+            const data = await resp.json();
+            if (data.error?.errors?.[0]?.reason === 'quotaExceeded') continue;
+            if (data.items?.length > 0) {
+              const v = data.items[0];
+              result = {
+                videoId: v.id,
+                title: v.snippet?.title,
+                description: v.snippet?.description?.slice(0, 500),
+                channelId: v.snippet?.channelId,
+                channelTitle: v.snippet?.channelTitle,
+                publishedAt: v.snippet?.publishedAt,
+                tags: v.snippet?.tags?.slice(0, 30),
+                duration: v.contentDetails?.duration,
+                views: parseInt(v.statistics?.viewCount || '0'),
+                likes: parseInt(v.statistics?.likeCount || '0'),
+                comments: parseInt(v.statistics?.commentCount || '0'),
+                categoryId: v.snippet?.categoryId,
+              };
+              break;
+            }
+          } catch { continue; }
+        }
+        if (!result) result = { error: "YouTube API quota exceeded" };
+        break;
+      }
+
+      case "youtube_search_api": {
+        const ytKeys3 = [
+          Deno.env.get("YOUTUBE_API_KEY"),
+          Deno.env.get("YOUTUBE_API_KEY_2"),
+          Deno.env.get("YOUTUBE_API_KEY_3"),
+          Deno.env.get("YOUTUBE_API_KEY_4"),
+        ].filter(Boolean);
+        
+        const params = new URLSearchParams({
+          part: "snippet",
+          q: args.query,
+          type: args.type || "video",
+          maxResults: String(args.maxResults || 10),
+          order: args.order || "relevance",
+        });
+        if (args.regionCode) params.set("regionCode", args.regionCode);
+        if (args.relevanceLanguage) params.set("relevanceLanguage", args.relevanceLanguage);
+        if (args.publishedAfter) params.set("publishedAfter", args.publishedAfter);
+        
+        for (const key of ytKeys3) {
+          try {
+            params.set("key", key as string);
+            const resp = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+            const data = await resp.json();
+            if (data.error?.errors?.[0]?.reason === 'quotaExceeded') continue;
+            
+            // Get video stats for video results
+            const videoIds = (data.items || [])
+              .filter((i: any) => i.id?.videoId)
+              .map((i: any) => i.id.videoId)
+              .join(',');
+            
+            let videoStats: Record<string, any> = {};
+            if (videoIds) {
+              const statsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${videoIds}&key=${key}`);
+              const statsData = await statsResp.json();
+              for (const v of (statsData.items || [])) {
+                videoStats[v.id] = {
+                  views: parseInt(v.statistics?.viewCount || '0'),
+                  likes: parseInt(v.statistics?.likeCount || '0'),
+                  comments: parseInt(v.statistics?.commentCount || '0'),
+                  duration: v.contentDetails?.duration,
+                };
+              }
+            }
+            
+            result = (data.items || []).map((item: any) => ({
+              type: args.type || "video",
+              id: item.id?.videoId || item.id?.channelId || item.id?.playlistId,
+              title: item.snippet?.title,
+              channelTitle: item.snippet?.channelTitle,
+              channelId: item.snippet?.channelId,
+              publishedAt: item.snippet?.publishedAt,
+              description: item.snippet?.description?.slice(0, 200),
+              ...(videoStats[item.id?.videoId] || {}),
+            }));
+            break;
+          } catch { continue; }
+        }
+        if (!result) result = { error: "YouTube API quota exceeded" };
+        break;
+      }
+
+      case "youtube_channel_videos": {
+        const ytKeys4 = [
+          Deno.env.get("YOUTUBE_API_KEY"),
+          Deno.env.get("YOUTUBE_API_KEY_2"),
+          Deno.env.get("YOUTUBE_API_KEY_3"),
+          Deno.env.get("YOUTUBE_API_KEY_4"),
+        ].filter(Boolean);
+        
+        for (const key of ytKeys4) {
+          try {
+            // Get uploads playlist
+            const chResp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${args.channelId}&key=${key}`);
+            const chData = await chResp.json();
+            if (chData.error?.errors?.[0]?.reason === 'quotaExceeded') continue;
+            const uploadsId = chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+            if (!uploadsId) { result = { error: "Channel not found" }; break; }
+            
+            // Get videos from playlist
+            const plResp = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=${args.maxResults || 20}&key=${key}`);
+            const plData = await plResp.json();
+            
+            const videoIds = (plData.items || []).map((i: any) => i.snippet?.resourceId?.videoId).filter(Boolean).join(',');
+            if (!videoIds) { result = []; break; }
+            
+            const vResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds}&key=${key}`);
+            const vData = await vResp.json();
+            
+            result = (vData.items || []).map((v: any) => ({
+              videoId: v.id,
+              title: v.snippet?.title,
+              publishedAt: v.snippet?.publishedAt,
+              duration: v.contentDetails?.duration,
+              views: parseInt(v.statistics?.viewCount || '0'),
+              likes: parseInt(v.statistics?.likeCount || '0'),
+              comments: parseInt(v.statistics?.commentCount || '0'),
+            }));
+            
+            // Sort by views if requested
+            if (args.order === 'viewCount') {
+              result.sort((a: any, b: any) => b.views - a.views);
+            }
+            break;
+          } catch { continue; }
+        }
+        if (!result) result = { error: "YouTube API quota exceeded" };
+        break;
+      }
+
+      // ===== AI ANALYSIS TOOLS =====
+      case "claude_deep_analysis": {
+        const claudeKey = Deno.env.get("CLAUDE_API_KEY");
+        if (!claudeKey) { result = { error: "Claude API key not configured" }; break; }
+        
+        const stylePrompts: Record<string, string> = {
+          strategic: "Você é um consultor estratégico de YouTube com 15 anos de experiência. Analise com profundidade estratégica, considerando mercado, competição e oportunidades.",
+          creative: "Você é um diretor criativo premiado. Foque em ideias originais, ângulos únicos, narrativas memoráveis e diferenciação criativa.",
+          analytical: "Você é um analista de dados do YouTube. Interprete métricas, identifique padrões, calcule projeções e encontre insights ocultos nos dados.",
+          diagnostic: "Você é um diagnosticador de canais do YouTube. Identifique problemas específicos, causas-raiz e prescreva soluções com prioridade e timeline.",
+        };
+        
+        try {
+          const resp = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": claudeKey,
+              "anthropic-version": "2023-06-01",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 4000,
+              system: stylePrompts[args.style || 'strategic'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto, use dados concretos, sem rodeios.",
+              messages: [{
+                role: "user",
+                content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}`,
+              }],
+            }),
+          });
+          const data = await resp.json();
+          result = { analysis: data.content?.[0]?.text || data.error?.message || "No response", model: "claude-sonnet-4" };
+        } catch (e: any) {
+          result = { error: `Claude error: ${e.message}` };
+        }
+        break;
+      }
+
+      case "gpt_expert_analysis": {
+        const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+        if (!lovableKey) { result = { error: "API key not configured" }; break; }
+        
+        const gptStyles: Record<string, string> = {
+          "data-driven": "You are a YouTube data scientist. Analyze with precision, find correlations, calculate growth curves, and predict outcomes based on historical patterns.",
+          "growth-hacking": "You are a YouTube growth hacker. Focus on unconventional strategies, algorithm exploitation, viral mechanics, and rapid scaling techniques.",
+          "monetization": "You are a YouTube monetization expert. Analyze RPM optimization, revenue diversification, sponsorship potential, and financial projections.",
+          "trend-analysis": "You are a trend analyst. Identify emerging patterns, predict what will go viral next, and find early-mover advantages.",
+        };
+        
+        try {
+          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "openai/gpt-5",
+              messages: [
+                { role: "system", content: gptStyles[args.style || 'data-driven'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto e específico." },
+                { role: "user", content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}` },
+              ],
+            }),
+          });
+          const data = await resp.json();
+          result = { analysis: data.choices?.[0]?.message?.content || "No response", model: "gpt-5" };
+        } catch (e: any) {
+          result = { error: `GPT error: ${e.message}` };
+        }
+        break;
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
