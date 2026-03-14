@@ -28,7 +28,7 @@ serve(async (req) => {
     console.log("transcribe-and-generate-scenes: starting pipeline");
 
     // ========== PHASE 1: Transcribe with Gemini Flash ==========
-    console.log("Phase 1: Transcribing audio with Gemini...");
+    console.log("Phase 1: Transcribing audio...");
 
     const transcribeResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -46,8 +46,7 @@ serve(async (req) => {
 OUTPUT FORMAT (strict JSON array):
 [
   {"start": 0.0, "end": 3.5, "text": "First sentence here."},
-  {"start": 3.6, "end": 7.2, "text": "Second sentence here."},
-  ...
+  {"start": 3.6, "end": 7.2, "text": "Second sentence here."}
 ]
 
 RULES:
@@ -81,38 +80,32 @@ RULES:
 
     const transcribeData = await transcribeResponse.json();
     let transcriptText = transcribeData.choices?.[0]?.message?.content || "";
-    console.log("Raw transcription response (first 500 chars):", transcriptText.slice(0, 500));
+    console.log("Raw transcription (first 500):", transcriptText.slice(0, 500));
 
-    // Parse transcript JSON — try multiple extraction strategies
+    // Parse transcript JSON
     let transcriptBlocks: { start: number; end: number; text: string }[] = [];
     
-    // Strategy 1: Extract JSON array from response
+    // Strategy 1: Extract JSON array
     const jsonMatch = transcriptText.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      try {
-        transcriptBlocks = JSON.parse(jsonMatch[0]);
-      } catch (parseErr) {
-        console.error("JSON parse failed:", parseErr, "Raw match:", jsonMatch[0].slice(0, 300));
+      try { transcriptBlocks = JSON.parse(jsonMatch[0]); } catch (e) {
+        console.error("JSON parse failed:", e);
       }
     }
 
-    // Strategy 2: If no valid JSON array, treat as plain text and create synthetic blocks
+    // Strategy 2: Clean markdown then parse
     if (!transcriptBlocks.length && transcriptText.trim()) {
-      // Clean markdown code blocks if present
       const cleaned = transcriptText.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
-      
-      // Try parsing cleaned text
       try {
         const parsed = JSON.parse(cleaned);
         if (Array.isArray(parsed)) transcriptBlocks = parsed;
       } catch {
-        // Last resort: split plain text into sentence blocks with estimated timestamps
+        // Strategy 3: Split plain text
         console.log("Falling back to plain text splitting");
         const sentences = transcriptText.replace(/```[\s\S]*?```/g, '').trim()
           .split(/[.!?]+/).filter(s => s.trim().length > 3);
-        
         if (sentences.length > 0) {
-          const estDuration = 60; // estimate 60s if we can't detect
+          const estDuration = 60;
           const perSentence = estDuration / sentences.length;
           transcriptBlocks = sentences.map((s, i) => ({
             start: +(i * perSentence).toFixed(1),
@@ -125,8 +118,6 @@ RULES:
 
     if (!transcriptBlocks.length) throw new Error("Áudio sem fala detectável. Verifique se o áudio contém narração.");
 
-    if (!transcriptBlocks.length) throw new Error("Áudio sem fala detectável.");
-
     const audioDuration = transcriptBlocks[transcriptBlocks.length - 1].end;
     const fullText = transcriptBlocks.map(b => b.text).join(" ");
     console.log(`Transcribed: ${transcriptBlocks.length} blocks, ${audioDuration.toFixed(1)}s, ${fullText.length} chars`);
@@ -135,45 +126,42 @@ RULES:
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
       .select("category,title,prompt_template,tags")
-      .order("viral_score", { ascending: false }).limit(8);
+      .order("viral_score", { ascending: false }).limit(5);
 
     const knowledgeBlock = (sceneKnowledge || []).map((r: any) =>
-      `[${r.category.toUpperCase()}] ${r.title}: ${r.prompt_template.slice(0, 200)}`
-    ).join("\n").slice(0, 2000);
+      `[${r.category.toUpperCase()}] ${r.title}: ${r.prompt_template.slice(0, 150)}`
+    ).join("\n").slice(0, 1200);
 
     // ========== PHASE 3: Build context ==========
     const styleGuides: Record<string, string> = {
-      'cinematográfico': 'Netflix/Disney premium. ARRI ALEXA 65, Cooke Anamorphic. ACES color, Kodak Vision3. Shallow DOF f/1.4-2.8. Volumetric rays.',
-      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector art, parallax depth, smooth 24fps. NO 3D elements, NO photorealistic.',
-      '3d': 'Pixar/DreamWorks 3D. Subsurface scattering, PBR materials, global illumination, 8K textures.',
+      'cinematográfico': 'Netflix/Disney premium. ARRI ALEXA 65, Cooke Anamorphic. ACES color, Kodak Vision3. Shallow DOF f/1.4-2.8.',
+      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector art, parallax depth, smooth 24fps. NO 3D, NO photorealistic.',
+      '3d': 'Pixar/DreamWorks 3D. Subsurface scattering, PBR materials, global illumination.',
       'anime': 'Ufotable/MAPPA. Sakuga poses, Shinkai backgrounds, cel-shading, rim lighting.',
       'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM, 8K, natural light.',
       'dark': 'Dark noir. Crushed blacks, neon accents. Blade Runner 2049 meets Se7en.',
       'comic': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
       'hq': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
-      'wojak': 'Wojak/meme internet art style. Simple drawn faces with exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic. Characters should look like Wojak memes with simple line art.',
-      'stickmen': 'Stick figure animation style. Minimalist black line drawings on white or simple colored backgrounds, humor through simplicity, hand-drawn feel.',
-      'whiteboard': 'Whiteboard animation. Hand-drawn sketches being drawn in real-time. Black ink on white, educational, clean lines.',
+      'wojak': 'Wojak/meme internet art style. Simple drawn faces with exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic.',
+      'stickmen': 'Stick figure animation. Minimalist black line drawings, simple backgrounds, hand-drawn feel.',
+      'whiteboard': 'Whiteboard animation. Hand-drawn sketches on white. Black ink, educational, clean lines.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
     const extraStyle = customStyleNotes ? `\nUSER STYLE INSTRUCTIONS: ${customStyleNotes}` : '';
-    const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES PROVIDED: The creator uploaded ${referenceImageUrls.length} reference images showing their desired visual style. Match that exact art style, color palette, and character design in every scene prompt.` : '';
+    const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES: ${referenceImageUrls.length} reference images uploaded. Match that exact art style, color palette, and character design.` : '';
 
     const characterBlock = characters?.length > 0
-      ? `\nCHARACTERS (include in scenes where they appear):\n${characters.slice(0, 5).map((c: any) => {
+      ? `\nCHARACTERS:\n${characters.slice(0, 5).map((c: any) => {
           const a = c.appearance || {};
           const cl = c.clothing || {};
           const ff = c.facial_features || {};
-          return `"${c.name}": ${c.gender||'?'}, ${c.age||'?'}y, ${c.role||'character'}, ${a.body_type||'average'} build, ${a.skin_color||'medium'} skin, ${a.hair_color||'dark'} ${a.hair_style||'short'} hair, ${a.eye_color||'brown'} eyes, ${ff.face_shape||'oval'} face, wearing ${cl.shirt||'casual'} and ${cl.pants||'jeans'}, ${cl.shoes||'sneakers'}. Personality: ${(c.personality||[]).join(', ')}`;
+          return `"${c.name}": ${c.gender||'?'}, ${c.age||'?'}y, ${c.role||'character'}, ${a.body_type||'average'} build, ${a.skin_color||'medium'} skin, ${a.hair_color||'dark'} ${a.hair_style||'short'} hair, wearing ${cl.shirt||'casual'} and ${cl.pants||'jeans'}`;
         }).join('\n')}\n`
       : '';
 
-    const transcriptForPrompt = transcriptBlocks
-      .map(b => `[${b.start.toFixed(1)}s-${b.end.toFixed(1)}s] ${b.text}`)
-      .join("\n");
-
-    // ========== PHASE 4: Generate scenes with Gemini Pro ==========
-    console.log("Phase 3: Generating synced scenes with Gemini Pro...");
+    // ========== PHASE 4: Generate scenes ==========
+    // Use Gemini Flash for speed (not Pro) to avoid timeout on long audio
+    console.log("Phase 4: Generating synced scenes with Gemini Flash...");
 
     const toolDef = {
       type: "function" as const,
@@ -192,9 +180,9 @@ RULES:
                   sceneDurationSeconds: { type: "number" },
                   startTime: { type: "number" },
                   endTime: { type: "number" },
-                  narrativeText: { type: "string", description: "The exact narration text during this scene" },
-                  narrativeSummary: { type: "string", description: "Brief summary of what's being said" },
-                  visualPrompt: { type: "string", description: "Detailed visual prompt for image/video generation" },
+                  narrativeText: { type: "string" },
+                  narrativeSummary: { type: "string" },
+                  visualPrompt: { type: "string" },
                   negativePrompt: { type: "string" },
                   cameraAngle: { type: "string" },
                   lensSpec: { type: "string" },
@@ -205,7 +193,7 @@ RULES:
                   charactersInScene: { type: "array", items: { type: "string" } },
                   transitionNote: { type: "string" },
                 },
-                required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "narrativeSummary", "visualPrompt", "negativePrompt", "cameraAngle", "lensSpec", "lightingSetup", "mood", "emotionalBeat"],
+                required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "visualPrompt", "cameraAngle", "mood"],
                 additionalProperties: false,
               },
             },
@@ -216,56 +204,33 @@ RULES:
       },
     };
 
-    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating video scenes from narrated audio.
-You have the FULL TRANSCRIPTION with exact timestamps. Your job is to create visual scenes that PERFECTLY MATCH what is being said at each moment.
+    const systemPrompt = `You are a VISUAL DIRECTOR creating video scenes from narrated audio.
+You have a TRANSCRIPTION with timestamps. Create visual scenes that MATCH what is being said.
 
-═══════════════════════════════════════
-🎨 MANDATORY ART STYLE — ALL PROMPTS MUST USE THIS STYLE:
+🎨 MANDATORY ART STYLE:
 ${selectedStyleGuide}
 ${extraStyle}${refImgContext}
-═══════════════════════════════════════
-IMPORTANT: Do NOT default to photorealistic/cinematic unless that is the chosen style above.
-For 2D styles: describe flat animation, vector art, cartoon characters — NOT real cameras/film
-For Wojak/meme: describe simple drawn faces, emotional expressions, meme aesthetic
-For anime: describe anime-specific visual language
 
-CRITICAL TIMING RULES:
-- Each scene MUST be 4, 6, or 8 seconds (Veo3 supported durations)
-- HOOK scene (first): always 8s for maximum impact
-- Action/transition: 6s for fast pacing
-- Emotional/descriptive: 8s for atmosphere
-- Cover the ENTIRE audio from 0.0s to ${audioDuration.toFixed(1)}s — NO GAPS
-- startTime/endTime MUST align with the transcript timestamps
+TIMING RULES:
+- Each scene: 5-10 seconds
+- HOOK scene (first): 8s
+- Cover the ENTIRE audio — NO GAPS
+- startTime/endTime MUST align with transcript timestamps
 
-VEO3 MASTER PROMPT FORMULA v2.0:
-[SHOT_TYPE + CAMERA_MOTION], [LENS_SPEC] with [DOF_SETTING]. [CHARACTER if applicable]. [ACTION]. [ENVIRONMENT]. [LIGHTING_SETUP]. [ATMOSPHERIC — particles, fog, rain]. [COLOR_GRADE — film stock]. [ANTI_AI — skin pores, motion blur, film grain, lens artifacts]. Quality: masterpiece, award-winning, 8K UHD, Kodak Vision3, ACES. Audio: ambient + foley + music mood. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [CHARACTER]. [ACTION]. [ENVIRONMENT]. [LIGHTING]. [ATMOSPHERE]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 
-NARRATION-VISUAL SYNC RULES:
-- EVERY visual prompt MUST directly illustrate what the narrator is saying at THAT EXACT MOMENT
-- Literal sync: concrete objects → show them. Metaphorical: abstract concepts → visual metaphors
-- Emotional sync: narration tone → color temperature (sad → cool blues, exciting → warm oranges)
-- Progressive: escalating tone → camera approaches, colors intensify, scale increases
-- NEVER show generic visuals disconnected from the narration
-
-VISUAL RETENTION RULES:
-- Create VARIETY: if narrator talks about pyramids, show different angles/perspectives across scenes
-- NEVER repeat the same visual concept in consecutive scenes
-- End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
-- CAMERA VARIETY: Never repeat angles consecutively. Use 5+ different shot types. Every 4th scene = pattern interrupt
-- DOPAMINERGIC: First 3s of each scene must trigger curiosity. Camera ALWAYS moving
-- MULTI-MOMENT: For complex narratives, design 2-3 visual moments within 8s using "seamlessly transforms into" transitions
-
-VISUAL STYLE: ${selectedStyleGuide}${extraStyle}${refImgContext}
+SYNC RULES:
+- EVERY visual prompt MUST illustrate what the narrator says at THAT moment
+- Concrete → show them. Abstract → visual metaphors
+- NEVER show generic visuals disconnected from narration
+- CAMERA VARIETY: Never repeat angles consecutively
 ${characterBlock}
-KNOWLEDGE BASE:
-${knowledgeBlock}
+PROMPT QUALITY: 80-150 words per prompt.
 
-PROMPT QUALITY: 100-200 words per prompt. Include exact lens (24mm/35mm/50mm/85mm/135mm/anamorphic), exact lighting (golden hour/Rembrandt/volumetric/chiaroscuro), anti-AI realism markers (skin pores, film grain, chromatic aberration, dust particles).
+${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
-${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT (use as reference for scene intent):\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 2000)}` : ''}`;
-
-    // Split into chunks if audio > 120s to avoid token limits
-    const CHUNK_SECONDS = 120;
+    // Split into chunks — 180s each for longer segments
+    const CHUNK_SECONDS = 180;
     const chunks: { blocks: typeof transcriptBlocks; startTime: number; endTime: number }[] = [];
 
     if (audioDuration <= CHUNK_SECONDS) {
@@ -288,8 +253,10 @@ ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT (use as reference for sce
 
     console.log(`Processing ${chunks.length} chunk(s) for ${audioDuration.toFixed(1)}s audio`);
 
-    // Process chunks in parallel
-    const chunkResults = await Promise.all(chunks.map(async (chunk, ci) => {
+    // Process chunks SEQUENTIALLY to avoid rate limits and timeout
+    const allScenes: any[] = [];
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const chunk = chunks[ci];
       const chunkTranscript = chunk.blocks
         .map(b => `[${b.start.toFixed(1)}s-${b.end.toFixed(1)}s] ${b.text}`)
         .join("\n");
@@ -297,7 +264,7 @@ ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT (use as reference for sce
       const chunkDuration = chunk.endTime - chunk.startTime;
       const expectedScenes = Math.max(2, Math.ceil(chunkDuration / 8));
 
-      console.log(`Chunk ${ci + 1}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s, ~${expectedScenes} scenes`);
+      console.log(`Chunk ${ci + 1}/${chunks.length}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s, ~${expectedScenes} scenes`);
 
       try {
         const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -307,21 +274,21 @@ ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT (use as reference for sce
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-pro",
+            model: "google/gemini-2.5-flash",
             tools: [toolDef],
             tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
             messages: [
               { role: "system", content: systemPrompt },
               {
                 role: "user",
-                content: `TRANSCRIPTION WITH TIMESTAMPS (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):
+                content: `TRANSCRIPTION (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):
 
 ${chunkTranscript}
 
-${cleanScript ? `FULL SCRIPT CONTEXT (for thematic reference):\n${cleanScript.slice(0, 2000)}` : ''}
+${cleanScript ? `SCRIPT CONTEXT:\n${cleanScript.slice(0, 1500)}` : ''}
 
-Generate ~${expectedScenes} scenes covering this ENTIRE segment. Each scene 5-10s. Visual style: ${videoStyle}. Language context: ${language}.
-The visual content of each scene MUST match what is being narrated at that timestamp.`
+Generate ~${expectedScenes} scenes for this segment. Each scene 5-10s. Style: ${videoStyle}. Language: ${language}.
+Visual content MUST match what is narrated at each timestamp.`
               }
             ],
           }),
@@ -330,35 +297,41 @@ The visual content of each scene MUST match what is being narrated at that times
         if (!resp.ok) {
           const t = await resp.text();
           console.error(`Chunk ${ci + 1} error: ${resp.status}`, t.slice(0, 200));
-          if (resp.status === 429) throw new Error("Rate limit. Tente novamente.");
+          if (resp.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
           if (resp.status === 402) throw new Error("Créditos insuficientes.");
-          return [];
+          continue; // Skip failed chunk but continue others
         }
 
         const data = await resp.json();
         const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
         if (toolCall) {
           const parsed = JSON.parse(toolCall.function.arguments);
-          console.log(`Chunk ${ci + 1}: ${parsed.scenes?.length || 0} scenes`);
-          return parsed.scenes || [];
+          const scenes = parsed.scenes || [];
+          console.log(`Chunk ${ci + 1}: ${scenes.length} scenes generated`);
+          allScenes.push(...scenes);
         }
-        return [];
       } catch (err: any) {
         console.error(`Chunk ${ci + 1} failed:`, err.message);
-        throw err; // Propagate rate limit / credit errors
+        if (err.message?.includes('Rate limit') || err.message?.includes('Créditos')) throw err;
+        // Continue with other chunks on non-critical errors
       }
-    }));
+
+      // Small delay between chunks to avoid rate limits
+      if (ci < chunks.length - 1) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
 
     // ========== PHASE 5: Merge and validate ==========
-    const allScenes = chunkResults.flat();
     allScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
 
-    // Enforce duration bounds and re-index
     for (const s of allScenes) {
       const dur = (s.endTime || 0) - (s.startTime || 0);
       s.sceneDurationSeconds = Math.max(5, Math.min(10, Math.round(dur)));
     }
     allScenes.forEach((s: any, i: number) => { s.sceneIndex = i + 1; });
+
+    if (allScenes.length === 0) throw new Error("Nenhuma cena gerada. Tente novamente.");
 
     console.log(`DONE: ${allScenes.length} scenes, ${audioDuration.toFixed(1)}s audio`);
 
@@ -377,7 +350,7 @@ The visual content of each scene MUST match what is being narrated at that times
         customStyleNotes: !!customStyleNotes,
         charactersCount: characters?.length || 0,
         chunksProcessed: chunks.length,
-        method: "gemini-transcription-synced",
+        method: "gemini-flash-sequential",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
