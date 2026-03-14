@@ -192,7 +192,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: SCORE_PROMPT + slopWarning + "\nVocê é o AVALIADOR GEMINI. Seja independente. NÃO INFLACIONE notas." },
+            { role: "system", content: SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR GEMINI. Seja independente. NÃO INFLACIONE notas." },
             { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
           ],
           tools: [toolDef],
