@@ -23,6 +23,48 @@ function gradePerformance(views: number, subs: number, daysSincePublish: number)
   return "F";
 }
 
+/**
+ * Auto-extract ranking keywords from a video title
+ */
+function extractKeywords(title: string): string[] {
+  const stopWords = new Set([
+    'a','o','e','de','da','do','em','para','com','que','um','uma','os','as','no','na','por',
+    'the','a','an','and','or','is','it','of','to','in','for','on','with','at','by','this','that',
+    'como','what','how','why','who','when','where','which','se','não','mais','muito','isso','este',
+    'esta','esse','essa','mas','ou','seu','sua','ele','ela','nos','são','foi','tem','ser','ter',
+  ]);
+
+  const words = title
+    .toLowerCase()
+    .replace(/[^\w\sáàâãéèêíïóôõöúçñ]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopWords.has(w));
+
+  const keywords: string[] = [];
+
+  // Full title as keyword (without special chars)
+  const cleanTitle = title.replace(/[^\w\sáàâãéèêíïóôõöúçñ]/g, '').trim();
+  if (cleanTitle.length > 5 && cleanTitle.length < 80) keywords.push(cleanTitle);
+
+  // 2-3 word combinations (bigrams/trigrams)
+  for (let i = 0; i < words.length - 1; i++) {
+    const bigram = `${words[i]} ${words[i + 1]}`;
+    if (bigram.length > 5) keywords.push(bigram);
+    if (i < words.length - 2) {
+      const trigram = `${words[i]} ${words[i + 1]} ${words[i + 2]}`;
+      if (trigram.length > 8) keywords.push(trigram);
+    }
+  }
+
+  // Individual meaningful words (4+ chars)
+  for (const w of words) {
+    if (w.length >= 4) keywords.push(w);
+  }
+
+  // Deduplicate and limit
+  return [...new Set(keywords)].slice(0, 5);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -34,7 +76,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const results: any = { checked: 0, graded: 0, rankings_checked: 0, lessons: 0 };
+    const results: any = { checked: 0, graded: 0, rankings_checked: 0, lessons: 0, keywords_extracted: 0 };
 
     // ═══ MODE: ADD VIDEO ═══
     if (mode === "add_video" && videoId && userId) {
@@ -50,6 +92,9 @@ serve(async (req) => {
       const likes = parseInt(video.statistics?.likeCount || '0');
       const comments = parseInt(video.statistics?.commentCount || '0');
 
+      // Auto-extract ranking keywords from title
+      const rankingKeywords = extractKeywords(video.snippet.title);
+
       const { error } = await sb.from("video_performance").upsert({
         user_id: userId,
         youtube_video_id: videoId,
@@ -58,12 +103,15 @@ serve(async (req) => {
         views_current: views,
         likes,
         comments,
+        ranking_keywords: rankingKeywords,
         last_checked_at: new Date().toISOString(),
         check_count: 1,
       }, { onConflict: "user_id,youtube_video_id" });
 
       if (error) throw error;
-      return new Response(JSON.stringify({ success: true, title: video.snippet.title, views }), {
+      results.keywords_extracted = rankingKeywords.length;
+
+      return new Response(JSON.stringify({ success: true, title: video.snippet.title, views, ranking_keywords: rankingKeywords }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -82,7 +130,7 @@ serve(async (req) => {
       }
 
       // Batch YouTube API calls (50 videos per request)
-      const videoIds = videos.map(v => v.youtube_video_id);
+      const videoIds = videos.map((v: any) => v.youtube_video_id);
       const batches = [];
       for (let i = 0; i < videoIds.length; i += 50) {
         batches.push(videoIds.slice(i, i + 50));
@@ -96,7 +144,7 @@ serve(async (req) => {
         const vData = await vRes.json();
 
         for (const item of (vData.items || [])) {
-          const vid = videos.find(v => v.youtube_video_id === item.id);
+          const vid = videos.find((v: any) => v.youtube_video_id === item.id);
           if (!vid) continue;
 
           const views = parseInt(item.statistics?.viewCount || '0');
@@ -116,7 +164,6 @@ serve(async (req) => {
 
           const grade = gradePerformance(views, subs, daysSince);
 
-          // Determine day-specific views
           const update: any = {
             views_current: views,
             likes,
@@ -126,6 +173,12 @@ serve(async (req) => {
             check_count: (vid.check_count || 0) + 1,
           };
 
+          // Auto-extract keywords if missing
+          if (!vid.ranking_keywords || (vid.ranking_keywords as string[]).length === 0) {
+            update.ranking_keywords = extractKeywords(vid.title);
+            results.keywords_extracted++;
+          }
+
           if (daysSince >= 1 && !vid.views_day1) update.views_day1 = views;
           if (daysSince >= 3 && !vid.views_day3) update.views_day3 = views;
           if (daysSince >= 7 && !vid.views_day7) update.views_day7 = views;
@@ -134,7 +187,7 @@ serve(async (req) => {
           await sb.from("video_performance").update(update).eq("id", vid.id);
           results.checked++;
 
-          // Grade changed? Generate AI feedback
+          // ═══ FEEDBACK LOOP: Grade changed → AI analysis → ai_learning ═══
           if (grade !== vid.performance_grade && grade !== "pending" && LOVABLE_API_KEY && daysSince >= 3) {
             try {
               const aiRes = await fetch(AI_URL, {
@@ -144,7 +197,7 @@ serve(async (req) => {
                   model: "google/gemini-2.5-flash-lite",
                   messages: [
                     { role: "system", content: "You analyze YouTube video performance and extract lessons. Be specific and actionable. Respond in Portuguese." },
-                    { role: "user", content: `Video: "${vid.title}"\nNiche: ${vid.niche || 'unknown'}\nViews: ${views.toLocaleString()} in ${Math.floor(daysSince)} days\nLikes: ${likes}, Comments: ${comments}\nGrade: ${grade}\nHook type: ${vid.hook_type || 'unknown'}\nTitle pattern: ${vid.title_pattern || 'unknown'}\nPredicted score: ${vid.predicted_viral_score}\n\nWhat worked? What failed? What should be done differently next time?` }
+                    { role: "user", content: `Video: "${vid.title}"\nNiche: ${vid.niche || 'unknown'}\nViews: ${views.toLocaleString()} in ${Math.floor(daysSince)} days\nLikes: ${likes}, Comments: ${comments}\nGrade: ${grade} (prev: ${vid.performance_grade})\nHook type: ${vid.hook_type || 'unknown'}\nTitle pattern: ${vid.title_pattern || 'unknown'}\nPredicted score: ${vid.predicted_viral_score}\n\nAnalyze: What worked? What failed? What hook/title/structure techniques should be kept or avoided?` }
                   ],
                   tools: [{
                     type: "function",
@@ -158,8 +211,10 @@ serve(async (req) => {
                           lessons: { type: "array", items: { type: "string" } },
                           next_time: { type: "string" },
                           prediction_accuracy: { type: "string" },
+                          hook_verdict: { type: "string", description: "Was the hook effective? Keep or change?" },
+                          title_verdict: { type: "string", description: "Did the title attract clicks?" },
                         },
-                        required: ["what_worked", "what_failed", "lessons", "next_time", "prediction_accuracy"],
+                        required: ["what_worked", "what_failed", "lessons", "next_time", "prediction_accuracy", "hook_verdict", "title_verdict"],
                         additionalProperties: false,
                       }
                     }
@@ -178,12 +233,28 @@ serve(async (req) => {
                     lessons_learned: feedback.lessons,
                   }).eq("id", vid.id);
 
-                  // Feed lessons back into AI learning
+                  // ═══ FEED BACK INTO ai_learning (closes the loop) ═══
                   await sb.from("ai_learning").insert({
                     topic: `performance_${grade}_${vid.niche || 'general'}`,
                     source: "track-video-performance",
-                    insight: `[Grade ${grade}] "${vid.title}" — ${views} views in ${Math.floor(daysSince)}d. Lessons: ${feedback.lessons.join('; ')}. Next time: ${feedback.next_time}`,
+                    insight: `[Grade ${grade}] "${vid.title}" — ${views} views in ${Math.floor(daysSince)}d. Hook: ${feedback.hook_verdict}. Title: ${feedback.title_verdict}. Lessons: ${feedback.lessons.join('; ')}. Next time: ${feedback.next_time}`,
                   });
+
+                  // ═══ FEED BACK TO hook_library (evolve hooks based on real data) ═══
+                  if (vid.hook_type) {
+                    const retention_adj = grade === 'S' || grade === 'A' ? 0.5 : grade === 'D' || grade === 'F' ? -0.5 : 0;
+                    if (retention_adj !== 0) {
+                      const { data: hooks } = await sb.from("hook_library")
+                        .select("id, retention_score")
+                        .eq("hook_type", vid.hook_type)
+                        .limit(5);
+                      for (const hook of (hooks || [])) {
+                        const newScore = Math.max(1, Math.min(10, (hook.retention_score || 5) + retention_adj));
+                        await sb.from("hook_library").update({ retention_score: newScore }).eq("id", hook.id);
+                      }
+                    }
+                  }
+
                   results.lessons++;
                   results.graded++;
                 }
@@ -199,13 +270,16 @@ serve(async (req) => {
     // ═══ MODE: CHECK RANKINGS ═══
     if (mode === "check_rankings" || mode === "check_all") {
       const { data: videos } = await sb.from("video_performance")
-        .select("id, user_id, title, ranking_keywords, youtube_video_id")
+        .select("id, user_id, title, ranking_keywords, youtube_video_id, best_ranking_position")
         .not("ranking_keywords", "eq", "[]")
+        .not("ranking_keywords", "is", null)
         .order("last_checked_at", { ascending: true })
         .limit(20);
 
       for (const vid of (videos || [])) {
-        const keywords = vid.ranking_keywords as string[] || [];
+        const keywords = (vid.ranking_keywords as string[]) || [];
+        if (keywords.length === 0) continue;
+
         for (const keyword of keywords.slice(0, 3)) {
           const { data: allowed } = await sb.rpc("check_and_increment_api_usage", { _api_name: "youtube" });
           if (!allowed) break;
@@ -237,8 +311,9 @@ serve(async (req) => {
             });
 
             if (position >= 0) {
+              const currentBest = vid.best_ranking_position || 999;
               await sb.from("video_performance").update({
-                best_ranking_position: Math.min(position + 1, vid.best_ranking_position || 999),
+                best_ranking_position: Math.min(position + 1, currentBest),
               }).eq("id", vid.id);
             }
 
