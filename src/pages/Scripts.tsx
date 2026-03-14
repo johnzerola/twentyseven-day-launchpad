@@ -950,6 +950,7 @@ const Scripts = () => {
                         getCleanNarration={getCleanNarration}
                         customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
                         referenceImageUrls={referenceImages.map(img => img.url)}
+                        onReferenceImagesChange={(urls) => setReferenceImages(urls.map(url => ({ url })))}
                       />
                       {syncedScenes.length > 0 && (
                         <div className="space-y-3">
