@@ -140,8 +140,11 @@ const Titles = () => {
     } catch { /* non-blocking */ }
   };
 
+  const canClick = useClickGuard();
+
   const generateTitles = async () => {
     if (!niche.trim() && !topic.trim()) return toast.error('Preencha nicho ou tema');
+    if (!canClick()) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-titles', {
