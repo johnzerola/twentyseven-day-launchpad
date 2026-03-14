@@ -379,6 +379,21 @@ const Dashboard = () => {
 
             {/* Script Performance History */}
             <ScriptPerformanceHistory />
+
+            {/* Video Performance Tracker — Feedback Loop */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="glass rounded-xl p-5">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" /> Performance Loop — Feedback Real
+              </h3>
+              <VideoPerformanceTracker />
+            </motion.div>
+
+            {/* A/B Testing */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+              className="glass rounded-xl p-5">
+              <ABTestManager />
+            </motion.div>
           </div>
 
           {/* Right: Quick Actions */}
