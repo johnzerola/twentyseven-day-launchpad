@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Youtube } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,17 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { YouTubeExportPanel } from '@/components/YouTubeExportPanel';
+
+// Debounce guard for generation buttons
+const useClickGuard = (cooldownMs = 3000) => {
+  const lastRef = useRef(0);
+  return () => {
+    const now = Date.now();
+    if (now - lastRef.current < cooldownMs) return false;
+    lastRef.current = now;
+    return true;
+  };
+};
 
 interface TitleSuggestion {
   title: string;
