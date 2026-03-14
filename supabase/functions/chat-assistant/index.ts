@@ -1439,8 +1439,8 @@ ${knowledgeBlock}
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 2;
-    const MAX_PARALLEL_TOOLS = 8;
+    const MAX_TOOL_ROUNDS = 1;
+    const MAX_PARALLEL_TOOLS = 5;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
       toolRound++;
