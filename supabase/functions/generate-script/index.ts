@@ -191,6 +191,39 @@ serve(async (req) => {
       ).join("\n")
       : '';
 
+    // ========== Channel Voice Profile ==========
+    let voiceInjection = '';
+    const voiceData = voiceRes?.data;
+    if (voiceData?.voice_signature) {
+      const sig = voiceData.voice_signature as any;
+      const markers = (voiceData.style_markers || []).join(', ');
+      const toneKw = (voiceData.tone_keywords || []).join(', ');
+      voiceInjection = `\n🎤 VOZ DO CANAL (aprendida de ${voiceData.sample_scripts_analyzed || '?'} roteiros anteriores):
+Tonalidade: ${sig.tone || 'N/A'}
+Ritmo: ${sig.rhythm || 'N/A'}
+Humor: ${sig.humor_style || 'N/A'}
+Narrativa: ${sig.narrative_preference || 'N/A'}
+Relação com audiência: ${sig.audience_relationship || 'N/A'}
+Marcadores: ${markers || 'N/A'}
+Keywords de tom: ${toneKw || 'N/A'}
+${sig.voice_prompt_injection ? `\nINSTRUÇÃO DE VOZ: ${sig.voice_prompt_injection}` : ''}
+IMPORTANTE: Use esta voz como BASE. O roteiro deve soar como ESTE criador específico, não como um roteirista genérico.\n`;
+    }
+
+    // ========== Backtesting Corrections ==========
+    let backtestBlock = '';
+    const btData = backtestRes?.data || [];
+    if (btData.length > 0) {
+      const corrections = btData.map((b: any) => {
+        try { const p = JSON.parse(b.insight); return p.correction; } catch { return null; }
+      }).filter(Boolean).slice(0, 3);
+      if (corrections.length > 0) {
+        backtestBlock = `\n📊 CORREÇÕES DO BACKTESTING (baseado em resultados REAIS de vídeos anteriores):
+${corrections.map((c: string) => `• ${c}`).join('\n')}
+Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`;
+      }
+    }
+
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
