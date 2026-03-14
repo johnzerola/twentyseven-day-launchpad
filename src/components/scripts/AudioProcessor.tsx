@@ -42,7 +42,7 @@ const PHASE_PROGRESS: Record<ProcessingPhase, number> = {
 export const AudioProcessor = ({
   script, videoStyle, videoStyles, characters, language, niche,
   sceneBlueprintJson, syncedScenes, setSyncedScenes, getCleanNarration,
-  customStyleNotes, setCustomStyleNotes,
+  customStyleNotes, setCustomStyleNotes, referenceImageUrls,
 }: AudioProcessorProps) => {
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
