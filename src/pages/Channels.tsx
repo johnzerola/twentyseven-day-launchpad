@@ -343,6 +343,9 @@ const Channels = () => {
           </div>
         </div>
 
+        {/* YouTube OAuth Connect */}
+        <YouTubeOAuthConnect />
+
         {showAdd && (
           <div className="glass rounded-xl p-5 flex gap-3">
             <Input value={channelInput} onChange={e => setChannelInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addChannel()} placeholder="URL do canal ou @username" className="bg-secondary/50" />
