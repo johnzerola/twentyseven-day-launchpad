@@ -292,6 +292,45 @@ serve(async (req) => {
       }
     }
 
+    // 6. Feed content_dna with full DNA extraction
+    feedPromises.push(
+      sb.from("content_dna").upsert({
+        video_id: video_id || `manual_${Date.now()}`,
+        video_title,
+        channel_id,
+        channel_name,
+        niche: niche || "general",
+        language,
+        views: views || 0,
+        subscribers: subscribers || 0,
+        hook_type: analysis.hook_analysis?.hook_type || null,
+        hook_pattern: analysis.hook_analysis?.hook_text_estimate || null,
+        hook_strength: analysis.hook_analysis?.retention_loop_count ? Math.min(10, analysis.hook_analysis.retention_loop_count + 4) : 6,
+        story_structure: analysis.narrative_structure?.arc_type || null,
+        pacing: analysis.pacing_analysis?.intensity_curve || null,
+        narrative_arc: analysis.narrative_structure?.segments ? {
+          segments: analysis.narrative_structure.segments,
+          payoff: analysis.narrative_structure.payoff_style,
+        } : {},
+        cliffhanger_count: analysis.narrative_structure?.cliffhanger_count || 0,
+        visual_style: analysis.pacing_analysis?.music_usage || null,
+        emotion_primary: analysis.psychological_triggers?.[0] || null,
+        emotion_secondary: analysis.psychological_triggers?.[1] || null,
+        psychological_triggers: analysis.psychological_triggers || [],
+        attention_score: (analysis.viral_score || 0) / 10 * 8,
+        curiosity_score: (analysis.viral_score || 0) / 10 * 7,
+        dopamine_score: (analysis.viral_score || 0) / 10 * 6,
+        estimated_retention: (analysis.quality_score || 5) * 10,
+        why_viral: `Viral Score: ${analysis.viral_score}. Triggers: ${(analysis.psychological_triggers || []).slice(0, 3).join(", ")}`,
+        replication_template: analysis.clone_template?.replicable_elements?.join("; ") || null,
+        content_model: analysis.clone_template?.estimated_production_cost || null,
+        viral_score: analysis.viral_score || 0,
+        gold_score: analysis.quality_score || 0,
+        source: "reverse-engineer",
+        duration_seconds: duration_seconds || 0,
+      }, { onConflict: "video_id" }).catch(() => {})
+    );
+
     await Promise.all(feedPromises);
     // ========== END AUTO-FEED PIPELINE ==========
 

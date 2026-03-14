@@ -579,6 +579,141 @@ export type Database = {
         }
         Relationships: []
       }
+      content_dna: {
+        Row: {
+          attention_score: number | null
+          channel_id: string | null
+          channel_name: string | null
+          cliffhanger_count: number | null
+          content_model: string | null
+          created_at: string | null
+          curiosity_score: number | null
+          dopamine_score: number | null
+          duration_seconds: number | null
+          emotion_primary: string | null
+          emotion_secondary: string | null
+          emotional_arc: Json | null
+          estimated_retention: number | null
+          gold_score: number | null
+          hook_pattern: string | null
+          hook_strength: number | null
+          hook_type: string | null
+          id: string
+          language: string | null
+          multiplier: number | null
+          narrative_arc: Json | null
+          niche: string | null
+          open_loop_count: number | null
+          pacing: string | null
+          psychological_triggers: string[] | null
+          replication_template: string | null
+          retention_hooks: Json | null
+          source: string | null
+          story_structure: string | null
+          subscribers: number | null
+          thumbnail_pattern: string | null
+          title_emotion: string | null
+          title_structure: string | null
+          title_uses_numbers: boolean | null
+          title_uses_questions: boolean | null
+          video_id: string
+          video_title: string
+          video_type: string | null
+          views: number | null
+          viral_score: number | null
+          visual_style: string | null
+          why_viral: string | null
+        }
+        Insert: {
+          attention_score?: number | null
+          channel_id?: string | null
+          channel_name?: string | null
+          cliffhanger_count?: number | null
+          content_model?: string | null
+          created_at?: string | null
+          curiosity_score?: number | null
+          dopamine_score?: number | null
+          duration_seconds?: number | null
+          emotion_primary?: string | null
+          emotion_secondary?: string | null
+          emotional_arc?: Json | null
+          estimated_retention?: number | null
+          gold_score?: number | null
+          hook_pattern?: string | null
+          hook_strength?: number | null
+          hook_type?: string | null
+          id?: string
+          language?: string | null
+          multiplier?: number | null
+          narrative_arc?: Json | null
+          niche?: string | null
+          open_loop_count?: number | null
+          pacing?: string | null
+          psychological_triggers?: string[] | null
+          replication_template?: string | null
+          retention_hooks?: Json | null
+          source?: string | null
+          story_structure?: string | null
+          subscribers?: number | null
+          thumbnail_pattern?: string | null
+          title_emotion?: string | null
+          title_structure?: string | null
+          title_uses_numbers?: boolean | null
+          title_uses_questions?: boolean | null
+          video_id: string
+          video_title?: string
+          video_type?: string | null
+          views?: number | null
+          viral_score?: number | null
+          visual_style?: string | null
+          why_viral?: string | null
+        }
+        Update: {
+          attention_score?: number | null
+          channel_id?: string | null
+          channel_name?: string | null
+          cliffhanger_count?: number | null
+          content_model?: string | null
+          created_at?: string | null
+          curiosity_score?: number | null
+          dopamine_score?: number | null
+          duration_seconds?: number | null
+          emotion_primary?: string | null
+          emotion_secondary?: string | null
+          emotional_arc?: Json | null
+          estimated_retention?: number | null
+          gold_score?: number | null
+          hook_pattern?: string | null
+          hook_strength?: number | null
+          hook_type?: string | null
+          id?: string
+          language?: string | null
+          multiplier?: number | null
+          narrative_arc?: Json | null
+          niche?: string | null
+          open_loop_count?: number | null
+          pacing?: string | null
+          psychological_triggers?: string[] | null
+          replication_template?: string | null
+          retention_hooks?: Json | null
+          source?: string | null
+          story_structure?: string | null
+          subscribers?: number | null
+          thumbnail_pattern?: string | null
+          title_emotion?: string | null
+          title_structure?: string | null
+          title_uses_numbers?: boolean | null
+          title_uses_questions?: boolean | null
+          video_id?: string
+          video_title?: string
+          video_type?: string | null
+          views?: number | null
+          viral_score?: number | null
+          visual_style?: string | null
+          why_viral?: string | null
+        }
+        Relationships: []
+      }
       content_models: {
         Row: {
           best_for_duration: string | null

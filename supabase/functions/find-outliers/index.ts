@@ -324,6 +324,40 @@ serve(async (req) => {
                 );
               }
 
+              // ═══ AUTO-FEED: content_dna table ═══
+              for (let i = 0; i < dnaResults.length && i < topOutliers.length; i++) {
+                const dv = dnaResults[i];
+                const ol = topOutliers[i];
+                feedPromises.push(
+                  sbService.from("content_dna").upsert({
+                    video_id: ol.video_id,
+                    video_title: ol.video_title,
+                    channel_id: ol.channel_id,
+                    channel_name: ol.channel_name,
+                    niche: keywords,
+                    views: ol.views,
+                    subscribers: ol.subscribers,
+                    multiplier: ol.multiplier,
+                    hook_type: dv.hook_type || null,
+                    hook_pattern: dv.title_pattern || null,
+                    hook_strength: ol.gold_score ? Math.min(10, ol.gold_score / 10) : 5,
+                    title_structure: dv.title_pattern || null,
+                    story_structure: dv.story_structure || null,
+                    pacing: dv.pacing || null,
+                    visual_style: dv.visual_style || null,
+                    thumbnail_pattern: dv.thumbnail_pattern || null,
+                    emotion_primary: dv.emotion_primary || null,
+                    emotion_secondary: dv.emotion_secondary || null,
+                    psychological_triggers: [dv.emotion_primary, dv.emotion_secondary].filter(Boolean),
+                    why_viral: dv.why_viral || `Outlier: ${ol.multiplier}x`,
+                    replication_template: dv.replication_template || null,
+                    gold_score: ol.gold_score || 0,
+                    viral_score: ol.gold_score || 0,
+                    source: "outlier-engine-auto",
+                  }, { onConflict: "video_id" }).catch(() => {})
+                );
+              }
+
               await Promise.all(feedPromises);
             }
           }
