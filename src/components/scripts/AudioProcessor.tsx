@@ -22,6 +22,7 @@ interface AudioProcessorProps {
   customStyleNotes: string;
   setCustomStyleNotes: (notes: string) => void;
   referenceImageUrls?: string[];
+  onReferenceImagesChange?: (urls: string[]) => void;
 }
 
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
@@ -42,10 +43,11 @@ const PHASE_PROGRESS: Record<ProcessingPhase, number> = {
 export const AudioProcessor = ({
   script, videoStyle, videoStyles, characters, language, niche,
   sceneBlueprintJson, syncedScenes, setSyncedScenes, getCleanNarration,
-  customStyleNotes, setCustomStyleNotes, referenceImageUrls,
+  customStyleNotes, setCustomStyleNotes, referenceImageUrls, onReferenceImagesChange,
 }: AudioProcessorProps) => {
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [uploadingRefImage, setUploadingRefImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,6 +63,38 @@ export const AudioProcessor = ({
   const removeFile = () => {
     setAudioFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const current = referenceImageUrls || [];
+    if (current.length + files.length > 5) {
+      toast.error('Máximo de 5 imagens de referência');
+      return;
+    }
+    setUploadingRefImage(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of files) {
+        const ext = file.name.split('.').pop();
+        const path = `references/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('media').upload(path, file);
+        if (error) { toast.error(`Erro ao subir ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        onReferenceImagesChange?.([...current, ...newUrls]);
+        toast.success(`${newUrls.length} imagem(ns) adicionada(s)`);
+      }
+    } finally {
+      setUploadingRefImage(false);
+    }
+  };
+
+  const removeRefImage = (index: number) => {
+    const current = referenceImageUrls || [];
+    onReferenceImagesChange?.(current.filter((_, i) => i !== index));
   };
 
   const generateSyncedScenes = async () => {
@@ -98,7 +132,6 @@ export const AudioProcessor = ({
       if (data?.error) throw new Error(data.error);
 
       setPhase('generating');
-      // Small delay for UI feedback
       await new Promise(r => setTimeout(r, 500));
 
       setSyncedScenes(data.scenes || []);
@@ -115,6 +148,7 @@ export const AudioProcessor = ({
   };
 
   const isProcessing = phase !== 'idle' && phase !== 'done';
+  const currentRefs = referenceImageUrls || [];
 
   return (
     <div className="space-y-4">
@@ -156,6 +190,51 @@ export const AudioProcessor = ({
         )}
       </div>
 
+      {/* Reference Images */}
+      {onReferenceImagesChange && (
+        <div className="border border-border/50 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-accent" />
+              <span className="text-sm font-semibold text-foreground">Imagens de Referência Visual</span>
+              <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+            </div>
+            {currentRefs.length > 0 && (
+              <span className="text-[10px] text-muted-foreground">{currentRefs.length}/5</span>
+            )}
+          </div>
+          <p className="text-[10px] text-muted-foreground mb-3">
+            Suba imagens do estilo visual desejado (ex: frames, screenshots, arte). A IA vai seguir esse padrão nas cenas.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {currentRefs.map((url, i) => (
+              <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-border">
+                <img src={url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => removeRefImage(i)}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {currentRefs.length < 5 && (
+              <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors bg-muted/20 hover:bg-muted/40">
+                {uploadingRefImage ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-[8px] text-muted-foreground">Adicionar</span>
+                  </>
+                )}
+                <input type="file" accept="image/*" multiple onChange={handleRefImageUpload} className="hidden" disabled={uploadingRefImage} />
+              </label>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Custom Style Notes */}
       <div className="border border-border/50 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
@@ -176,6 +255,7 @@ export const AudioProcessor = ({
       <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground">
         🎬 Estilo: <strong className="text-foreground">{videoStyles.find(v => v.value === videoStyle)?.label}</strong>
         {characters.length > 0 && <> • 👥 {characters.length} personagens</>}
+        {currentRefs.length > 0 && <> • 🖼️ {currentRefs.length} refs visuais</>}
         {customStyleNotes && <> • ✏️ Com instruções extras</>}
         <span className="ml-2">• ⏱ IA decide duração (5-10s/cena)</span>
       </div>
