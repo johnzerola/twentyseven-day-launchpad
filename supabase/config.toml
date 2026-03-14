@@ -126,4 +126,13 @@ verify_jwt = false
 [functions.backfill-embeddings]
 verify_jwt = false
 
+[functions.youtube-oauth-start]
+verify_jwt = false
+
+[functions.youtube-oauth-callback]
+verify_jwt = false
+
+[functions.youtube-analytics]
+verify_jwt = false
+
 

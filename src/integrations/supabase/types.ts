@@ -3033,6 +3033,48 @@ export type Database = {
         }
         Relationships: []
       }
+      youtube_oauth_tokens: {
+        Row: {
+          access_token: string
+          channel_id: string
+          channel_name: string | null
+          channel_thumbnail: string | null
+          connected_at: string | null
+          id: string
+          refresh_token: string
+          scopes: string[] | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          channel_id: string
+          channel_name?: string | null
+          channel_thumbnail?: string | null
+          connected_at?: string | null
+          id?: string
+          refresh_token: string
+          scopes?: string[] | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          channel_id?: string
+          channel_name?: string | null
+          channel_thumbnail?: string | null
+          connected_at?: string | null
+          id?: string
+          refresh_token?: string
+          scopes?: string[] | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

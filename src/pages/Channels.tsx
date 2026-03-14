@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { YouTubeOAuthConnect } from '@/components/dashboard/YouTubeOAuthConnect';
 import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap, ArrowUpRight, ArrowDownRight, Minus, Shield, Flame, Star, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -341,6 +342,9 @@ const Channels = () => {
             </Button>
           </div>
         </div>
+
+        {/* YouTube OAuth Connect */}
+        <YouTubeOAuthConnect />
 
         {showAdd && (
           <div className="glass rounded-xl p-5 flex gap-3">
