@@ -216,11 +216,13 @@ serve(async (req) => {
     }
 
     // ═══ Log ═══
-    await sb.from("execution_logs").insert({
-      function_name: "self-learning-worker",
-      success: true,
-      metadata: results,
-    }).catch(() => {});
+    try {
+      await sb.from("execution_logs").insert({
+        function_name: "self-learning-worker",
+        success: true,
+        metadata: results,
+      });
+    } catch (_) { /* ignore */ }
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
