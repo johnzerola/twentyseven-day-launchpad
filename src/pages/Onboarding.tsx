@@ -150,7 +150,7 @@ ${a.growth_potential}`;
           } as any, { onConflict: 'user_id,youtube_channel_id' }).select();
         }
 
-        // Save plan
+      // Save plan
         await supabase.from('onboarding_plans').insert({
           user_id: user.id,
           niche: allAnswers.niche,
@@ -161,6 +161,23 @@ ${a.growth_potential}`;
           plan_json: data.plan,
           channel_analysis_json: channelAnalysis?.analysis || null,
         } as any);
+
+        // ═══ SMART ONBOARDING: Auto-populate initial data ═══
+        try {
+          const onboardHeaders = await getAuthHeaders();
+          fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-onboarding`, {
+            method: 'POST',
+            headers: onboardHeaders,
+            body: JSON.stringify({
+              userId: user.id,
+              niche: allAnswers.niche,
+              language: allAnswers.language,
+              contentType: allAnswers.contentType,
+              channelId: allAnswers.channelId,
+              goal: allAnswers.goal,
+            }),
+          }).catch(() => {}); // Fire & forget — non-blocking
+        } catch { /* non-blocking */ }
       }
 
       // Show plan summary

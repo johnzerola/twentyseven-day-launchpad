@@ -288,12 +288,32 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
 ` : '';
 
     // ═══════════════════════════════════════════════════════
+    // PHASE CACHE: Check if a previous run was interrupted
+    // If Phase 0 hook was already generated, reuse it
+    // ═══════════════════════════════════════════════════════
+    const phaseCache: Record<string, string> = {};
+    try {
+      const { data: cached } = await sb.from("research_cache")
+        .select("result_json")
+        .eq("cache_key", `script_phase0:${runId}`)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (cached?.result_json) {
+        phaseCache['phase0'] = (cached.result_json as any).hook || '';
+        console.log(`[PHASE-CACHE] runId=${runId} Recovered Phase 0 hook (${phaseCache['phase0'].length} chars)`);
+      }
+    } catch { /* no cache — fresh run */ }
+
+    // ═══════════════════════════════════════════════════════
     // PHASE 0: Hook Generation (non-streaming, fast model)
     // CONTRACT: Receives topic+style+language → Returns 60s hook text
     // OUTPUT: Pure narration text, no metadata, no instructions
     // ═══════════════════════════════════════════════════════
     console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation...`);
-    let hookText = '';
+    let hookText = phaseCache['phase0'] || '';
+    if (hookText) {
+      console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
+    } else {
     try {
       const hookSystemPrompt = `Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR para YouTube. Idioma: ${language}. Estilo: ${style}.
 
