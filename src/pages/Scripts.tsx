@@ -74,6 +74,8 @@ const Scripts = () => {
   const [newStyleNotes, setNewStyleNotes] = useState('');
   const [referenceImages, setReferenceImages] = useState<{ url: string; file?: File }[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [channelVisualProfile, setChannelVisualProfile] = useState<string | null>(null);
+  const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [showIntelligence, setShowIntelligence] = useState(false);
@@ -102,7 +104,12 @@ const Scripts = () => {
 
   // Load channel styles when channel changes
   useEffect(() => {
-    if (selectedChannelId) loadChannelStyles(selectedChannelId);
+    if (selectedChannelId) {
+      loadChannelStyles(selectedChannelId);
+      analyzeChannelVisualStyle(selectedChannelId);
+    } else {
+      setChannelVisualProfile(null);
+    }
   }, [selectedChannelId]);
 
   const loadUserChannels = async () => {
@@ -123,6 +130,91 @@ const Scripts = () => {
       setVideoStyle(defaultStyle.style_name);
       setCustomStyleNotes(defaultStyle.visual_notes || '');
       toast.success(`Estilo "${defaultStyle.style_name}" do canal aplicado`);
+    }
+  };
+
+  const analyzeChannelVisualStyle = async (channelId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setAnalyzingChannelStyle(true);
+    try {
+      const channel = userChannels.find((c: any) => c.id === channelId);
+      const ytChannelId = channel?.youtube_channel_id;
+
+      // Fetch intelligence data, voice profile, and recent scenes in parallel
+      const [intelRes, voiceRes, scenesRes] = await Promise.all([
+        ytChannelId
+          ? supabase.from('channel_intelligence').select('visual_style_notes, style, niche, viral_patterns').eq('youtube_channel_id', ytChannelId).maybeSingle()
+          : Promise.resolve({ data: null }),
+        supabase.from('channel_voice_profiles').select('visual_style, voice_signature, style_markers').eq('user_id', user.id).eq('channel_id', channelId).maybeSingle(),
+        supabase.from('video_projects').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+      ]);
+
+      const parts: string[] = [];
+
+      // From channel_intelligence
+      const intel = intelRes.data as any;
+      if (intel?.visual_style_notes) parts.push(`Estilo visual do canal: ${intel.visual_style_notes}`);
+      if (intel?.style) parts.push(`Estilo geral: ${intel.style}`);
+      if (intel?.viral_patterns?.visual_style) parts.push(`Padrão visual viral: ${intel.viral_patterns.visual_style}`);
+
+      // From voice profile
+      const voice = voiceRes.data as any;
+      if (voice?.visual_style) parts.push(`Visual aprendido: ${voice.visual_style}`);
+      if (voice?.voice_signature?.narrative_preference) parts.push(`Narrativa: ${voice.voice_signature.narrative_preference}`);
+
+      // From channel styles already loaded
+      if (channelStyles.length > 0) {
+        const styleDescs = channelStyles.map((cs: any) => `${cs.style_name}: ${cs.style_description || cs.visual_notes || ''}`).filter(Boolean);
+        if (styleDescs.length) parts.push(`Estilos salvos: ${styleDescs.join('; ')}`);
+      }
+
+      // Fetch recent synced scenes for visual pattern detection
+      if (scenesRes.data?.length) {
+        const projectIds = scenesRes.data.map((p: any) => p.id);
+        const { data: recentScenes } = await supabase.from('scenes')
+          .select('visual_prompt, camera_angle, mood')
+          .in('project_id', projectIds)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (recentScenes?.length) {
+          const visualPatterns = recentScenes.map((s: any) => s.visual_prompt).filter(Boolean).slice(0, 5);
+          if (visualPatterns.length) parts.push(`Padrões visuais recentes: ${visualPatterns.join(' | ').slice(0, 500)}`);
+          const moods = [...new Set(recentScenes.map((s: any) => s.mood).filter(Boolean))];
+          if (moods.length) parts.push(`Moods frequentes: ${moods.join(', ')}`);
+        }
+      }
+
+      if (parts.length > 0) {
+        const profile = parts.join('\n');
+        setChannelVisualProfile(profile);
+        // Auto-fill custom style notes if empty
+        if (!customStyleNotes.trim()) {
+          setCustomStyleNotes(profile);
+        }
+        toast.success(`🎨 Estilo visual do canal "${channel?.channel_name}" detectado`);
+      } else {
+        setChannelVisualProfile(null);
+        // If no data, trigger voice learning
+        if (ytChannelId) {
+          supabase.functions.invoke('learn-channel-voice', {
+            body: { userId: user.id, channelId },
+          }).then(({ data }) => {
+            if (data?.success && data.voice_profile?.voice_signature) {
+              const vs = data.voice_profile.voice_signature;
+              const autoNotes = [vs.tone, vs.rhythm, vs.narrative_preference].filter(Boolean).join('. ');
+              if (autoNotes) {
+                setChannelVisualProfile(autoNotes);
+                toast.success('🧠 Perfil de voz do canal aprendido!');
+              }
+            }
+          }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('Channel visual analysis failed:', err);
+    } finally {
+      setAnalyzingChannelStyle(false);
     }
   };
 
@@ -661,6 +753,23 @@ const Scripts = () => {
                       Próximo <Users className="w-3 h-3" />
                     </Button>
                   </div>
+
+                  {/* Channel Visual Profile Detected */}
+                  {analyzingChannelStyle && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <p className="text-xs text-primary">Analisando estilo visual do canal...</p>
+                    </div>
+                  )}
+                  {channelVisualProfile && !analyzingChannelStyle && (
+                    <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 space-y-1.5">
+                      <p className="text-[10px] font-semibold text-accent uppercase flex items-center gap-1">
+                        🎨 Estilo Visual Detectado do Canal
+                      </p>
+                      <p className="text-[10px] text-muted-foreground whitespace-pre-line leading-relaxed">{channelVisualProfile}</p>
+                      <p className="text-[9px] text-muted-foreground/60 italic">Este padrão será usado para manter consistência visual nas cenas geradas</p>
+                    </div>
+                  )}
 
                   {/* Channel Custom Styles */}
                   {selectedChannelId && channelStyles.length > 0 && (
