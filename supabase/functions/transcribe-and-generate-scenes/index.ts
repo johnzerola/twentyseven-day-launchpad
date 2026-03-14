@@ -112,15 +112,16 @@ RULES:
     // ========== PHASE 3: Build context ==========
     const styleGuides: Record<string, string> = {
       'cinematográfico': 'Netflix/Disney premium. ARRI ALEXA 65, Cooke Anamorphic. ACES color, Kodak Vision3. Shallow DOF f/1.4-2.8. Volumetric rays.',
-      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector, parallax depth, smooth 24fps.',
+      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector art, parallax depth, smooth 24fps. NO 3D elements, NO photorealistic.',
       '3d': 'Pixar/DreamWorks 3D. Subsurface scattering, PBR materials, global illumination, 8K textures.',
       'anime': 'Ufotable/MAPPA. Sakuga poses, Shinkai backgrounds, cel-shading, rim lighting.',
       'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM, 8K, natural light.',
       'dark': 'Dark noir. Crushed blacks, neon accents. Blade Runner 2049 meets Se7en.',
       'comic': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
-      'wojak': 'Wojak/meme style. Simple drawn faces with strong emotional expressions. Internet culture aesthetic.',
-      'stickmen': 'Stick figure style. Minimalist black line art on white/simple backgrounds. Humor through simplicity.',
-      'whiteboard': 'Whiteboard animation. Hand-drawn sketches being drawn in real-time. Educational, clean.',
+      'hq': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
+      'wojak': 'Wojak/meme internet art style. Simple drawn faces with exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic. Characters should look like Wojak memes with simple line art.',
+      'stickmen': 'Stick figure animation style. Minimalist black line drawings on white or simple colored backgrounds, humor through simplicity, hand-drawn feel.',
+      'whiteboard': 'Whiteboard animation. Hand-drawn sketches being drawn in real-time. Black ink on white, educational, clean lines.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
     const extraStyle = customStyleNotes ? `\nUSER STYLE INSTRUCTIONS: ${customStyleNotes}` : '';
