@@ -194,11 +194,13 @@ serve(async (req) => {
             const d = await aiRes.json();
             const insight = d.choices?.[0]?.message?.content;
             if (insight) {
-              await sb.from("ai_learning").insert({
-                topic: "calibration_meta",
-                source: "self-learning-worker",
-                insight: `[Calibrated ${results.calibrated} niches] ${insight}`,
-              }).catch(() => {});
+              try {
+                await sb.from("ai_learning").insert({
+                  topic: "calibration_meta",
+                  source: "self-learning-worker",
+                  insight: `[Calibrated ${results.calibrated} niches] ${insight}`,
+                });
+              } catch (_) { /* ignore */ }
             }
           }
         } catch (e) { console.warn("Calibration insight error:", e); }
