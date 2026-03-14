@@ -184,8 +184,18 @@ RULES:
       },
     };
 
-    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating Netflix-grade video scenes from narrated audio.
+    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating video scenes from narrated audio.
 You have the FULL TRANSCRIPTION with exact timestamps. Your job is to create visual scenes that PERFECTLY MATCH what is being said at each moment.
+
+═══════════════════════════════════════
+🎨 MANDATORY ART STYLE — ALL PROMPTS MUST USE THIS STYLE:
+${selectedStyleGuide}
+${extraStyle}${refImgContext}
+═══════════════════════════════════════
+IMPORTANT: Do NOT default to photorealistic/cinematic unless that is the chosen style above.
+For 2D styles: describe flat animation, vector art, cartoon characters — NOT real cameras/film
+For Wojak/meme: describe simple drawn faces, emotional expressions, meme aesthetic
+For anime: describe anime-specific visual language
 
 CRITICAL TIMING RULES:
 - Each scene MUST be 4, 6, or 8 seconds (Veo3 supported durations)
