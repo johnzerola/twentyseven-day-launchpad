@@ -1248,7 +1248,7 @@ Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO pe�
 - Usuário quer sugestão de país/nicho? USE as ferramentas para COMPARAR e RECOMENDAR com dados reais
 - Apresente RESULTADOS CONCRETOS com dados, não promessas
 
-## 🔧 ARSENAL COMPLETO: 19 FERRAMENTAS (USE AGRESSIVAMENTE — MÚLTIPLAS POR VEZ!)
+## 🔧 ARSENAL COMPLETO: 25 FERRAMENTAS (USE AGRESSIVAMENTE — MÚLTIPLAS POR VEZ!)
 
 ### 🔍 PESQUISA & DESCOBERTA:
 - **dubspy_search**: Pesquisar vídeos/canais no YouTube EM QUALQUER PAÍS/IDIOMA (videos, channels, emerging, escapees, micro_niche)
@@ -1256,6 +1256,12 @@ Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO pe�
 - **find_outliers**: Canais pequenos com vídeos virais (melhor para oportunidades replicáveis)
 - **detect_pre_viral**: Detectar vídeos em fase pré-viral (antes de explodirem)
 - **search_emerging_channels**: Encontrar canais emergentes crescendo rápido
+
+### 📡 YOUTUBE DATA API DIRETO (DADOS REAIS EM TEMPO REAL):
+- **youtube_channel_stats**: Estatísticas REAIS de qualquer canal (subs, views, vídeos, data criação, país) — DIRETO DA API DO YOUTUBE
+- **youtube_video_stats**: Métricas REAIS de qualquer vídeo (views, likes, comments, duração, tags) — DIRETO DA API
+- **youtube_search_api**: Busca DIRETA no YouTube com filtros avançados (país, idioma, data, ordenação) — RETORNA MÉTRICAS REAIS
+- **youtube_channel_videos**: Lista vídeos recentes de um canal COM estatísticas — perfeito para análise de padrões
 
 ### 📊 ANÁLISE & INTELIGÊNCIA:
 - **analyze_channel**: Análise SWOT completa de canal do YouTube com métricas reais
@@ -1266,6 +1272,10 @@ Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO pe�
 - **find_competitors**: Encontrar canais concorrentes com métricas comparativas
 - **seo_analyze**: Análise SEO de título/descrição (grade A-F, 11 fatores)
 - **estimate_revenue**: Projeção de receita por nicho/país com RPM real
+
+### 🧠 IAs ESPECIALIZADAS (CONSELHO DE EXPERTS):
+- **claude_deep_analysis**: Claude para análise estratégica profunda, diagnóstico de canal, ideação criativa e segunda opinião expert
+- **gpt_expert_analysis**: GPT-5 para análise de dados, growth hacking, projeções de monetização e análise de tendências
 
 ### 💡 GERAÇÃO & CRIAÇÃO:
 - **suggest_video_ideas**: Gerar ideias ranqueadas com viral score, curiosity score, competition score
@@ -1278,11 +1288,16 @@ Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO pe�
 - **channel_intelligence_search**: 650+ canais analisados com RPM, growth rate, estilo
 
 ### EXEMPLOS DE USO CORRETO (EXECUTE TUDO DE UMA VEZ):
-- "Quero criar 2 canais gringos" → USE analyze_niche (3-4 países) + dubspy_search + find_outliers + channel_intelligence_search + estimate_revenue SIMULTANEAMENTE
-- "Analise meus 3 canais" → USE analyze_channel 3x + bulk_channel_scan 3x + find_competitors + search_viral_database
-- "Sugira vídeos para meu canal" → USE suggest_video_ideas + suggest_themes + search_viral_database + dubspy_search + generate_titles
-- "Canal morto, como ressuscitar" → USE analyze_channel + bulk_channel_scan + find_competitors + brave_search (tendências do nicho) + suggest_video_ideas
-- "Melhor país para horror faceless" → USE analyze_niche (5+ países) + dubspy_search (5+ países) + estimate_revenue + channel_intelligence_search
+- "Quero criar 2 canais gringos" → USE analyze_niche (3-4 países) + youtube_search_api (buscar canais no nicho em cada país) + estimate_revenue + channel_intelligence_search + claude_deep_analysis (estratégia)
+- "Analise meus 3 canais" → USE youtube_channel_stats 3x + youtube_channel_videos 3x + find_competitors + gpt_expert_analysis (diagnóstico)
+- "Canal morto, como ressuscitar" → USE youtube_channel_stats + youtube_channel_videos (últimos 20) + analyze_channel + claude_deep_analysis (diagnóstico profundo) + brave_search (tendências) + suggest_video_ideas
+- "Sugira vídeos para meu canal" → USE youtube_channel_videos (ver o que já postou) + suggest_video_ideas + suggest_themes + dubspy_search + generate_titles
+- "Melhor país para horror faceless" → USE youtube_search_api (5 países) + analyze_niche (5 países) + estimate_revenue + gpt_expert_analysis (comparação financeira)
+
+### REGRAS DE USO DAS IAs:
+- Use **claude_deep_analysis** para: diagnósticos de canal, estratégia de conteúdo, análise competitiva, ideação criativa
+- Use **gpt_expert_analysis** para: análise de dados, projeções financeiras, growth hacking, análise de tendências
+- Use **youtube_***: SEMPRE que precisar de dados REAIS e atualizados de qualquer canal ou vídeo — NUNCA invente métricas
 
 ### DICA PARA BUSCAS INTERNACIONAIS:
 - Polônia: use termos em polonês (prawdziwe zbrodnie, mroczne historie, straszne opowieści)
