@@ -238,20 +238,38 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
 
     // ========== Style guides ==========
     const styleGuides: Record<string, string> = {
-      'dopaminérgico': 'DOPAMINÉRGICO: Open loops a cada 30s, pattern interrupts, "E aqui é onde tudo muda...", contagem regressiva, comparações viscerais.',
-      'cinematográfico': 'CINEMATOGRÁFICO: Cena visual vívida, show dont tell, tensão como Nolan, transições cinematográficas, clímax emocional.',
-      'mrbeast': 'MRBEAST: Hook IMPOSSÍVEL em 5s, desafio a cada 30s, linguagem simples, contagem/ranking, urgência e reações exageradas.',
-      'narração': 'NARRAÇÃO: Voz profunda e hipnótica, frases curtas e impactantes, ritmo tensão→alívio→tensão, suspense narrativo.',
-      'storytelling': 'STORYTELLING: In medias res, personagens com nome/motivação/conflito, arco setup→conflito→escalada→clímax→resolução, plot twists.',
-      'educativo': 'EDUCATIVO: Destruir mitos com fatos, analogias do dia-a-dia, "A maioria pensa X mas...", mini-quizzes.',
-      'tutorial': 'TUTORIAL: Resultado final PRIMEIRO, passos numerados, "O erro #1 que 90% cometem..."',
-      'documentário': 'DOCUMENTÁRIO: Dados impactantes, múltiplas perspectivas, revelações progressivas.',
-      'listicle': 'LISTICLE: Preview do #1, escalada de impacto, "Mas o número X vai te deixar de queixo caído".',
-      'reddit': 'REDDIT: Tom 1ª pessoa, "Eu nunca contei isso...", detalhes sensoriais, plot twists, escalada de tensão. NÃO use fatos reais — crie uma narrativa envolvente.',
-      'conspiração': 'CONSPIRAÇÃO: Fato oficial → inconsistências → evidências alternativas → contra-argumentos → "Tire suas conclusões". Pode misturar fatos reais com teorias alternativas. Tom investigador e misterioso.',
-      'mitologia': 'MITOLOGIA: Tom épico, personagens míticos com motivações humanas, batalhas cinematográficas, conexões mito→moderno. Use LENDAS e MITOS como base, não fatos científicos.',
-      'teorias': 'TEORIAS: Dado real impressionante + pergunta, ciência + mistério, múltiplas teorias, tom investigador. Explore hipóteses e mistérios sem necessidade de provas definitivas.',
+      'dopaminérgico': 'DOPAMINÉRGICO: Open loops a cada 30s, pattern interrupts, "E aqui é onde tudo muda...", contagem regressiva, comparações viscerais. Frases de 3-8 palavras como METRALHADORA de curiosidade.',
+      'cinematográfico': 'CINEMATOGRÁFICO: Cena visual vívida, show dont tell, tensão como Nolan, transições cinematográficas, clímax emocional. Descrições sensoriais: cheiro, temperatura, textura.',
+      'mrbeast': 'MRBEAST: Hook IMPOSSÍVEL em 5s, desafio a cada 30s, linguagem simples, contagem/ranking, urgência e reações exageradas. Formato: promessa → tentativa → falha → ajuste → sucesso épico.',
+      'narração': 'NARRAÇÃO: Voz profunda e hipnótica, frases curtas e impactantes, ritmo tensão→alívio→tensão, suspense narrativo. Silêncios narrativos: "... E então, nada." Pausas deliberadas.',
+      'storytelling': 'STORYTELLING: In medias res, personagens com nome/motivação/conflito, arco setup→conflito→escalada→clímax→resolução, plot twists. O narrador FALHA e DUVIDA — vulnerabilidade real.',
+      'educativo': 'EDUCATIVO: Destruir mitos com fatos, analogias do dia-a-dia, "A maioria pensa X mas...", mini-quizzes. Transforme dados secos em revelações chocantes.',
+      'tutorial': 'TUTORIAL: Resultado final PRIMEIRO (show the end product), passos numerados claros, "O erro #1 que 90% cometem...", screenshot mental de cada passo.',
+      'documentário': 'DOCUMENTÁRIO: Dados impactantes com fonte, múltiplas perspectivas (prós e contras), revelações progressivas. Frio e preciso, com momentos de genuína perplexidade.',
+      'listicle': 'LISTICLE: Preview do #1 no início, escalada de impacto (fraco→médio→EXPLOSIVO), "Mas o número X vai te deixar de queixo caído". Cada item mais surpreendente que o anterior.',
+      'reddit': 'REDDIT: Tom 1ª pessoa, "Eu nunca contei isso...", detalhes sensoriais, plot twists, escalada de tensão. Digressões que voltam ao ponto. Humor self-deprecating. NÃO use fatos reais — crie narrativa.',
+      'conspiração': 'CONSPIRAÇÃO: Fato oficial → inconsistências → evidências alternativas → contra-argumentos → "Tire suas conclusões". Paranóico mas lúcido. Alterne fatos verificáveis com especulação rotulada.',
+      'mitologia': 'MITOLOGIA: Tom épico, personagens míticos com motivações humanas, batalhas cinematográficas, conexões mito→moderno. Descreva CENÁRIOS grandiosos (templos, mares, montanhas). Linguagem poética.',
+      'teorias': 'TEORIAS: Dado real impressionante + pergunta provocativa, ciência + mistério, múltiplas teorias apresentadas, tom investigador. Explore hipóteses sem necessidade de provas definitivas.',
     };
+
+    // ========== Niche-specific prompt enhancements ==========
+    const nicheGuides: Record<string, string> = {
+      'finanças': 'NICHO FINANÇAS: Use números ESPECÍFICOS ($47.392 > "milhares"), mostre cálculos reais, cite fontes (Warren Buffett, Ray Dalio). Evite promessas irrealistas. Formato: problema → dado chocante → solução acionável → prova social.',
+      'terror': 'NICHO TERROR: Construa tensão GRADUAL (não comece no máximo). Detalhes sensoriais (ranger de porta, cheiro de mofo, frio na nuca). Silencie antes do susto. O medo do desconhecido > monstro revelado.',
+      'tecnologia': 'NICHO TECNOLOGIA: Analogias simples para conceitos complexos ("É como se seu celular tivesse um mini-cérebro que..."). Mostre impacto na vida real. Dados de mercado. Comparações antes/depois.',
+      'ciência': 'NICHO CIÊNCIA: Comece com dado IMPOSSÍVEL de ignorar. Use escalas comparativas ("Se o Sol fosse uma bola de basquete, a Terra seria..."). Mistério + revelação. Cite papers quando possível.',
+      'gaming': 'NICHO GAMING: Energia ALTA do início ao fim. Easter eggs, speedruns, recordes. Linguagem gamer autêntica. Desafios impossíveis. Reações genuínas (não forçadas).',
+      'história': 'NICHO HISTÓRIA: Narrativa como filme épico. Personagens com motivação clara. Conexão passado-presente ("Isso aconteceu há 2000 anos, e ainda afeta você HOJE"). Detalhes que livros não contam.',
+      'saúde': 'NICHO SAÚDE: Resultados visuais/mensuráveis. Desmistifique mitos populares com estudos. "Seu médico provavelmente nunca te contou...". Cuidado com claims médicos — use "estudos sugerem".',
+      'true_crime': 'NICHO TRUE CRIME: Timeline cronológica clara. Revelações progressivas (não entregue tudo no início). Múltiplas perspectivas (vítima, investigador, suspeito). Detalhes forenses que prendem.',
+      'mitologia': 'NICHO MITOLOGIA: Tom ÉPICO e grandioso. Descreva cenários como se filmasse com câmera IMAX. Motivações humanas em seres divinos. Conecte lições do mito com vida moderna.',
+      'curiosidades': 'NICHO CURIOSIDADES: Cada fato MAIS surpreendente que o anterior. "Você sabia que..." é proibido — use hooks melhores. Números específicos e estranhos. Fontes inusitadas.',
+      'relacionamentos': 'NICHO RELACIONAMENTOS: Psicologia aplicada (attachment theory, love languages). Histórias reais anônimas. Vulnerabilidade genuína. "90% dos casais fazem isso sem perceber...".',
+      'empreendedorismo': 'NICHO EMPREENDEDORISMO: Case studies REAIS com números. Passo-a-passo acionável. "Eu comecei com R$0 e...". Erros comuns que custam dinheiro. ROI específico.',
+    };
+    const nicheLC = (niche || '').toLowerCase();
+    const nicheSpecific = Object.entries(nicheGuides).find(([key]) => nicheLC.includes(key))?.[1] || '';
     const selectedStyle = styleGuides[styleLC] || styleGuides['narração'];
 
     const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
