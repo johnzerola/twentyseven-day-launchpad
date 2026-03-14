@@ -304,8 +304,8 @@ POSTING STRATEGY FOR 30-DAY MONETIZATION:
                       why_this_will_work: { type: "string" },
                       anti_spam_check: { type: "boolean", description: "True if content seems human and not AI-generic" },
                     },
-                    required: ["title", "hook_text", "hook_type", "topic", "unique_angle", "story_structure", "narrative_skeleton", "predicted_attention_score", "predicted_curiosity_score", "predicted_dopamine_score", "viral_probability", "why_this_will_work"]
-                  }
+                     required: ["title", "hook_text", "hook_type", "topic", "unique_angle", "story_structure", "narrative_skeleton", "predicted_attention_score", "predicted_curiosity_score", "predicted_dopamine_score", "viral_probability", "why_this_will_work"],
+                     additionalProperties: false,
                 },
                 niche_summary: {
                   type: "object",
