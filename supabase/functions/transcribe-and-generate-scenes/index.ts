@@ -81,17 +81,49 @@ RULES:
 
     const transcribeData = await transcribeResponse.json();
     let transcriptText = transcribeData.choices?.[0]?.message?.content || "";
+    console.log("Raw transcription response (first 500 chars):", transcriptText.slice(0, 500));
 
-    // Parse transcript JSON
+    // Parse transcript JSON — try multiple extraction strategies
+    let transcriptBlocks: { start: number; end: number; text: string }[] = [];
+    
+    // Strategy 1: Extract JSON array from response
     const jsonMatch = transcriptText.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error("Falha ao transcrever áudio. Tente novamente.");
-
-    let transcriptBlocks: { start: number; end: number; text: string }[];
-    try {
-      transcriptBlocks = JSON.parse(jsonMatch[0]);
-    } catch {
-      throw new Error("Erro ao processar transcrição. Tente novamente.");
+    if (jsonMatch) {
+      try {
+        transcriptBlocks = JSON.parse(jsonMatch[0]);
+      } catch (parseErr) {
+        console.error("JSON parse failed:", parseErr, "Raw match:", jsonMatch[0].slice(0, 300));
+      }
     }
+
+    // Strategy 2: If no valid JSON array, treat as plain text and create synthetic blocks
+    if (!transcriptBlocks.length && transcriptText.trim()) {
+      // Clean markdown code blocks if present
+      const cleaned = transcriptText.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
+      
+      // Try parsing cleaned text
+      try {
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) transcriptBlocks = parsed;
+      } catch {
+        // Last resort: split plain text into sentence blocks with estimated timestamps
+        console.log("Falling back to plain text splitting");
+        const sentences = transcriptText.replace(/```[\s\S]*?```/g, '').trim()
+          .split(/[.!?]+/).filter(s => s.trim().length > 3);
+        
+        if (sentences.length > 0) {
+          const estDuration = 60; // estimate 60s if we can't detect
+          const perSentence = estDuration / sentences.length;
+          transcriptBlocks = sentences.map((s, i) => ({
+            start: +(i * perSentence).toFixed(1),
+            end: +((i + 1) * perSentence).toFixed(1),
+            text: s.trim(),
+          }));
+        }
+      }
+    }
+
+    if (!transcriptBlocks.length) throw new Error("Áudio sem fala detectável. Verifique se o áudio contém narração.");
 
     if (!transcriptBlocks.length) throw new Error("Áudio sem fala detectável.");
 
