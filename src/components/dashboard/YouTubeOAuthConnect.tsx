@@ -1,0 +1,152 @@
+import { useState, useEffect } from 'react';
+import { Youtube, Link2, Unlink, Loader2, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { authFetch } from '@/lib/auth-fetch';
+import { toast } from 'sonner';
+
+interface ConnectedChannel {
+  id: string;
+  channel_id: string;
+  channel_name: string;
+  channel_thumbnail: string;
+  connected_at: string;
+}
+
+export const YouTubeOAuthConnect = () => {
+  const [connectedChannels, setConnectedChannels] = useState<ConnectedChannel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    fetchConnectedChannels();
+  }, []);
+
+  const fetchConnectedChannels = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('youtube_oauth_tokens')
+        .select('id, channel_id, channel_name, channel_thumbnail, connected_at');
+      if (error) throw error;
+      setConnectedChannels((data as ConnectedChannel[]) || []);
+    } catch (err) {
+      console.error('Error fetching connected channels:', err);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleConnect = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Você precisa estar logado');
+
+      const resp = await authFetch('youtube-oauth-start', { userId: user.id });
+      const { authUrl, error } = await resp.json();
+      if (error) throw new Error(error);
+
+      // Open OAuth consent screen in popup
+      const popup = window.open(authUrl, 'youtube-oauth', 'width=600,height=700');
+
+      // Poll for popup close, then refresh
+      const interval = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(interval);
+          fetchConnectedChannels();
+          setLoading(false);
+        }
+      }, 1000);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(interval);
+        setLoading(false);
+      }, 300000);
+    } catch (err: any) {
+      toast.error(err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnect = async (id: string, channelName: string) => {
+    try {
+      const { error } = await supabase
+        .from('youtube_oauth_tokens')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      toast.success(`Canal "${channelName}" desconectado`);
+      setConnectedChannels(prev => prev.filter(c => c.id !== id));
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  return (
+    <Card className="border-border">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Youtube className="w-5 h-5 text-destructive" />
+          <CardTitle className="text-base">YouTube Analytics (OAuth)</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Conecte seu canal para acessar dados reais de CTR, retenção, impressões e receita.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {fetching ? (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+          </div>
+        ) : (
+          <>
+            {connectedChannels.map((ch) => (
+              <div key={ch.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/30">
+                {ch.channel_thumbnail && (
+                  <img src={ch.channel_thumbnail} alt="" className="w-8 h-8 rounded-full" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{ch.channel_name}</p>
+                  <p className="text-[10px] text-muted-foreground">{ch.channel_id}</p>
+                </div>
+                <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
+                  <BarChart3 className="w-3 h-3" /> Conectado
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => handleDisconnect(ch.id, ch.channel_name || '')}
+                >
+                  <Unlink className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              onClick={handleConnect}
+              disabled={loading}
+              variant="outline"
+              className="w-full gap-2"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Link2 className="w-4 h-4" />
+              )}
+              {connectedChannels.length > 0 ? 'Conectar outro canal' : 'Conectar Canal YouTube'}
+            </Button>
+
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              🔒 Seus dados ficam protegidos. Acessamos apenas métricas de leitura (analytics).
+              Nenhuma ação é realizada no seu canal.
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
