@@ -384,6 +384,8 @@ ${viralInjection}
 ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
+${voiceInjection}
+${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
