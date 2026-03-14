@@ -124,6 +124,7 @@ RULES:
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
     const extraStyle = customStyleNotes ? `\nUSER STYLE INSTRUCTIONS: ${customStyleNotes}` : '';
+    const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES PROVIDED: The creator uploaded ${referenceImageUrls.length} reference images showing their desired visual style. Match that exact art style, color palette, and character design in every scene prompt.` : '';
 
     const characterBlock = characters?.length > 0
       ? `\nCHARACTERS (include in scenes where they appear):\n${characters.slice(0, 5).map((c: any) => {
