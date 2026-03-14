@@ -212,7 +212,7 @@ VISUAL RETENTION RULES:
 - DOPAMINERGIC: First 3s of each scene must trigger curiosity. Camera ALWAYS moving
 - MULTI-MOMENT: For complex narratives, design 2-3 visual moments within 8s using "seamlessly transforms into" transitions
 
-VISUAL STYLE: ${selectedStyleGuide}${extraStyle}
+VISUAL STYLE: ${selectedStyleGuide}${extraStyle}${refImgContext}
 ${characterBlock}
 KNOWLEDGE BASE:
 ${knowledgeBlock}
