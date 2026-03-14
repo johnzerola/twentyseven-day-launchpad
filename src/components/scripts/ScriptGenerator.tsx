@@ -11,6 +11,22 @@ import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ═══════ NICHE PRESETS ═══════
+const NICHE_PRESETS: Record<string, { label: string; emoji: string; styles: string[]; topics: string[]; defaultDuration: number; tips: string }> = {
+  finanças: { label: 'Finanças', emoji: '💰', styles: ['dopaminérgico', 'educativo', 'listicle'], topics: ['Como investir R$100 por mês e ficar rico', '5 erros que te mantêm pobre', 'A verdade sobre renda passiva em 2026'], defaultDuration: 15, tips: 'Use números específicos, mostre resultados reais, evite promessas vazias.' },
+  terror: { label: 'Terror/Horror', emoji: '👻', styles: ['narração', 'storytelling', 'reddit'], topics: ['A floresta que ninguém ousa entrar', 'O que encontraram debaixo daquela casa', 'Relatos reais que a ciência não explica'], defaultDuration: 20, tips: 'Construa tensão gradual, use silêncios narrativos, detalhes sensoriais.' },
+  tecnologia: { label: 'Tecnologia', emoji: '🤖', styles: ['educativo', 'dopaminérgico', 'documentário'], topics: ['IA vai substituir seu trabalho em 2026?', 'O chip que mudou TUDO', '5 tecnologias que vão explodir este ano'], defaultDuration: 12, tips: 'Analogias simples para conceitos complexos, demonstrações visuais.' },
+  ciência: { label: 'Ciência', emoji: '🔬', styles: ['documentário', 'cinematográfico', 'teorias'], topics: ['O que acontece se você cair num buraco negro', 'A partícula que não deveria existir', 'Por que o tempo não é real'], defaultDuration: 15, tips: 'Comece com dado chocante, use escalas comparativas, mistério + revelação.' },
+  gaming: { label: 'Gaming', emoji: '🎮', styles: ['dopaminérgico', 'mrbeast', 'listicle'], topics: ['O jogo mais difícil já criado', '24h jogando o pior jogo da história', 'Easter eggs que 99% não conhecem'], defaultDuration: 15, tips: 'Energia alta, cortes rápidos, desafios impossíveis, reações genuínas.' },
+  história: { label: 'História', emoji: '📜', styles: ['documentário', 'cinematográfico', 'storytelling'], topics: ['O império que o mundo esqueceu', 'A batalha mais insana da história', 'O segredo que mudou uma civilização'], defaultDuration: 20, tips: 'Narrativa como filme, personagens com motivação, conexão passado-presente.' },
+  saúde: { label: 'Saúde/Fitness', emoji: '💪', styles: ['educativo', 'tutorial', 'dopaminérgico'], topics: ['O exercício que muda seu corpo em 30 dias', 'Alimentos que estão te matando lentamente', '5 hábitos de quem vive 100 anos'], defaultDuration: 12, tips: 'Resultados visuais, antes/depois, desmistifique mitos populares.' },
+  true_crime: { label: 'True Crime', emoji: '🔍', styles: ['narração', 'conspiração', 'documentário'], topics: ['O caso que a polícia nunca resolveu', 'O serial killer que ninguém suspeitava', 'A evidência que mudou tudo'], defaultDuration: 25, tips: 'Timeline cronológica, revelações progressivas, múltiplas perspectivas.' },
+  mitologia: { label: 'Mitologia', emoji: '⚡', styles: ['mitologia', 'cinematográfico', 'storytelling'], topics: ['O deus que desafiou o próprio destino', 'A criatura mais temida da mitologia nórdica', 'A guerra dos deuses que destruiu o mundo'], defaultDuration: 20, tips: 'Tom épico, descreva cenários grandiosos, conecte mito com lição moderna.' },
+  curiosidades: { label: 'Curiosidades', emoji: '🧠', styles: ['dopaminérgico', 'listicle', 'educativo'], topics: ['15 fatos que vão explodir sua mente', 'Coisas proibidas ao redor do mundo', 'O que acontece se você NÃO dormir por 7 dias'], defaultDuration: 15, tips: 'Escalada de impacto, cada fato mais surpreendente que o anterior.' },
+  relacionamentos: { label: 'Relacionamentos', emoji: '❤️', styles: ['storytelling', 'reddit', 'educativo'], topics: ['Sinais que ele/ela não te ama de verdade', 'A psicologia por trás da atração', 'O que ninguém te conta sobre morar junto'], defaultDuration: 12, tips: 'Histórias reais, vulnerabilidade, psicologia aplicada.' },
+  empreendedorismo: { label: 'Empreendedorismo', emoji: '🚀', styles: ['dopaminérgico', 'educativo', 'mrbeast'], topics: ['De R$0 a R$100k em 12 meses', 'O negócio que ninguém está fazendo', '3 ideias de negócio para 2026'], defaultDuration: 15, tips: 'Case studies reais, números específicos, passo-a-passo acionável.' },
+};
+
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
   { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Estilo filme premiado, tensão narrativa' },
