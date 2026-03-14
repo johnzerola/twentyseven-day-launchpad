@@ -218,6 +218,7 @@ const Scripts = () => {
     }
   };
 
+  const saveChannelStyle = async () => {
     if (!newStyleName.trim() || !selectedChannelId) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
