@@ -935,6 +935,7 @@ export const ScriptGenerator = ({
                 )}
               </motion.div>
             )}
+          </motion.div>
         )}
 
         {/* ═══════ STEP 1: Draft Review ═══════ */}
