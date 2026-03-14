@@ -441,7 +441,16 @@ const DOTTI_TOOLS = [
   },
 ];
 
-// ===== TOOL EXECUTION WITH RETRY =====
+// ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
+const TOOL_TIMEOUT_MS = 20000; // 20s per tool
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms)),
+  ]);
+}
+
 async function executeTool(
   toolName: string,
   args: any,
@@ -452,11 +461,15 @@ async function executeTool(
 ): Promise<string> {
   const callFn = async (fnName: string, payload: any) => {
     try {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-        body: JSON.stringify(payload),
-      });
+      const resp = await withTimeout(
+        fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+          body: JSON.stringify(payload),
+        }),
+        TOOL_TIMEOUT_MS,
+        fnName
+      );
       const text = await resp.text();
       if (!resp.ok) {
         console.error(`Tool ${fnName} HTTP ${resp.status}:`, text.slice(0, 500));
@@ -464,8 +477,8 @@ async function executeTool(
       }
       try { return JSON.parse(text); } catch { return { raw: text.slice(0, 3000) }; }
     } catch (e: any) {
-      console.error(`Tool ${fnName} network error:`, e.message);
-      return { error: `Network error: ${e.message}` };
+      console.error(`Tool ${fnName} error:`, e.message);
+      return { error: e.message };
     }
   };
 
