@@ -180,7 +180,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "openai/gpt-5-nano",
           messages: [
-            { role: "system", content: SCORE_PROMPT + slopWarning + "\nVocê é o AVALIADOR GPT. Seja independente. NÃO INFLACIONE notas." },
+            { role: "system", content: SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR GPT. Seja independente. NÃO INFLACIONE notas." },
             { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
           ],
           tools: [toolDef],
