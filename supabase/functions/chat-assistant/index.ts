@@ -320,6 +320,106 @@ const DOTTI_TOOLS = [
       },
     },
   },
+  // ===== YOUTUBE DATA API DIRECT =====
+  {
+    type: "function",
+    function: {
+      name: "youtube_channel_stats",
+      description: "Get REAL YouTube channel statistics directly from YouTube Data API: subscribers, views, videos, creation date, description, country. Use for accurate current metrics of any channel.",
+      parameters: {
+        type: "object",
+        properties: {
+          channelId: { type: "string", description: "YouTube channel ID (UCxxxx)" },
+          handle: { type: "string", description: "YouTube @handle or channel name (will be resolved)" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "youtube_video_stats",
+      description: "Get REAL video statistics from YouTube Data API: views, likes, comments, duration, publish date, tags, description. Use for accurate data on specific videos.",
+      parameters: {
+        type: "object",
+        properties: {
+          videoId: { type: "string", description: "YouTube video ID" },
+          videoUrl: { type: "string", description: "YouTube video URL (will extract ID)" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "youtube_search_api",
+      description: "Search YouTube directly via Data API: find videos, channels, playlists by query with real metrics. Best for finding CURRENT content in any country/language.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Search query" },
+          type: { type: "string", enum: ["video", "channel", "playlist"], description: "Result type (default: video)" },
+          regionCode: { type: "string", description: "Country code (BR, US, PL, etc.)" },
+          relevanceLanguage: { type: "string", description: "Language code (pt, en, pl, etc.)" },
+          order: { type: "string", enum: ["relevance", "date", "viewCount", "rating"], description: "Sort order" },
+          maxResults: { type: "number", description: "Max results (default 10, max 50)" },
+          publishedAfter: { type: "string", description: "ISO date — only videos after this date" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "youtube_channel_videos",
+      description: "Get recent videos from a YouTube channel with stats. Best for analyzing upload patterns, content strategy, and finding top performers.",
+      parameters: {
+        type: "object",
+        properties: {
+          channelId: { type: "string", description: "YouTube channel ID" },
+          maxResults: { type: "number", description: "Max videos to return (default 20)" },
+          order: { type: "string", enum: ["date", "viewCount"], description: "Sort by date or views" },
+        },
+        required: ["channelId"],
+      },
+    },
+  },
+  // ===== AI ANALYSIS TOOLS =====
+  {
+    type: "function",
+    function: {
+      name: "claude_deep_analysis",
+      description: "Use Claude AI for deep strategic analysis, creative writing, nuanced content strategy, or when you need a second expert opinion. Best for complex strategy, competitive analysis, and creative ideation.",
+      parameters: {
+        type: "object",
+        properties: {
+          task: { type: "string", description: "What to analyze or create" },
+          context: { type: "string", description: "Relevant context, data, or channel info" },
+          style: { type: "string", enum: ["strategic", "creative", "analytical", "diagnostic"], description: "Analysis style" },
+        },
+        required: ["task"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gpt_expert_analysis",
+      description: "Use GPT-5 for expert-level analysis, data interpretation, trend forecasting, or monetization strategy. Best for number crunching, market analysis, and growth projections.",
+      parameters: {
+        type: "object",
+        properties: {
+          task: { type: "string", description: "What to analyze" },
+          context: { type: "string", description: "Data and context" },
+          style: { type: "string", enum: ["data-driven", "growth-hacking", "monetization", "trend-analysis"], description: "Analysis focus" },
+        },
+        required: ["task"],
+      },
+    },
+  },
 ];
 
 // ===== TOOL EXECUTION WITH RETRY =====
