@@ -1425,16 +1425,19 @@ ${knowledgeBlock}
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 3;
+    const MAX_TOOL_ROUNDS = 2;
+    const MAX_PARALLEL_TOOLS = 8;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
       toolRound++;
-      console.log(`Dotti tool round ${toolRound}: calling ${currentChoice.tool_calls.length} tools:`, 
-        currentChoice.tool_calls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 100)})`));
+      // Cap parallel tools to avoid timeout
+      const toolCalls = currentChoice.tool_calls.slice(0, MAX_PARALLEL_TOOLS);
+      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`, 
+        toolCalls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`));
 
-      // Execute all tool calls in parallel
+      // Execute tool calls in parallel (capped)
       const toolResults = await Promise.all(
-        currentChoice.tool_calls.map(async (tc: any) => {
+        toolCalls.map(async (tc: any) => {
           const args = JSON.parse(tc.function.arguments || '{}');
           const result = await executeTool(tc.function.name, args, sb, supabaseUrl, supabaseKey);
           return {
