@@ -7,6 +7,8 @@ import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
 import { ScriptPerformanceHistory } from '@/components/dashboard/ScriptPerformanceHistory';
 import { DailyPlanner } from '@/components/dashboard/DailyPlanner';
 import { DashboardSkeleton } from '@/components/PageSkeletons';
+import { VideoPerformanceTracker } from '@/components/dashboard/VideoPerformanceTracker';
+import { ABTestManager } from '@/components/dashboard/ABTestManager';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
