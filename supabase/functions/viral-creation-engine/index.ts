@@ -306,6 +306,7 @@ POSTING STRATEGY FOR 30-DAY MONETIZATION:
                     },
                      required: ["title", "hook_text", "hook_type", "topic", "unique_angle", "story_structure", "narrative_skeleton", "predicted_attention_score", "predicted_curiosity_score", "predicted_dopamine_score", "viral_probability", "why_this_will_work"],
                      additionalProperties: false,
+                  },
                 },
                 niche_summary: {
                   type: "object",
