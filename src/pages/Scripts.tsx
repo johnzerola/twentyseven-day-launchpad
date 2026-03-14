@@ -72,7 +72,8 @@ const Scripts = () => {
   const [newStyleName, setNewStyleName] = useState('');
   const [newStyleDesc, setNewStyleDesc] = useState('');
   const [newStyleNotes, setNewStyleNotes] = useState('');
-
+  const [referenceImages, setReferenceImages] = useState<{ url: string; file?: File }[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [showIntelligence, setShowIntelligence] = useState(false);
