@@ -74,6 +74,8 @@ const Scripts = () => {
   const [newStyleNotes, setNewStyleNotes] = useState('');
   const [referenceImages, setReferenceImages] = useState<{ url: string; file?: File }[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [channelVisualProfile, setChannelVisualProfile] = useState<string | null>(null);
+  const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [showIntelligence, setShowIntelligence] = useState(false);
