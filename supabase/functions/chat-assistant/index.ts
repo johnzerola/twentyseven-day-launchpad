@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -441,7 +441,16 @@ const DOTTI_TOOLS = [
   },
 ];
 
-// ===== TOOL EXECUTION WITH RETRY =====
+// ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
+const TOOL_TIMEOUT_MS = 20000; // 20s per tool
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms)),
+  ]);
+}
+
 async function executeTool(
   toolName: string,
   args: any,
@@ -452,11 +461,15 @@ async function executeTool(
 ): Promise<string> {
   const callFn = async (fnName: string, payload: any) => {
     try {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-        body: JSON.stringify(payload),
-      });
+      const resp = await withTimeout(
+        fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+          body: JSON.stringify(payload),
+        }),
+        TOOL_TIMEOUT_MS,
+        fnName
+      );
       const text = await resp.text();
       if (!resp.ok) {
         console.error(`Tool ${fnName} HTTP ${resp.status}:`, text.slice(0, 500));
@@ -464,8 +477,8 @@ async function executeTool(
       }
       try { return JSON.parse(text); } catch { return { raw: text.slice(0, 3000) }; }
     } catch (e: any) {
-      console.error(`Tool ${fnName} network error:`, e.message);
-      return { error: `Network error: ${e.message}` };
+      console.error(`Tool ${fnName} error:`, e.message);
+      return { error: e.message };
     }
   };
 
@@ -1263,7 +1276,8 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
     const systemPrompt = `Você é o **Dotti** — o consultor estratégico de YouTube mais poderoso do mundo. Você é um conselho de 3 experts: ex-CEO do YouTube (viralização), ex-diretor da Netflix (storytelling) e ex-diretor do Google (arquitetura de crescimento).
 
 ## 🧠 REGRA SUPREMA: AUTONOMIA TOTAL
-Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO peça confirmação. NÃO diga "vou pesquisar" — PESQUISE. NÃO diga "vamos analisar" — ANALISE. NÃO peça mais dados se você pode descobrir sozinho com as ferramentas.
+Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO peça confirmação.
+**IMPORTANTE**: Use no MÁXIMO 8 ferramentas por vez. Priorize as mais importantes primeiro. Se precisar de mais, use em rodadas.
 
 **NUNCA FAÇA ISSO:**
 - "Preciso de um nicho definido" → ESCOLHA o melhor nicho você mesmo
@@ -1412,16 +1426,19 @@ ${knowledgeBlock}
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 3;
+    const MAX_TOOL_ROUNDS = 2;
+    const MAX_PARALLEL_TOOLS = 8;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
       toolRound++;
-      console.log(`Dotti tool round ${toolRound}: calling ${currentChoice.tool_calls.length} tools:`, 
-        currentChoice.tool_calls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 100)})`));
+      // Cap parallel tools to avoid timeout
+      const toolCalls = currentChoice.tool_calls.slice(0, MAX_PARALLEL_TOOLS);
+      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`, 
+        toolCalls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`));
 
-      // Execute all tool calls in parallel
+      // Execute tool calls in parallel (capped)
       const toolResults = await Promise.all(
-        currentChoice.tool_calls.map(async (tc: any) => {
+        toolCalls.map(async (tc: any) => {
           const args = JSON.parse(tc.function.arguments || '{}');
           const result = await executeTool(tc.function.name, args, sb, supabaseUrl, supabaseKey);
           return {
