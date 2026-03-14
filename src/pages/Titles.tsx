@@ -199,6 +199,7 @@ const Titles = () => {
 
   const generateSEODesc = async () => {
     if (!seoTitle.trim()) return toast.error('Preencha o título do vídeo');
+    if (!canClick()) return;
     setSeoLoading(true);
     setSeoResult(null);
     try {
