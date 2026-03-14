@@ -7,6 +7,8 @@ import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
 import { ScriptPerformanceHistory } from '@/components/dashboard/ScriptPerformanceHistory';
 import { DailyPlanner } from '@/components/dashboard/DailyPlanner';
 import { DashboardSkeleton } from '@/components/PageSkeletons';
+import { VideoPerformanceTracker } from '@/components/dashboard/VideoPerformanceTracker';
+import { ABTestManager } from '@/components/dashboard/ABTestManager';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -377,6 +379,21 @@ const Dashboard = () => {
 
             {/* Script Performance History */}
             <ScriptPerformanceHistory />
+
+            {/* Video Performance Tracker — Feedback Loop */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="glass rounded-xl p-5">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" /> Performance Loop — Feedback Real
+              </h3>
+              <VideoPerformanceTracker />
+            </motion.div>
+
+            {/* A/B Testing */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+              className="glass rounded-xl p-5">
+              <ABTestManager />
+            </motion.div>
           </div>
 
           {/* Right: Quick Actions */}
