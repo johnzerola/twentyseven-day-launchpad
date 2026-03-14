@@ -84,10 +84,20 @@ serve(async (req) => {
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
 
-    // ========== Fetch ALL Knowledge (parallel — 10 queries) ==========
+    // ========== Fetch ALL Knowledge + Voice Profile (parallel — 12 queries) ==========
+    // Extract userId from auth header for voice profile lookup
+    const authHeader = req.headers.get("authorization") || '';
+    let currentUserId: string | null = null;
+    if (authHeader.startsWith("Bearer ")) {
+      try {
+        const { data: { user } } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+        currentUserId = user?.id || null;
+      } catch {}
+    }
+
     const [
       ytRes, scriptRes, channelRes, triggersRes, formatsRes, psychPatternsRes,
-      hookRes, structRes, attEngRes, attLibRes, viralTitlesRes
+      hookRes, structRes, attEngRes, attLibRes, viralTitlesRes, voiceRes, backtestRes
     ] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(8),
       sb.from("script_knowledge").select("category,title,content,examples").order("effectiveness_score", { ascending: false }).limit(12),
@@ -110,6 +120,15 @@ serve(async (req) => {
         .order("attention_score", { ascending: false }).limit(10),
       sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
         .order("views", { ascending: false }).limit(20),
+      // Channel Voice Profile (if user has one)
+      currentUserId
+        ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers")
+            .eq("user_id", currentUserId).order("last_analyzed_at", { ascending: false }).limit(1).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // Backtesting corrections (most recent lessons)
+      sb.from("ai_learning").select("insight")
+        .eq("source", "backtest-scores")
+        .order("created_at", { ascending: false }).limit(5),
     ]);
 
     // ========== Format existing knowledge ==========
