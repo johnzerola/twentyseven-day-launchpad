@@ -104,6 +104,42 @@ serve(async (req) => {
     const scriptText = script.slice(0, 12000);
     const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
 
+    // ═══ Fetch calibration data from real results ═══
+    let calibrationContext = '';
+    try {
+      const [calibRes, avgScoresRes, recentErrorsRes] = await Promise.all([
+        sb.from("score_calibration").select("niche, avg_error, bias_correction, samples_count, confidence")
+          .eq("score_type", "viral_probability").limit(10),
+        sb.from("mv_avg_scores_by_niche").select("*").limit(20),
+        sb.from("prediction_vs_result").select("niche, predicted_viral_score, real_views, prediction_error_score")
+          .order("created_at", { ascending: false }).limit(10),
+      ]);
+
+      const calibData = calibRes.data || [];
+      const avgScores = avgScoresRes.data || [];
+      const recentErrors = recentErrorsRes.data || [];
+
+      if (calibData.length > 0 || avgScores.length > 0) {
+        const parts: string[] = [];
+        if (calibData.length > 0) {
+          parts.push('CALIBRAÇÃO REAL: ' + calibData.map(c => 
+            `${c.niche}: erro médio ${c.avg_error}%, bias ${c.bias_correction > 0 ? '+' : ''}${c.bias_correction}, ${c.samples_count} amostras (confiança: ${Math.round((c.confidence || 0) * 100)}%)`
+          ).join('; '));
+        }
+        if (avgScores.length > 0 && niche) {
+          const nicheMatch = avgScores.find((a: any) => a.niche?.toLowerCase().includes(niche?.toLowerCase()));
+          if (nicheMatch) {
+            parts.push(`BENCHMARK REAL DO NICHO "${niche}": viral_score médio=${nicheMatch.avg_viral_score}, attention=${nicheMatch.avg_attention_score}, retenção=${nicheMatch.avg_retention}, baseado em ${nicheMatch.total_videos} vídeos reais`);
+          }
+        }
+        if (recentErrors.length > 0) {
+          const avgErr = recentErrors.reduce((s: number, e: any) => s + (e.prediction_error_score || 0), 0) / recentErrors.length;
+          parts.push(`ERRO MÉDIO RECENTE DAS PREVISÕES: ${avgErr.toFixed(1)} pontos. Calibre suas notas baseado nesta margem de erro.`);
+        }
+        calibrationContext = parts.length > 0 ? `\n\n═══ DADOS REAIS DE CALIBRAÇÃO (use para ajustar sua avaliação) ═══\n${parts.join('\n')}\n` : '';
+      }
+    } catch (e) { console.warn("Calibration fetch error:", e); }
+
     // Add slop context to scoring prompt
     const slopWarning = slopResult.slopScore > 0
       ? `\n⚠️ NOTA PRÉ-AVALIAÇÃO: O detector automático encontrou ${slopResult.slopScore} padrões de AI-slop: ${slopResult.details.join(', ')}. Considere isso na sua avaliação de originalidade.\n`
