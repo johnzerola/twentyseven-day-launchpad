@@ -754,6 +754,23 @@ const Scripts = () => {
                     </Button>
                   </div>
 
+                  {/* Channel Visual Profile Detected */}
+                  {analyzingChannelStyle && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <p className="text-xs text-primary">Analisando estilo visual do canal...</p>
+                    </div>
+                  )}
+                  {channelVisualProfile && !analyzingChannelStyle && (
+                    <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 space-y-1.5">
+                      <p className="text-[10px] font-semibold text-accent uppercase flex items-center gap-1">
+                        🎨 Estilo Visual Detectado do Canal
+                      </p>
+                      <p className="text-[10px] text-muted-foreground whitespace-pre-line leading-relaxed">{channelVisualProfile}</p>
+                      <p className="text-[9px] text-muted-foreground/60 italic">Este padrão será usado para manter consistência visual nas cenas geradas</p>
+                    </div>
+                  )}
+
                   {/* Channel Custom Styles */}
                   {selectedChannelId && channelStyles.length > 0 && (
                     <div className="space-y-2">
