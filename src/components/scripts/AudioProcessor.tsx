@@ -86,6 +86,7 @@ export const AudioProcessor = ({
           script: cleanScript,
           videoStyle,
           customStyleNotes,
+          referenceImageUrls: referenceImageUrls?.length ? referenceImageUrls : undefined,
           characters: characters.length > 0 ? characters : undefined,
           language,
           niche,
