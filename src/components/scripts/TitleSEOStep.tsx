@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Search, Zap, Brain } from 'lucide-react';
+import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Search, Zap, Brain, BarChart3, Target, Tag, ShieldCheck, ArrowUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
@@ -34,6 +35,31 @@ interface SEODescription {
   keyword_density_note?: string;
 }
 
+interface SEOFactor {
+  score: number;
+  weight: number;
+  label: string;
+  tip: string;
+  category: string;
+}
+
+interface SEOAnalysisResult {
+  seo_score: number;
+  grade: string;
+  scores: Record<string, SEOFactor>;
+  category_scores: Record<string, number>;
+  issues: string[];
+  ai_suggestions?: {
+    alternative_titles?: { title: string; estimated_ctr: number; why_better: string }[];
+    suggested_tags?: string[];
+    description_template?: string;
+    hook_suggestion?: string;
+    seo_keywords?: string[];
+    quick_wins?: string[];
+  };
+  metadata: Record<string, any>;
+}
+
 const getStyleColor = (style: string): string => {
   const hash = style.split('').reduce((acc, c) => c.charCodeAt(0) + ((acc << 5) - acc), 0);
   const colors = [
@@ -46,6 +72,47 @@ const getStyleColor = (style: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+const getGradeColor = (grade: string) => {
+  if (grade === 'A+' || grade === 'A') return 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
+  if (grade === 'B+' || grade === 'B') return 'text-yellow-400 bg-yellow-500/15 border-yellow-500/30';
+  if (grade === 'C') return 'text-orange-400 bg-orange-500/15 border-orange-500/30';
+  return 'text-destructive bg-destructive/15 border-destructive/30';
+};
+
+const getScoreColor = (score: number) => {
+  if (score >= 8) return 'text-emerald-400';
+  if (score >= 6) return 'text-yellow-400';
+  if (score >= 4) return 'text-orange-400';
+  return 'text-destructive';
+};
+
+const getProgressColor = (score: number) => {
+  if (score >= 8) return '[&>div]:bg-emerald-500';
+  if (score >= 6) return '[&>div]:bg-yellow-500';
+  if (score >= 4) return '[&>div]:bg-orange-500';
+  return '[&>div]:bg-destructive';
+};
+
+const getCategoryIcon = (cat: string) => {
+  switch (cat) {
+    case 'title': return Target;
+    case 'description': return FileText;
+    case 'tags': return Tag;
+    case 'market': return TrendingUp;
+    default: return BarChart3;
+  }
+};
+
+const getCategoryLabel = (cat: string) => {
+  switch (cat) {
+    case 'title': return 'Título';
+    case 'description': return 'Descrição';
+    case 'tags': return 'Tags';
+    case 'market': return 'Mercado';
+    default: return cat;
+  }
+};
+
 interface TitleSEOStepProps {
   topic: string;
   niche: string;
@@ -56,7 +123,7 @@ interface TitleSEOStepProps {
 }
 
 export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, syncedScenes }: TitleSEOStepProps) => {
-  const [activeTab, setActiveTab] = useState<'generate' | 'ab-test' | 'seo-desc'>('generate');
+  const [activeTab, setActiveTab] = useState<'generate' | 'ab-test' | 'seo-desc' | 'seo-audit'>('generate');
   const [loading, setLoading] = useState(false);
   const [titles, setTitles] = useState<TitleSuggestion[]>([]);
   const [competitorAnalysis, setCompetitorAnalysis] = useState('');
@@ -68,10 +135,19 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
   const [abLoading, setAbLoading] = useState(false);
   const [abResult, setAbResult] = useState<ABResult | null>(null);
 
-  // SEO
+  // SEO Description
   const [seoTitle, setSeoTitle] = useState('');
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoResult, setSeoResult] = useState<SEODescription | null>(null);
+
+  // SEO Audit
+  const [auditTitle, setAuditTitle] = useState('');
+  const [auditKeyword, setAuditKeyword] = useState('');
+  const [auditDesc, setAuditDesc] = useState('');
+  const [auditTags, setAuditTags] = useState('');
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditResult, setAuditResult] = useState<SEOAnalysisResult | null>(null);
+  const [auditExpandedCat, setAuditExpandedCat] = useState<string | null>('title');
 
   const buildScriptContext = () => {
     const parts: string[] = [];
@@ -188,6 +264,34 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
     }
   };
 
+  const runSEOAudit = async () => {
+    const titleToAudit = auditTitle || titles.find(t => t.liked)?.title || titles[0]?.title;
+    if (!titleToAudit) return toast.error('Preencha um título para analisar');
+    setAuditLoading(true);
+    setAuditResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('seo-analyzer', {
+        body: {
+          title: titleToAudit,
+          keyword: auditKeyword || topic,
+          description: auditDesc,
+          tags: auditTags ? auditTags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          language,
+          niche,
+          include_suggestions: true,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setAuditResult(data);
+      toast.success(`Análise completa: ${data.grade} (${data.seo_score}/10)`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro na análise SEO');
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   const copyText = (text: string, titleObj?: TitleSuggestion) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado!');
@@ -222,11 +326,12 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {[
           { id: 'generate' as const, label: 'Gerar Títulos', icon: Sparkles },
           { id: 'ab-test' as const, label: 'A/B Test', icon: FlaskConical },
           { id: 'seo-desc' as const, label: 'SEO & Descrição', icon: FileText },
+          { id: 'seo-audit' as const, label: '🔬 Análise SEO', icon: ShieldCheck },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-all border ${
@@ -248,7 +353,6 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
             {loading ? 'Pesquisando concorrentes + gerando títulos...' : 'Gerar 20 Títulos (Gemini Pro + YouTube + Brave)'}
           </Button>
 
-          {/* Research indicators */}
           {researchInfo && (
             <div className="flex gap-2 flex-wrap">
               {researchInfo.competitors_analyzed && (
@@ -267,7 +371,6 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
             </div>
           )}
 
-          {/* Competitor Analysis */}
           {competitorAnalysis && (
             <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
               className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
@@ -327,6 +430,10 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                       <Button variant="ghost" size="sm" className="h-7 w-7 opacity-0 group-hover:opacity-100"
                         onClick={() => { setSeoTitle(t.title); setActiveTab('seo-desc'); }}>
                         <FileText className="w-3 h-3" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                        onClick={() => { setAuditTitle(t.title); setActiveTab('seo-audit'); }}>
+                        <ShieldCheck className="w-3 h-3" />
                       </Button>
                       <Button variant="ghost" size="sm" className="h-7 w-7 opacity-0 group-hover:opacity-100"
                         onClick={() => copyText(t.title, t)}>
@@ -398,7 +505,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
         </div>
       )}
 
-      {/* SEO Tab */}
+      {/* SEO Description Tab */}
       {activeTab === 'seo-desc' && (
         <div className="space-y-3">
           <div>
@@ -411,7 +518,6 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
           </Button>
           {seoResult && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-              {/* SEO Score */}
               {seoResult.seo_score && (
                 <div className="flex items-center gap-2">
                   <Badge className={`${seoResult.seo_score >= 8 ? 'bg-emerald-500/20 text-emerald-400' : seoResult.seo_score >= 6 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-destructive/20 text-destructive'} text-xs`}>
@@ -443,6 +549,193 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                   </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* SEO Audit Tab */}
+      {activeTab === 'seo-audit' && (
+        <div className="space-y-3">
+          <div className="bg-muted/20 rounded-lg p-3 border border-border/50">
+            <p className="text-[10px] font-medium text-muted-foreground mb-2">📊 Análise SEO completa com 18 fatores — estilo VidIQ</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-muted-foreground mb-1 block">Título *</label>
+                <Input placeholder="Título do vídeo..." value={auditTitle} onChange={e => setAuditTitle(e.target.value)} className="bg-secondary/50 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground mb-1 block">Keyword principal</label>
+                <Input placeholder="Ex: como ganhar dinheiro" value={auditKeyword} onChange={e => setAuditKeyword(e.target.value)} className="bg-secondary/50 text-xs" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <label className="text-[10px] text-muted-foreground mb-1 block">Descrição (opcional)</label>
+              <Textarea placeholder="Cole a descrição do vídeo..." value={auditDesc} onChange={e => setAuditDesc(e.target.value)} rows={3} className="bg-secondary/50 text-xs" />
+            </div>
+            <div className="mt-2">
+              <label className="text-[10px] text-muted-foreground mb-1 block">Tags (separadas por vírgula)</label>
+              <Input placeholder="tag1, tag2, tag3..." value={auditTags} onChange={e => setAuditTags(e.target.value)} className="bg-secondary/50 text-xs" />
+            </div>
+          </div>
+
+          <Button onClick={runSEOAudit} disabled={auditLoading} className="w-full gradient-hero border-0 gap-2">
+            {auditLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {auditLoading ? 'Analisando 18 fatores + IA...' : 'Analisar SEO (18 fatores + Sugestões IA)'}
+          </Button>
+
+          {auditResult && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+              {/* Grade + Score Header */}
+              <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+                <div className={`text-3xl font-black px-4 py-2 rounded-xl border-2 ${getGradeColor(auditResult.grade)}`}>
+                  {auditResult.grade}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xl font-bold">{auditResult.seo_score}<span className="text-sm text-muted-foreground font-normal">/10</span></p>
+                  <p className="text-[10px] text-muted-foreground">Score geral baseado em 18 fatores ponderados</p>
+                </div>
+              </div>
+
+              {/* Category Scores */}
+              <div className="grid grid-cols-4 gap-2">
+                {Object.entries(auditResult.category_scores || {}).map(([cat, score]) => {
+                  const Icon = getCategoryIcon(cat);
+                  return (
+                    <button key={cat} onClick={() => setAuditExpandedCat(auditExpandedCat === cat ? null : cat)}
+                      className={`p-3 rounded-lg text-center transition-all border ${auditExpandedCat === cat ? 'border-primary bg-primary/10' : 'border-border/50 bg-muted/20 hover:border-primary/30'}`}>
+                      <Icon className={`w-4 h-4 mx-auto mb-1 ${getScoreColor(score)}`} />
+                      <p className={`text-lg font-bold ${getScoreColor(score)}`}>{score}</p>
+                      <p className="text-[9px] text-muted-foreground">{getCategoryLabel(cat)}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Factor Breakdown */}
+              {auditExpandedCat && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-2 bg-muted/20 rounded-lg p-3 border border-border/50">
+                  <p className="text-xs font-semibold flex items-center gap-1.5">
+                    {(() => { const Icon = getCategoryIcon(auditExpandedCat); return <Icon className="w-3.5 h-3.5 text-primary" />; })()}
+                    {getCategoryLabel(auditExpandedCat)}
+                  </p>
+                  {Object.entries(auditResult.scores)
+                    .filter(([, f]) => f.category === auditExpandedCat)
+                    .sort(([, a], [, b]) => a.score - b.score)
+                    .map(([key, factor]) => (
+                      <div key={key} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-foreground">{factor.label}</span>
+                          <span className={`text-[10px] font-bold ${getScoreColor(factor.score)}`}>{factor.score}/10</span>
+                        </div>
+                        <Progress value={factor.score * 10} className={`h-1.5 ${getProgressColor(factor.score)}`} />
+                        <p className="text-[9px] text-muted-foreground flex items-center gap-1">
+                          {factor.score >= 8 ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> :
+                           factor.score >= 5 ? <ArrowUp className="w-3 h-3 text-yellow-400" /> :
+                           <AlertTriangle className="w-3 h-3 text-destructive" />}
+                          {factor.tip}
+                        </p>
+                      </div>
+                    ))}
+                </motion.div>
+              )}
+
+              {/* Quick Wins */}
+              {auditResult.ai_suggestions?.quick_wins && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                  <p className="text-[10px] font-medium text-emerald-400 mb-2">⚡ Quick Wins — Ações Imediatas</p>
+                  <div className="space-y-1.5">
+                    {auditResult.ai_suggestions.quick_wins.map((win, i) => (
+                      <p key={i} className="text-[10px] text-muted-foreground flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400 mt-0.5 shrink-0" />
+                        {win}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Title Alternatives */}
+              {auditResult.ai_suggestions?.alternative_titles && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" /> Títulos Otimizados (IA)
+                  </p>
+                  {auditResult.ai_suggestions.alternative_titles.map((alt, i) => (
+                    <div key={i} className="bg-muted/30 rounded-lg p-2.5 flex items-center gap-2 group hover:bg-muted/50 transition-all">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-[11px]">{alt.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] font-bold text-emerald-400">CTR ~{alt.estimated_ctr}%</span>
+                          <span className="text-[8px] text-muted-foreground">— {alt.why_better}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-0.5">
+                        <Button variant="ghost" size="sm" className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                          onClick={() => { setAuditTitle(alt.title); }}>
+                          <ArrowUp className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                          onClick={() => copyText(alt.title)}>
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Suggested Tags & Keywords */}
+              <div className="grid grid-cols-2 gap-3">
+                {auditResult.ai_suggestions?.suggested_tags && (
+                  <div className="bg-muted/20 rounded-lg p-2.5">
+                    <p className="text-[9px] font-medium text-muted-foreground mb-1.5">Tags Sugeridas ({auditResult.ai_suggestions.suggested_tags.length})</p>
+                    <div className="flex flex-wrap gap-1">
+                      {auditResult.ai_suggestions.suggested_tags.map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="text-[8px] cursor-pointer hover:bg-primary/20"
+                          onClick={() => copyText(tag)}>{tag}</Badge>
+                      ))}
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-6 text-[9px] mt-1.5 w-full"
+                      onClick={() => copyText(auditResult.ai_suggestions!.suggested_tags!.join(', '))}>
+                      <Copy className="w-3 h-3 mr-1" /> Copiar todas
+                    </Button>
+                  </div>
+                )}
+                {auditResult.ai_suggestions?.seo_keywords && (
+                  <div className="bg-muted/20 rounded-lg p-2.5">
+                    <p className="text-[9px] font-medium text-muted-foreground mb-1.5">Keywords Relacionadas</p>
+                    <div className="flex flex-wrap gap-1">
+                      {auditResult.ai_suggestions.seo_keywords.map((kw, i) => (
+                        <Badge key={i} className="bg-primary/15 text-primary text-[8px]">{kw}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Description Template */}
+              {auditResult.ai_suggestions?.description_template && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold">📝 Template de Descrição Otimizada</p>
+                  <div className="relative">
+                    <Textarea value={auditResult.ai_suggestions.description_template} readOnly rows={8} className="bg-secondary/50 text-[11px] font-mono" />
+                    <Button variant="outline" size="sm" className="absolute top-2 right-2 h-6 text-[9px]"
+                      onClick={() => copyText(auditResult.ai_suggestions!.description_template!)}>
+                      <Copy className="w-3 h-3 mr-1" /> Copiar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Hook Suggestion */}
+              {auditResult.ai_suggestions?.hook_suggestion && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5">
+                  <p className="text-[9px] font-medium text-primary mb-0.5">🎣 Hook Sugerido (primeiros 3s)</p>
+                  <p className="text-[11px] text-foreground italic">"{auditResult.ai_suggestions.hook_suggestion}"</p>
+                </div>
+              )}
             </motion.div>
           )}
         </div>
