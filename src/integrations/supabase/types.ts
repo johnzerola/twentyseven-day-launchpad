@@ -2126,6 +2126,50 @@ export type Database = {
         }
         Relationships: []
       }
+      title_rankings: {
+        Row: {
+          checked_at: string | null
+          country: string | null
+          id: string
+          keyword: string
+          position: number | null
+          previous_position: number | null
+          search_volume_estimate: string | null
+          user_id: string
+          video_performance_id: string | null
+        }
+        Insert: {
+          checked_at?: string | null
+          country?: string | null
+          id?: string
+          keyword: string
+          position?: number | null
+          previous_position?: number | null
+          search_volume_estimate?: string | null
+          user_id: string
+          video_performance_id?: string | null
+        }
+        Update: {
+          checked_at?: string | null
+          country?: string | null
+          id?: string
+          keyword?: string
+          position?: number | null
+          previous_position?: number | null
+          search_volume_estimate?: string | null
+          user_id?: string
+          video_performance_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "title_rankings_video_performance_id_fkey"
+            columns: ["video_performance_id"]
+            isOneToOne: false
+            referencedRelation: "video_performance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracked_channels: {
         Row: {
           channel_name: string
@@ -2368,6 +2412,113 @@ export type Database = {
           visual_style?: string | null
         }
         Relationships: []
+      }
+      video_performance: {
+        Row: {
+          ai_feedback: Json | null
+          avg_retention_percent: number | null
+          avg_view_duration_seconds: number | null
+          best_ranking_position: number | null
+          check_count: number | null
+          comments: number | null
+          created_at: string | null
+          ctr_percent: number | null
+          hook_type: string | null
+          id: string
+          last_checked_at: string | null
+          lessons_learned: string[] | null
+          likes: number | null
+          niche: string | null
+          performance_grade: string | null
+          predicted_viral_score: number | null
+          project_id: string | null
+          published_at: string | null
+          ranking_keywords: Json | null
+          script_score: number | null
+          title: string
+          title_pattern: string | null
+          updated_at: string | null
+          user_id: string
+          views_current: number | null
+          views_day1: number | null
+          views_day3: number | null
+          views_day30: number | null
+          views_day7: number | null
+          youtube_video_id: string
+        }
+        Insert: {
+          ai_feedback?: Json | null
+          avg_retention_percent?: number | null
+          avg_view_duration_seconds?: number | null
+          best_ranking_position?: number | null
+          check_count?: number | null
+          comments?: number | null
+          created_at?: string | null
+          ctr_percent?: number | null
+          hook_type?: string | null
+          id?: string
+          last_checked_at?: string | null
+          lessons_learned?: string[] | null
+          likes?: number | null
+          niche?: string | null
+          performance_grade?: string | null
+          predicted_viral_score?: number | null
+          project_id?: string | null
+          published_at?: string | null
+          ranking_keywords?: Json | null
+          script_score?: number | null
+          title?: string
+          title_pattern?: string | null
+          updated_at?: string | null
+          user_id: string
+          views_current?: number | null
+          views_day1?: number | null
+          views_day3?: number | null
+          views_day30?: number | null
+          views_day7?: number | null
+          youtube_video_id: string
+        }
+        Update: {
+          ai_feedback?: Json | null
+          avg_retention_percent?: number | null
+          avg_view_duration_seconds?: number | null
+          best_ranking_position?: number | null
+          check_count?: number | null
+          comments?: number | null
+          created_at?: string | null
+          ctr_percent?: number | null
+          hook_type?: string | null
+          id?: string
+          last_checked_at?: string | null
+          lessons_learned?: string[] | null
+          likes?: number | null
+          niche?: string | null
+          performance_grade?: string | null
+          predicted_viral_score?: number | null
+          project_id?: string | null
+          published_at?: string | null
+          ranking_keywords?: Json | null
+          script_score?: number | null
+          title?: string
+          title_pattern?: string | null
+          updated_at?: string | null
+          user_id?: string
+          views_current?: number | null
+          views_day1?: number | null
+          views_day3?: number | null
+          views_day30?: number | null
+          views_day7?: number | null
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_performance_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_projects: {
         Row: {
