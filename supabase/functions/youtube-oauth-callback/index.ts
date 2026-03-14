@@ -103,7 +103,7 @@ serve(async (req) => {
 
 function redirectHtml(message: string, success = false): string {
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>YouTube OAuth</title>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>YouTube OAuth</title>
 <style>
   body { font-family: system-ui; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #fafafa; }
   .card { text-align: center; padding: 2rem; border-radius: 1rem; background: #1a1a1a; border: 1px solid #333; max-width: 400px; }
