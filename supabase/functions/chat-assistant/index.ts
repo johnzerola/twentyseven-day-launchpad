@@ -487,13 +487,23 @@ async function executeTool(
 
     switch (toolName) {
       case "dubspy_search": {
+        const modeMap: Record<string, string> = {
+          videos: "emerging",
+          channels: "cluster",
+          emerging: "emerging",
+          escapees: "escapees",
+          micro_niche: "micro-niche-drill",
+          "micro-niche-drill": "micro-niche-drill",
+          cluster: "cluster",
+        };
+
         result = await callFn("dubspy-scan", {
-          query: args.query,
+          niche: args.niche || args.query || "general",
+          mode: modeMap[args.mode || "emerging"] || "emerging",
           country: args.country || "BR",
           language: args.language || "pt",
-          mode: args.mode || "videos",
-          min_views: args.min_views,
-          max_subs: args.max_subs,
+          minVideoViews: args.min_views,
+          maxSubs: args.max_subs,
         });
         break;
       }
@@ -976,10 +986,13 @@ async function executeTool(
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
 
-    // Check for errors and retry once
+    // Retry only for transient errors
     const resultStr = JSON.stringify(result);
-    if (result?.error && attempt === 1) {
-      console.log(`Tool ${toolName} failed (attempt 1), retrying in 1s...`);
+    const isTransientError = typeof result?.error === 'string' && (
+      result.error.includes('Timeout') || result.error.includes('Network') || result.error.includes('context canceled')
+    );
+    if (isTransientError && attempt === 1) {
+      console.log(`Tool ${toolName} transient failure (attempt 1), retrying in 1s...`);
       await new Promise(r => setTimeout(r, 1000));
       return executeTool(toolName, args, sb, supabaseUrl, serviceKey, 2);
     }
@@ -1277,7 +1290,7 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
 
 ## 🧠 REGRA SUPREMA: AUTONOMIA TOTAL
 Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO peça confirmação.
-**IMPORTANTE**: Use no MÁXIMO 8 ferramentas por vez. Priorize as mais importantes primeiro. Se precisar de mais, use em rodadas.
+**IMPORTANTE**: Use no MÁXIMO 5 ferramentas por vez. Priorize as mais importantes primeiro. Se precisar de mais, use em rodadas.
 
 **NUNCA FAÇA ISSO:**
 - "Preciso de um nicho definido" → ESCOLHA o melhor nicho você mesmo
@@ -1404,7 +1417,7 @@ ${knowledgeBlock}
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: aiMessages,
         tools: DOTTI_TOOLS,
         stream: false,
@@ -1426,8 +1439,8 @@ ${knowledgeBlock}
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 2;
-    const MAX_PARALLEL_TOOLS = 8;
+    const MAX_TOOL_ROUNDS = 1;
+    const MAX_PARALLEL_TOOLS = 5;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
       toolRound++;
@@ -1462,7 +1475,7 @@ ${knowledgeBlock}
           method: "POST",
           headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-pro",
+            model: "google/gemini-2.5-flash",
             messages: currentMessages,
             tools: DOTTI_TOOLS,
             stream: false,
@@ -1484,7 +1497,7 @@ ${knowledgeBlock}
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-2.5-pro",
+              model: "google/gemini-2.5-flash",
               messages: currentMessages,
               stream: true,
             }),
@@ -1505,7 +1518,7 @@ ${knowledgeBlock}
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-2.5-flash",
           messages: currentMessages,
           stream: true,
         }),
@@ -1523,7 +1536,7 @@ ${knowledgeBlock}
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: aiMessages,
         stream: true,
       }),
