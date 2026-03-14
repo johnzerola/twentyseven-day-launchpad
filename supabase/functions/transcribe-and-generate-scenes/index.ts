@@ -20,7 +20,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
 
     const body = await req.json();
-    const { audioBase64, audioMimeType, script, videoStyle, customStyleNotes, characters, language, niche, sceneBlueprintFromScript } = body;
+    const { audioBase64, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = body;
 
     if (!audioBase64) throw new Error("Áudio obrigatório.");
     const cleanScript = (script || "").slice(0, 5000);
