@@ -233,28 +233,94 @@ ${topic_seed ? `9. Topic direction: "${topic_seed}" (use as seed, expand creativ
 ${style ? `10. Style: ${style}` : ""}
 
 ${isShort ? `
-═══ SHORTS MONETIZATION STRATEGY (30-DAY TARGET) ═══
-CRITICAL: These Shorts MUST be optimized for MAXIMUM viral spread to achieve monetization in 30 days.
-Requirements for each Short concept:
+═══ SHORTS MONETIZATION STRATEGY — DATA-DRIVEN 30-DAY PLAN ═══
+Based on real case studies and algorithm research (2025-2026):
+
+📊 CASE STUDY #1 (Kood Blog): 2 Shorts → 150K views + 1K subs in 12 days
+  KEY RULE: "Never upload a new Short while the previous is still being pushed by the algorithm."
+  UPLOAD RULE: Wait until your last Short drops below 100 views/hour for at least 12 hours before posting another.
+
+📊 CASE STUDY #2: 300 Shorts in 30 days → only 318 subs and 131K views
+  LESSON: Quantity WITHOUT quality = waste. 10 shorts/day with bad retention = algorithm death.
+
+📊 CASE STUDY #3 (SaaS Channel): 5 Shorts/day → 925 subs in 28 days (+999% growth)
+  BUT: Only worked AFTER finding ONE proven repeatable format with 200%+ avg viewed.
+
+📊 ALGORITHM UPDATE (Tubefilter, Dec 2025 / SEJ 2026):
+  - YouTube Shorts algorithm now FAVORS fresh content over evergreen
+  - Shorts older than 28-30 days are being deprioritized in recommendations
+  - This means CONSISTENT posting matters more than ever — but smart posting, not spam
+
+═══ CANNIBALIZATION WARNING ═══
+CRITICAL: Posting multiple Shorts per day TOO EARLY kills growth. Real data shows:
+- Each Short competes with YOUR OWN previous Shorts for the algorithm's attention
+- If Short #1 is being pushed and you upload Short #2, BOTH get reduced reach
+- The algorithm needs time to "learn" your audience before scaling up
+- New channels posting 3+/day in week 1 show LOWER per-video performance than 1/day channels
+
+═══ PHASED RAMP-UP STRATEGY (the proven approach) ═══
+
+PHASE 1 — CALIBRATION (Days 1-7): 1 Short per day MAX
+  Purpose: Let the algorithm learn your content profile and find your audience
+  Rules:
+  - Post at the SAME TIME every day (build predictability signal)
+  - Monitor: completion rate, swipe-away rate, and subscriber conversion
+  - Do NOT post a new Short until the previous one has peaked (check if views/hour < 100 for 12h)
+  - If a Short goes viral (10K+ views), DO NOT upload next day — let it ride
+  - Reply to EVERY comment within the first hour (engagement signal)
+  - Focus: Find what WORKS (topic + hook + format combination)
+  
+PHASE 2 — ACCELERATION (Days 8-20): 1-2 Shorts per day
+  Unlock condition: At least 2 Shorts from Phase 1 achieved >50% retention
+  Rules:
+  - Double down on the format/topic that performed best
+  - Space uploads 6-8 hours apart if posting 2/day
+  - Create "series" from your best performer (same hook structure, new angle)
+  - Every 5th Short: reference a previous Short to drive binge-watching
+  - Start building "content clusters" (3-5 Shorts around same topic)
+  - Track: which topic clusters get the most subscriber conversions
+
+PHASE 3 — SCALE (Days 21-30): 2-3 Shorts per day (ONLY if data supports it)
+  Unlock condition: Average retention >50% AND subscriber growth is consistent
+  Rules:
+  - Scale ONLY the proven format — do NOT experiment with new formats at high volume
+  - Use the "spin-off" technique: take your top 3 Shorts, create 3 variations of each
+  - Space uploads 4-6 hours apart
+  - Monitor daily: if per-Short views DROP when posting 3/day, go back to 2/day
+  - Create "compilation hooks" that tease best moments from previous Shorts
+  - Cross-pollinate: Shorts should reference each other ("Parte 2 de...")
+
+═══ CONTENT REQUIREMENTS FOR EACH SHORT ═══
 - Hook in FIRST 1 SECOND (not 3, not 2 — ONE second)
-- Loop-ending: the last frame must make viewers want to rewatch
+- Loop-ending: the last frame must make viewers want to rewatch (target 200%+ avg viewed)
 - Emotional peak within first 5 seconds
 - PATTERN INTERRUPT every 8-10 seconds
 - Information density: one surprising fact per 5 seconds minimum
-- Target: 90%+ retention rate, 5%+ share rate
+- Target: 80%+ retention rate (not 90% — be realistic), 5%+ share rate
 - Include a LOOP STRATEGY: how the ending connects back to start
 - Include COMMENT BAIT: a controversial or debatable element
 - Use "micro-cliffhanger" technique: reveal 80% of answer, hold 20%
-- Each concept must specify the EXACT trending audio/format to use
-- Optimize for YouTube Shorts shelf algorithm: high CTR thumbnail frame, engaging first frame
-- Include a SERIES POTENTIAL: how this can become 10+ related Shorts
+- Optimize for YouTube Shorts shelf algorithm: engaging first frame = thumbnail
+- Include SERIES POTENTIAL: how this becomes 10+ related Shorts (content cluster)
 - Target niches with LOW competition but HIGH RPM for Shorts
 
-POSTING STRATEGY FOR 30-DAY MONETIZATION:
-- Recommend 3-5 Shorts per DAY for first 30 days
-- Each Short must be part of a "content cluster" (related topics)
-- Include cross-pollination strategy between Shorts
-- Every 5th Short should be a "compilation hook" driving to previous Shorts
+═══ ANTI-CANNIBALIZATION RULES ═══
+- NEVER upload 2 Shorts within 4 hours of each other
+- If a Short gets 5K+ views in first 2 hours → PAUSE next upload, let it ride
+- If 3 consecutive Shorts get <500 views → STOP, analyze, adjust format before continuing
+- Weekend posting: reduce to 1/day (lower competition = better per-Short reach)
+- First Short of the day = your STRONGEST concept. Second = experimental/series
+
+═══ SUCCESS METRICS BY WEEK ═══
+Week 1: 7 Shorts → Target: 50+ subs, identify best-performing format
+Week 2: 10-14 Shorts → Target: 150+ total subs, double down on winners
+Week 3: 14-18 Shorts → Target: 400+ total subs, content clusters established
+Week 4: 14-21 Shorts → Target: 1,000+ subs (YPP subscriber threshold)
+Total: 45-60 quality Shorts in 30 days (NOT 90-150 spam Shorts)
+
+KEY INSIGHT: It's not about posting MORE — it's about posting SMARTER.
+The algorithm rewards channels that maintain high retention CONSISTENTLY.
+One viral Short (50K+ views) = more growth than 50 mediocre Shorts.
 ` : ""}`
           },
           {
