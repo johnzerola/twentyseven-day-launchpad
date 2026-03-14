@@ -733,12 +733,60 @@ const Scripts = () => {
                     </div>
                   </div>
 
+                  {/* Reference Images Upload */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                        <Image className="w-3 h-3" /> Imagens de Referência Visual (opcional, até 5)
+                      </label>
+                      {referenceImages.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground">{referenceImages.length}/5</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Suba screenshots ou frames dos seus vídeos para a IA entender seu estilo visual
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {referenceImages.map((img, i) => (
+                        <div key={i} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-border">
+                          <img src={img.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => removeReferenceImage(i)}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {referenceImages.length < 5 && (
+                        <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors bg-muted/20 hover:bg-muted/40">
+                          {uploadingImage ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                          ) : (
+                            <>
+                              <Upload className="w-5 h-5 text-muted-foreground" />
+                              <span className="text-[9px] text-muted-foreground">Adicionar</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleReferenceImageUpload}
+                            className="hidden"
+                            disabled={uploadingImage}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Custom Style Notes */}
                   <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Notas visuais adicionais (opcional)</label>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">Descrição do estilo visual (opcional)</label>
                     <textarea value={customStyleNotes} onChange={e => setCustomStyleNotes(e.target.value)}
-                      placeholder="Ex: fundo branco, personagens estilo macaco com roupa de terno, cores neon..."
-                      className="w-full min-h-[50px] bg-muted/20 border border-border rounded-md p-2 text-xs resize-none" />
+                      placeholder="Descreva seu estilo: Ex: tons escuros, cinematográfico noir, personagens em silhueta, iluminação dramática com sombras..."
+                      className="w-full min-h-[60px] bg-muted/20 border border-border rounded-md p-2 text-xs resize-none" />
                   </div>
                 </motion.div>
               )}
