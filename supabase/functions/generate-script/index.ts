@@ -345,8 +345,17 @@ Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA esc
         const d = await hookRes2.json();
         hookText = d.choices?.[0]?.message?.content || '';
         console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars`);
+        // Cache the hook for retry/recovery
+        await sb.from("research_cache").upsert({
+          cache_key: `script_phase0:${runId}`,
+          source: "generate-script",
+          result_json: { hook: hookText },
+          expires_at: new Date(Date.now() + 2 * 3600000).toISOString(), // 2h TTL
+          query: `phase0:${topic?.slice(0, 50)}`,
+        }, { onConflict: "cache_key" }).catch(() => {});
       }
     } catch (e) { console.warn(`[PHASE-0 HOOK] runId=${runId} Error:`, e); }
+    } // end of hookText cache else block
 
     // ═══════════════════════════════════════════════════════
     // PHASE 1: Full Draft Generation (streaming, Gemini Flash)
