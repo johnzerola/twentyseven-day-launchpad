@@ -420,6 +420,25 @@ const DOTTI_TOOLS = [
       },
     },
   },
+  // ===== PERPLEXITY RESEARCH =====
+  {
+    type: "function",
+    function: {
+      name: "perplexity_research",
+      description: "Deep web research using Perplexity AI (sonar-pro). Returns real-time, cited, grounded answers from the entire internet. BEST FOR: current trends, strategies, news, competitor research, market data, algorithm updates, monetization tips. Results include citations from real sources.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Research question — be specific and detailed for best results" },
+          searchRecency: { type: "string", enum: ["day", "week", "month", "year"], description: "Filter results by recency (default: no filter)" },
+          storeInKnowledge: { type: "boolean", description: "Store result in knowledge base for future use (default false)" },
+          storageCategory: { type: "string", description: "Category for storage (if storing)" },
+          storageTitle: { type: "string", description: "Title for storage (if storing)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ];
 
 // ===== TOOL EXECUTION WITH RETRY =====
