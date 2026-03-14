@@ -854,6 +854,10 @@ export const ScriptGenerator = ({
               {videoType === 'short' ? 'Gerar Short com IA' : 'Gerar Rascunho com IA'}
               <ArrowRight className="w-4 h-4 ml-auto" />
             </Button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              ⏱ Tempo estimado: {videoType === 'short' ? '15-25s' : parseInt(duration) <= 10 ? '30-45s' : parseInt(duration) <= 20 ? '45-90s' : '60-120s'}
+              {' • '}Análise competitiva + rascunho + {videoType === 'short' ? 'avaliação automática' : '12 bases de conhecimento'}
+            </p>
 
             <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => {
               setWizardStep(1);
