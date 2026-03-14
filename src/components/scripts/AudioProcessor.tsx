@@ -21,6 +21,7 @@ interface AudioProcessorProps {
   getCleanNarration: () => string;
   customStyleNotes: string;
   setCustomStyleNotes: (notes: string) => void;
+  referenceImageUrls?: string[];
 }
 
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
@@ -41,7 +42,7 @@ const PHASE_PROGRESS: Record<ProcessingPhase, number> = {
 export const AudioProcessor = ({
   script, videoStyle, videoStyles, characters, language, niche,
   sceneBlueprintJson, syncedScenes, setSyncedScenes, getCleanNarration,
-  customStyleNotes, setCustomStyleNotes,
+  customStyleNotes, setCustomStyleNotes, referenceImageUrls,
 }: AudioProcessorProps) => {
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -85,6 +86,7 @@ export const AudioProcessor = ({
           script: cleanScript,
           videoStyle,
           customStyleNotes,
+          referenceImageUrls: referenceImageUrls?.length ? referenceImageUrls : undefined,
           characters: characters.length > 0 ? characters : undefined,
           language,
           niche,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,8 @@ const Scripts = () => {
   const [newStyleName, setNewStyleName] = useState('');
   const [newStyleDesc, setNewStyleDesc] = useState('');
   const [newStyleNotes, setNewStyleNotes] = useState('');
-
+  const [referenceImages, setReferenceImages] = useState<{ url: string; file?: File }[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [showIntelligence, setShowIntelligence] = useState(false);
@@ -148,8 +149,39 @@ const Scripts = () => {
     if (selectedChannelId) loadChannelStyles(selectedChannelId);
     toast.success('Estilo removido');
   };
+  const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (referenceImages.length + files.length > 5) {
+      toast.error('Máximo de 5 imagens de referência');
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Faça login'); return; }
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} é muito grande (máx 5MB)`); continue; }
+        const ext = file.name.split('.').pop() || 'jpg';
+        const path = `${user.id}/ref-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('media').upload(path, file);
+        if (error) { toast.error(`Erro ao subir ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+        setReferenceImages(prev => [...prev, { url: urlData.publicUrl, file }]);
+      }
+      toast.success(`${files.length} imagem(ns) adicionada(s)`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao subir imagens');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
 
-  // Debounced theme suggestions
+  const removeReferenceImage = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     if (topic.trim().length < 5 || !niche.trim()) return;
     const timer = setTimeout(() => {
@@ -701,12 +733,60 @@ const Scripts = () => {
                     </div>
                   </div>
 
+                  {/* Reference Images Upload */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                        <Image className="w-3 h-3" /> Imagens de Referência Visual (opcional, até 5)
+                      </label>
+                      {referenceImages.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground">{referenceImages.length}/5</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Suba screenshots ou frames dos seus vídeos para a IA entender seu estilo visual
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {referenceImages.map((img, i) => (
+                        <div key={i} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-border">
+                          <img src={img.url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => removeReferenceImage(i)}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {referenceImages.length < 5 && (
+                        <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors bg-muted/20 hover:bg-muted/40">
+                          {uploadingImage ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                          ) : (
+                            <>
+                              <Upload className="w-5 h-5 text-muted-foreground" />
+                              <span className="text-[9px] text-muted-foreground">Adicionar</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleReferenceImageUpload}
+                            className="hidden"
+                            disabled={uploadingImage}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Custom Style Notes */}
                   <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Notas visuais adicionais (opcional)</label>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">Descrição do estilo visual (opcional)</label>
                     <textarea value={customStyleNotes} onChange={e => setCustomStyleNotes(e.target.value)}
-                      placeholder="Ex: fundo branco, personagens estilo macaco com roupa de terno, cores neon..."
-                      className="w-full min-h-[50px] bg-muted/20 border border-border rounded-md p-2 text-xs resize-none" />
+                      placeholder="Descreva seu estilo: Ex: tons escuros, cinematográfico noir, personagens em silhueta, iluminação dramática com sombras..."
+                      className="w-full min-h-[60px] bg-muted/20 border border-border rounded-md p-2 text-xs resize-none" />
                   </div>
                 </motion.div>
               )}
@@ -760,6 +840,7 @@ const Scripts = () => {
                         syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
                         getCleanNarration={getCleanNarration}
                         customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
+                        referenceImageUrls={referenceImages.map(img => img.url)}
                       />
                       {syncedScenes.length > 0 && (
                         <div className="space-y-3">

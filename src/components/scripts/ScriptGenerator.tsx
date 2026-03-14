@@ -84,6 +84,7 @@ const SPEECH_RATES: Record<string, number> = {
 };
 
 type WizardStep = 0 | 1 | 2 | 3;
+type PasteMode = null | 'choosing'; // null=not pasting, choosing=user choosing route
 
 const WIZARD_STEPS = [
   { label: 'Configuração', icon: FileText, desc: 'Defina tópico, estilo e idioma' },
@@ -116,6 +117,8 @@ export const ScriptGenerator = ({
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [wizardStep, setWizardStep] = useState<WizardStep>(0);
+  const [pasteMode, setPasteMode] = useState<PasteMode>(null);
+  const [pastedScript, setPastedScript] = useState('');
   const [draftScript, setDraftScript] = useState('');
   const [phaseLabel, setPhaseLabel] = useState('');
   const [dualScore, setDualScore] = useState<DualScore | null>(null);
@@ -859,13 +862,79 @@ export const ScriptGenerator = ({
               {' • '}Análise competitiva + rascunho + {videoType === 'short' ? 'avaliação automática' : '12 bases de conhecimento'}
             </p>
 
-            <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => {
-              setWizardStep(1);
-              setDraftScript('');
-              setEditMode(true);
-            }}>
+            <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => setPasteMode('choosing')}>
               <ClipboardPaste className="w-3 h-3" /> Ou cole seu próprio roteiro
             </Button>
+
+            {/* ═══════ PASTE OWN SCRIPT MODAL ═══════ */}
+            {pasteMode === 'choosing' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="border-2 border-primary/30 rounded-xl p-4 space-y-3 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold flex items-center gap-1.5">
+                    <ClipboardPaste className="w-3.5 h-3.5 text-primary" /> Cole seu roteiro
+                  </h4>
+                  <button onClick={() => { setPasteMode(null); setPastedScript(''); }} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                </div>
+                <textarea
+                  value={pastedScript}
+                  onChange={e => setPastedScript(e.target.value)}
+                  placeholder="Cole seu roteiro completo aqui..."
+                  className="w-full min-h-[200px] max-h-[350px] bg-background border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto"
+                />
+                {pastedScript.trim() && (
+                  <>
+                    <p className="text-[10px] text-muted-foreground">
+                      {pastedScript.split(/\s+/).filter(Boolean).length.toLocaleString()} palavras • Escolha o que fazer com seu roteiro:
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button size="sm" variant="outline" className="w-full gap-2 text-xs justify-start h-auto py-2.5" onClick={() => {
+                        setDraftScript(pastedScript);
+                        setPasteMode(null);
+                        setWizardStep(1);
+                        setEditMode(true);
+                        toast.success('Roteiro colado! Edite e escolha refinar ou avaliar.');
+                      }}>
+                        <Edit3 className="w-4 h-4 text-yellow-400 shrink-0" />
+                        <div className="text-left">
+                          <p className="font-medium">Editar & Refinar com IA</p>
+                          <p className="text-[10px] text-muted-foreground">A IA faz edição cirúrgica melhorando pontos fracos</p>
+                        </div>
+                      </Button>
+                      <Button size="sm" variant="outline" className="w-full gap-2 text-xs justify-start h-auto py-2.5" onClick={async () => {
+                        setScript(pastedScript);
+                        setDraftScript(pastedScript);
+                        setPasteMode(null);
+                        toast.info('⚡ Avaliando seu roteiro com GPT + Gemini...');
+                        await runStep3_DualScoreWithText(pastedScript);
+                      }}>
+                        <Shield className="w-4 h-4 text-blue-400 shrink-0" />
+                        <div className="text-left">
+                          <p className="font-medium">Ir direto para Avaliação Dual</p>
+                          <p className="text-[10px] text-muted-foreground">GPT + Gemini analisam e dão score (mín. 14/20)</p>
+                        </div>
+                      </Button>
+                      <Button size="sm" variant="outline" className="w-full gap-2 text-xs justify-start h-auto py-2.5" onClick={() => {
+                        setScript(pastedScript);
+                        setDraftScript(pastedScript);
+                        setPasteMode(null);
+                        setWizardStep(3);
+                        setDualScore({ approved: true, combinedScore: 0, gpt_score: 0, gemini_score: 0, gpt_details: null, gemini_details: null, strengths: [], weaknesses: [], improvements: [] });
+                        setActiveStep('style');
+                        onScriptGenerated?.();
+                        toast.success('Roteiro aceito! Configure o estilo visual e imagens de referência.');
+                      }}>
+                        <Film className="w-4 h-4 text-accent shrink-0" />
+                        <div className="text-left">
+                          <p className="font-medium">Pular para Estilo Visual & Cenas</p>
+                          <p className="text-[10px] text-muted-foreground">Vai direto para configurar visual, personagens e prompts</p>
+                        </div>
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
           </motion.div>
         )}
 
