@@ -209,12 +209,11 @@ serve(async (req) => {
 
     // ═══ STEP 4: Refresh materialized views ═══
     try {
-      await sb.rpc("refresh_materialized_views").catch(async () => {
-        // Fallback: direct SQL via service role (views may not have RPC yet)
-        console.log("Materialized views refresh will happen on next cron cycle");
-      });
+      await sb.rpc("refresh_materialized_views");
       results.views_refreshed = true;
-    } catch (e) { console.warn("MV refresh error:", e); }
+    } catch (e) { 
+      console.warn("MV refresh error:", e); 
+    }
 
     // ═══ Log ═══
     await sb.from("execution_logs").insert({
