@@ -986,10 +986,13 @@ async function executeTool(
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
 
-    // Check for errors and retry once
+    // Retry only for transient errors
     const resultStr = JSON.stringify(result);
-    if (result?.error && attempt === 1) {
-      console.log(`Tool ${toolName} failed (attempt 1), retrying in 1s...`);
+    const isTransientError = typeof result?.error === 'string' && (
+      result.error.includes('Timeout') || result.error.includes('Network') || result.error.includes('context canceled')
+    );
+    if (isTransientError && attempt === 1) {
+      console.log(`Tool ${toolName} transient failure (attempt 1), retrying in 1s...`);
       await new Promise(r => setTimeout(r, 1000));
       return executeTool(toolName, args, sb, supabaseUrl, serviceKey, 2);
     }
