@@ -21,6 +21,7 @@ interface AudioProcessorProps {
   getCleanNarration: () => string;
   customStyleNotes: string;
   setCustomStyleNotes: (notes: string) => void;
+  referenceImageUrls?: string[];
 }
 
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
