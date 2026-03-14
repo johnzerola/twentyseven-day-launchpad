@@ -840,6 +840,7 @@ const Scripts = () => {
                         syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
                         getCleanNarration={getCleanNarration}
                         customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
+                        referenceImageUrls={referenceImages.map(img => img.url)}
                       />
                       {syncedScenes.length > 0 && (
                         <div className="space-y-3">
