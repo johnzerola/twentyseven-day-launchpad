@@ -87,7 +87,6 @@ export const YouTubeOAuthConnect = () => {
   };
 
   if (fetching) return null;
-  if (connectedChannels.length === 0 && !loading) return null;
 
   return (
     <Card className="border-border">

@@ -111,9 +111,30 @@ const Channels = () => {
   useEffect(() => { loadChannels(); }, []);
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' }); }, [chatMessages]);
 
+  const syncOAuthChannels = async (userId: string) => {
+    try {
+      const { data: oauthChannels } = await supabase
+        .from('youtube_oauth_tokens')
+        .select('channel_id, channel_name, channel_thumbnail')
+        .eq('user_id', userId) as any;
+      if (!oauthChannels || oauthChannels.length === 0) return;
+      for (const ch of oauthChannels) {
+        await supabase.from('user_channels').upsert({
+          user_id: userId,
+          youtube_channel_id: ch.channel_id,
+          channel_name: ch.channel_name,
+          thumbnail: ch.channel_thumbnail,
+        } as any, { onConflict: 'user_id,youtube_channel_id', ignoreDuplicates: true } as any);
+      }
+    } catch (err) {
+      console.error('OAuth sync error:', err);
+    }
+  };
+
   const loadChannels = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
+    await syncOAuthChannels(user.id);
     const { data } = await supabase.from('user_channels').select('*').eq('user_id', user.id).order('linked_at', { ascending: false }) as any;
     const freshChannels = data || [];
     setChannels(freshChannels);
