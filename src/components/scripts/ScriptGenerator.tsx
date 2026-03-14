@@ -11,6 +11,22 @@ import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ═══════ NICHE PRESETS ═══════
+const NICHE_PRESETS: Record<string, { label: string; emoji: string; styles: string[]; topics: string[]; defaultDuration: number; tips: string }> = {
+  finanças: { label: 'Finanças', emoji: '💰', styles: ['dopaminérgico', 'educativo', 'listicle'], topics: ['Como investir R$100 por mês e ficar rico', '5 erros que te mantêm pobre', 'A verdade sobre renda passiva em 2026'], defaultDuration: 15, tips: 'Use números específicos, mostre resultados reais, evite promessas vazias.' },
+  terror: { label: 'Terror/Horror', emoji: '👻', styles: ['narração', 'storytelling', 'reddit'], topics: ['A floresta que ninguém ousa entrar', 'O que encontraram debaixo daquela casa', 'Relatos reais que a ciência não explica'], defaultDuration: 20, tips: 'Construa tensão gradual, use silêncios narrativos, detalhes sensoriais.' },
+  tecnologia: { label: 'Tecnologia', emoji: '🤖', styles: ['educativo', 'dopaminérgico', 'documentário'], topics: ['IA vai substituir seu trabalho em 2026?', 'O chip que mudou TUDO', '5 tecnologias que vão explodir este ano'], defaultDuration: 12, tips: 'Analogias simples para conceitos complexos, demonstrações visuais.' },
+  ciência: { label: 'Ciência', emoji: '🔬', styles: ['documentário', 'cinematográfico', 'teorias'], topics: ['O que acontece se você cair num buraco negro', 'A partícula que não deveria existir', 'Por que o tempo não é real'], defaultDuration: 15, tips: 'Comece com dado chocante, use escalas comparativas, mistério + revelação.' },
+  gaming: { label: 'Gaming', emoji: '🎮', styles: ['dopaminérgico', 'mrbeast', 'listicle'], topics: ['O jogo mais difícil já criado', '24h jogando o pior jogo da história', 'Easter eggs que 99% não conhecem'], defaultDuration: 15, tips: 'Energia alta, cortes rápidos, desafios impossíveis, reações genuínas.' },
+  história: { label: 'História', emoji: '📜', styles: ['documentário', 'cinematográfico', 'storytelling'], topics: ['O império que o mundo esqueceu', 'A batalha mais insana da história', 'O segredo que mudou uma civilização'], defaultDuration: 20, tips: 'Narrativa como filme, personagens com motivação, conexão passado-presente.' },
+  saúde: { label: 'Saúde/Fitness', emoji: '💪', styles: ['educativo', 'tutorial', 'dopaminérgico'], topics: ['O exercício que muda seu corpo em 30 dias', 'Alimentos que estão te matando lentamente', '5 hábitos de quem vive 100 anos'], defaultDuration: 12, tips: 'Resultados visuais, antes/depois, desmistifique mitos populares.' },
+  true_crime: { label: 'True Crime', emoji: '🔍', styles: ['narração', 'conspiração', 'documentário'], topics: ['O caso que a polícia nunca resolveu', 'O serial killer que ninguém suspeitava', 'A evidência que mudou tudo'], defaultDuration: 25, tips: 'Timeline cronológica, revelações progressivas, múltiplas perspectivas.' },
+  mitologia: { label: 'Mitologia', emoji: '⚡', styles: ['mitologia', 'cinematográfico', 'storytelling'], topics: ['O deus que desafiou o próprio destino', 'A criatura mais temida da mitologia nórdica', 'A guerra dos deuses que destruiu o mundo'], defaultDuration: 20, tips: 'Tom épico, descreva cenários grandiosos, conecte mito com lição moderna.' },
+  curiosidades: { label: 'Curiosidades', emoji: '🧠', styles: ['dopaminérgico', 'listicle', 'educativo'], topics: ['15 fatos que vão explodir sua mente', 'Coisas proibidas ao redor do mundo', 'O que acontece se você NÃO dormir por 7 dias'], defaultDuration: 15, tips: 'Escalada de impacto, cada fato mais surpreendente que o anterior.' },
+  relacionamentos: { label: 'Relacionamentos', emoji: '❤️', styles: ['storytelling', 'reddit', 'educativo'], topics: ['Sinais que ele/ela não te ama de verdade', 'A psicologia por trás da atração', 'O que ninguém te conta sobre morar junto'], defaultDuration: 12, tips: 'Histórias reais, vulnerabilidade, psicologia aplicada.' },
+  empreendedorismo: { label: 'Empreendedorismo', emoji: '🚀', styles: ['dopaminérgico', 'educativo', 'mrbeast'], topics: ['De R$0 a R$100k em 12 meses', 'O negócio que ninguém está fazendo', '3 ideias de negócio para 2026'], defaultDuration: 15, tips: 'Case studies reais, números específicos, passo-a-passo acionável.' },
+};
+
 const STYLES = [
   { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, pattern interrupts, curiosity gaps' },
   { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Estilo filme premiado, tensão narrativa' },
@@ -639,6 +655,46 @@ export const ScriptGenerator = ({
             className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h3 className="font-semibold text-sm">1. Configurações do Roteiro</h3>
 
+            {/* ═══════ NICHE QUICK-START PRESETS ═══════ */}
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">⚡ Quick Start — Escolha seu nicho</label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                {Object.entries(NICHE_PRESETS).map(([key, preset]) => (
+                  <button key={key} onClick={() => {
+                    setNiche(key);
+                    if (!style || !preset.styles.includes(style)) setStyle(preset.styles[0]);
+                    if (videoType === 'long') setDuration(String(preset.defaultDuration));
+                    toast.success(`${preset.emoji} Nicho "${preset.label}" configurado! Escolha um tópico abaixo.`);
+                  }}
+                    className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-[10px] ${
+                      niche === key ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+                    }`}>
+                    <span className="text-base">{preset.emoji}</span>
+                    <span className="font-medium truncate w-full text-center">{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ═══════ NICHE TOPIC SUGGESTIONS ═══════ */}
+            {niche && NICHE_PRESETS[niche] && (
+              <div className="border border-accent/20 rounded-lg p-3 bg-accent/5 space-y-2">
+                <p className="text-xs font-medium text-accent flex items-center gap-1">
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  Tópicos sugeridos para {NICHE_PRESETS[niche].label}
+                </p>
+                <div className="space-y-1">
+                  {NICHE_PRESETS[niche].topics.map((t, i) => (
+                    <button key={i} onClick={() => { setTopic(t); toast.success('Tópico aplicado!'); }}
+                      className="w-full text-left p-1.5 rounded-md hover:bg-secondary/50 transition-colors text-xs text-foreground/80 hover:text-foreground">
+                      {NICHE_PRESETS[niche].emoji} {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">💡 Dica: {NICHE_PRESETS[niche].tips}</p>
+              </div>
+            )}
+
             {/* ═══════ CHANNEL SELECTOR ═══════ */}
             {userChannels.length > 0 && (
               <div>
@@ -798,6 +854,10 @@ export const ScriptGenerator = ({
               {videoType === 'short' ? 'Gerar Short com IA' : 'Gerar Rascunho com IA'}
               <ArrowRight className="w-4 h-4 ml-auto" />
             </Button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              ⏱ Tempo estimado: {videoType === 'short' ? '15-25s' : parseInt(duration) <= 10 ? '30-45s' : parseInt(duration) <= 20 ? '45-90s' : '60-120s'}
+              {' • '}Análise competitiva + rascunho + {videoType === 'short' ? 'avaliação automática' : '12 bases de conhecimento'}
+            </p>
 
             <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => {
               setWizardStep(1);
