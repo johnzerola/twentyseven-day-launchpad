@@ -26,6 +26,24 @@ serve(async (req) => {
       characterBlock = `MAIN CHARACTER: ${characterDescription}`;
     }
 
+    const customStyleNotes = body.customStyleNotes || '';
+
+    const styleGuides: Record<string, string> = {
+      'cinematográfico': 'Netflix/Disney cinematic. Ultra-realistic, ARRI ALEXA, Kodak Vision3, film grain.',
+      '2d': '2D flat animation, Kurzgesagt/Studio Trigger style. Vibrant flat colors, clean vector art, parallax depth, smooth 24fps. NO 3D, NO photorealistic.',
+      '3d': 'Pixar/DreamWorks 3D. Stylized, subsurface scattering, PBR materials, global illumination.',
+      'anime': 'Ufotable/MAPPA anime. Sakuga poses, Shinkai backgrounds, cel-shading, rim lighting.',
+      'wojak': 'Wojak/meme internet art style. Simple drawn faces, exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic.',
+      'stickmen': 'Stick figure animation. Minimalist black lines, simple backgrounds, humor through simplicity.',
+      'realista': 'Hyper-photorealistic. Sony A7R V, 85mm, 8K, natural light.',
+      'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accents. Blade Runner 2049 mood.',
+      'whiteboard': 'Whiteboard animation. Black ink sketches on white, hand-drawn, educational.',
+      'comic': 'Comic book / graphic novel. Bold ink outlines, halftone, dynamic panels, saturated colors.',
+    };
+
+    const effectiveStyle = (videoStyle || 'cinematográfico').toLowerCase();
+    const selectedStyleGuide = styleGuides[effectiveStyle] || styleGuides['cinematográfico'];
+
     const segmentTexts = segments.map((s: any, i: number) => `[${i}] "${s.text}"`).join('\n');
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -42,42 +60,29 @@ serve(async (req) => {
             content: `You are a WORLD-CLASS visual director creating prompts for Google Veo 3 video generation.
 
 ═══════════════════════════════════════
-🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
+🎨 MANDATORY ART STYLE: ${selectedStyleGuide}
+${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
 ═══════════════════════════════════════
+
+🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
 - NEVER include text, subtitles, captions, titles, logos, watermarks, writing of ANY kind
 - EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
-═══════════════════════════════════════
 
-VEO 3 MASTER PROMPT FORMULA v2.0:
-[SHOT_TYPE + CAMERA_MOTION], [LENS_SPEC] with [DOF_SETTING].
-[CHARACTER — FULL identity VERBATIM if applicable].
-[ACTION — cinematic description].
-[ENVIRONMENT — specific, sensory, atmospheric].
-[LIGHTING_SETUP — exact type + modifiers].
-[ATMOSPHERIC — particles, fog, rain, dust, embers].
-[COLOR_GRADE — film stock reference].
-[ANTI_AI_REALISM — skin pores, motion blur, film grain, lens artifacts].
-Quality: masterpiece, award-winning, 8K UHD, Kodak Vision3, ACES.
-Audio: ambient + foley + music mood.
-(anti-text block)
-
-RULES:
-1. 100-200 words per prompt. Use EXACT professional film terminology Veo3 understands: dolly-in, tracking shot, crane shot, steadicam, orbit shot, push-in, pull-out, rack focus, Dutch angle, POV, handheld.
-2. Specify exact lens: 24mm wide, 35mm, 50mm, 85mm portrait, 135mm telephoto, or anamorphic.
-3. Specify exact lighting: golden hour, Rembrandt, butterfly, split, rim/edge, volumetric/god rays, chiaroscuro, practical lights, neon glow.
-4. Anti-AI realism in every prompt: natural skin pores, asymmetric composition, motion blur (180-degree shutter), lens breathing, chromatic aberration, Kodak Vision3 film grain, dust particles, subtle camera shake on handheld, environmental imperfections.
-5. Quality tags before anti-text block: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain, ACES color science"
-6. Anti-text block at end: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
-7. Segment 0 = HOOK — MAGNETIC HOOK FORMULA: MYSTERY + SCALE + MOTION + DETAIL. Prefix with "HOOK SCENE —"
-8. Include FULL character description VERBATIM in every prompt where character appears.
-9. CAMERA VARIETY: Never repeat angles in consecutive segments. Use 5+ different shot types. Every 4th segment = pattern interrupt.
-10. MULTI-MOMENT: For complex narratives, design 2-3 visual moments within 8s using "seamlessly transforms into" / "camera pushes through" transitions.
-11. DOPAMINERGIC: First 3s of each scene must trigger curiosity. Camera ALWAYS moving. Each scene shows something novel.
-12. AUDIO: Specify ambient sounds + foley SFX + music mood per scene.
-13. ALL PROMPTS IN ENGLISH.
+VEO 3 PROMPT RULES:
+1. 100-200 words per prompt. ALL prompts MUST be in the "${effectiveStyle}" art style.
+2. For 2D/Wojak/meme styles: describe animated characters, flat colors, cartoon movements — NOT realistic cinematography
+3. For anime: describe anime-specific movements, cel-shading, expressive eyes
+4. For cinematic/realistic: use film terminology — dolly, tracking, crane, steadicam, lens specs
+5. Always specify lighting and mood appropriate to the art style
+6. Anti-text block at end of every prompt
+7. Segment 0 = HOOK — most visually spectacular shot in the chosen style
+8. Include FULL character description VERBATIM where characters appear
+9. CAMERA VARIETY: Never repeat angles in consecutive segments
+10. DOPAMINERGIC: First 3s of each scene must trigger curiosity
+11. ALL PROMPTS IN ENGLISH
 
 ${characterBlock ? `\nCHARACTER IDENTITY (include verbatim in every prompt):\n${characterBlock}` : ''}
-Visual style: ${videoStyle || 'Netflix cinematic'}`
+Visual style: ${selectedStyleGuide}`
           },
           {
             role: "user",

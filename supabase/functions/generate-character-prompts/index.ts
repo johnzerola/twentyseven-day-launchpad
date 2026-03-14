@@ -5,17 +5,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const styleGuides: Record<string, string> = {
+  'cinematográfico': 'Netflix/Disney cinematic. Ultra-realistic, film grain, dramatic lighting, Kodak Vision3.',
+  '2d': '2D flat animation, Kurzgesagt-style. Vibrant flat colors, clean vector, character design sheets in flat art style. NO 3D, NO photorealistic.',
+  '3d': 'Pixar/DreamWorks 3D. Stylized 3D characters, subsurface scattering, PBR materials.',
+  'anime': 'Anime/manga style. Ufotable/MAPPA. Cel-shading, expressive eyes, dynamic poses.',
+  'wojak': 'Wojak/meme art style. Simple drawn faces, exaggerated emotions, internet meme aesthetic, flat colors, minimal detail.',
+  'stickmen': 'Stick figure style. Minimalist black line art, simple colored backgrounds.',
+  'realista': 'Hyper-photorealistic. Natural lighting, 8K, lifelike humans.',
+  'dark': 'Dark noir/cyberpunk. Crushed blacks, neon, atmospheric.',
+  'whiteboard': 'Whiteboard sketch style. Black ink on white, hand-drawn look.',
+  'comic': 'Comic book art. Bold ink outlines, halftone, saturated colors.',
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { characters, scenes, visualStyle } = await req.json();
+    const { characters, scenes, visualStyle, videoStyle, customStyleNotes } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     if (!characters?.length || !scenes?.length) {
       throw new Error("characters and scenes arrays required");
     }
+
+    const effectiveStyle = videoStyle || visualStyle || 'cinematográfico';
+    const styleKey = effectiveStyle.toLowerCase();
+    const selectedStyleGuide = styleGuides[styleKey] || styleGuides['cinematográfico'];
 
     const characterDescriptions = characters.map((c: any, i: number) =>
       `Character ${i + 1}: "${c.name}" - ${c.description}. Appearance: ${c.appearance || 'not specified'}. Outfit: ${c.outfit || 'not specified'}.`
@@ -36,38 +53,30 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a Netflix/Disney-level character design director creating consistent character prompts for Google Veo 3 video generation.
+            content: `You are a character design director creating consistent character prompts for video generation.
 
 ═══════════════════════════════════════
-🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
+🎨 MANDATORY ART STYLE: ${selectedStyleGuide}
+${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
 ═══════════════════════════════════════
+
+🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
 - NEVER include text, subtitles, captions, titles, logos, watermarks in ANY prompt
 - EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
-═══════════════════════════════════════
-
-VEO 3 PROMPT FORMULA: [Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]
 
 CHARACTER CONSISTENCY PROTOCOL:
-1. Create a DETAILED "identity sheet" with EXACT physical attributes — skin tone with pores, hair strand detail, eye color, face shape, body type, height, distinguishing marks
-2. Use IDENTICAL wording for each character across ALL scene prompts — never paraphrase
-3. Include the FULL identity description in EVERY prompt where character appears
-4. Specify consistent wardrobe with fabric textures and colors
-5. Reference image-to-video consistency when available
+1. Create a DETAILED "identity sheet" matching the ${styleKey} art style
+2. For 2D/Wojak/meme styles: describe the character's drawn style, line thickness, color palette
+3. For anime: describe anime-specific features (eye style, hair highlights, cel-shading)
+4. For realistic/cinematic: include physical details like skin pores, hair strands
+5. Use IDENTICAL wording for each character across ALL scene prompts
+6. Include the FULL identity description in EVERY prompt where character appears
 
-CINEMATOGRAPHY RULES:
-- Specify exact camera: dolly, tracking, crane, steadicam, rack focus, Dutch angle, orbit
-- Specify exact lens: 24mm, 35mm, 50mm, 85mm, 135mm, anamorphic
-- Specify exact lighting: golden hour, Rembrandt, butterfly, rim, volumetric, chiaroscuro
-- Anti-AI realism: skin pores, asymmetric composition, motion blur, film grain, dust particles
-- End with: "masterpiece, award-winning cinematography, 8K UHD, photorealistic, Kodak Vision3 film grain"
-- Then ALWAYS: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
-
-Visual style: ${visualStyle || "Netflix cinematic"}
-Scene 1 = HOOK — most visually spectacular shot.`
+IMPORTANT: All character designs and scene prompts MUST be in ${styleKey} style. Do NOT mix styles.`
           },
           {
             role: "user",
-            content: `Create Veo3-optimized character-consistent prompts. ZERO text/subtitles anywhere.
+            content: `Create character-consistent prompts in "${styleKey}" style. ZERO text/subtitles anywhere.
 
 CHARACTERS:\n${characterDescriptions}
 
@@ -78,7 +87,7 @@ SCENES:\n${sceneTexts}`
           type: "function",
           function: {
             name: "character_consistent_prompts",
-            description: "Return character sheets and Veo3 scene prompts with consistent characters",
+            description: "Return character sheets and scene prompts with consistent characters in the chosen art style",
             parameters: {
               type: "object",
               properties: {
@@ -88,10 +97,10 @@ SCENES:\n${sceneTexts}`
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      physicalDescription: { type: "string", description: "Detailed appearance with skin pores, hair strands, fabric texture for Veo3 consistency" },
+                      physicalDescription: { type: "string", description: "Detailed appearance in the chosen art style for consistency" },
                       outfit: { type: "string" },
                       distinctiveFeatures: { type: "string" },
-                      referencePrompt: { type: "string", description: "Standalone Veo3 prompt to generate reference of this character. Must end with anti-text block." },
+                      referencePrompt: { type: "string", description: "Standalone prompt to generate reference of this character in the chosen style. Must end with anti-text block." },
                     },
                     required: ["name", "physicalDescription", "outfit", "distinctiveFeatures", "referencePrompt"],
                     additionalProperties: false,
@@ -103,11 +112,11 @@ SCENES:\n${sceneTexts}`
                     type: "object",
                     properties: {
                       sceneIndex: { type: "number" },
-                      prompt: { type: "string", description: "Full Veo3 prompt with embedded character descriptions. MUST end with anti-text block." },
+                      prompt: { type: "string", description: "Full prompt with embedded character descriptions in the chosen art style. MUST end with anti-text block." },
                       negativePrompt: { type: "string", description: "Always include: subtitles, text, titles, captions, logos, watermarks, writing, letters, blurry, distorted, deformed" },
-                      camera: { type: "string", description: "Veo3 camera: dolly, tracking, crane, steadicam, rack focus, orbit, push-in" },
-                      lensSpec: { type: "string", description: "24mm, 35mm, 50mm, 85mm, 135mm, anamorphic" },
-                      lighting: { type: "string", description: "golden hour, Rembrandt, butterfly, rim, volumetric, chiaroscuro" },
+                      camera: { type: "string" },
+                      lensSpec: { type: "string" },
+                      lighting: { type: "string" },
                       mood: { type: "string" },
                     },
                     required: ["sceneIndex", "prompt", "negativePrompt", "camera", "lensSpec", "lighting", "mood"],

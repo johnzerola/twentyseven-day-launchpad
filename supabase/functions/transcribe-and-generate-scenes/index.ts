@@ -20,7 +20,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
 
     const body = await req.json();
-    const { audioBase64, audioMimeType, script, videoStyle, customStyleNotes, characters, language, niche, sceneBlueprintFromScript } = body;
+    const { audioBase64, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = body;
 
     if (!audioBase64) throw new Error("Áudio obrigatório.");
     const cleanScript = (script || "").slice(0, 5000);
@@ -112,18 +112,20 @@ RULES:
     // ========== PHASE 3: Build context ==========
     const styleGuides: Record<string, string> = {
       'cinematográfico': 'Netflix/Disney premium. ARRI ALEXA 65, Cooke Anamorphic. ACES color, Kodak Vision3. Shallow DOF f/1.4-2.8. Volumetric rays.',
-      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector, parallax depth, smooth 24fps.',
+      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector art, parallax depth, smooth 24fps. NO 3D elements, NO photorealistic.',
       '3d': 'Pixar/DreamWorks 3D. Subsurface scattering, PBR materials, global illumination, 8K textures.',
       'anime': 'Ufotable/MAPPA. Sakuga poses, Shinkai backgrounds, cel-shading, rim lighting.',
       'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM, 8K, natural light.',
       'dark': 'Dark noir. Crushed blacks, neon accents. Blade Runner 2049 meets Se7en.',
       'comic': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
-      'wojak': 'Wojak/meme style. Simple drawn faces with strong emotional expressions. Internet culture aesthetic.',
-      'stickmen': 'Stick figure style. Minimalist black line art on white/simple backgrounds. Humor through simplicity.',
-      'whiteboard': 'Whiteboard animation. Hand-drawn sketches being drawn in real-time. Educational, clean.',
+      'hq': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
+      'wojak': 'Wojak/meme internet art style. Simple drawn faces with exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic. Characters should look like Wojak memes with simple line art.',
+      'stickmen': 'Stick figure animation style. Minimalist black line drawings on white or simple colored backgrounds, humor through simplicity, hand-drawn feel.',
+      'whiteboard': 'Whiteboard animation. Hand-drawn sketches being drawn in real-time. Black ink on white, educational, clean lines.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
     const extraStyle = customStyleNotes ? `\nUSER STYLE INSTRUCTIONS: ${customStyleNotes}` : '';
+    const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES PROVIDED: The creator uploaded ${referenceImageUrls.length} reference images showing their desired visual style. Match that exact art style, color palette, and character design in every scene prompt.` : '';
 
     const characterBlock = characters?.length > 0
       ? `\nCHARACTERS (include in scenes where they appear):\n${characters.slice(0, 5).map((c: any) => {
@@ -182,8 +184,18 @@ RULES:
       },
     };
 
-    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating Netflix-grade video scenes from narrated audio.
+    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating video scenes from narrated audio.
 You have the FULL TRANSCRIPTION with exact timestamps. Your job is to create visual scenes that PERFECTLY MATCH what is being said at each moment.
+
+═══════════════════════════════════════
+🎨 MANDATORY ART STYLE — ALL PROMPTS MUST USE THIS STYLE:
+${selectedStyleGuide}
+${extraStyle}${refImgContext}
+═══════════════════════════════════════
+IMPORTANT: Do NOT default to photorealistic/cinematic unless that is the chosen style above.
+For 2D styles: describe flat animation, vector art, cartoon characters — NOT real cameras/film
+For Wojak/meme: describe simple drawn faces, emotional expressions, meme aesthetic
+For anime: describe anime-specific visual language
 
 CRITICAL TIMING RULES:
 - Each scene MUST be 4, 6, or 8 seconds (Veo3 supported durations)
@@ -211,7 +223,7 @@ VISUAL RETENTION RULES:
 - DOPAMINERGIC: First 3s of each scene must trigger curiosity. Camera ALWAYS moving
 - MULTI-MOMENT: For complex narratives, design 2-3 visual moments within 8s using "seamlessly transforms into" transitions
 
-VISUAL STYLE: ${selectedStyleGuide}${extraStyle}
+VISUAL STYLE: ${selectedStyleGuide}${extraStyle}${refImgContext}
 ${characterBlock}
 KNOWLEDGE BASE:
 ${knowledgeBlock}
