@@ -149,8 +149,39 @@ const Scripts = () => {
     if (selectedChannelId) loadChannelStyles(selectedChannelId);
     toast.success('Estilo removido');
   };
+  const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (referenceImages.length + files.length > 5) {
+      toast.error('Máximo de 5 imagens de referência');
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Faça login'); return; }
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} é muito grande (máx 5MB)`); continue; }
+        const ext = file.name.split('.').pop() || 'jpg';
+        const path = `${user.id}/ref-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('media').upload(path, file);
+        if (error) { toast.error(`Erro ao subir ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+        setReferenceImages(prev => [...prev, { url: urlData.publicUrl, file }]);
+      }
+      toast.success(`${files.length} imagem(ns) adicionada(s)`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao subir imagens');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
 
-  // Debounced theme suggestions
+  const removeReferenceImage = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     if (topic.trim().length < 5 || !niche.trim()) return;
     const timer = setTimeout(() => {
