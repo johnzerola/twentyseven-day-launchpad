@@ -234,23 +234,27 @@ serve(async (req) => {
 
     // Feed to ai_learning
     if (results.pre_viral_found > 0) {
-      await sb.from("ai_learning").insert({
-        topic: `pre_viral_detection_${new Date().toISOString().slice(0, 10)}`,
-        source: "pre-viral-detection",
-        insight: JSON.stringify({
-          scanned: results.scanned,
-          found: results.pre_viral_found,
-          top_candidates: results.candidates.slice(0, 5),
-        }),
-      }).catch(() => {});
+      try {
+        await sb.from("ai_learning").insert({
+          topic: `pre_viral_detection_${new Date().toISOString().slice(0, 10)}`,
+          source: "pre-viral-detection",
+          insight: JSON.stringify({
+            scanned: results.scanned,
+            found: results.pre_viral_found,
+            top_candidates: results.candidates.slice(0, 5),
+          }),
+        });
+      } catch (_) { /* ignore */ }
     }
 
-    await sb.from("execution_logs").insert({
-      function_name: "pre-viral-detection",
-      success: true,
-      api_calls_made: Math.ceil(videoData.length / 50) + 1,
-      metadata: { scanned: results.scanned, found: results.pre_viral_found },
-    }).catch(() => {});
+    try {
+      await sb.from("execution_logs").insert({
+        function_name: "pre-viral-detection",
+        success: true,
+        api_calls_made: Math.ceil(videoData.length / 50) + 1,
+        metadata: { scanned: results.scanned, found: results.pre_viral_found },
+      });
+    } catch (_) { /* ignore */ }
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
