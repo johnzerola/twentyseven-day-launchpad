@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ===== TOOL DEFINITIONS =====
+// ===== TOOL DEFINITIONS (19 TOOLS) =====
 const DOTTI_TOOLS = [
   {
     type: "function",
@@ -16,12 +16,12 @@ const DOTTI_TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Search query (niche, topic, or keyword — use LOCAL LANGUAGE for best results, e.g. 'prawdziwe zbrodnie' for Polish true crime)" },
+          query: { type: "string", description: "Search query — use LOCAL LANGUAGE for best results (e.g. 'prawdziwe zbrodnie' for Polish true crime)" },
           country: { type: "string", description: "Country code (BR, US, PL, TR, SE, NO, DE, etc.)" },
           language: { type: "string", description: "Language code (pt, en, pl, tr, sv, no, de, etc.)" },
-          mode: { type: "string", enum: ["videos", "channels", "emerging", "escapees", "micro_niche"], description: "Search mode: videos=trending, channels=top channels, emerging=pre-viral, escapees=fast-growing, micro_niche=sub-niches" },
+          mode: { type: "string", enum: ["videos", "channels", "emerging", "escapees", "micro_niche"], description: "videos=trending, channels=top channels, emerging=pre-viral, escapees=fast-growing, micro_niche=sub-niches" },
           min_views: { type: "number", description: "Minimum views filter" },
-          max_subs: { type: "number", description: "Maximum subscribers filter (for finding small channels with viral videos)" },
+          max_subs: { type: "number", description: "Maximum subscribers filter" },
         },
         required: ["query"],
       },
@@ -31,12 +31,12 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "analyze_niche",
-      description: "Deep analysis of a niche: RPM, saturation, difficulty, top channels, opportunity score, sub-niches. ALWAYS use when user asks about niche viability or wants recommendations.",
+      description: "Deep analysis of a niche: RPM, saturation, difficulty, top channels, opportunity score, sub-niches. ALWAYS use when user asks about niche viability.",
       parameters: {
         type: "object",
         properties: {
-          niche: { type: "string", description: "The niche to analyze (e.g. 'true crime', 'horror stories', 'personal finance')" },
-          country: { type: "string", description: "Country code (BR, US, PL, SE, NO, etc.)" },
+          niche: { type: "string", description: "Niche to analyze" },
+          country: { type: "string", description: "Country code" },
           language: { type: "string", description: "Language code" },
         },
         required: ["niche"],
@@ -47,7 +47,7 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "analyze_channel",
-      description: "Full analysis of a YouTube channel: subscribers, views, upload frequency, top videos, viral patterns, SWOT, growth trajectory. ALWAYS use when user mentions ANY channel by name or URL.",
+      description: "Full SWOT analysis of a YouTube channel: subscribers, views, upload frequency, top videos, viral patterns, growth trajectory. ALWAYS use when user mentions ANY channel.",
       parameters: {
         type: "object",
         properties: {
@@ -61,7 +61,7 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "reverse_engineer_video",
-      description: "Reverse-engineer a YouTube video: hook structure, pacing, retention curve, psychological triggers, why it went viral. Use when user shares a video URL or wants to understand why a video worked.",
+      description: "Reverse-engineer a YouTube video: hook, pacing, retention curve, psychological triggers, why it went viral.",
       parameters: {
         type: "object",
         properties: {
@@ -75,13 +75,13 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "find_outliers",
-      description: "Find OUTLIER videos: small channels (<100k subs) with viral videos (10x+ their average views). Best tool for finding replicable opportunities and content gaps. Use for ANY opportunity research.",
+      description: "Find OUTLIER videos: small channels with viral videos (10x+ average). Best for finding replicable opportunities.",
       parameters: {
         type: "object",
         properties: {
-          niche: { type: "string", description: "Niche to search (use local language terms for non-English)" },
+          niche: { type: "string", description: "Niche (use local language terms)" },
           country: { type: "string", description: "Country code" },
-          min_multiplier: { type: "number", description: "Minimum views/subs multiplier (default 5)" },
+          min_multiplier: { type: "number", description: "Min views/subs multiplier (default 5)" },
         },
         required: ["niche"],
       },
@@ -91,14 +91,14 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "generate_titles",
-      description: "Generate 10+ viral title suggestions with CTR estimates, SEO scores, and emotional triggers. Use when user needs title ideas or wants to optimize existing titles.",
+      description: "Generate 10+ viral title suggestions with CTR estimates and SEO scores.",
       parameters: {
         type: "object",
         properties: {
-          topic: { type: "string", description: "Video topic or theme" },
-          niche: { type: "string", description: "Niche category" },
-          language: { type: "string", description: "Language for titles (português, english, polski, etc.)" },
-          style: { type: "string", description: "Title style: curiosity, listicle, challenge, shock, question, etc." },
+          topic: { type: "string", description: "Video topic" },
+          niche: { type: "string", description: "Niche" },
+          language: { type: "string", description: "Language for titles" },
+          style: { type: "string", description: "curiosity, listicle, challenge, shock, question, etc." },
         },
         required: ["topic"],
       },
@@ -108,11 +108,11 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "search_viral_database",
-      description: "Search internal database of 900+ REAL viral titles with views, patterns, emotional triggers, and why they went viral. Best for pattern discovery and learning what works.",
+      description: "Search 900+ REAL viral titles with views, patterns, emotional triggers. Best for pattern discovery.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Search query (niche, keyword, pattern type)" },
+          query: { type: "string", description: "Search query" },
           niche: { type: "string", description: "Filter by niche" },
           country: { type: "string", description: "Filter by country" },
           min_views: { type: "number", description: "Minimum views" },
@@ -125,15 +125,15 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "channel_intelligence_search",
-      description: "Search database of 650+ analyzed channels. Filter by niche, country, faceless, growth rate, subscribers. Best for competitive analysis and finding reference channels.",
+      description: "Search 650+ analyzed channels by niche, country, faceless, growth rate.",
       parameters: {
         type: "object",
         properties: {
           niche: { type: "string", description: "Niche filter" },
-          country: { type: "string", description: "Country code filter" },
-          is_faceless: { type: "boolean", description: "Filter faceless channels only" },
-          min_subscribers: { type: "number", description: "Minimum subscribers" },
-          growth_rate: { type: "string", description: "Growth rate filter (fast, steady, explosive)" },
+          country: { type: "string", description: "Country code" },
+          is_faceless: { type: "boolean", description: "Faceless only" },
+          min_subscribers: { type: "number", description: "Min subscribers" },
+          growth_rate: { type: "string", description: "fast, steady, explosive" },
         },
         required: [],
       },
@@ -143,16 +143,180 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "estimate_revenue",
-      description: "Estimate monthly revenue for a niche/country/views combination. Returns RPM data, projections (pessimistic/realistic/optimistic). Use when user asks about money or earnings potential.",
+      description: "Estimate monthly revenue for a niche/country combination with RPM projections.",
       parameters: {
         type: "object",
         properties: {
           niche: { type: "string", description: "Niche" },
           country: { type: "string", description: "Country code" },
           monthly_views: { type: "number", description: "Estimated monthly views" },
-          subscribers: { type: "number", description: "Current or target subscribers" },
+          subscribers: { type: "number", description: "Subscribers" },
         },
         required: ["niche", "country"],
+      },
+    },
+  },
+  // ===== NEW TOOLS =====
+  {
+    type: "function",
+    function: {
+      name: "brave_search",
+      description: "Search the web using Brave Search for current trends, news, strategies, and real-world data. Use for trending topics, competitor research, recent events, marketing strategies, or any real-time web information.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Search query (supports any language)" },
+          count: { type: "number", description: "Number of results (default 10)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "suggest_video_ideas",
+      description: "Generate ranked video ideas with viral scores, curiosity scores, and competition analysis. Uses intelligence from viral database and channel patterns.",
+      parameters: {
+        type: "object",
+        properties: {
+          niche: { type: "string", description: "Niche for ideas" },
+          channelName: { type: "string", description: "Channel name for personalization" },
+          existingIdeas: { type: "array", items: { type: "string" }, description: "Ideas to NOT repeat" },
+          count: { type: "number", description: "Number of top ideas to return (default 10)" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "suggest_themes",
+      description: "Generate video theme suggestions with viral potential, hooks, and style recommendations. Great for content calendar planning.",
+      parameters: {
+        type: "object",
+        properties: {
+          niche: { type: "string", description: "Niche" },
+          style: { type: "string", description: "Video style (documentário, listicle, horror, etc.)" },
+          language: { type: "string", description: "Language" },
+          count: { type: "number", description: "Number of themes (default 10)" },
+          topic: { type: "string", description: "Specific topic to expand on" },
+          narrativeStyle: { type: "string", description: "Narrative style preference" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "seo_analyze",
+      description: "Analyze SEO of a YouTube video title/description. Returns A-F grade with 11 weighted factors: keyword density, emotional triggers, length optimization, etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Video title to analyze" },
+          description: { type: "string", description: "Video description" },
+          tags: { type: "array", items: { type: "string" }, description: "Video tags" },
+          niche: { type: "string", description: "Niche for comparison" },
+        },
+        required: ["title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_competitors",
+      description: "Find competitor channels for a given channel or niche. Returns similar channels with metrics for competitive analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          channelId: { type: "string", description: "YouTube channel ID to find competitors for" },
+          channelName: { type: "string", description: "Channel name (alternative to ID)" },
+          niche: { type: "string", description: "Niche to search competitors in" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "extract_content_dna",
+      description: "Extract the Content DNA of a viral video: hook type, pacing, emotional arc, storytelling structure, thumbnail pattern, and replication template.",
+      parameters: {
+        type: "object",
+        properties: {
+          videoId: { type: "string", description: "YouTube video ID" },
+          videoTitle: { type: "string", description: "Video title (if known)" },
+          niche: { type: "string", description: "Niche" },
+        },
+        required: ["videoId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "detect_pre_viral",
+      description: "Detect pre-viral videos that are gaining momentum. Finds videos in early growth phase before they explode. Best for catching trends early.",
+      parameters: {
+        type: "object",
+        properties: {
+          niche: { type: "string", description: "Niche to monitor" },
+          country: { type: "string", description: "Country code" },
+          language: { type: "string", description: "Language code" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "analyze_topic_research",
+      description: "Deep research on a topic using Brave Search + AI analysis. Returns structured research with facts, stats, angles, and content opportunities.",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: { type: "string", description: "Topic to research" },
+          niche: { type: "string", description: "Niche context" },
+          language: { type: "string", description: "Language" },
+          style: { type: "string", description: "Content style (documentário, investigativo, etc.)" },
+        },
+        required: ["topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_emerging_channels",
+      description: "Find emerging/new channels that are growing fast in a niche. Returns channels with growth metrics and viral potential.",
+      parameters: {
+        type: "object",
+        properties: {
+          niche: { type: "string", description: "Niche" },
+          country: { type: "string", description: "Country code" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "bulk_channel_scan",
+      description: "Deep scan of a YouTube channel: all videos, performance metrics, outlier detection, upload patterns. More detailed than analyze_channel.",
+      parameters: {
+        type: "object",
+        properties: {
+          channelId: { type: "string", description: "YouTube channel ID" },
+          channelName: { type: "string", description: "Channel name (alternative)" },
+        },
+        required: [],
       },
     },
   },
@@ -282,6 +446,100 @@ async function executeTool(
           country: args.country,
           monthly_views: args.monthly_views || 100000,
           subscribers: args.subscribers || 10000,
+        });
+        break;
+      }
+
+      // ===== NEW TOOLS =====
+      case "brave_search": {
+        result = await callFn("brave-search", {
+          query: args.query,
+          count: args.count || 10,
+        });
+        break;
+      }
+
+      case "suggest_video_ideas": {
+        result = await callFn("generate-ideas", {
+          niche: args.niche,
+          channelName: args.channelName || "",
+          existingIdeas: args.existingIdeas || [],
+          count: args.count || 10,
+        });
+        break;
+      }
+
+      case "suggest_themes": {
+        result = await callFn("suggest-themes", {
+          niche: args.niche,
+          style: args.style || "",
+          language: args.language || "português",
+          count: args.count || 10,
+          topic: args.topic || "",
+          narrativeStyle: args.narrativeStyle || "",
+        });
+        break;
+      }
+
+      case "seo_analyze": {
+        result = await callFn("seo-analyzer", {
+          title: args.title,
+          description: args.description || "",
+          tags: args.tags || [],
+          niche: args.niche || "",
+        });
+        break;
+      }
+
+      case "find_competitors": {
+        result = await callFn("find-competitors", {
+          channelId: args.channelId || "",
+          channelName: args.channelName || "",
+          niche: args.niche,
+        });
+        break;
+      }
+
+      case "extract_content_dna": {
+        result = await callFn("extract-content-dna", {
+          videoId: args.videoId,
+          videoTitle: args.videoTitle || "",
+          niche: args.niche || "",
+        });
+        break;
+      }
+
+      case "detect_pre_viral": {
+        result = await callFn("pre-viral-detection", {
+          niche: args.niche,
+          country: args.country || "BR",
+          language: args.language || "pt",
+        });
+        break;
+      }
+
+      case "analyze_topic_research": {
+        result = await callFn("analyze-topic", {
+          topic: args.topic,
+          niche: args.niche || "",
+          language: args.language || "pt",
+          style: args.style || "investigativo",
+        });
+        break;
+      }
+
+      case "search_emerging_channels": {
+        result = await callFn("detect-emerging-channels", {
+          niche: args.niche,
+          country: args.country || "BR",
+        });
+        break;
+      }
+
+      case "bulk_channel_scan": {
+        result = await callFn("bulk-channel-scan", {
+          channelId: args.channelId || "",
+          channelName: args.channelName || "",
         });
         break;
       }
@@ -607,23 +865,41 @@ Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO pe�
 - Usuário quer sugestão de país/nicho? USE as ferramentas para COMPARAR e RECOMENDAR com dados reais
 - Apresente RESULTADOS CONCRETOS com dados, não promessas
 
-## 🔧 FERRAMENTAS (USE AGRESSIVAMENTE — MÚLTIPLAS POR VEZ!)
-Você tem 9 ferramentas. USE VÁRIAS SIMULTANEAMENTE para pedidos complexos:
-- **dubspy_search**: Pesquisar vídeos/canais no YouTube EM QUALQUER PAÍS/IDIOMA
-- **analyze_niche**: Analisar RPM, saturação, dificuldade de um nicho
-- **analyze_channel**: Análise SWOT completa de canal do YouTube
-- **reverse_engineer_video**: Engenharia reversa de vídeo viral
-- **find_outliers**: Canais pequenos com vídeos virais (melhor para oportunidades)
-- **generate_titles**: Gerar títulos virais com CTR estimado
-- **search_viral_database**: 900+ títulos virais reais com métricas
-- **channel_intelligence_search**: 650+ canais analisados
-- **estimate_revenue**: Projeção de receita por nicho/país
+## 🔧 ARSENAL COMPLETO: 19 FERRAMENTAS (USE AGRESSIVAMENTE — MÚLTIPLAS POR VEZ!)
 
-### EXEMPLOS DE USO CORRETO:
-- "Quero criar 2 canais gringos" → USE dubspy_search + analyze_niche + find_outliers + channel_intelligence_search + estimate_revenue para 3-4 países, COMPARE os dados e RECOMENDE os melhores
-- "Analise meus 3 canais" → USE analyze_channel 3 vezes simultaneamente + search_viral_database no nicho de cada um
-- "Encontre nicho para crescer rápido" → USE analyze_niche em 5+ nichos + find_outliers + dubspy_search e compare resultados
-- "Sugira vídeos para meu canal" → USE search_viral_database + dubspy_search + generate_titles com dados do canal do usuário
+### 🔍 PESQUISA & DESCOBERTA:
+- **dubspy_search**: Pesquisar vídeos/canais no YouTube EM QUALQUER PAÍS/IDIOMA (videos, channels, emerging, escapees, micro_niche)
+- **brave_search**: Pesquisar na WEB INTEIRA — tendências, notícias, estratégias, dados atuais em tempo real
+- **find_outliers**: Canais pequenos com vídeos virais (melhor para oportunidades replicáveis)
+- **detect_pre_viral**: Detectar vídeos em fase pré-viral (antes de explodirem)
+- **search_emerging_channels**: Encontrar canais emergentes crescendo rápido
+
+### 📊 ANÁLISE & INTELIGÊNCIA:
+- **analyze_channel**: Análise SWOT completa de canal do YouTube com métricas reais
+- **bulk_channel_scan**: Scan PROFUNDO de canal — todos vídeos, outliers, padrões de upload
+- **analyze_niche**: RPM, saturação, dificuldade, oportunidades de um nicho
+- **reverse_engineer_video**: Engenharia reversa de vídeo viral (hook, pacing, triggers)
+- **extract_content_dna**: Extrair DNA do conteúdo viral (estrutura, arco emocional, template de replicação)
+- **find_competitors**: Encontrar canais concorrentes com métricas comparativas
+- **seo_analyze**: Análise SEO de título/descrição (grade A-F, 11 fatores)
+- **estimate_revenue**: Projeção de receita por nicho/país com RPM real
+
+### 💡 GERAÇÃO & CRIAÇÃO:
+- **suggest_video_ideas**: Gerar ideias ranqueadas com viral score, curiosity score, competition score
+- **suggest_themes**: Sugerir temas com hooks prontos, estilo e potencial viral
+- **generate_titles**: Gerar títulos virais com CTR estimado e análise SEO
+- **analyze_topic_research**: Pesquisa profunda sobre tópico (Brave + IA) para roteiros
+
+### 📚 BANCOS DE DADOS:
+- **search_viral_database**: 900+ títulos virais REAIS com views, padrões e triggers emocionais
+- **channel_intelligence_search**: 650+ canais analisados com RPM, growth rate, estilo
+
+### EXEMPLOS DE USO CORRETO (EXECUTE TUDO DE UMA VEZ):
+- "Quero criar 2 canais gringos" → USE analyze_niche (3-4 países) + dubspy_search + find_outliers + channel_intelligence_search + estimate_revenue SIMULTANEAMENTE
+- "Analise meus 3 canais" → USE analyze_channel 3x + bulk_channel_scan 3x + find_competitors + search_viral_database
+- "Sugira vídeos para meu canal" → USE suggest_video_ideas + suggest_themes + search_viral_database + dubspy_search + generate_titles
+- "Canal morto, como ressuscitar" → USE analyze_channel + bulk_channel_scan + find_competitors + brave_search (tendências do nicho) + suggest_video_ideas
+- "Melhor país para horror faceless" → USE analyze_niche (5+ países) + dubspy_search (5+ países) + estimate_revenue + channel_intelligence_search
 
 ### DICA PARA BUSCAS INTERNACIONAIS:
 - Polônia: use termos em polonês (prawdziwe zbrodnie, mroczne historie, straszne opowieści)
