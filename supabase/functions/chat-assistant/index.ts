@@ -487,13 +487,23 @@ async function executeTool(
 
     switch (toolName) {
       case "dubspy_search": {
+        const modeMap: Record<string, string> = {
+          videos: "emerging",
+          channels: "cluster",
+          emerging: "emerging",
+          escapees: "escapees",
+          micro_niche: "micro-niche-drill",
+          "micro-niche-drill": "micro-niche-drill",
+          cluster: "cluster",
+        };
+
         result = await callFn("dubspy-scan", {
-          query: args.query,
+          niche: args.niche || args.query || "general",
+          mode: modeMap[args.mode || "emerging"] || "emerging",
           country: args.country || "BR",
           language: args.language || "pt",
-          mode: args.mode || "videos",
-          min_views: args.min_views,
-          max_subs: args.max_subs,
+          minVideoViews: args.min_views,
+          maxSubs: args.max_subs,
         });
         break;
       }
