@@ -12,16 +12,16 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "dubspy_search",
-      description: "Search YouTube videos and channels using DubSpy. Use when user asks to find channels, videos, trends, or wants competitive research in any niche/country.",
+      description: "Search YouTube videos and channels in ANY country/language. ALWAYS use when user asks to find channels, videos, trends, opportunities, or needs competitive research. Supports modes: videos, channels, emerging, escapees, micro_niche.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Search query (niche, topic, or keyword)" },
-          country: { type: "string", description: "Country code (BR, US, PL, TR, etc.)" },
-          language: { type: "string", description: "Language code (pt, en, pl, tr, etc.)" },
-          mode: { type: "string", enum: ["videos", "channels", "emerging", "escapees", "micro_niche"], description: "Search mode" },
+          query: { type: "string", description: "Search query (niche, topic, or keyword — use LOCAL LANGUAGE for best results, e.g. 'prawdziwe zbrodnie' for Polish true crime)" },
+          country: { type: "string", description: "Country code (BR, US, PL, TR, SE, NO, DE, etc.)" },
+          language: { type: "string", description: "Language code (pt, en, pl, tr, sv, no, de, etc.)" },
+          mode: { type: "string", enum: ["videos", "channels", "emerging", "escapees", "micro_niche"], description: "Search mode: videos=trending, channels=top channels, emerging=pre-viral, escapees=fast-growing, micro_niche=sub-niches" },
           min_views: { type: "number", description: "Minimum views filter" },
-          max_subs: { type: "number", description: "Maximum subscribers filter (for finding small channels)" },
+          max_subs: { type: "number", description: "Maximum subscribers filter (for finding small channels with viral videos)" },
         },
         required: ["query"],
       },
@@ -31,12 +31,12 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "analyze_niche",
-      description: "Analyze a niche using the Niche Explorer. Returns RPM, saturation, difficulty, top channels, and opportunity score. Use when user asks about niche viability.",
+      description: "Deep analysis of a niche: RPM, saturation, difficulty, top channels, opportunity score, sub-niches. ALWAYS use when user asks about niche viability or wants recommendations.",
       parameters: {
         type: "object",
         properties: {
-          niche: { type: "string", description: "The niche to analyze" },
-          country: { type: "string", description: "Country code (BR, US, PL, etc.)" },
+          niche: { type: "string", description: "The niche to analyze (e.g. 'true crime', 'horror stories', 'personal finance')" },
+          country: { type: "string", description: "Country code (BR, US, PL, SE, NO, etc.)" },
           language: { type: "string", description: "Language code" },
         },
         required: ["niche"],
@@ -47,11 +47,11 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "analyze_channel",
-      description: "Analyze a specific YouTube channel. Returns subscribers, views, upload frequency, top videos, viral patterns, and SWOT. Use when user provides a channel URL or name.",
+      description: "Full analysis of a YouTube channel: subscribers, views, upload frequency, top videos, viral patterns, SWOT, growth trajectory. ALWAYS use when user mentions ANY channel by name or URL.",
       parameters: {
         type: "object",
         properties: {
-          channel: { type: "string", description: "YouTube channel URL, @handle, or channel ID" },
+          channel: { type: "string", description: "YouTube channel URL, @handle, or channel name" },
         },
         required: ["channel"],
       },
@@ -61,7 +61,7 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "reverse_engineer_video",
-      description: "Reverse-engineer a YouTube video to extract hook structure, pacing, retention curve, psychological triggers. Use when user shares a video URL.",
+      description: "Reverse-engineer a YouTube video: hook structure, pacing, retention curve, psychological triggers, why it went viral. Use when user shares a video URL or wants to understand why a video worked.",
       parameters: {
         type: "object",
         properties: {
@@ -75,11 +75,11 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "find_outliers",
-      description: "Find outlier videos in a niche — small channels with viral videos (views >> subscribers). Use for finding replicable opportunities.",
+      description: "Find OUTLIER videos: small channels (<100k subs) with viral videos (10x+ their average views). Best tool for finding replicable opportunities and content gaps. Use for ANY opportunity research.",
       parameters: {
         type: "object",
         properties: {
-          niche: { type: "string", description: "Niche to search" },
+          niche: { type: "string", description: "Niche to search (use local language terms for non-English)" },
           country: { type: "string", description: "Country code" },
           min_multiplier: { type: "number", description: "Minimum views/subs multiplier (default 5)" },
         },
@@ -91,14 +91,14 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "generate_titles",
-      description: "Generate viral title suggestions for a topic. Returns titles with estimated CTR and SEO analysis. Use when user needs title ideas.",
+      description: "Generate 10+ viral title suggestions with CTR estimates, SEO scores, and emotional triggers. Use when user needs title ideas or wants to optimize existing titles.",
       parameters: {
         type: "object",
         properties: {
-          topic: { type: "string", description: "Video topic" },
+          topic: { type: "string", description: "Video topic or theme" },
           niche: { type: "string", description: "Niche category" },
-          language: { type: "string", description: "Language for titles" },
-          style: { type: "string", description: "Title style (curiosity, listicle, challenge, etc.)" },
+          language: { type: "string", description: "Language for titles (português, english, polski, etc.)" },
+          style: { type: "string", description: "Title style: curiosity, listicle, challenge, shock, question, etc." },
         },
         required: ["topic"],
       },
@@ -108,11 +108,11 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "search_viral_database",
-      description: "Search the internal viral titles database (900+ real viral titles). Returns titles with views, patterns, emotional triggers. Use for pattern discovery.",
+      description: "Search internal database of 900+ REAL viral titles with views, patterns, emotional triggers, and why they went viral. Best for pattern discovery and learning what works.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Search query (niche, keyword, pattern)" },
+          query: { type: "string", description: "Search query (niche, keyword, pattern type)" },
           niche: { type: "string", description: "Filter by niche" },
           country: { type: "string", description: "Filter by country" },
           min_views: { type: "number", description: "Minimum views" },
@@ -125,7 +125,7 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "channel_intelligence_search",
-      description: "Search the channel intelligence database (650+ analyzed channels). Find channels by niche, country, style, or growth pattern.",
+      description: "Search database of 650+ analyzed channels. Filter by niche, country, faceless, growth rate, subscribers. Best for competitive analysis and finding reference channels.",
       parameters: {
         type: "object",
         properties: {
@@ -143,7 +143,7 @@ const DOTTI_TOOLS = [
     type: "function",
     function: {
       name: "estimate_revenue",
-      description: "Estimate revenue for a channel or niche based on views, RPM, and country. Use when user asks about money/earnings potential.",
+      description: "Estimate monthly revenue for a niche/country/views combination. Returns RPM data, projections (pessimistic/realistic/optimistic). Use when user asks about money or earnings potential.",
       parameters: {
         type: "object",
         properties: {
@@ -157,6 +157,157 @@ const DOTTI_TOOLS = [
     },
   },
 ];
+
+// ===== TOOL EXECUTION WITH RETRY =====
+async function executeTool(
+  toolName: string,
+  args: any,
+  sb: any,
+  supabaseUrl: string,
+  serviceKey: string,
+  attempt = 1
+): Promise<string> {
+  const callFn = async (fnName: string, payload: any) => {
+    try {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify(payload),
+      });
+      const text = await resp.text();
+      if (!resp.ok) {
+        console.error(`Tool ${fnName} HTTP ${resp.status}:`, text.slice(0, 500));
+        return { error: `HTTP ${resp.status}`, details: text.slice(0, 300) };
+      }
+      try { return JSON.parse(text); } catch { return { raw: text.slice(0, 3000) }; }
+    } catch (e: any) {
+      console.error(`Tool ${fnName} network error:`, e.message);
+      return { error: `Network error: ${e.message}` };
+    }
+  };
+
+  try {
+    let result: any;
+
+    switch (toolName) {
+      case "dubspy_search": {
+        result = await callFn("dubspy-scan", {
+          query: args.query,
+          country: args.country || "BR",
+          language: args.language || "pt",
+          mode: args.mode || "videos",
+          min_views: args.min_views,
+          max_subs: args.max_subs,
+        });
+        break;
+      }
+
+      case "analyze_niche": {
+        result = await callFn("niche-explorer", {
+          niche: args.niche,
+          country: args.country || "BR",
+          language: args.language || "pt",
+        });
+        break;
+      }
+
+      case "analyze_channel": {
+        result = await callFn("analyze-channel", {
+          channelInput: args.channel,
+        });
+        break;
+      }
+
+      case "reverse_engineer_video": {
+        const videoId = args.video_url.replace(/.*(?:v=|youtu\.be\/)/, '').replace(/[&?].*/, '');
+        result = await callFn("reverse-engineer-video", { videoId });
+        break;
+      }
+
+      case "find_outliers": {
+        result = await callFn("find-outliers", {
+          niche: args.niche,
+          country: args.country || "BR",
+          minMultiplier: args.min_multiplier || 5,
+        });
+        break;
+      }
+
+      case "generate_titles": {
+        result = await callFn("generate-titles", {
+          topic: args.topic,
+          niche: args.niche || "",
+          language: args.language || "português",
+          style: args.style || "mixed",
+        });
+        break;
+      }
+
+      case "search_viral_database": {
+        let query = sb.from("viral_titles_db")
+          .select("title, views, niche, country, language, emotional_triggers, title_pattern, why_viral, channel_name")
+          .order("views", { ascending: false })
+          .limit(25);
+        
+        if (args.niche) query = query.ilike("niche", `%${args.niche}%`);
+        if (args.country) query = query.eq("country", args.country);
+        if (args.min_views) query = query.gte("views", args.min_views);
+        if (args.query) query = query.or(`title.ilike.%${args.query}%,niche.ilike.%${args.query}%`);
+        
+        const { data } = await query;
+        result = data || [];
+        break;
+      }
+
+      case "channel_intelligence_search": {
+        let query = sb.from("channel_intelligence")
+          .select("channel_name, niche, avg_views, subscribers, growth_rate, rpm_estimate, style, is_faceless, country, language, upload_frequency, youtube_channel_id")
+          .order("avg_views", { ascending: false })
+          .limit(25);
+        
+        if (args.niche) query = query.ilike("niche", `%${args.niche}%`);
+        if (args.country) query = query.eq("country", args.country);
+        if (args.is_faceless !== undefined) query = query.eq("is_faceless", args.is_faceless);
+        if (args.min_subscribers) query = query.gte("subscribers", args.min_subscribers);
+        if (args.growth_rate) query = query.eq("growth_rate", args.growth_rate);
+        
+        const { data } = await query;
+        result = data || [];
+        break;
+      }
+
+      case "estimate_revenue": {
+        result = await callFn("estimate-revenue", {
+          niche: args.niche,
+          country: args.country,
+          monthly_views: args.monthly_views || 100000,
+          subscribers: args.subscribers || 10000,
+        });
+        break;
+      }
+
+      default:
+        return JSON.stringify({ error: `Unknown tool: ${toolName}` });
+    }
+
+    // Check for errors and retry once
+    const resultStr = JSON.stringify(result);
+    if (result?.error && attempt === 1) {
+      console.log(`Tool ${toolName} failed (attempt 1), retrying in 1s...`);
+      await new Promise(r => setTimeout(r, 1000));
+      return executeTool(toolName, args, sb, supabaseUrl, serviceKey, 2);
+    }
+
+    return resultStr.slice(0, 10000);
+  } catch (e: any) {
+    console.error(`Tool ${toolName} error (attempt ${attempt}):`, e);
+    if (attempt === 1) {
+      await new Promise(r => setTimeout(r, 1000));
+      return executeTool(toolName, args, sb, supabaseUrl, serviceKey, 2);
+    }
+    return JSON.stringify({ error: e.message, tool: toolName });
+  }
+}
 
 // Generate query embedding
 async function generateQueryEmbedding(text: string, apiKey: string): Promise<number[] | null> {
@@ -204,136 +355,6 @@ async function generateQueryEmbedding(text: string, apiKey: string): Promise<num
   }
 }
 
-// ===== TOOL EXECUTION =====
-async function executeTool(
-  toolName: string,
-  args: any,
-  sb: any,
-  supabaseUrl: string,
-  serviceKey: string
-): Promise<string> {
-  const callFn = async (fnName: string, payload: any) => {
-    try {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-        body: JSON.stringify(payload),
-      });
-      const text = await resp.text();
-      try { return JSON.parse(text); } catch { return { raw: text.slice(0, 2000) }; }
-    } catch (e: any) {
-      return { error: e.message };
-    }
-  };
-
-  try {
-    switch (toolName) {
-      case "dubspy_search": {
-        const result = await callFn("dubspy-scan", {
-          query: args.query,
-          country: args.country || "BR",
-          language: args.language || "pt",
-          mode: args.mode || "videos",
-          min_views: args.min_views,
-          max_subs: args.max_subs,
-        });
-        return JSON.stringify(result).slice(0, 8000);
-      }
-
-      case "analyze_niche": {
-        const result = await callFn("niche-explorer", {
-          niche: args.niche,
-          country: args.country || "BR",
-          language: args.language || "pt",
-        });
-        return JSON.stringify(result).slice(0, 6000);
-      }
-
-      case "analyze_channel": {
-        const result = await callFn("analyze-channel", {
-          channelInput: args.channel,
-        });
-        return JSON.stringify(result).slice(0, 8000);
-      }
-
-      case "reverse_engineer_video": {
-        const videoId = args.video_url.replace(/.*(?:v=|youtu\.be\/)/, '').replace(/[&?].*/, '');
-        const result = await callFn("reverse-engineer-video", {
-          videoId,
-        });
-        return JSON.stringify(result).slice(0, 8000);
-      }
-
-      case "find_outliers": {
-        const result = await callFn("find-outliers", {
-          niche: args.niche,
-          country: args.country || "BR",
-          minMultiplier: args.min_multiplier || 5,
-        });
-        return JSON.stringify(result).slice(0, 6000);
-      }
-
-      case "generate_titles": {
-        const result = await callFn("generate-titles", {
-          topic: args.topic,
-          niche: args.niche || "",
-          language: args.language || "português",
-          style: args.style || "mixed",
-        });
-        return JSON.stringify(result).slice(0, 4000);
-      }
-
-      case "search_viral_database": {
-        // Search viral_titles_db directly
-        let query = sb.from("viral_titles_db")
-          .select("title, views, niche, country, language, emotional_triggers, title_pattern, why_viral, channel_name")
-          .order("views", { ascending: false })
-          .limit(20);
-        
-        if (args.niche) query = query.ilike("niche", `%${args.niche}%`);
-        if (args.country) query = query.eq("country", args.country);
-        if (args.min_views) query = query.gte("views", args.min_views);
-        if (args.query) query = query.or(`title.ilike.%${args.query}%,niche.ilike.%${args.query}%`);
-        
-        const { data } = await query;
-        return JSON.stringify(data || []).slice(0, 6000);
-      }
-
-      case "channel_intelligence_search": {
-        let query = sb.from("channel_intelligence")
-          .select("channel_name, niche, avg_views, subscribers, growth_rate, rpm_estimate, style, is_faceless, country, language, upload_frequency, youtube_channel_id")
-          .order("avg_views", { ascending: false })
-          .limit(20);
-        
-        if (args.niche) query = query.ilike("niche", `%${args.niche}%`);
-        if (args.country) query = query.eq("country", args.country);
-        if (args.is_faceless !== undefined) query = query.eq("is_faceless", args.is_faceless);
-        if (args.min_subscribers) query = query.gte("subscribers", args.min_subscribers);
-        if (args.growth_rate) query = query.eq("growth_rate", args.growth_rate);
-        
-        const { data } = await query;
-        return JSON.stringify(data || []).slice(0, 6000);
-      }
-
-      case "estimate_revenue": {
-        const result = await callFn("estimate-revenue", {
-          niche: args.niche,
-          country: args.country,
-          monthly_views: args.monthly_views || 100000,
-          subscribers: args.subscribers || 10000,
-        });
-        return JSON.stringify(result).slice(0, 3000);
-      }
-
-      default:
-        return JSON.stringify({ error: `Unknown tool: ${toolName}` });
-    }
-  } catch (e: any) {
-    console.error(`Tool ${toolName} error:`, e);
-    return JSON.stringify({ error: e.message });
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -375,8 +396,8 @@ serve(async (req) => {
       if (userChannels.data?.length) {
         blocks.push(`### 📺 Canais do Usuário (${userChannels.data.length}):\n` +
           userChannels.data.map(c => {
-            const analysis = c.analysis_json ? ` | Análise: ${JSON.stringify(c.analysis_json).slice(0, 200)}` : '';
-            return `- ${c.channel_name} (${c.niche || '?'}): ${(c.subscribers || 0)/1000}K subs, ${(c.views || 0)/1000}K views, ${c.videos || 0} vídeos${analysis}`;
+            const analysis = c.analysis_json ? ` | Análise: ${JSON.stringify(c.analysis_json).slice(0, 300)}` : '';
+            return `- **${c.channel_name}** (${c.niche || '?'}): ${(c.subscribers || 0)/1000}K subs, ${(c.views || 0)/1000}K views, ${c.videos || 0} vídeos${analysis}`;
           }).join('\n'));
       }
       if (trackedChannels.data?.length) {
@@ -415,7 +436,7 @@ serve(async (req) => {
         blocks.push(`### 📋 Tarefas:\n` + Object.entries(byColumn).map(([col, items]) => `**${col}**: ${items.join(', ')}`).join('\n'));
       }
       if (blocks.length > 0) {
-        userProfileContext = `\n## 👤 PERFIL DO USUÁRIO\n${blocks.join('\n\n')}`;
+        userProfileContext = `\n## 👤 PERFIL DO USUÁRIO (USE ESTES DADOS PARA PERSONALIZAR TUDO)\n${blocks.join('\n\n')}`;
       }
     }
 
@@ -561,82 +582,108 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
       return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
-    // ========== REGULAR CHAT MODE (with tools) ==========
+    // ========== REGULAR CHAT MODE (with multi-round tools) ==========
     const knowledgeBlock = usedSemantic
       ? `## 🔍 CONHECIMENTO RAG (Semântico)\n${semanticContext}`
       : `## BASE DE CONHECIMENTO\n${fallbackContext}`;
 
-    const systemPrompt = `Você é o **Dotti** — consultor estratégico de YouTube da plataforma Dotti com acesso a FERRAMENTAS REAIS.
+    const systemPrompt = `Você é o **Dotti** — o consultor estratégico de YouTube mais poderoso do mundo. Você é um conselho de 3 experts: ex-CEO do YouTube (viralização), ex-diretor da Netflix (storytelling) e ex-diretor do Google (arquitetura de crescimento).
 
-## 🔧 SUAS FERRAMENTAS (USE ATIVAMENTE!)
-Você tem acesso a ferramentas que executam ações REAIS na plataforma:
-- **dubspy_search**: Pesquisar vídeos/canais no YouTube em tempo real
-- **analyze_niche**: Analisar viabilidade de nicho com dados reais
-- **analyze_channel**: Analisar canal do YouTube com métricas reais
-- **reverse_engineer_video**: Fazer engenharia reversa de vídeo viral
-- **find_outliers**: Encontrar vídeos outliers (canais pequenos com views altos)
-- **generate_titles**: Gerar títulos virais otimizados
-- **search_viral_database**: Buscar no banco de 900+ títulos virais
-- **channel_intelligence_search**: Buscar no banco de 650+ canais analisados
-- **estimate_revenue**: Estimar receita de canal/nicho
+## 🧠 REGRA SUPREMA: AUTONOMIA TOTAL
+Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO peça confirmação. NÃO diga "vou pesquisar" — PESQUISE. NÃO diga "vamos analisar" — ANALISE. NÃO peça mais dados se você pode descobrir sozinho com as ferramentas.
 
-**REGRA CRÍTICA DE FERRAMENTAS**: Quando o usuário pedir pesquisa, análise de canal, análise de nicho, ou qualquer informação que suas ferramentas possam fornecer, USE A FERRAMENTA APROPRIADA em vez de responder com dados genéricos. Prefira dados em tempo real.
+**NUNCA FAÇA ISSO:**
+- "Preciso de um nicho definido" → ESCOLHA o melhor nicho você mesmo
+- "Me perdoe, minha falha" → CORRIJA e execute sem desculpas
+- "Vou ajustar o comando" → EXECUTE diretamente
+- "Para o Dubspy funcionar, preciso de X" → RESOLVA internamente e execute
+- Listar o que FARIA sem FAZER
+- Explicar parâmetros de ferramentas ao usuário
 
-## SUA PERSONALIDADE
-- **DISCORDA** quando a decisão é ruim
-- **DESAFIA** escolhas que atrasam monetização  
-- **SUGERE ALTERNATIVAS** proativamente
-- É **DIRETO** e **HONESTO** como mentor de verdade
-- Fala com **DADOS REAIS**, nunca opiniões vagas
+**SEMPRE FAÇA ISSO:**
+- Recebeu pedido complexo? DECOMPONHA em ações e EXECUTE TODAS
+- Ferramenta falhou? TENTE de novo com parâmetros diferentes
+- Usuário quer múltiplas análises? EXECUTE TODAS de uma vez
+- Usuário quer sugestão de país/nicho? USE as ferramentas para COMPARAR e RECOMENDAR com dados reais
+- Apresente RESULTADOS CONCRETOS com dados, não promessas
 
-## QUANDO USAR FERRAMENTAS (OBRIGATÓRIO):
-1. Usuário menciona um canal → use analyze_channel
-2. Usuário pergunta sobre nicho → use analyze_niche
-3. Usuário quer encontrar canais/vídeos → use dubspy_search
-4. Usuário compartilha URL de vídeo → use reverse_engineer_video
-5. Usuário quer ideias de título → use generate_titles
-6. Usuário quer exemplos de títulos virais → use search_viral_database
-7. Usuário pergunta sobre ganhos → use estimate_revenue
-8. Usuário quer encontrar oportunidades → use find_outliers
-9. Usuário quer comparar canais → use channel_intelligence_search
+## 🔧 FERRAMENTAS (USE AGRESSIVAMENTE — MÚLTIPLAS POR VEZ!)
+Você tem 9 ferramentas. USE VÁRIAS SIMULTANEAMENTE para pedidos complexos:
+- **dubspy_search**: Pesquisar vídeos/canais no YouTube EM QUALQUER PAÍS/IDIOMA
+- **analyze_niche**: Analisar RPM, saturação, dificuldade de um nicho
+- **analyze_channel**: Análise SWOT completa de canal do YouTube
+- **reverse_engineer_video**: Engenharia reversa de vídeo viral
+- **find_outliers**: Canais pequenos com vídeos virais (melhor para oportunidades)
+- **generate_titles**: Gerar títulos virais com CTR estimado
+- **search_viral_database**: 900+ títulos virais reais com métricas
+- **channel_intelligence_search**: 650+ canais analisados
+- **estimate_revenue**: Projeção de receita por nicho/país
 
-## INTELIGÊNCIA DE MERCADO
-### MAPA GLOBAL DE OPORTUNIDADES:
-#### TIER S (RPM Alto + Zero Competição): Noruega $9-12, Suécia $8-11, Suíça $10-14, Dinamarca $8-10
-#### TIER A: Holanda $7-9, Polônia $4-6, Tchéquia $3-5, Áustria $7-9
-#### TIER B (Volume): Turquia $2-4 (85M pop), Indonésia $1-2 (270M), Vietnã $1-3, Tailândia $2-3
+### EXEMPLOS DE USO CORRETO:
+- "Quero criar 2 canais gringos" → USE dubspy_search + analyze_niche + find_outliers + channel_intelligence_search + estimate_revenue para 3-4 países, COMPARE os dados e RECOMENDE os melhores
+- "Analise meus 3 canais" → USE analyze_channel 3 vezes simultaneamente + search_viral_database no nicho de cada um
+- "Encontre nicho para crescer rápido" → USE analyze_niche em 5+ nichos + find_outliers + dubspy_search e compare resultados
+- "Sugira vídeos para meu canal" → USE search_viral_database + dubspy_search + generate_titles com dados do canal do usuário
 
-## CONTEXTO
+### DICA PARA BUSCAS INTERNACIONAIS:
+- Polônia: use termos em polonês (prawdziwe zbrodnie, mroczne historie, straszne opowieści)
+- Suécia: use termos em sueco (sanna brott, skräckhistorier, mysterier)
+- Noruega: use termos em norueguês (sanne forbrytelser, skrekkhistorier)
+- Turquia: use termos em turco (gerçek suçlar, korku hikayeleri)
+- Alemanha: use termos em alemão (wahre Verbrechen, Horrorgeschichten)
+
+## 💀 PERSONALIDADE (BRUTAL)
+- **DISCORDA** quando o plano do usuário é ruim — com dados
+- **DESAFIA** escolhas que atrasam monetização
+- **SUGERE ALTERNATIVAS** melhores proativamente
+- **NUNCA** é vago ou genérico — sempre dados específicos
+- **NUNCA** se desculpa por falhas de ferramentas — apenas corrige e executa
+- Fala como MENTOR exigente que quer que o aluno ganhe dinheiro
+- Se o usuário insiste em decisão ruim, mostra os números que provam que é ruim
+
+## 📋 FORMATO DE RESPOSTA
+Para cada análise/recomendação:
+1. **Dados brutos** (números, métricas, comparações)
+2. **Interpretação** (o que significa para o usuário)
+3. **Ação concreta** (faça X agora, depois Y)
+4. **Timeline** (quando esperar resultados)
+
+Para planos de canal:
+- Frequência de upload (longos + shorts separados)
+- Sugestões de 5-10 vídeos com títulos prontos
+- Projeção financeira mês 1-6
+- Riscos e como evitar
+
+## CONTEXTO ATUAL
 ${pageContext}
 ${userProfileContext}
 ${knowledgeBlock}
 
-### 📺 Canais (${channelIntel.data?.length || 0}):\n${channelContext}
+### 📺 Canais na Base (${channelIntel.data?.length || 0}):\n${channelContext}
 ### 🔥 Títulos Virais (${viralTitles.data?.length || 0}):\n${viralContext}
 ### 📊 Nichos (${nicheDb.data?.length || 0}):\n${nicheContext}
 
-## REGRAS:
-1. Português brasileiro, tom de MENTOR
-2. DISCORDA quando necessário
-3. Dados REAIS — nunca invente
-4. Sempre mencione RPM + competição por país
-5. AÇÃO CONCRETA ao final: "Próximo passo: faz X agora"
-6. USE FERRAMENTAS quando tiver dados em tempo real disponíveis
-7. Após usar ferramenta, INTERPRETE os resultados para o usuário com insights estratégicos
-8. ${usedSemantic ? 'RAG semântico ativo — priorize esses dados.' : 'RAG por score ativo.'}
-9. Se tem dados do PERFIL DO USUÁRIO, personalize TODA resposta`;
+## REGRAS FINAIS:
+1. Português brasileiro, tom de MENTOR BRUTALMENTE HONESTO
+2. USE FERRAMENTAS para TUDO que pode ser pesquisado — nunca responda de cabeça
+3. Para pedidos multi-parte: EXECUTE TUDO, não peça para "ir por partes"
+4. Dados REAIS — nunca invente números
+5. Sempre inclua RPM + competição + projeção financeira nas recomendações
+6. Ao final: "🎯 **Próximo passo:** [ação específica imediata]"
+7. ${usedSemantic ? 'RAG semântico ativo — priorize esses dados.' : 'RAG por score ativo.'}
+8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados`;
 
-    // First AI call with tools
+    // First AI call with tools — use Pro model for better tool orchestration
     const aiMessages = [{ role: "system", content: systemPrompt }, ...messages];
     
     const firstResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: aiMessages,
         tools: DOTTI_TOOLS,
-        stream: false, // Non-streaming for tool detection
+        stream: false,
       }),
     });
 
@@ -651,15 +698,21 @@ ${knowledgeBlock}
     const firstResult = await firstResponse.json();
     const firstChoice = firstResult.choices?.[0]?.message;
 
-    // Check if model wants to call tools
-    if (firstChoice?.tool_calls?.length > 0) {
-      console.log(`Dotti calling ${firstChoice.tool_calls.length} tools:`, firstChoice.tool_calls.map((t: any) => t.function.name));
+    // Multi-round tool execution (up to 3 rounds)
+    let currentMessages = [...aiMessages];
+    let currentChoice = firstChoice;
+    let toolRound = 0;
+    const MAX_TOOL_ROUNDS = 3;
+
+    while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
+      toolRound++;
+      console.log(`Dotti tool round ${toolRound}: calling ${currentChoice.tool_calls.length} tools:`, 
+        currentChoice.tool_calls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 100)})`));
 
       // Execute all tool calls in parallel
       const toolResults = await Promise.all(
-        firstChoice.tool_calls.map(async (tc: any) => {
+        currentChoice.tool_calls.map(async (tc: any) => {
           const args = JSON.parse(tc.function.arguments || '{}');
-          console.log(`Executing tool: ${tc.function.name}`, args);
           const result = await executeTool(tc.function.name, args, sb, supabaseUrl, supabaseKey);
           return {
             role: "tool",
@@ -669,41 +722,81 @@ ${knowledgeBlock}
         })
       );
 
-      // Second AI call with tool results — STREAMING
-      const secondMessages = [
-        ...aiMessages,
-        firstChoice, // The assistant message with tool_calls
+      // Add to message chain
+      currentMessages = [
+        ...currentMessages,
+        currentChoice,
         ...toolResults,
       ];
 
-      const secondResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      // Check if model wants more tools (non-streaming)
+      if (toolRound < MAX_TOOL_ROUNDS) {
+        const nextResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            messages: currentMessages,
+            tools: DOTTI_TOOLS,
+            stream: false,
+          }),
+        });
+
+        if (!nextResponse.ok) {
+          console.error("Multi-round tool call failed:", nextResponse.status);
+          break;
+        }
+
+        const nextResult = await nextResponse.json();
+        currentChoice = nextResult.choices?.[0]?.message;
+
+        // If no more tool calls, this is the final text response
+        if (!currentChoice?.tool_calls?.length) {
+          // Stream the final response
+          const finalStreamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-pro",
+              messages: currentMessages,
+              stream: true,
+            }),
+          });
+
+          if (!finalStreamResponse.ok) throw new Error("Final stream error");
+
+          return new Response(finalStreamResponse.body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+      }
+    }
+
+    // If we exited the loop with tool calls done, stream final response
+    if (toolRound > 0) {
+      const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: secondMessages,
+          model: "google/gemini-2.5-pro",
+          messages: currentMessages,
           stream: true,
         }),
       });
 
-      if (!secondResponse.ok) {
-        const t = await secondResponse.text();
-        console.error("Second AI call error:", secondResponse.status, t);
-        throw new Error("AI gateway error on tool response");
-      }
+      if (!finalResponse.ok) throw new Error("Final stream error");
 
-      return new Response(secondResponse.body, {
+      return new Response(finalResponse.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
     }
 
-    // No tools called — stream the direct response
-    // Re-do the call with streaming since firstResponse was non-streaming
+    // No tools called — stream direct response
     const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: aiMessages,
         stream: true,
       }),
