@@ -946,6 +946,19 @@ async function executeTool(
         break;
       }
 
+      case "perplexity_research": {
+        result = await callFn("perplexity-research", {
+          singleQuery: {
+            query: args.query,
+            searchRecency: args.searchRecency,
+            storeInKnowledge: args.storeInKnowledge || false,
+            storageCategory: args.storageCategory || "perplexity_research",
+            storageTitle: args.storageTitle || args.query.slice(0, 100),
+          },
+        });
+        break;
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
