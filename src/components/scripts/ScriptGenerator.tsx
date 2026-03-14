@@ -84,6 +84,7 @@ const SPEECH_RATES: Record<string, number> = {
 };
 
 type WizardStep = 0 | 1 | 2 | 3;
+type PasteMode = null | 'choosing'; // null=not pasting, choosing=user choosing route
 
 const WIZARD_STEPS = [
   { label: 'Configuração', icon: FileText, desc: 'Defina tópico, estilo e idioma' },
