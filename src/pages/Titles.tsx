@@ -180,6 +180,7 @@ const Titles = () => {
 
   const runABTest = async () => {
     if (!titleA.trim() || !titleB.trim()) return toast.error('Preencha ambos os títulos');
+    if (!canClick()) return;
     setAbLoading(true);
     setAbResult(null);
     try {
