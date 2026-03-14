@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Youtube } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,17 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { YouTubeExportPanel } from '@/components/YouTubeExportPanel';
+
+// Debounce guard for generation buttons
+const useClickGuard = (cooldownMs = 3000) => {
+  const lastRef = useRef(0);
+  return () => {
+    const now = Date.now();
+    if (now - lastRef.current < cooldownMs) return false;
+    lastRef.current = now;
+    return true;
+  };
+};
 
 interface TitleSuggestion {
   title: string;
@@ -129,8 +140,11 @@ const Titles = () => {
     } catch { /* non-blocking */ }
   };
 
+  const canClick = useClickGuard();
+
   const generateTitles = async () => {
     if (!niche.trim() && !topic.trim()) return toast.error('Preencha nicho ou tema');
+    if (!canClick()) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-titles', {
@@ -166,6 +180,7 @@ const Titles = () => {
 
   const runABTest = async () => {
     if (!titleA.trim() || !titleB.trim()) return toast.error('Preencha ambos os títulos');
+    if (!canClick()) return;
     setAbLoading(true);
     setAbResult(null);
     try {
@@ -184,6 +199,7 @@ const Titles = () => {
 
   const generateSEODesc = async () => {
     if (!seoTitle.trim()) return toast.error('Preencha o título do vídeo');
+    if (!canClick()) return;
     setSeoLoading(true);
     setSeoResult(null);
     try {

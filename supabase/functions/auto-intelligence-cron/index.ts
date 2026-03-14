@@ -55,6 +55,15 @@ serve(async (req) => {
 
       // 3. Light self-learning (just scan trending + update patterns)
       await invokeFunction("self-learning-engine", { mode: "scan_trending", maxVideos: 5 });
+
+      // 4. Daily backfill embeddings (small batch to keep RAG fresh)
+      await invokeFunction("backfill-embeddings", { batchSize: 3 });
+
+      // 5. Daily intelligence sync (user activity feed)
+      await invokeFunction("intelligence-sync-engine", { mode: "user_activity_feed" });
+
+      // 6. Feed performance lessons back into learning
+      await invokeFunction("track-video-performance", { mode: "check_rankings" });
     }
 
     // ═══ WEEKLY TASKS (Sunday 02:00 UTC) ═══

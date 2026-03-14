@@ -230,7 +230,32 @@ Generate ${count} NEW video concepts that:
 7. Language: ${language}
 8. Format: ${isShort ? "SHORT (20-60 seconds)" : `LONG-FORM (${duration} minutes)`}
 ${topic_seed ? `9. Topic direction: "${topic_seed}" (use as seed, expand creatively)` : ""}
-${style ? `10. Style: ${style}` : ""}`
+${style ? `10. Style: ${style}` : ""}
+
+${isShort ? `
+═══ SHORTS MONETIZATION STRATEGY (30-DAY TARGET) ═══
+CRITICAL: These Shorts MUST be optimized for MAXIMUM viral spread to achieve monetization in 30 days.
+Requirements for each Short concept:
+- Hook in FIRST 1 SECOND (not 3, not 2 — ONE second)
+- Loop-ending: the last frame must make viewers want to rewatch
+- Emotional peak within first 5 seconds
+- PATTERN INTERRUPT every 8-10 seconds
+- Information density: one surprising fact per 5 seconds minimum
+- Target: 90%+ retention rate, 5%+ share rate
+- Include a LOOP STRATEGY: how the ending connects back to start
+- Include COMMENT BAIT: a controversial or debatable element
+- Use "micro-cliffhanger" technique: reveal 80% of answer, hold 20%
+- Each concept must specify the EXACT trending audio/format to use
+- Optimize for YouTube Shorts shelf algorithm: high CTR thumbnail frame, engaging first frame
+- Include a SERIES POTENTIAL: how this can become 10+ related Shorts
+- Target niches with LOW competition but HIGH RPM for Shorts
+
+POSTING STRATEGY FOR 30-DAY MONETIZATION:
+- Recommend 3-5 Shorts per DAY for first 30 days
+- Each Short must be part of a "content cluster" (related topics)
+- Include cross-pollination strategy between Shorts
+- Every 5th Short should be a "compilation hook" driving to previous Shorts
+` : ""}`
           },
           {
             role: "user",
@@ -279,8 +304,8 @@ ${style ? `10. Style: ${style}` : ""}`
                       why_this_will_work: { type: "string" },
                       anti_spam_check: { type: "boolean", description: "True if content seems human and not AI-generic" },
                     },
-                    required: ["title", "hook_text", "hook_type", "topic", "unique_angle", "story_structure", "narrative_skeleton", "predicted_attention_score", "predicted_curiosity_score", "predicted_dopamine_score", "viral_probability", "why_this_will_work"]
-                  }
+                     required: ["title", "hook_text", "hook_type", "topic", "unique_angle", "story_structure", "narrative_skeleton", "predicted_attention_score", "predicted_curiosity_score", "predicted_dopamine_score", "viral_probability", "why_this_will_work"],
+                     additionalProperties: false,
                 },
                 niche_summary: {
                   type: "object",
