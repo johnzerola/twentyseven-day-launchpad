@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_channels_user_youtube ON public.user_channels (user_id, youtube_channel_id);

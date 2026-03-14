@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Youtube, Link2, Unlink, Loader2, BarChart3 } from 'lucide-react';
+import { Youtube, Link2, Unlink, Loader2, BarChart3, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,11 +52,12 @@ export const YouTubeOAuthConnect = () => {
       const popup = window.open(authUrl, 'youtube-oauth', 'width=600,height=700');
 
       // Poll for popup close, then refresh
-      const interval = setInterval(() => {
+      const interval = setInterval(async () => {
         if (popup?.closed) {
           clearInterval(interval);
-          fetchConnectedChannels();
-          setLoading(false);
+          await fetchConnectedChannels();
+          // Reload the page to refresh user_channels list
+          window.location.reload();
         }
       }, 1000);
 
@@ -78,12 +79,15 @@ export const YouTubeOAuthConnect = () => {
         .delete()
         .eq('id', id);
       if (error) throw error;
-      toast.success(`Canal "${channelName}" desconectado`);
+      toast.success(`Canal "${channelName}" desconectado do OAuth`);
       setConnectedChannels(prev => prev.filter(c => c.id !== id));
     } catch (err: any) {
       toast.error(err.message);
     }
   };
+
+  if (fetching) return null;
+  if (connectedChannels.length === 0 && !loading) return null;
 
   return (
     <Card className="border-border">
@@ -91,61 +95,55 @@ export const YouTubeOAuthConnect = () => {
         <div className="flex items-center gap-2">
           <Youtube className="w-5 h-5 text-destructive" />
           <CardTitle className="text-base">YouTube Analytics (OAuth)</CardTitle>
+          <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-400/30">
+            Dados Avançados
+          </Badge>
         </div>
         <CardDescription className="text-xs">
-          Conecte seu canal para acessar dados reais de CTR, retenção, impressões e receita.
+          Canais conectados via OAuth têm acesso a dados privados (CTR, retenção, receita) além de todas as funcionalidades padrão.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {fetching ? (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
-          </div>
-        ) : (
-          <>
-            {connectedChannels.map((ch) => (
-              <div key={ch.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/30">
-                {ch.channel_thumbnail && (
-                  <img src={ch.channel_thumbnail} alt="" className="w-8 h-8 rounded-full" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{ch.channel_name}</p>
-                  <p className="text-[10px] text-muted-foreground">{ch.channel_id}</p>
-                </div>
-                <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
-                  <BarChart3 className="w-3 h-3" /> Conectado
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleDisconnect(ch.id, ch.channel_name || '')}
-                >
-                  <Unlink className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
-
+        {connectedChannels.map((ch) => (
+          <div key={ch.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/30">
+            {ch.channel_thumbnail && (
+              <img src={ch.channel_thumbnail} alt="" className="w-8 h-8 rounded-full" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{ch.channel_name}</p>
+              <p className="text-[10px] text-muted-foreground">{ch.channel_id}</p>
+            </div>
+            <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
+              <BarChart3 className="w-3 h-3" /> OAuth
+            </Badge>
             <Button
-              onClick={handleConnect}
-              disabled={loading}
-              variant="outline"
-              className="w-full gap-2"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+              onClick={() => handleDisconnect(ch.id, ch.channel_name || '')}
             >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Link2 className="w-4 h-4" />
-              )}
-              {connectedChannels.length > 0 ? 'Conectar outro canal' : 'Conectar Canal YouTube'}
+              <Unlink className="w-3.5 h-3.5" />
             </Button>
+          </div>
+        ))}
 
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
-              🔒 Seus dados ficam protegidos. Acessamos apenas métricas de leitura (analytics).
-              Nenhuma ação é realizada no seu canal.
-            </p>
-          </>
-        )}
+        <Button
+          onClick={handleConnect}
+          disabled={loading}
+          variant="outline"
+          className="w-full gap-2"
+        >
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Link2 className="w-4 h-4" />
+          )}
+          {connectedChannels.length > 0 ? 'Conectar outro canal' : 'Conectar Canal YouTube'}
+        </Button>
+
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          🔒 Canais conectados via OAuth aparecem automaticamente em "Meus Canais" com todas as funcionalidades + métricas avançadas exclusivas.
+        </p>
       </CardContent>
     </Card>
   );
