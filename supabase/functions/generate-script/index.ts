@@ -427,6 +427,7 @@ ${psychPatterns.slice(0, 1200)}
 ${viralTitlesBlock ? `\n🏆 TÍTULOS VIRAIS SIMILARES (945 títulos, top 10 relevantes):\n${viralTitlesBlock}\n` : ''}
 
 ${selectedStyle}
+${nicheSpecific ? `\n${nicheSpecific}\n` : ''}
 ${viralInjection}
 ${intelBlock}
 ${hookInjection}
