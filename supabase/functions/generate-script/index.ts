@@ -84,10 +84,20 @@ serve(async (req) => {
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
 
-    // ========== Fetch ALL Knowledge (parallel — 10 queries) ==========
+    // ========== Fetch ALL Knowledge + Voice Profile (parallel — 12 queries) ==========
+    // Extract userId from auth header for voice profile lookup
+    const authHeader = req.headers.get("authorization") || '';
+    let currentUserId: string | null = null;
+    if (authHeader.startsWith("Bearer ")) {
+      try {
+        const { data: { user } } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+        currentUserId = user?.id || null;
+      } catch {}
+    }
+
     const [
       ytRes, scriptRes, channelRes, triggersRes, formatsRes, psychPatternsRes,
-      hookRes, structRes, attEngRes, attLibRes, viralTitlesRes
+      hookRes, structRes, attEngRes, attLibRes, viralTitlesRes, voiceRes, backtestRes
     ] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(8),
       sb.from("script_knowledge").select("category,title,content,examples").order("effectiveness_score", { ascending: false }).limit(12),
@@ -110,6 +120,15 @@ serve(async (req) => {
         .order("attention_score", { ascending: false }).limit(10),
       sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
         .order("views", { ascending: false }).limit(20),
+      // Channel Voice Profile (if user has one)
+      currentUserId
+        ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers")
+            .eq("user_id", currentUserId).order("last_analyzed_at", { ascending: false }).limit(1).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // Backtesting corrections (most recent lessons)
+      sb.from("ai_learning").select("insight")
+        .eq("source", "backtest-scores")
+        .order("created_at", { ascending: false }).limit(5),
     ]);
 
     // ========== Format existing knowledge ==========
@@ -171,6 +190,39 @@ serve(async (req) => {
         `• "${t.title}" (${(t.views || 0).toLocaleString()} views) — Padrão: ${t.title_pattern || '?'} | Viral porque: ${t.why_viral || 'N/A'}`
       ).join("\n")
       : '';
+
+    // ========== Channel Voice Profile ==========
+    let voiceInjection = '';
+    const voiceData = voiceRes?.data;
+    if (voiceData?.voice_signature) {
+      const sig = voiceData.voice_signature as any;
+      const markers = (voiceData.style_markers || []).join(', ');
+      const toneKw = (voiceData.tone_keywords || []).join(', ');
+      voiceInjection = `\n🎤 VOZ DO CANAL (aprendida de ${voiceData.sample_scripts_analyzed || '?'} roteiros anteriores):
+Tonalidade: ${sig.tone || 'N/A'}
+Ritmo: ${sig.rhythm || 'N/A'}
+Humor: ${sig.humor_style || 'N/A'}
+Narrativa: ${sig.narrative_preference || 'N/A'}
+Relação com audiência: ${sig.audience_relationship || 'N/A'}
+Marcadores: ${markers || 'N/A'}
+Keywords de tom: ${toneKw || 'N/A'}
+${sig.voice_prompt_injection ? `\nINSTRUÇÃO DE VOZ: ${sig.voice_prompt_injection}` : ''}
+IMPORTANTE: Use esta voz como BASE. O roteiro deve soar como ESTE criador específico, não como um roteirista genérico.\n`;
+    }
+
+    // ========== Backtesting Corrections ==========
+    let backtestBlock = '';
+    const btData = backtestRes?.data || [];
+    if (btData.length > 0) {
+      const corrections = btData.map((b: any) => {
+        try { const p = JSON.parse(b.insight); return p.correction; } catch { return null; }
+      }).filter(Boolean).slice(0, 3);
+      if (corrections.length > 0) {
+        backtestBlock = `\n📊 CORREÇÕES DO BACKTESTING (baseado em resultados REAIS de vídeos anteriores):
+${corrections.map((c: string) => `• ${c}`).join('\n')}
+Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`;
+      }
+    }
 
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
@@ -332,6 +384,8 @@ ${viralInjection}
 ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
+${voiceInjection}
+${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
