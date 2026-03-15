@@ -93,6 +93,10 @@ serve(async (req) => {
       `${k.title}: ${k.content?.slice(0, 300)}`
     ).join("\n\n");
 
+    const monetizationKnowledge = (monetizationRes.data || []).map((k: any) =>
+      `${k.title}: ${k.content?.slice(0, 400)}`
+    ).join("\n\n");
+
     const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
     const channelBlock = channelKnowledge ? `\n📚 CONHECIMENTO DO CANAL:\n${channelKnowledge}\nAdapte o tom e estilo ao perfil deste canal.\n` : '';
 
