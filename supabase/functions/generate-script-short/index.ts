@@ -163,10 +163,20 @@ ${shortsKnowledge}
 
 💰 INTELIGÊNCIA DE MONETIZAÇÃO:
 ${monetizationKnowledge}
-FATO: Shorts de 15-25s são o caminho MAIS RÁPIDO para monetização no YouTube.
-- Canais faceless atingem YPP em 15-30 dias com volume de shorts
-- Completion rate >90% = algoritmo escala de 200 para 20K views em 1 HORA
-- Estratégia: 70% micro-shorts (15-25s) para viralizar + 30% story-shorts para watch time
+DADOS REAIS DE CRIADORES (2025):
+- Shorts de 1.5-3 min geram MAIS views que shorts de 30s (AVD absoluto maior)
+- ~$100 por 1M views em shorts (RPM $0.10-$0.20 dependendo do nicho)
+- Criador fez $750 em 30 dias com shorts de 2-3min (7.2M views)
+- Shorts gaming/entertainment = $0.17-0.18 RPM
+- Shorts finanças/dropshipping = $0.25-0.30 RPM
+- Estratégia validada: 70% micro-shorts (15-25s) para viralizar + 30% story-shorts (45-60s+) para watch time
+- HACK VALIDADO: Efeito sonoro de meme nos primeiros 0.5s aumenta swipe ratio de 77% para 82%+
+- VIDEO BREATHING: Não spame uploads. 2-3 shorts/dia com intervalos > 6 shorts seguidos
+
+REGRA DO SNOWBALL: Canais explodem exponencialmente, não linearmente:
+- Dias 1-7: Slow start (1K-10K views/dia) 
+- Dias 8-15: Descoberta de formato viral
+- Dias 15-30: Efeito bola de neve (50K-500K+ views/dia)
 
 O cérebro humano em Shorts:
 - 0-0.3s: Processamento pré-atencional (visual PRECISA ser diferente)
