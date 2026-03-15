@@ -10,9 +10,11 @@ import {
   Layers, Plus, Search, Filter, Globe, Calendar, Trash2, Edit3,
   BarChart3, TrendingUp, Youtube, FolderOpen, CheckCircle2,
   Clock, Sparkles, ChevronDown, ChevronUp, GripVertical,
-  Copy, ArrowRight, Loader2, FileText, Users, Kanban, Lightbulb, Wand2, Star
+  Copy, ArrowRight, Loader2, FileText, Users, Kanban, Lightbulb, Wand2, Star,
+  Flame, ExternalLink, Zap, Brain, Target
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth-fetch';
+import { Progress } from '@/components/ui/progress';
 
 type QueueItem = {
   id: string;
@@ -91,8 +93,18 @@ const MultiChannel = () => {
   const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [showIdeaPanel, setShowIdeaPanel] = useState(false);
+  const [selectedIdea, setSelectedIdea] = useState<any>(null);
 
-  useEffect(() => { loadAll(); }, []);
+  // Trend alerts
+  const [trendAlerts, setTrendAlerts] = useState<any[]>([]);
+
+  // Precision stats
+  const [precisionStats, setPrecisionStats] = useState<{ predictions: number; avgError: number; accuracy: number } | null>(null);
+
+  // Quick script generation
+  const [generatingScript, setGeneratingScript] = useState<string | null>(null);
+
+  useEffect(() => { loadAll(); loadTrendAlerts(); loadPrecisionStats(); }, []);
 
   const loadAll = async () => {
     setLoading(true);
@@ -111,12 +123,74 @@ const MultiChannel = () => {
     setLoading(false);
   };
 
+  const loadTrendAlerts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Get user's channel niches
+    const { data: userCh } = await supabase.from('user_channels').select('niche').eq('user_id', user.id);
+    const niches = [...new Set((userCh || []).map((c: any) => c.niche).filter(Boolean))];
+    if (!niches.length) return;
+
+    // Fetch emerging videos matching user's niches
+    const { data: emerging } = await supabase
+      .from('emerging_videos')
+      .select('title, views, channel_name, niche, pre_viral_score, velocity_score, video_id, thumbnail_url')
+      .in('niche', niches)
+      .order('pre_viral_score', { ascending: false })
+      .limit(5);
+
+    setTrendAlerts(emerging || []);
+  };
+
+  const loadPrecisionStats = async () => {
+    const { data: preds } = await supabase
+      .from('prediction_vs_result')
+      .select('predicted_score, actual_score')
+      .not('actual_score', 'is', null);
+
+    if (preds && preds.length > 0) {
+      const errors = preds.map((p: any) => Math.abs((p.predicted_score || 0) - (p.actual_score || 0)));
+      const avgError = errors.reduce((a: number, b: number) => a + b, 0) / errors.length;
+      setPrecisionStats({
+        predictions: preds.length,
+        avgError: Math.round(avgError * 10) / 10,
+        accuracy: Math.round((1 - avgError / 100) * 100),
+      });
+    }
+  };
+
   const generateIdeas = async () => {
     const selectedChannel = channels.find(c => c.id === newChannel);
     if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
     setGeneratingIdeas(true);
     setShowIdeaPanel(true);
     try {
+      // Fetch Dotti suggestions for this channel to inject as context
+      const { data: { user } } = await supabase.auth.getUser();
+      let dottiContext: string[] = [];
+      if (user) {
+        const { data: dottiData } = await supabase
+          .from('dotti_suggestions')
+          .select('title, content, niche, topic')
+          .eq('user_id', user.id)
+          .eq('channel_id', newChannel)
+          .order('updated_at', { ascending: false })
+          .limit(10);
+        
+        // Also get general suggestions if channel-specific are few
+        if (!dottiData?.length) {
+          const { data: generalDotti } = await supabase
+            .from('dotti_suggestions')
+            .select('title, content, niche, topic')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(5);
+          dottiContext = (generalDotti || []).map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
+        } else {
+          dottiContext = dottiData.map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
+        }
+      }
+
       const headers = await getAuthHeaders();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ideas`, {
         method: 'POST',
@@ -125,6 +199,9 @@ const MultiChannel = () => {
           niche: selectedChannel.niche || 'general',
           channelName: selectedChannel.channel_name,
           count: 8,
+          existingIdeas: dottiContext.length > 0 
+            ? `Contexto do usuário (insights salvos): ${dottiContext.join(' | ')}` 
+            : undefined,
         }),
       });
       const result = await res.json();
@@ -142,6 +219,7 @@ const MultiChannel = () => {
 
   const selectIdea = (idea: any) => {
     setNewTitle(idea.title || idea.tema || '');
+    setSelectedIdea(idea);
     setShowIdeaPanel(false);
     toast.success('💡 Ideia selecionada!');
   };
@@ -150,23 +228,106 @@ const MultiChannel = () => {
     if (!newTitle.trim()) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const ch = channels.find(c => c.id === newChannel);
     const { error } = await supabase.from('content_queue').insert({
       user_id: user.id,
       title: newTitle.trim(),
       channel_id: newChannel || null,
       priority: newPriority,
       scheduled_date: newDate || null,
+      niche: ch?.niche || null,
+      metadata_json: selectedIdea ? {
+        idea_score: selectedIdea.idea_score,
+        viral_potential: selectedIdea.viral_potential,
+        hook: selectedIdea.hook,
+        source: 'idea_engine',
+      } : {},
     } as any);
     if (error) { toast.error(error.message); return; }
     toast.success('Item adicionado à fila!');
-    setNewTitle(''); setNewChannel(''); setNewDate(''); setShowAddForm(false);
+    setNewTitle(''); setNewChannel(''); setNewDate(''); setShowAddForm(false); setSelectedIdea(null);
     loadAll();
   };
 
   const updateQueueStatus = async (id: string, status: string) => {
+    const item = queue.find(q => q.id === id);
     await supabase.from('content_queue').update({ status, updated_at: new Date().toISOString() } as any).eq('id', id);
     setQueue(prev => prev.map(q => q.id === id ? { ...q, status } : q));
     toast.success(`Status → ${STATUS_CONFIG[status]?.label || status}`);
+
+    // FEEDBACK LOOP: When published, save prediction data for learning
+    if (status === 'published' && item) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Get the metadata which may contain idea scores
+        const metadata = (item as any).metadata_json || {};
+        const predictedScore = metadata.viral_score || metadata.idea_score || null;
+
+        if (predictedScore) {
+          await supabase.from('prediction_vs_result').insert({
+            user_id: user.id,
+            prediction_type: 'queue_idea',
+            predicted_score: predictedScore,
+            niche: item.niche || 'general',
+            metadata: { title: item.title, channel_id: item.channel_id },
+          } as any).then(() => {
+            toast.info('📊 Score salvo para calibração futura');
+          });
+        }
+      }
+    }
+  };
+
+  const quickGenerateScript = async (item: QueueItem) => {
+    setGeneratingScript(item.id);
+    try {
+      const ch = channels.find(c => c.id === item.channel_id);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-script`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          topic: item.title,
+          niche: item.niche || ch?.niche || 'general',
+          channelName: ch?.channel_name || '',
+          videoType: 'long',
+          duration: '10min',
+          language: item.language || 'português',
+        }),
+      });
+      const result = await res.json();
+      if (result.script) {
+        // Save as project
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('video_projects').insert({
+            user_id: user.id,
+            title: item.title,
+            script_text: result.script,
+            status: 'script',
+            video_type: 'long',
+            niche: item.niche || ch?.niche,
+            channel_id: item.channel_id,
+          } as any);
+
+          // Update queue status
+          await supabase.from('content_queue').update({ 
+            status: 'scripting', 
+            metadata_json: { viral_score: result.viralScore, idea_score: result.ideaScore },
+            updated_at: new Date().toISOString() 
+          } as any).eq('id', item.id);
+
+          setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'scripting' } : q));
+          toast.success('✅ Roteiro gerado e salvo no Workflow!');
+        }
+      } else {
+        toast.error(result.error || 'Erro ao gerar roteiro');
+      }
+    } catch {
+      toast.error('Erro de conexão');
+    } finally {
+      setGeneratingScript(null);
+    }
   };
 
   const deleteQueueItem = async (id: string) => {
@@ -271,6 +432,61 @@ const MultiChannel = () => {
             </button>
           ))}
         </div>
+
+        {/* 🔔 Trend Alerts + 📈 Precision Stats */}
+        {(trendAlerts.length > 0 || precisionStats) && (
+          <div className="grid md:grid-cols-2 gap-3">
+            {trendAlerts.length > 0 && (
+              <div className="bg-card border border-amber-500/20 rounded-xl p-3">
+                <p className="text-xs font-medium flex items-center gap-1.5 mb-2">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-amber-400">Trending no seu nicho</span>
+                </p>
+                <div className="space-y-1.5">
+                  {trendAlerts.slice(0, 3).map((alert: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
+                      <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium truncate">{alert.title}</p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {alert.channel_name} • {alert.views?.toLocaleString()} views • Score: {alert.pre_viral_score?.toFixed(0)}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-6 text-[9px] px-2 shrink-0"
+                        onClick={() => { setNewTitle(`Inspirado em: ${alert.title}`); setShowAddForm(true); }}>
+                        Usar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {precisionStats && (
+              <div className="bg-card border border-border rounded-xl p-3">
+                <p className="text-xs font-medium flex items-center gap-1.5 mb-2">
+                  <Target className="w-3.5 h-3.5 text-primary" />
+                  Precisão do Sistema
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center bg-muted/20 rounded-lg p-2">
+                    <p className="text-lg font-bold text-primary">{precisionStats.accuracy}%</p>
+                    <p className="text-[9px] text-muted-foreground">Acurácia</p>
+                  </div>
+                  <div className="text-center bg-muted/20 rounded-lg p-2">
+                    <p className="text-lg font-bold">{precisionStats.predictions}</p>
+                    <p className="text-[9px] text-muted-foreground">Predições</p>
+                  </div>
+                  <div className="text-center bg-muted/20 rounded-lg p-2">
+                    <p className="text-lg font-bold">{precisionStats.avgError}</p>
+                    <p className="text-[9px] text-muted-foreground">Erro médio</p>
+                  </div>
+                </div>
+                <Progress value={precisionStats.accuracy} className="mt-2 h-1.5" />
+                <p className="text-[9px] text-muted-foreground mt-1">Melhora com cada vídeo publicado</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Add Form */}
         <AnimatePresence>
@@ -507,6 +723,14 @@ const MultiChannel = () => {
                             <option key={k} value={k}>{v.label}</option>
                           ))}
                         </select>
+                        {item.status === 'idea' && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            disabled={generatingScript === item.id}
+                            onClick={() => quickGenerateScript(item)}
+                            title="Gerar roteiro automaticamente">
+                            {generatingScript === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3 text-primary" />}
+                          </Button>
+                        )}
                         <Button size="icon" variant="ghost" className="h-7 w-7"
                           onClick={() => {
                             const otherChannels = channels.filter(c => c.id !== item.channel_id);
