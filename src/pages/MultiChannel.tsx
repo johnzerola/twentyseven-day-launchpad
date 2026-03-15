@@ -10,9 +10,11 @@ import {
   Layers, Plus, Search, Filter, Globe, Calendar, Trash2, Edit3,
   BarChart3, TrendingUp, Youtube, FolderOpen, CheckCircle2,
   Clock, Sparkles, ChevronDown, ChevronUp, GripVertical,
-  Copy, ArrowRight, Loader2, FileText, Users, Kanban, Lightbulb, Wand2, Star
+  Copy, ArrowRight, Loader2, FileText, Users, Kanban, Lightbulb, Wand2, Star,
+  Flame, ExternalLink, Zap, Brain, Target
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth-fetch';
+import { Progress } from '@/components/ui/progress';
 
 type QueueItem = {
   id: string;
