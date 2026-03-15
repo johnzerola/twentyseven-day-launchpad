@@ -38,6 +38,12 @@ const DURATION_OPTIONS = [
   { value: 'long', label: '🎬 Longform (5-60min)', desc: 'Formato completo, monetização' },
 ];
 
+const SHORTS_DURATION_OPTIONS = [
+  { value: 'micro', label: '⚡ Micro (15-25s)', desc: 'Completion rate máximo. Viraliza rápido.', example: 'Fatos, comparações, trends' },
+  { value: 'flash', label: '🔥 Flash (25-40s)', desc: 'Sweet spot do algoritmo. Fato + twist.', example: 'Revelações, listicles, hacks' },
+  { value: 'story', label: '📖 Story (45-60s)', desc: 'Narrativas emocionais. Alto engajamento.', example: 'Milionários, crime, mitologia' },
+];
+
 interface ViralThemeWizardProps {
   onSelectTheme: (theme: any) => void;
   userChannels: any[];
