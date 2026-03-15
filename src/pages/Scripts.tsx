@@ -367,36 +367,7 @@ const Scripts = () => {
     setShowTemplates(false);
   };
 
-  const generateThemeSuggestions = async () => {
-    setLoadingThemes(true);
-    setThemeSuggestions([]);
-    try {
-      const { data, error } = await supabase.functions.invoke('suggest-themes', {
-        body: { niche: niche || 'faceless dark', style, language, count: 10, topic, narrativeStyle: style },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setThemeSuggestions(data?.themes || []);
-      toast.success(`${data?.themes?.length || 0} temas gerados!`);
-    } catch (err: any) {
-      if (err?.message?.includes('402')) toast.error('Créditos insuficientes.');
-      else if (err?.message?.includes('429')) toast.error('Rate limit. Tente novamente.');
-      else toast.error(err.message || 'Erro ao gerar temas');
-    } finally { setLoadingThemes(false); }
-  };
 
-  const useTheme = (theme: any) => {
-    setTopic(theme.title);
-    if (theme.estimated_duration) { const dur = parseInt(theme.estimated_duration); if (dur) setDuration(String(dur)); }
-    const styleMap: Record<string, string> = {
-      'documentário': 'documentário', 'listicle': 'listicle', 'tutorial': 'tutorial',
-      'true crime': 'narração', 'motivacional': 'storytelling', 'storytelling': 'storytelling',
-      'educativo': 'educativo', 'horror': 'narração', 'shorts': 'dopaminérgico',
-    };
-    if (theme.style && styleMap[theme.style]) setStyle(styleMap[theme.style]);
-    toast.success('Tema aplicado!');
-    setShowThemeSuggestions(false);
-  };
 
   const getViralContext = useCallback(() => {
     const parts: string[] = [];
