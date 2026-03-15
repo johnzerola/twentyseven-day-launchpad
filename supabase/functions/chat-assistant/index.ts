@@ -442,13 +442,33 @@ const DOTTI_TOOLS = [
 ];
 
 // ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
-const TOOL_TIMEOUT_MS = 20000; // 20s per tool
+const DEFAULT_TOOL_TIMEOUT_MS = 12000;
+const TOOL_TIMEOUTS_MS: Record<string, number> = {
+  // YouTube-intensive tools can exhaust quota quickly; fail fast to avoid full chat failure.
+  "analyze-channel": 8000,
+  "youtube_channel_stats": 7000,
+  "youtube_channel_videos": 7000,
+  "youtube_video_stats": 7000,
+  "youtube_search_api": 7000,
+};
+
+const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
+  "analyze_channel",
+  "youtube_channel_stats",
+  "youtube_channel_videos",
+  "youtube_video_stats",
+  "youtube_search_api",
+]);
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms)),
   ]);
+}
+
+function getToolTimeoutMs(fnName: string, toolName: string): number {
+  return TOOL_TIMEOUTS_MS[toolName] || TOOL_TIMEOUTS_MS[fnName] || DEFAULT_TOOL_TIMEOUT_MS;
 }
 
 async function executeTool(
@@ -461,13 +481,14 @@ async function executeTool(
 ): Promise<string> {
   const callFn = async (fnName: string, payload: any) => {
     try {
+      const timeoutMs = getToolTimeoutMs(fnName, toolName);
       const resp = await withTimeout(
         fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
           body: JSON.stringify(payload),
         }),
-        TOOL_TIMEOUT_MS,
+        timeoutMs,
         fnName
       );
       const text = await resp.text();
@@ -986,12 +1007,14 @@ async function executeTool(
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
 
-    // Retry only for transient errors
+    // Retry only for transient errors (but don't retry quota-prone/expensive timeout tools)
     const resultStr = JSON.stringify(result);
-    const isTransientError = typeof result?.error === 'string' && (
-      result.error.includes('Timeout') || result.error.includes('Network') || result.error.includes('context canceled')
-    );
-    if (isTransientError && attempt === 1) {
+    const errorText = typeof result?.error === 'string' ? result.error : '';
+    const isTransientError = errorText.includes('Timeout') || errorText.includes('Network') || errorText.includes('context canceled');
+    const isTimeoutError = errorText.includes('Timeout');
+    const shouldRetry = attempt === 1 && isTransientError && !(isTimeoutError && NON_RETRYABLE_TIMEOUT_TOOLS.has(toolName));
+
+    if (shouldRetry) {
       console.log(`Tool ${toolName} transient failure (attempt 1), retrying in 1s...`);
       await new Promise(r => setTimeout(r, 1000));
       return executeTool(toolName, args, sb, supabaseUrl, serviceKey, 2);
@@ -1446,14 +1469,30 @@ ${knowledgeBlock}
       toolRound++;
       // Cap parallel tools to avoid timeout
       const toolCalls = currentChoice.tool_calls.slice(0, MAX_PARALLEL_TOOLS);
-      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`, 
-        toolCalls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`));
+      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`,
+        toolCalls.map((t: any) => {
+          try {
+            return `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`;
+          } catch {
+            return `${t.function.name}(invalid-args)`;
+          }
+        }));
 
       // Execute tool calls in parallel (capped)
       const toolResults = await Promise.all(
         toolCalls.map(async (tc: any) => {
-          const args = JSON.parse(tc.function.arguments || '{}');
-          const result = await executeTool(tc.function.name, args, sb, supabaseUrl, supabaseKey);
+          let parsedArgs: any = {};
+          try {
+            parsedArgs = JSON.parse(tc.function.arguments || '{}');
+          } catch {
+            return {
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify({ error: `Invalid tool arguments for ${tc.function.name}` }),
+            };
+          }
+
+          const result = await executeTool(tc.function.name, parsedArgs, sb, supabaseUrl, supabaseKey);
           return {
             role: "tool",
             tool_call_id: tc.id,
