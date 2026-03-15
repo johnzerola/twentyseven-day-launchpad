@@ -433,6 +433,61 @@ const MultiChannel = () => {
           ))}
         </div>
 
+        {/* 🔔 Trend Alerts + 📈 Precision Stats */}
+        {(trendAlerts.length > 0 || precisionStats) && (
+          <div className="grid md:grid-cols-2 gap-3">
+            {trendAlerts.length > 0 && (
+              <div className="bg-card border border-amber-500/20 rounded-xl p-3">
+                <p className="text-xs font-medium flex items-center gap-1.5 mb-2">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-amber-400">Trending no seu nicho</span>
+                </p>
+                <div className="space-y-1.5">
+                  {trendAlerts.slice(0, 3).map((alert: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
+                      <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium truncate">{alert.title}</p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {alert.channel_name} • {alert.views?.toLocaleString()} views • Score: {alert.pre_viral_score?.toFixed(0)}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-6 text-[9px] px-2 shrink-0"
+                        onClick={() => { setNewTitle(`Inspirado em: ${alert.title}`); setShowAddForm(true); }}>
+                        Usar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {precisionStats && (
+              <div className="bg-card border border-border rounded-xl p-3">
+                <p className="text-xs font-medium flex items-center gap-1.5 mb-2">
+                  <Target className="w-3.5 h-3.5 text-primary" />
+                  Precisão do Sistema
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center bg-muted/20 rounded-lg p-2">
+                    <p className="text-lg font-bold text-primary">{precisionStats.accuracy}%</p>
+                    <p className="text-[9px] text-muted-foreground">Acurácia</p>
+                  </div>
+                  <div className="text-center bg-muted/20 rounded-lg p-2">
+                    <p className="text-lg font-bold">{precisionStats.predictions}</p>
+                    <p className="text-[9px] text-muted-foreground">Predições</p>
+                  </div>
+                  <div className="text-center bg-muted/20 rounded-lg p-2">
+                    <p className="text-lg font-bold">{precisionStats.avgError}</p>
+                    <p className="text-[9px] text-muted-foreground">Erro médio</p>
+                  </div>
+                </div>
+                <Progress value={precisionStats.accuracy} className="mt-2 h-1.5" />
+                <p className="text-[9px] text-muted-foreground mt-1">Melhora com cada vídeo publicado</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Add Form */}
         <AnimatePresence>
           {showAddForm && (
