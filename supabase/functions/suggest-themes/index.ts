@@ -17,7 +17,7 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch intelligence from DB
-    const [channelRes, ytRes] = await Promise.all([
+    const fetchPromises: Promise<any>[] = [
       sb.from("channel_intelligence")
         .select("channel_name,niche,style,viral_patterns,top_videos,avg_views,growth_rate")
         .eq("is_faceless", true)
@@ -27,7 +27,23 @@ serve(async (req) => {
         .select("title,content")
         .order("priority", { ascending: false })
         .limit(5),
-    ]);
+    ];
+    // For shorts, also fetch shorts-specific models and hooks
+    if (videoFormat === 'short') {
+      fetchPromises.push(
+        sb.from("content_models").select("model_name,description,hook_pattern,pacing_guide")
+          .eq("video_type", "short").order("effectiveness_score", { ascending: false }).limit(5),
+        sb.from("hook_library").select("hook_text,hook_type,retention_score")
+          .order("retention_score", { ascending: false }).limit(15),
+        sb.from("audience_psychology_patterns").select("trigger_type,description,storytelling_pattern")
+          .eq("source", "shorts_engine").limit(5),
+      );
+    }
+    const results = await Promise.all(fetchPromises);
+    const [channelRes, ytRes] = results;
+    const shortsModels = results[2]?.data || [];
+    const shortsHooks = results[3]?.data || [];
+    const shortsPsych = results[4]?.data || [];
 
     const channelContext = (channelRes.data || []).map((c: any) => {
       const tops = Array.isArray(c.top_videos) ? c.top_videos.slice(0, 2).map((v: any) => v.title).join(", ") : "";
