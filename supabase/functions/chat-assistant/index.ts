@@ -1007,12 +1007,14 @@ async function executeTool(
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
 
-    // Retry only for transient errors
+    // Retry only for transient errors (but don't retry quota-prone/expensive timeout tools)
     const resultStr = JSON.stringify(result);
-    const isTransientError = typeof result?.error === 'string' && (
-      result.error.includes('Timeout') || result.error.includes('Network') || result.error.includes('context canceled')
-    );
-    if (isTransientError && attempt === 1) {
+    const errorText = typeof result?.error === 'string' ? result.error : '';
+    const isTransientError = errorText.includes('Timeout') || errorText.includes('Network') || errorText.includes('context canceled');
+    const isTimeoutError = errorText.includes('Timeout');
+    const shouldRetry = attempt === 1 && isTransientError && !(isTimeoutError && NON_RETRYABLE_TIMEOUT_TOOLS.has(toolName));
+
+    if (shouldRetry) {
       console.log(`Tool ${toolName} transient failure (attempt 1), retrying in 1s...`);
       await new Promise(r => setTimeout(r, 1000));
       return executeTool(toolName, args, sb, supabaseUrl, serviceKey, 2);
