@@ -71,7 +71,7 @@ const MultiChannel = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [groups, setGroups] = useState<ChannelGroup[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'queue' | 'groups'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'queue' | 'groups' | 'calendar' | 'checklist'>('overview');
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
