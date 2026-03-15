@@ -758,6 +758,21 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
                     className="w-full bg-muted/30 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     placeholder="Título da sugestão"
                   />
+                  {saveChannels.length > 0 && (
+                    <div>
+                      <label className="text-[10px] text-muted-foreground font-medium mb-0.5 block">Salvar para canal:</label>
+                      <select
+                        value={editingSuggestion.channelId || ''}
+                        onChange={e => setEditingSuggestion(prev => prev ? { ...prev, channelId: e.target.value || null } : null)}
+                        className="w-full bg-muted/30 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">Geral (sem canal)</option>
+                        {saveChannels.map(ch => (
+                          <option key={ch.id} value={ch.id}>{ch.channel_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <textarea
                     value={editingSuggestion.content}
                     onChange={e => setEditingSuggestion(prev => prev ? { ...prev, content: e.target.value } : null)}
