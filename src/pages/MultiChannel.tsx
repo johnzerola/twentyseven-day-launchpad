@@ -10,8 +10,9 @@ import {
   Layers, Plus, Search, Filter, Globe, Calendar, Trash2, Edit3,
   BarChart3, TrendingUp, Youtube, FolderOpen, CheckCircle2,
   Clock, Sparkles, ChevronDown, ChevronUp, GripVertical,
-  Copy, ArrowRight, Loader2, FileText, Users, Kanban
+  Copy, ArrowRight, Loader2, FileText, Users, Kanban, Lightbulb, Wand2, Star
 } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/auth-fetch';
 
 type QueueItem = {
   id: string;
@@ -86,6 +87,11 @@ const MultiChannel = () => {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupChannels, setNewGroupChannels] = useState<string[]>([]);
 
+  // Idea generator
+  const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
+  const [generatingIdeas, setGeneratingIdeas] = useState(false);
+  const [showIdeaPanel, setShowIdeaPanel] = useState(false);
+
   useEffect(() => { loadAll(); }, []);
 
   const loadAll = async () => {
@@ -103,6 +109,41 @@ const MultiChannel = () => {
     setQueue((qRes.data || []).map((q: any) => ({ ...q, tags: Array.isArray(q.tags) ? q.tags : [] })));
     setGroups((gRes.data || []).map((g: any) => ({ ...g, channels: Array.isArray(g.channels) ? g.channels : [] })));
     setLoading(false);
+  };
+
+  const generateIdeas = async () => {
+    const selectedChannel = channels.find(c => c.id === newChannel);
+    if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
+    setGeneratingIdeas(true);
+    setShowIdeaPanel(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ideas`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          niche: selectedChannel.niche || 'general',
+          channelName: selectedChannel.channel_name,
+          count: 8,
+        }),
+      });
+      const result = await res.json();
+      if (result.ideas) {
+        setGeneratedIdeas(result.ideas);
+      } else {
+        toast.error(result.error || 'Erro ao gerar ideias');
+      }
+    } catch {
+      toast.error('Erro de conexão');
+    } finally {
+      setGeneratingIdeas(false);
+    }
+  };
+
+  const selectIdea = (idea: any) => {
+    setNewTitle(idea.title || idea.tema || '');
+    setShowIdeaPanel(false);
+    toast.success('💡 Ideia selecionada!');
   };
 
   const addQueueItem = async () => {
@@ -237,15 +278,17 @@ const MultiChannel = () => {
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden">
               <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-                <h3 className="font-semibold text-sm">Novo item na fila</h3>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-primary" /> Novo item na fila
+                </h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   <div className="col-span-2">
-                    <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Título do vídeo / ideia" className="bg-muted/30" />
+                    <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Título do vídeo / ideia (ou gere abaixo)" className="bg-muted/30" />
                   </div>
-                  <select value={newChannel} onChange={e => setNewChannel(e.target.value)}
+                  <select value={newChannel} onChange={e => { setNewChannel(e.target.value); setGeneratedIdeas([]); setShowIdeaPanel(false); }}
                     className="h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
-                    <option value="">Sem canal</option>
-                    {channels.map(c => <option key={c.id} value={c.id}>{c.channel_name}</option>)}
+                    <option value="">Selecione canal</option>
+                    {channels.map(c => <option key={c.id} value={c.id}>{c.channel_name} {c.niche ? `(${c.niche})` : ''}</option>)}
                   </select>
                   <select value={newPriority} onChange={e => setNewPriority(e.target.value)}
                     className="h-9 rounded-md border border-input bg-muted/30 px-3 text-sm">
@@ -255,12 +298,80 @@ const MultiChannel = () => {
                     <option value="urgent">🔴 Urgente</option>
                   </select>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="bg-muted/30 w-48" />
-                  <Button onClick={addQueueItem} disabled={!newTitle.trim()} className="gap-1">
+                  <Button onClick={generateIdeas} disabled={!newChannel || generatingIdeas} variant="outline" className="gap-1.5 text-xs">
+                    {generatingIdeas ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                    {generatingIdeas ? 'Gerando...' : '🧠 Gerar Ideias com IA'}
+                  </Button>
+                  <Button onClick={addQueueItem} disabled={!newTitle.trim()} className="gap-1 ml-auto">
                     <Plus className="w-3 h-3" /> Adicionar
                   </Button>
                 </div>
+
+                {/* Idea Generator Panel */}
+                <AnimatePresence>
+                  {showIdeaPanel && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden">
+                      <div className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium flex items-center gap-1.5">
+                            <Lightbulb className="w-3.5 h-3.5 text-primary" />
+                            Ideias para <span className="text-primary">{channels.find(c => c.id === newChannel)?.channel_name}</span>
+                          </p>
+                          <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowIdeaPanel(false)}>
+                            Fechar
+                          </Button>
+                        </div>
+
+                        {generatingIdeas ? (
+                          <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                            Analisando nicho e gerando ideias...
+                          </div>
+                        ) : generatedIdeas.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">Nenhuma ideia gerada ainda.</p>
+                        ) : (
+                          <div className="grid sm:grid-cols-2 gap-1.5 max-h-[300px] overflow-y-auto">
+                            {generatedIdeas.map((idea, i) => (
+                              <button key={i} onClick={() => selectIdea(idea)}
+                                className="text-left bg-card border border-border rounded-lg p-2.5 hover:border-primary/50 hover:bg-primary/5 transition-all group">
+                                <div className="flex items-start gap-2">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                    i < 3 ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                                  }`}>
+                                    {i < 3 ? <Star className="w-3 h-3" /> : i + 1}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium leading-tight group-hover:text-primary transition-colors">
+                                      {idea.title || idea.tema}
+                                    </p>
+                                    {idea.hook && (
+                                      <p className="text-[10px] text-muted-foreground mt-1 truncate">🎣 {idea.hook}</p>
+                                    )}
+                                    <div className="flex gap-1.5 mt-1.5">
+                                      {idea.idea_score != null && (
+                                        <Badge variant="secondary" className="text-[9px] px-1">
+                                          ⚡ {typeof idea.idea_score === 'number' ? idea.idea_score.toFixed(0) : idea.idea_score}/100
+                                        </Badge>
+                                      )}
+                                      {idea.viral_potential != null && (
+                                        <Badge variant="outline" className="text-[9px] px-1">
+                                          🔥 Viral {typeof idea.viral_potential === 'number' ? idea.viral_potential.toFixed(0) : idea.viral_potential}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
