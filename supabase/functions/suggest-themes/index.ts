@@ -33,7 +33,7 @@ serve(async (req) => {
         .limit(10),
     ];
 
-    // For shorts, fetch ALL shorts-specific intelligence
+    // For shorts, fetch ALL shorts-specific intelligence + monetization cases
     if (videoFormat === 'short') {
       fetchPromises.push(
         sb.from("content_models").select("model_name,description,hook_pattern,pacing_guide,best_for_duration,effectiveness_score")
@@ -47,6 +47,14 @@ serve(async (req) => {
         sb.from("youtube_knowledge").select("title,content")
           .ilike("title", "%shorts%")
           .order("priority", { ascending: false }).limit(5),
+        // Monetization-specific knowledge
+        sb.from("youtube_knowledge").select("title,content")
+          .eq("category", "shorts-monetization")
+          .order("priority", { ascending: false }).limit(5),
+        // Case studies of successful Shorts channels
+        sb.from("case_studies" as any).select("channel_name,niche,total_shorts,total_views,days_to_monetization,strategy_used,lessons_learned")
+          .not("days_to_monetization", "is", null)
+          .order("days_to_monetization", { ascending: true }).limit(5),
       );
     }
 
