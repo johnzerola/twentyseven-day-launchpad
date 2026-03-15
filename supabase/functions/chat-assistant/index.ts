@@ -1475,8 +1475,18 @@ ${knowledgeBlock}
       // Execute tool calls in parallel (capped)
       const toolResults = await Promise.all(
         toolCalls.map(async (tc: any) => {
-          const args = JSON.parse(tc.function.arguments || '{}');
-          const result = await executeTool(tc.function.name, args, sb, supabaseUrl, supabaseKey);
+          let parsedArgs: any = {};
+          try {
+            parsedArgs = JSON.parse(tc.function.arguments || '{}');
+          } catch {
+            return {
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify({ error: `Invalid tool arguments for ${tc.function.name}` }),
+            };
+          }
+
+          const result = await executeTool(tc.function.name, parsedArgs, sb, supabaseUrl, supabaseKey);
           return {
             role: "tool",
             tool_call_id: tc.id,
