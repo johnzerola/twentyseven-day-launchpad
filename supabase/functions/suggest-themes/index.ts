@@ -135,6 +135,11 @@ serve(async (req) => {
 🔑 INTELIGÊNCIA DE VIRALIZAÇÃO DE SHORTS:
 ${shortsKnowledgeBlock}
 
+💰 ESTRATÉGIA DE MONETIZAÇÃO COM SHORTS:
+${monetizationBlock}
+
+${caseStudiesBlock ? `🏆 CASES DE SUCESSO REAIS:\n${caseStudiesBlock}\n` : ''}
+
 📐 MODELOS ESTRUTURAIS DE SHORTS:
 ${modelsBlock}
 
@@ -147,13 +152,20 @@ ${psychBlock}
 ⚡ TÉCNICAS DE ATENÇÃO:
 ${attBlock}
 
-📊 ESTRATÉGIA DE DURAÇÃO:
-${durHint === 'micro' ? '- MICRO-SHORTS (15-30s): Foco em completion rate >90%. UMA ideia nuclear. Melhor para viralizar rápido.'
-  : durHint === 'story' ? '- STORY-SHORTS (45-60s): Narrativas com alta carga emocional. Histórias de milionários, true crime, mitologia.'
+📊 ESTRATÉGIA DE DURAÇÃO (CRÍTICO PARA MONETIZAÇÃO):
+${durHint === 'micro' ? `- MICRO-SHORTS (15-30s): Foco em completion rate >90%. MELHOR para viralizar rápido.
+- DADO: Shorts de 15-25s têm 40% mais chance de entrar no feed For You
+- DADO: Completion >85% nos primeiros 200 views = escala para 20K+ em 1h
+- IDEAL PARA: Monetização rápida via volume (10M views em 30 dias)`
+  : durHint === 'story' ? `- STORY-SHORTS (45-60s): Narrativas com alta carga emocional. 
+- QUANDO USAR: Histórias de milionários, true crime, tragédias, mitologia
+- IMPORTANTE: Funciona para watch time (4.000 horas), não para views rápidas
+- COMBINE: 70% micro-shorts (viralização) + 30% story-shorts (watch time)`
   : `- AUTO: Sugira a duração IDEAL para cada tema baseado na complexidade:
-  • Tema simples (1 fato/ideia) → 15-25s (MICRO)
-  • Tema com twist (2 elementos) → 25-40s (FLASH)
-  • Tema narrativo (personagem + conflito) → 45-60s (STORY)`}
+  • Tema simples (1 fato/ideia) → 15-25s (MICRO) — MELHOR para monetizar rápido
+  • Tema com twist (2 elementos) → 25-40s (FLASH) — Sweet spot
+  • Tema narrativo (personagem + conflito) → 45-60s (STORY) — Watch time
+  PRIORIZE 70% MICRO para acelerar monetização!`}
 
 REGRAS CRÍTICAS PARA TEMAS DE SHORTS:
 1. Cada tema DEVE funcionar em formato ultra-curto
