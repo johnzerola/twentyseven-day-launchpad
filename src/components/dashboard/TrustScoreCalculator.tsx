@@ -28,6 +28,10 @@ interface ScoreResult {
   recommendations: string[];
   monetizationReady: boolean;
   engagedViewPct: number;
+  snowballMultiplier: number;
+  daysToMonetize: string;
+  viewsProgress: number;
+  estimatedEngagedViews: number;
 }
 
 const calculateScore = (m: TrustMetrics): ScoreResult => {
@@ -61,11 +65,33 @@ const calculateScore = (m: TrustMetrics): ScoreResult => {
     issues.push(`Duração em ${m.lov}s — sweet spot: 32s`);
     recommendations.push('Ajuste para 32 segundos — é o LOV ideal para maximizar retenção em shorts');
   }
+  
+  // Snowball effect estimation
+  const snowballMultiplier = cvRvRating >= 55 && retention >= 100 && m.swipeRatio >= 81.1 ? 3.5 : 
+    cvRvRating >= 45 && retention >= 80 ? 2.0 : 
+    cvRvRating >= 35 ? 1.3 : 1.0;
+  
+  // Monetization timeline estimation
+  const daysToMonetize = snowballMultiplier >= 3 ? '15-30 dias' : 
+    snowballMultiplier >= 2 ? '30-60 dias' : 
+    snowballMultiplier >= 1.3 ? '60-90 dias' : '90+ dias';
+
+  // Engaged views estimation (50% rule)
+  const estimatedEngagedViews = Math.round(m.totalViews * 0.5);
+  const engagedViewsNeeded = 10_000_000;
+  const viewsProgress = Math.min((estimatedEngagedViews / engagedViewsNeeded) * 100, 100);
+
   if (cvRvRating >= 55) {
-    recommendations.push('✅ CV+RV saudável! Continue usando CTAs integradas para manter');
+    recommendations.push('✅ CV+RV saudável! Efeito snowball ativo — multiplicador de ' + snowballMultiplier.toFixed(1) + 'x');
   }
   if (retention >= 100) {
     recommendations.push('✅ Retenção excelente! Seus vídeos estão gerando rewatches');
+  }
+  if (snowballMultiplier < 2) {
+    issues.push(`Snowball fraco (${snowballMultiplier.toFixed(1)}x) — monetização estimada: ${daysToMonetize}`);
+    recommendations.push(`Otimize Trust Score para ativar o efeito snowball (crescimento exponencial vs linear)`);
+  } else {
+    recommendations.push(`🚀 Snowball ativo! Multiplicador ${snowballMultiplier.toFixed(1)}x — monetização estimada: ${daysToMonetize}`);
   }
 
   const trustScore = (retentionScore * 0.35) + (swipeScore * 0.3) + (cvRvScore * 0.2) + (lovScore * 0.15);
@@ -74,7 +100,7 @@ const calculateScore = (m: TrustMetrics): ScoreResult => {
 
   const monetizationReady = m.engagedViews >= 10_000_000 && m.subscribers >= 1000;
 
-  return { trustScore, retention, cvRvRating, grade, issues, recommendations, monetizationReady, engagedViewPct: engagedViewPct };
+  return { trustScore, retention, cvRvRating, grade, issues, recommendations, monetizationReady, engagedViewPct, snowballMultiplier, daysToMonetize, viewsProgress, estimatedEngagedViews };
 };
 
 const gradeColors: Record<string, string> = {
@@ -198,9 +224,9 @@ export const TrustScoreCalculator = () => {
                   ) : (
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">
-                        Views engajadas: {(metrics.engagedViews / 1_000_000).toFixed(1)}M / 10M
+                        Views engajadas: {(result.estimatedEngagedViews / 1_000_000).toFixed(1)}M / 10M
                       </p>
-                      <Progress value={Math.min(metrics.engagedViews / 10_000_000 * 100, 100)} className="h-1.5" />
+                      <Progress value={result.viewsProgress} className="h-1.5" />
                       <p className="text-sm text-muted-foreground">
                         Inscritos: {metrics.subscribers.toLocaleString()} / 1.000
                       </p>
@@ -210,6 +236,40 @@ export const TrustScoreCalculator = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Snowball Effect Card */}
+            <Card className="border-border bg-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" /> Efeito Snowball
+                    </p>
+                    <p className="text-xs text-muted-foreground">Crescimento exponencial vs linear</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-bold ${result.snowballMultiplier >= 3 ? 'text-green-400' : result.snowballMultiplier >= 2 ? 'text-primary' : 'text-orange-400'}`}>
+                      {result.snowballMultiplier.toFixed(1)}x
+                    </p>
+                    <p className="text-xs text-muted-foreground">multiplicador</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-2 rounded-lg bg-secondary/50 border border-border text-center">
+                    <p className="text-lg font-bold text-foreground">{result.daysToMonetize}</p>
+                    <p className="text-[10px] text-muted-foreground">Monetização estimada</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-secondary/50 border border-border text-center">
+                    <p className="text-lg font-bold text-foreground">{result.engagedViewPct.toFixed(0)}%</p>
+                    <p className="text-[10px] text-muted-foreground">Views engajadas</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-secondary/50 border border-border text-center">
+                    <p className="text-lg font-bold text-foreground">{Math.round(20_000_000 / result.snowballMultiplier).toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Views necessárias</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Issues & Recommendations */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
