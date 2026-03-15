@@ -12,8 +12,11 @@ import { toast } from 'sonner';
 import { 
   Rocket, Trophy, Calendar, CheckCircle2, Target, TrendingUp, 
   Flame, Zap, Play, Clock, Star, ChevronLeft, ChevronRight,
-  BarChart3, Video, Eye, Users, Loader2
+  BarChart3, Video, Eye, Users, Loader2, Brain
 } from 'lucide-react';
+import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
+import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DailyTask {
   id: string;
