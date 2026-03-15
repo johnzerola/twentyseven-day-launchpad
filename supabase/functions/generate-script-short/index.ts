@@ -27,7 +27,7 @@ serve(async (req) => {
     const durCat = durationCategory || (dur <= 25 ? 'micro' : dur <= 40 ? 'flash' : 'story');
 
     // ═══ FETCH SHORTS-SPECIFIC KNOWLEDGE (parallel) ═══
-    const [hookRes, psychRes, attRes, viralTitlesRes, contentModelRes, scenePatternRes, shortsKnowledgeRes] = await Promise.all([
+    const [hookRes, psychRes, attRes, viralTitlesRes, contentModelRes, scenePatternRes, shortsKnowledgeRes, monetizationRes] = await Promise.all([
       sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
         .order("retention_score", { ascending: false }).limit(15),
       sb.from("audience_psychology_patterns").select("trigger_type,description,example_hooks,storytelling_pattern,retention_score")
@@ -45,6 +45,9 @@ serve(async (req) => {
         .order("attention_score", { ascending: false }).limit(8),
       sb.from("youtube_knowledge").select("title,content")
         .ilike("title", "%shorts%")
+        .order("priority", { ascending: false }).limit(3),
+      sb.from("youtube_knowledge").select("title,content")
+        .eq("category", "shorts-monetization")
         .order("priority", { ascending: false }).limit(3),
     ]);
 
