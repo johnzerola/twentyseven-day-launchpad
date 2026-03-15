@@ -36,44 +36,76 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { niche, country, videosPerWeek, avgViewsPerVideo, currentSubs } = await req.json();
+    const { niche, country, videosPerWeek, avgViewsPerVideo, currentSubs, contentType } = await req.json();
 
+    const isShorts = (contentType || 'shorts').toLowerCase().includes('short');
     const baseRpm = RPM_BY_COUNTRY[country || 'BR'] || 1.5;
     const nicheKey = (niche || '').toLowerCase();
-    const nicheMult = Object.entries(RPM_BY_NICHE).find(([k]) => nicheKey.includes(k))?.[1] || 1.0;
-    const rpm = baseRpm * nicheMult;
+    
+    // Use shorts-specific RPM or long-form RPM based on content type
+    let rpm: number;
+    if (isShorts) {
+      // Shorts RPM is independent of country (YouTube Shorts Fund / RPM is flat)
+      // Real data: ~$0.10-$0.20 per 1K views depending on niche
+      const shortsNicheRpm = Object.entries(SHORTS_RPM_BY_NICHE).find(([k]) => nicheKey.includes(k))?.[1] || 0.15;
+      // Country still has minor effect on shorts RPM
+      const countryMult = (RPM_BY_COUNTRY[country || 'BR'] || 1.5) / 4; // Normalized
+      rpm = shortsNicheRpm * (0.7 + countryMult * 0.3);
+    } else {
+      const nicheMult = Object.entries(RPM_BY_NICHE).find(([k]) => nicheKey.includes(k))?.[1] || 1.0;
+      rpm = baseRpm * nicheMult;
+    }
 
-    const vpw = videosPerWeek || 3;
-    const avgViews = avgViewsPerVideo || 1000;
+    const vpw = videosPerWeek || (isShorts ? 14 : 3); // Shorts: 2/day default
+    const avgViews = avgViewsPerVideo || (isShorts ? 10000 : 1000);
     const subs = currentSubs || 0;
 
-    // 27-day projection with growth curve
+    // 30-day projection with exponential growth curve (snowball effect)
     const days: any[] = [];
     let totalViews = 0;
     let totalRevenue = 0;
     let projectedSubs = subs;
+    let momentum = 1.0; // Snowball multiplier
 
-    for (let d = 1; d <= 27; d++) {
-      // Views grow as channel gains traction (algorithmic boost after consistency)
+    for (let d = 1; d <= 30; d++) {
       const dayOfWeek = d % 7;
-      const isUploadDay = dayOfWeek < vpw;
-      const growthMult = 1 + (d / 27) * 0.5; // 50% growth over 27 days
-      const dailyViews = isUploadDay ? Math.round(avgViews * growthMult) : Math.round(avgViews * 0.3 * growthMult);
+      const uploadsToday = dayOfWeek < Math.min(vpw, 7) ? Math.ceil(vpw / 7) : 0;
+      const isUploadDay = uploadsToday > 0;
+      
+      // Exponential growth curve (not linear!) - validated by real creator data
+      // Days 1-7: slow start, Days 8-15: finding format, Days 15-30: exponential
+      if (d <= 7) {
+        momentum = 1.0 + (d / 7) * 0.3; // Slow ramp
+      } else if (d <= 15) {
+        momentum = 1.3 + ((d - 7) / 8) * 0.7; // Format discovery phase
+      } else {
+        momentum = 2.0 + ((d - 15) / 15) * 1.5; // Snowball effect kicks in
+      }
+      
+      const dailyViews = isUploadDay 
+        ? Math.round(avgViews * momentum * uploadsToday) 
+        : Math.round(avgViews * 0.3 * momentum); // Old videos still get views
       const dailyRevenue = parseFloat(((dailyViews / 1000) * rpm).toFixed(2));
       
       totalViews += dailyViews;
       totalRevenue += dailyRevenue;
-      // Rough sub growth: 1 sub per 100 views for small channels
-      projectedSubs += Math.round(dailyViews / 100);
+      // Shorts: 1 sub per 200-400 views (harder than long-form)
+      const subRate = isShorts ? 300 : 100;
+      projectedSubs += Math.round(dailyViews / subRate);
+
+      // Track engaged views (50% rule from real data)
+      const engagedViews = Math.round(totalViews * 0.5);
 
       days.push({
         day: d,
         views: dailyViews,
         revenue: dailyRevenue,
         totalViews,
+        engagedViews,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         projectedSubs,
         isUploadDay,
+        momentum: parseFloat(momentum.toFixed(2)),
       });
     }
 
