@@ -7,10 +7,12 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Rocket, Trophy, Calendar, CheckCircle2, Target, TrendingUp, 
+  Rocket, Trophy, Calendar, CheckCircle2, TrendingUp, 
   Flame, Zap, Play, Clock, Star, ChevronLeft, ChevronRight,
-  BarChart3, Video, Eye, Users, Loader2, Brain, Youtube, Trash2
+  BarChart3, Video, Eye, Users, Loader2, Brain, Youtube, Trash2,
+  FileText, AlertTriangle, ArrowRight, RefreshCw, Lightbulb
 } from 'lucide-react';
 import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
 import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';
@@ -58,13 +60,23 @@ interface Plan {
   channel_id: string | null;
 }
 
+interface SmartAlert {
+  type: 'replicate' | 'change' | 'milestone' | 'tip';
+  title: string;
+  message: string;
+  icon: string;
+}
+
 export default function Tracker30Days() {
+  const navigate = useNavigate();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [loading, setLoading] = useState(true);
   const [channelName, setChannelName] = useState('');
+  const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([]);
+  const [syncingMetrics, setSyncingMetrics] = useState(false);
 
   const loadPlan = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -86,59 +98,183 @@ export default function Tracker30Days() {
       const diffDays = Math.min(30, Math.max(1, Math.ceil((now.getTime() - started.getTime()) / 86400000)));
       setSelectedDay(diffDays);
 
-      // Load tasks, milestones, and channel name in parallel
       const [tasksRes, milestonesRes, channelRes] = await Promise.all([
         supabase.from('daily_tasks' as any).select('*').eq('plan_id', activePlan.id).order('day_number'),
         supabase.from('monetization_milestones' as any).select('*').eq('plan_id', activePlan.id).order('day_expected'),
         activePlan.channel_id
-          ? supabase.from('user_channels' as any).select('channel_name').eq('id', activePlan.channel_id).limit(1)
+          ? supabase.from('user_channels' as any).select('channel_name,subscribers,views,videos').eq('id', activePlan.channel_id).limit(1)
           : Promise.resolve({ data: null }),
       ]);
       setTasks((tasksRes.data as any) || []);
       setMilestones((milestonesRes.data as any) || []);
-      if ((channelRes.data as any)?.[0]?.channel_name) {
-        setChannelName((channelRes.data as any)[0].channel_name);
-      }
+      
+      const ch = (channelRes.data as any)?.[0];
+      if (ch?.channel_name) setChannelName(ch.channel_name);
+
+      // Generate smart alerts based on data
+      generateSmartAlerts(activePlan, (tasksRes.data as any) || [], (milestonesRes.data as any) || [], ch, diffDays);
     }
     setLoading(false);
   }, []);
+
+  const generateSmartAlerts = (plan: any, tasks: DailyTask[], milestones: Milestone[], channel: any, currentDay: number) => {
+    const alerts: SmartAlert[] = [];
+    
+    // Check milestone proximity
+    const upcomingMilestone = milestones.find(m => !m.reached && m.day_expected <= currentDay + 3 && m.day_expected >= currentDay);
+    if (upcomingMilestone) {
+      alerts.push({
+        type: 'milestone',
+        title: `Marco próximo: ${upcomingMilestone.title}`,
+        message: `Meta de ${upcomingMilestone.target_value} esperada para o dia ${upcomingMilestone.day_expected}. Atual: ${upcomingMilestone.current_value}.`,
+        icon: '🎯',
+      });
+    }
+
+    // Check if behind schedule
+    const dayTasks = tasks.filter(t => t.day_number <= currentDay);
+    const completedRate = dayTasks.length > 0 ? dayTasks.filter(t => t.completed).length / dayTasks.length : 1;
+    if (completedRate < 0.5 && currentDay > 3) {
+      alerts.push({
+        type: 'change',
+        title: 'Progresso abaixo do esperado',
+        message: `Apenas ${Math.round(completedRate * 100)}% das tarefas concluídas. Considere ajustar a estratégia ou reduzir a frequência de upload.`,
+        icon: '⚠️',
+      });
+    }
+
+    // Check for content tasks that could use the pipeline
+    const contentTasksToday = tasks.filter(t => t.day_number === currentDay && t.task_type === 'content' && !t.completed);
+    if (contentTasksToday.length > 0) {
+      alerts.push({
+        type: 'tip',
+        title: `${contentTasksToday.length} conteúdo(s) para produzir hoje`,
+        message: 'Use o botão "Produzir" para abrir o gerador de roteiros com o contexto do seu plano.',
+        icon: '🚀',
+      });
+    }
+
+    // Replicate format alert if past day 10
+    if (currentDay >= 10 && plan.strategy === 'shorts-first') {
+      const completedContentTasks = tasks.filter(t => t.task_type === 'content' && t.completed);
+      if (completedContentTasks.length >= 5) {
+        alerts.push({
+          type: 'replicate',
+          title: 'Replique o que funciona',
+          message: 'Você já tem dados suficientes. Analise quais formatos tiveram mais engajamento e duplique-os.',
+          icon: '🔄',
+        });
+      }
+    }
+
+    setSmartAlerts(alerts);
+  };
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     const now = completed ? new Date().toISOString() : null;
     await supabase.from('daily_tasks' as any).update({ 
-      completed, 
-      completed_at: now,
-      updated_at: new Date().toISOString(),
+      completed, completed_at: now, updated_at: new Date().toISOString(),
     } as any).eq('id', taskId);
     
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed, completed_at: now } : t));
     
-    if (completed) {
+    if (completed && plan) {
       toast.success('Tarefa concluída! 🎉');
-      // Sync: update plan progress
       const completedTasks = tasks.filter(t => t.completed || t.id === taskId);
       const shortsCompleted = completedTasks.filter(t => t.video_type === 'short' && t.task_type === 'content').length;
       const longsCompleted = completedTasks.filter(t => t.video_type === 'long' && t.task_type === 'content').length;
       
-      await supabase.from('monetization_30day_plans' as any).update({
-        total_shorts_published: shortsCompleted,
-        total_longs_published: longsCompleted,
-        current_day: selectedDay,
-        updated_at: new Date().toISOString(),
-      } as any).eq('id', plan?.id);
+      // Sync plan progress + content_queue
+      await Promise.all([
+        supabase.from('monetization_30day_plans' as any).update({
+          total_shorts_published: shortsCompleted,
+          total_longs_published: longsCompleted,
+          current_day: selectedDay,
+          updated_at: new Date().toISOString(),
+        } as any).eq('id', plan.id),
+        // Auto-add to content queue when content task is completed
+        (async () => {
+          const task = tasks.find(t => t.id === taskId);
+          if (completed && task?.task_type === 'content') {
+            const { data: { user: u } } = await supabase.auth.getUser();
+            if (u) {
+              await supabase.from('content_queue' as any).insert({
+                user_id: u.id,
+                title: task.title || '',
+                video_type: task.video_type === 'short' ? 'short' : 'long',
+                status: 'done',
+                niche: plan.niche,
+                channel_id: plan.channel_id,
+              } as any);
+            }
+          }
+        })(),
+      ]);
+    }
+  };
+
+  // v2.2: Navigate to Scripts with context from the plan
+  const handleProduce = (task?: DailyTask) => {
+    const params = new URLSearchParams();
+    if (plan?.niche) params.set('niche', plan.niche);
+    if (task?.video_type) params.set('type', task.video_type === 'short' ? 'short' : 'long');
+    if (task?.title) params.set('topic', task.title);
+    if (plan?.strategy) params.set('strategy', plan.strategy);
+    navigate(`/scripts?${params.toString()}`);
+  };
+
+  // v2.3: Sync YouTube metrics  
+  const syncYouTubeMetrics = async () => {
+    if (!plan?.channel_id) return;
+    setSyncingMetrics(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('youtube-analytics', {
+        body: { channelId: plan.channel_id },
+      });
+      if (error) throw error;
+      
+      if (data?.analytics) {
+        // Update milestones with real data
+        const subs = data.analytics.subscribers || 0;
+        const views = data.analytics.views || 0;
+        
+        for (const m of milestones) {
+          let newValue = m.current_value;
+          if (m.milestone_type === 'subs') newValue = subs;
+          if (m.milestone_type === 'views') newValue = views;
+          
+          if (newValue !== m.current_value) {
+            const reached = newValue >= m.target_value;
+            await supabase.from('monetization_milestones' as any).update({
+              current_value: newValue,
+              reached,
+              reached_at: reached && !m.reached ? new Date().toISOString() : m.reached_at,
+            } as any).eq('id', m.id);
+          }
+        }
+        
+        // Update plan total views
+        await supabase.from('monetization_30day_plans' as any).update({
+          total_views: views,
+          updated_at: new Date().toISOString(),
+        } as any).eq('id', plan.id);
+
+        toast.success('Métricas sincronizadas do YouTube!');
+        await loadPlan();
+      }
+    } catch (e: any) {
+      toast.error('Conecte o YouTube OAuth para sincronizar métricas reais.');
+    } finally {
+      setSyncingMetrics(false);
     }
   };
 
   const resetPlan = async () => {
     if (!plan) return;
     if (!confirm('Tem certeza que deseja resetar o plano? Isso apagará todo o progresso.')) return;
-    
-    await Promise.all([
-      supabase.from('monetization_30day_plans' as any).update({ status: 'archived' } as any).eq('id', plan.id),
-    ]);
-    
+    await supabase.from('monetization_30day_plans' as any).update({ status: 'archived' } as any).eq('id', plan.id);
     setPlan(null);
     setTasks([]);
     setMilestones([]);
@@ -162,7 +298,6 @@ export default function Tracker30Days() {
   const planJson = plan?.plan_json || {};
   const phases = planJson.phases || [];
   const currentPhase = phases.find((p: any) => selectedDay >= p.days?.[0] && selectedDay <= p.days?.[1]);
-
   const strategyLabel = plan?.strategy === 'shorts-first' ? '⚡ Shorts' :
     plan?.strategy === 'longform-first' ? '🎬 Longform' : '🔄 Híbrido';
 
@@ -176,7 +311,6 @@ export default function Tracker30Days() {
     );
   }
 
-  // No active plan - show wizard
   if (!plan) {
     return (
       <DashboardLayout>
@@ -208,6 +342,10 @@ export default function Tracker30Days() {
             </div>
           </div>
           <div className="flex items-center gap-2 self-start">
+            <Button variant="outline" size="sm" onClick={syncYouTubeMetrics} disabled={syncingMetrics}>
+              {syncingMetrics ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <span className="ml-1.5 hidden sm:inline text-xs">Sync</span>
+            </Button>
             <Badge variant="outline" className="text-sm px-3 py-1">
               <Flame className="w-3.5 h-3.5 mr-1 text-orange-500" />
               Dia {selectedDay}/30
@@ -217,6 +355,33 @@ export default function Tracker30Days() {
             </Button>
           </div>
         </div>
+
+        {/* v2.3: Smart Alerts */}
+        {smartAlerts.length > 0 && (
+          <div className="space-y-2">
+            {smartAlerts.map((alert, i) => (
+              <Card key={i} className={`transition-all ${
+                alert.type === 'change' ? 'border-destructive/30 bg-destructive/5' :
+                alert.type === 'replicate' ? 'border-primary/30 bg-primary/5' :
+                alert.type === 'milestone' ? 'border-yellow-500/30 bg-yellow-500/5' :
+                'border-border'
+              }`}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <span className="text-lg">{alert.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{alert.title}</p>
+                    <p className="text-xs text-muted-foreground">{alert.message}</p>
+                  </div>
+                  {alert.type === 'tip' && (
+                    <Button size="sm" variant="outline" onClick={() => handleProduce()}>
+                      <FileText className="w-3.5 h-3.5 mr-1" /> Produzir
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Progress Overview */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -307,15 +472,22 @@ export default function Tracker30Days() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Daily Tasks */}
           <div className="lg:col-span-2 space-y-3">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              Dia {selectedDay} — Tarefas
-              {dayTasks.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {dayTasks.filter(t => t.completed).length}/{dayTasks.length}
-                </Badge>
-              )}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                Dia {selectedDay} — Tarefas
+                {dayTasks.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {dayTasks.filter(t => t.completed).length}/{dayTasks.length}
+                  </Badge>
+                )}
+              </h2>
+              {/* v2.2: Produce button */}
+              <Button size="sm" variant="outline" onClick={() => handleProduce()}>
+                <FileText className="w-3.5 h-3.5 mr-1.5" />
+                Produzir Conteúdo
+              </Button>
+            </div>
 
             {dayTasks.length === 0 ? (
               <Card>
@@ -353,12 +525,25 @@ export default function Tracker30Days() {
                         {task.description && (
                           <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
                         )}
-                        {(task.target_shorts > 0 || task.target_longs > 0) && (
-                          <div className="flex gap-3 mt-2 text-[10px] text-muted-foreground">
-                            {task.target_shorts > 0 && <span className="flex items-center gap-1"><Zap className="w-3 h-3" />{task.target_shorts} shorts</span>}
-                            {task.target_longs > 0 && <span className="flex items-center gap-1"><Play className="w-3 h-3" />{task.target_longs} longos</span>}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          {(task.target_shorts > 0 || task.target_longs > 0) && (
+                            <div className="flex gap-3 text-[10px] text-muted-foreground">
+                              {task.target_shorts > 0 && <span className="flex items-center gap-1"><Zap className="w-3 h-3" />{task.target_shorts} shorts</span>}
+                              {task.target_longs > 0 && <span className="flex items-center gap-1"><Play className="w-3 h-3" />{task.target_longs} longos</span>}
+                            </div>
+                          )}
+                          {/* v2.2: Per-task produce button for content tasks */}
+                          {task.task_type === 'content' && !task.completed && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="ml-auto h-6 text-[10px] text-primary"
+                              onClick={(e) => { e.stopPropagation(); handleProduce(task); }}
+                            >
+                              <ArrowRight className="w-3 h-3 mr-1" /> Produzir
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>

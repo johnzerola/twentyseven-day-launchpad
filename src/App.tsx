@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -49,16 +49,18 @@ const App = () => (
             <Route path="/channels" element={<P><Channels /></P>} />
             <Route path="/search" element={<P><ChannelSearch /></P>} />
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
-            <Route path="/branding" element={<P><Branding /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
-            <Route path="/workflow" element={<P><Workflow /></P>} />
             <Route path="/multichannel" element={<P><MultiChannel /></P>} />
-            <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
-            <Route path="/intelligence" element={<P><ChannelIntelligence /></P>} />
             <Route path="/tracker" element={<P><Tracker30Days /></P>} />
             <Route path="/growth-tools" element={<P><GrowthTools /></P>} />
+
+            {/* Merged/redirect routes */}
+            <Route path="/branding" element={<Navigate to="/growth-tools" replace />} />
+            <Route path="/workflow" element={<Navigate to="/tracker" replace />} />
+            <Route path="/intelligence" element={<Navigate to="/channels" replace />} />
+            <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
 
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />

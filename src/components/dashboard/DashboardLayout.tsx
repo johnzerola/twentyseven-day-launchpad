@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Palette, Sparkles, Flame, GitBranch, Layers, HelpCircle, Lock, CreditCard, Database, Brain, X, Rocket, Shield } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,21 +13,18 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
+// v2.4: Simplified menu - merged redundant pages
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { key: 'DubSpy', icon: Search, path: '/search' },
-  { key: 'Growth Center', icon: Palette, path: '/branding' },
-  { key: 'Niche Explorer', icon: Compass, path: '/niches' },
+  { key: 'Tracker 30 Dias', icon: Rocket, path: '/tracker' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
-  { key: 'Viral Database', icon: Flame, path: '/viral-db' },
-  { key: 'Workflow', icon: GitBranch, path: '/workflow' },
-  { key: 'Multichannel', icon: Layers, path: '/multichannel' },
+  { key: 'DubSpy', icon: Search, path: '/search' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
-  { key: 'Intelligence', icon: Brain, path: '/intelligence' },
-  { key: 'Tracker 30 Dias', icon: Rocket, path: '/tracker' },
+  { key: 'Viral Database', icon: Flame, path: '/viral-db' },
+  { key: 'Niche Explorer', icon: Compass, path: '/niches' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
-  { key: 'Knowledge Base', icon: Database, path: '/knowledge' },
+  { key: 'Multichannel', icon: Layers, path: '/multichannel' },
 ];
 
 const TIER_COLORS: Record<string, string> = {
