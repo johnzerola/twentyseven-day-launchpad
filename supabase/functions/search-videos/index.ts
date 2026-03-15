@@ -233,7 +233,14 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("search-videos error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    const isQuota = msg.includes("quota") || msg.includes("exceeded");
+    if (isQuota) {
+      return new Response(JSON.stringify({ results: [], channel: null, warning: "Cota do YouTube esgotada. Tente novamente amanhã ou use filtros mais específicos." }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
