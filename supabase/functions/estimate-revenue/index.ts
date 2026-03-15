@@ -11,12 +11,25 @@ const RPM_BY_COUNTRY: Record<string, number> = {
   IN: 0.5, JP: 4.5, KR: 3.5, IT: 3.5, MX: 1.0,
 };
 
+// RPM multipliers for long-form content
 const RPM_BY_NICHE: Record<string, number> = {
   finance: 3.0, insurance: 3.5, tech: 2.0, gaming: 0.8,
   education: 1.5, health: 2.0, cooking: 1.0, travel: 1.2,
   entertainment: 0.7, music: 0.5, sports: 1.0, news: 1.2,
   beauty: 1.5, fitness: 1.8, business: 2.5, crypto: 2.8,
   motivation: 1.0, stories: 0.8, horror: 0.9, comedy: 0.7,
+  dropshipping: 3.5, ecommerce: 3.0, animals: 0.6, satisfying: 0.5,
+};
+
+// Shorts-specific RPM (real data from creators: ~$0.10-$0.20 per 1K views)
+// ~$100 per 1M views = $0.10 RPM, gaming/entertainment = $0.17-0.18
+const SHORTS_RPM_BY_NICHE: Record<string, number> = {
+  finance: 0.25, insurance: 0.30, tech: 0.20, gaming: 0.17,
+  education: 0.18, health: 0.20, cooking: 0.15, travel: 0.15,
+  entertainment: 0.17, music: 0.10, sports: 0.18, news: 0.15,
+  beauty: 0.18, fitness: 0.18, business: 0.22, crypto: 0.25,
+  motivation: 0.15, stories: 0.15, horror: 0.17, comedy: 0.15,
+  dropshipping: 0.30, ecommerce: 0.25, animals: 0.12, satisfying: 0.10,
 };
 
 serve(async (req) => {
