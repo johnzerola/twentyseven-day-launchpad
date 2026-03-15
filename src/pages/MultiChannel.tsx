@@ -228,16 +228,24 @@ const MultiChannel = () => {
     if (!newTitle.trim()) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const ch = channels.find(c => c.id === newChannel);
     const { error } = await supabase.from('content_queue').insert({
       user_id: user.id,
       title: newTitle.trim(),
       channel_id: newChannel || null,
       priority: newPriority,
       scheduled_date: newDate || null,
+      niche: ch?.niche || null,
+      metadata_json: selectedIdea ? {
+        idea_score: selectedIdea.idea_score,
+        viral_potential: selectedIdea.viral_potential,
+        hook: selectedIdea.hook,
+        source: 'idea_engine',
+      } : {},
     } as any);
     if (error) { toast.error(error.message); return; }
     toast.success('Item adicionado à fila!');
-    setNewTitle(''); setNewChannel(''); setNewDate(''); setShowAddForm(false);
+    setNewTitle(''); setNewChannel(''); setNewDate(''); setShowAddForm(false); setSelectedIdea(null);
     loadAll();
   };
 
