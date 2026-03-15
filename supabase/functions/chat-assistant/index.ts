@@ -481,13 +481,14 @@ async function executeTool(
 ): Promise<string> {
   const callFn = async (fnName: string, payload: any) => {
     try {
+      const timeoutMs = getToolTimeoutMs(fnName, toolName);
       const resp = await withTimeout(
         fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
           body: JSON.stringify(payload),
         }),
-        TOOL_TIMEOUT_MS,
+        timeoutMs,
         fnName
       );
       const text = await resp.text();
