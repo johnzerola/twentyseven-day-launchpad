@@ -33,7 +33,7 @@ serve(async (req) => {
         .limit(10),
     ];
 
-    // For shorts, fetch ALL shorts-specific intelligence
+    // For shorts, fetch ALL shorts-specific intelligence + monetization cases
     if (videoFormat === 'short') {
       fetchPromises.push(
         sb.from("content_models").select("model_name,description,hook_pattern,pacing_guide,best_for_duration,effectiveness_score")
@@ -47,6 +47,14 @@ serve(async (req) => {
         sb.from("youtube_knowledge").select("title,content")
           .ilike("title", "%shorts%")
           .order("priority", { ascending: false }).limit(5),
+        // Monetization-specific knowledge
+        sb.from("youtube_knowledge").select("title,content")
+          .eq("category", "shorts-monetization")
+          .order("priority", { ascending: false }).limit(5),
+        // Case studies of successful Shorts channels
+        sb.from("case_studies" as any).select("channel_name,niche,total_shorts,total_views,days_to_monetization,strategy_used,lessons_learned")
+          .not("days_to_monetization", "is", null)
+          .order("days_to_monetization", { ascending: true }).limit(5),
       );
     }
 
@@ -59,6 +67,8 @@ serve(async (req) => {
     const shortsPsych = results[5]?.data || [];
     const shortsAttention = results[6]?.data || [];
     const shortsKnowledge = results[7]?.data || [];
+    const monetizationKnowledge = results[8]?.data || [];
+    const caseStudies = results[9]?.data || [];
 
     // ═══ BUILD CONTEXT BLOCKS ═══
     const channelContext = (channelRes.data || []).map((c: any) => {
@@ -107,6 +117,16 @@ serve(async (req) => {
         `${k.title}: ${k.content?.slice(0, 400)}`
       ).join('\n\n');
 
+      // ═══ MONETIZATION INTELLIGENCE ═══
+      const monetizationBlock = monetizationKnowledge.map((k: any) =>
+        `${k.title}: ${k.content?.slice(0, 500)}`
+      ).join('\n\n');
+
+      const caseStudiesBlock = caseStudies.map((c: any) => {
+        const lessons = Array.isArray(c.lessons_learned) ? c.lessons_learned.slice(0, 3).join('; ') : '';
+        return `• ${c.channel_name} (${c.niche}): ${c.total_shorts || '?'} shorts, ${(c.total_views || 0).toLocaleString()} views, monetizado em ${c.days_to_monetization} dias${lessons ? ` — Lições: ${lessons}` : ''}`;
+      }).join('\n');
+
       formatContext = `
 ═══════════════════════════════════
 📱 FORMATO: SHORTS (15-60 segundos)
@@ -114,6 +134,11 @@ serve(async (req) => {
 
 🔑 INTELIGÊNCIA DE VIRALIZAÇÃO DE SHORTS:
 ${shortsKnowledgeBlock}
+
+💰 ESTRATÉGIA DE MONETIZAÇÃO COM SHORTS:
+${monetizationBlock}
+
+${caseStudiesBlock ? `🏆 CASES DE SUCESSO REAIS:\n${caseStudiesBlock}\n` : ''}
 
 📐 MODELOS ESTRUTURAIS DE SHORTS:
 ${modelsBlock}
@@ -127,13 +152,20 @@ ${psychBlock}
 ⚡ TÉCNICAS DE ATENÇÃO:
 ${attBlock}
 
-📊 ESTRATÉGIA DE DURAÇÃO:
-${durHint === 'micro' ? '- MICRO-SHORTS (15-30s): Foco em completion rate >90%. UMA ideia nuclear. Melhor para viralizar rápido.'
-  : durHint === 'story' ? '- STORY-SHORTS (45-60s): Narrativas com alta carga emocional. Histórias de milionários, true crime, mitologia.'
+📊 ESTRATÉGIA DE DURAÇÃO (CRÍTICO PARA MONETIZAÇÃO):
+${durHint === 'micro' ? `- MICRO-SHORTS (15-30s): Foco em completion rate >90%. MELHOR para viralizar rápido.
+- DADO: Shorts de 15-25s têm 40% mais chance de entrar no feed For You
+- DADO: Completion >85% nos primeiros 200 views = escala para 20K+ em 1h
+- IDEAL PARA: Monetização rápida via volume (10M views em 30 dias)`
+  : durHint === 'story' ? `- STORY-SHORTS (45-60s): Narrativas com alta carga emocional. 
+- QUANDO USAR: Histórias de milionários, true crime, tragédias, mitologia
+- IMPORTANTE: Funciona para watch time (4.000 horas), não para views rápidas
+- COMBINE: 70% micro-shorts (viralização) + 30% story-shorts (watch time)`
   : `- AUTO: Sugira a duração IDEAL para cada tema baseado na complexidade:
-  • Tema simples (1 fato/ideia) → 15-25s (MICRO)
-  • Tema com twist (2 elementos) → 25-40s (FLASH)
-  • Tema narrativo (personagem + conflito) → 45-60s (STORY)`}
+  • Tema simples (1 fato/ideia) → 15-25s (MICRO) — MELHOR para monetizar rápido
+  • Tema com twist (2 elementos) → 25-40s (FLASH) — Sweet spot
+  • Tema narrativo (personagem + conflito) → 45-60s (STORY) — Watch time
+  PRIORIZE 70% MICRO para acelerar monetização!`}
 
 REGRAS CRÍTICAS PARA TEMAS DE SHORTS:
 1. Cada tema DEVE funcionar em formato ultra-curto

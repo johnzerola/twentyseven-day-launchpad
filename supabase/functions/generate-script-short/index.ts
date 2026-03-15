@@ -27,7 +27,7 @@ serve(async (req) => {
     const durCat = durationCategory || (dur <= 25 ? 'micro' : dur <= 40 ? 'flash' : 'story');
 
     // ═══ FETCH SHORTS-SPECIFIC KNOWLEDGE (parallel) ═══
-    const [hookRes, psychRes, attRes, viralTitlesRes, contentModelRes, scenePatternRes, shortsKnowledgeRes] = await Promise.all([
+    const [hookRes, psychRes, attRes, viralTitlesRes, contentModelRes, scenePatternRes, shortsKnowledgeRes, monetizationRes] = await Promise.all([
       sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
         .order("retention_score", { ascending: false }).limit(15),
       sb.from("audience_psychology_patterns").select("trigger_type,description,example_hooks,storytelling_pattern,retention_score")
@@ -45,6 +45,9 @@ serve(async (req) => {
         .order("attention_score", { ascending: false }).limit(8),
       sb.from("youtube_knowledge").select("title,content")
         .ilike("title", "%shorts%")
+        .order("priority", { ascending: false }).limit(3),
+      sb.from("youtube_knowledge").select("title,content")
+        .eq("category", "shorts-monetization")
         .order("priority", { ascending: false }).limit(3),
     ]);
 
@@ -88,6 +91,10 @@ serve(async (req) => {
 
     const shortsKnowledge = (shortsKnowledgeRes.data || []).map((k: any) =>
       `${k.title}: ${k.content?.slice(0, 300)}`
+    ).join("\n\n");
+
+    const monetizationKnowledge = (monetizationRes.data || []).map((k: any) =>
+      `${k.title}: ${k.content?.slice(0, 400)}`
     ).join("\n\n");
 
     const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
@@ -153,6 +160,13 @@ ${durationStrategy}
 
 🧬 CIÊNCIA DA ATENÇÃO PARA SHORTS:
 ${shortsKnowledge}
+
+💰 INTELIGÊNCIA DE MONETIZAÇÃO:
+${monetizationKnowledge}
+FATO: Shorts de 15-25s são o caminho MAIS RÁPIDO para monetização no YouTube.
+- Canais faceless atingem YPP em 15-30 dias com volume de shorts
+- Completion rate >90% = algoritmo escala de 200 para 20K views em 1 HORA
+- Estratégia: 70% micro-shorts (15-25s) para viralizar + 30% story-shorts para watch time
 
 O cérebro humano em Shorts:
 - 0-0.3s: Processamento pré-atencional (visual PRECISA ser diferente)
