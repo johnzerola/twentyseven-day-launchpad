@@ -114,21 +114,35 @@ serve(async (req) => {
     const expected = parseFloat(totalRevenue.toFixed(2));
     const aggressive = parseFloat((totalRevenue * 2.0).toFixed(2));
 
-    // Monthly projection (extrapolate)
-    const monthlyConservative = parseFloat((conservative * 30 / 27).toFixed(2));
-    const monthlyExpected = parseFloat((expected * 30 / 27).toFixed(2));
-    const monthlyAggressive = parseFloat((aggressive * 30 / 27).toFixed(2));
+    // Monthly projection
+    const monthlyConservative = parseFloat((conservative).toFixed(2));
+    const monthlyExpected = parseFloat((expected).toFixed(2));
+    const monthlyAggressive = parseFloat((aggressive).toFixed(2));
+
+    // Monetization milestones (based on real data)
+    const engagedViewsTotal = Math.round(totalViews * 0.5);
+    const viewsToMemberships = Math.max(0, 3000000 - engagedViewsTotal);
+    const viewsToFullMonetization = Math.max(0, 10000000 - engagedViewsTotal);
+    const subsNeeded = Math.max(0, 1000 - projectedSubs);
 
     return new Response(JSON.stringify({
       rpm: parseFloat(rpm.toFixed(2)),
-      baseRpm,
-      nicheMult,
+      contentType: isShorts ? 'shorts' : 'longform',
       days,
       totals: {
         views: totalViews,
+        engagedViews: engagedViewsTotal,
         revenue: { conservative, expected, aggressive },
         monthlyRevenue: { conservative: monthlyConservative, expected: monthlyExpected, aggressive: monthlyAggressive },
         projectedSubs,
+      },
+      monetization: {
+        viewsToMemberships,
+        viewsToFullMonetization,
+        subsNeeded,
+        estimatedDaysToMonetize: viewsToFullMonetization > 0 
+          ? Math.ceil(viewsToFullMonetization / (totalViews > 0 ? totalViews / 30 : 1)) 
+          : 0,
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
