@@ -19,11 +19,15 @@ interface ChecklistItem {
 
 const WARMUP_CHECKLIST: ChecklistItem[] = [
   // Day 0 - Setup
-  { id: 'old-gmail', label: 'Usar Gmail antigo (não criar novo)', description: 'Contas novas têm 90%+ chance de shadowban. Use uma conta pessoal com histórico.', icon: Shield, day: 0, critical: true },
+  { id: 'old-gmail', label: 'Usar conta ANTIGA (não criar nova)', description: 'Contas novas caem no "Zero View Jail". Use conta pessoal/infância com histórico de navegação. Conta aged = YouTube já confia.', icon: Shield, day: 0, critical: true },
   { id: 'proxy-setup', label: 'Configurar proxy/IP dedicado', description: 'Use proxy do país-alvo. Cada canal = IP diferente. Nunca acesse múltiplos canais no mesmo IP.', icon: Wifi, day: 0, critical: false },
-  { id: 'channel-config', label: 'Configurar canal (foto, banner, about)', description: 'Canal sem foto de perfil = red flag para o YouTube. Preencha tudo antes de postar.', icon: Monitor, day: 0, critical: true },
+  { id: 'channel-config', label: 'Configurar canal (foto, banner, about)', description: 'Canal sem foto de perfil = red flag. Preencha TUDO antes de postar. Nome memorável + identidade visual única (Pink Glasses Effect).', icon: Monitor, day: 0, critical: true },
+  { id: 'tag-trinity', label: 'Configurar Tag Trinity (3 tipos)', description: '(1) Channel Tags em Settings > Channel > Keywords (máx 10); (2) Video Tags no upload; (3) Hashtags na descrição (máx 5, sem espaços). Ajuda YouTube classificar seu canal.', icon: Shield, day: 0, critical: true },
+  { id: 'no-social-links', label: 'NÃO colocar links sociais na descrição', description: 'YouTube penaliza quem manda viewers para fora. Descrição = APENAS sobre o conteúdo do vídeo. Links sociais só após 10K+ subs.', icon: AlertTriangle, day: 0, critical: true },
+  { id: 'separate-channels', label: 'Shorts e Long-Form em canais SEPARADOS', description: 'Misturar confunde o algoritmo sobre qual tipo de viewer buscar. Mantenha canais especializados para maximizar ads revenue.', icon: Monitor, day: 0, critical: true },
   // Day 1-2
-  { id: 'watch-30min-d1', label: 'Assistir 30min de vídeos do nicho', description: 'Assista vídeos do nicho que vai criar. O algoritmo precisa entender seus interesses.', icon: Eye, day: 1, critical: true },
+  { id: 'research-account', label: 'Criar conta de PESQUISA separada', description: 'Conta que SÓ assiste conteúdo do seu nicho. Nunca posta/comenta. Após dias, o feed vira um curador de ideias virais comprovadas.', icon: Eye, day: 1, critical: true },
+  { id: 'watch-30min-d1', label: 'Assistir 30min de vídeos do nicho', description: 'Na sua conta principal. O algoritmo precisa entender seus interesses antes de confiar no seu canal.', icon: Eye, day: 1, critical: true },
   { id: 'subscribe-2-3', label: 'Se inscrever em 2-3 canais do nicho', description: 'NÃO se inscreva em dezenas. 2-3 canais relevantes, como um usuário normal faria.', icon: UserPlus, day: 1, critical: true },
   { id: 'comment-1-2', label: 'Comentar em 1-2 vídeos (natural)', description: 'Comentários genéricos como "Great video!" são ruins. Escreva algo específico sobre o conteúdo.', icon: MessageSquare, day: 1, critical: false },
   // Day 3-4
@@ -33,10 +37,12 @@ const WARMUP_CHECKLIST: ChecklistItem[] = [
   // Day 5-6
   { id: 'watch-mobile', label: 'Acessar YouTube pelo celular', description: 'YouTube rastreia dispositivos. Acesse pelo app mobile também para parecer usuário real.', icon: Smartphone, day: 5, critical: false },
   { id: 'watch-30min-d5', label: 'Mais sessão de 30min assistindo', description: 'Continue o padrão. Não force — use como usaria normalmente.', icon: Eye, day: 5, critical: true },
-  // Day 7 - Test
-  { id: 'test-post-1', label: 'Postar 1º vídeo de teste', description: 'Poste seu primeiro vídeo. Se pegar 2-4 views em 1h, o canal está aquecido!', icon: Flame, day: 7, critical: true },
-  { id: 'test-post-2', label: 'Postar 2º vídeo 1h depois', description: 'Se o 2º vídeo também pegar views, o canal está pronto. Se ambos = 0 views, repita o warmup.', icon: Flame, day: 7, critical: true },
-  { id: 'no-schedule-bulk', label: 'NÃO agendar vários vídeos', description: 'Máximo 2 vídeos agendados. Agendar 9-10+ = YouTube marca como bot e mata todos os vídeos.', icon: AlertTriangle, day: 7, critical: true },
+  { id: 'old-channel-prep', label: 'Preparar cross-promo no canal antigo', description: 'Se tem canal antigo: prepare um Community Post com screenshot QUADRADO do thumbnail + link do novo vídeo. Isso jumpstarta o algoritmo com viewers puros.', icon: Flame, day: 5, critical: false },
+  // Day 7 - Launch
+  { id: 'test-post-1', label: 'Postar 2 vídeos SIMULTANEAMENTE', description: 'No lançamento, poste 2 vídeos de uma vez. YouTube envia viewer do vídeo 1 para o vídeo 2 → classifica como fã → pushes para audiência similar. SÓ faça isso no lançamento!', icon: Flame, day: 7, critical: true },
+  { id: 'test-post-2', label: 'Publicar Community Post no canal antigo', description: 'Poste thumbnail quadrado com link no canal antigo. Isso direciona viewers PUROS do nicho certo para o novo canal. É o segredo para jumpstart em <10 dias.', icon: Flame, day: 7, critical: true },
+  { id: 'video-flow-check', label: 'Verificar "Flow" entre vídeos', description: 'Seus 2 vídeos se conectam? Viewer do vídeo 1 naturalmente quer assistir o 2? Se não, refaça. Pense como episódios de Netflix, não uploads aleatórios.', icon: Eye, day: 7, critical: true },
+  { id: 'no-schedule-bulk', label: 'NÃO agendar vários vídeos', description: 'Máximo 2 vídeos agendados. Agendar 9-10+ = YouTube marca como bot. Deixe vídeos "respirarem" entre uploads (2-4/dia máx com espaçamento).', icon: AlertTriangle, day: 7, critical: true },
 ];
 
 export const ChannelWarmupChecklist = () => {
