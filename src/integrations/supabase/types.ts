@@ -23,6 +23,7 @@ export type Database = {
           result: Json | null
           started_at: string | null
           test_type: string | null
+          user_id: string | null
           variant_a: Json | null
           variant_b: Json | null
         }
@@ -34,6 +35,7 @@ export type Database = {
           result?: Json | null
           started_at?: string | null
           test_type?: string | null
+          user_id?: string | null
           variant_a?: Json | null
           variant_b?: Json | null
         }
@@ -45,6 +47,7 @@ export type Database = {
           result?: Json | null
           started_at?: string | null
           test_type?: string | null
+          user_id?: string | null
           variant_a?: Json | null
           variant_b?: Json | null
         }
