@@ -56,6 +56,7 @@ const App = () => (
             <Route path="/multichannel" element={<P><MultiChannel /></P>} />
             <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
             <Route path="/intelligence" element={<P><ChannelIntelligence /></P>} />
+            <Route path="/tracker" element={<P><Tracker30Days /></P>} />
             
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />

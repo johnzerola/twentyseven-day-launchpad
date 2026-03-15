@@ -25,6 +25,7 @@ const navItems = [
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Intelligence', icon: Brain, path: '/intelligence' },
+  { key: 'Tracker 30 Dias', icon: Rocket, path: '/tracker' },
   { key: 'Knowledge Base', icon: Database, path: '/knowledge' },
 ];
 
