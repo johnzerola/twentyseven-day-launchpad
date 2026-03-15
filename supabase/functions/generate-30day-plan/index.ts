@@ -13,46 +13,102 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("authorization");
-    const { niche, language, country, channelId, strategy } = await req.json();
+    const { niche, language, country, channelId, strategy, channelAnalysis, format, channelStats } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Get user
-    const sbAuth = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader! } } }
-    );
+    const sbAuth = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader! } },
+    });
     const { data: { user } } = await sbAuth.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     // Fetch knowledge in parallel
-    const [monetKnowledge, caseStudies, nicheData] = await Promise.all([
+    const [monetKnowledge, caseStudies, nicheData, hookPatterns, contentModels] = await Promise.all([
       sb.from("youtube_knowledge").select("title,content")
-        .eq("category", "shorts-monetization").order("priority", { ascending: false }).limit(3),
+        .eq("category", "shorts-monetization").order("priority", { ascending: false }).limit(5),
       sb.from("case_studies").select("*").eq("is_public", true).limit(5),
       sb.from("niche_database").select("*").ilike("name", `%${niche || ''}%`).limit(3),
+      sb.from("hook_patterns").select("pattern_name,template,effectiveness_score")
+        .order("effectiveness_score", { ascending: false }).limit(5),
+      sb.from("content_models").select("model_name,description,video_type,effectiveness_score")
+        .order("effectiveness_score", { ascending: false }).limit(5),
     ]);
 
     const knowledgeBlock = (monetKnowledge.data || []).map((k: any) => `${k.title}: ${k.content?.slice(0, 400)}`).join("\n\n");
-    const casesBlock = (caseStudies.data || []).map((c: any) => 
+    const casesBlock = (caseStudies.data || []).map((c: any) =>
       `• ${c.channel_name} (${c.niche}): ${c.days_to_monetization || '?'} dias, ${c.total_shorts || 0} shorts, ${(c.total_views || 0).toLocaleString()} views`
     ).join("\n");
+    const hooksBlock = (hookPatterns.data || []).map((h: any) => `• ${h.pattern_name}: ${h.template}`).join("\n");
+    const modelsBlock = (contentModels.data || []).map((m: any) => `• ${m.model_name} (${m.video_type}): ${m.description?.slice(0, 100)}`).join("\n");
 
-    const systemPrompt = `Você é um estrategista de monetização YouTube especializado em canais faceless. 
-Gere um plano de 30 dias DETALHADO e REALISTA para monetização.
+    // Build channel context
+    let channelContext = '';
+    if (channelStats) {
+      channelContext = `\nDADOS DO CANAL DO USUÁRIO:
+- Inscritos: ${channelStats.subscribers || 0}
+- Views totais: ${channelStats.views || 0}
+- Vídeos publicados: ${channelStats.videos || 0}
+- Canal ${(channelStats.videos || 0) <= 5 ? 'NOVO (poucas publicações)' : 'COM HISTÓRICO de conteúdo'}`;
+    }
+
+    if (channelAnalysis?.intelligence) {
+      const intel = channelAnalysis.intelligence;
+      channelContext += `\n\nINTELLIGENCE DO CANAL (dados do sistema):
+- Estilo: ${intel.style || 'N/A'}
+- Upload frequency: ${intel.upload_frequency || 'N/A'}
+- Growth rate: ${intel.growth_rate || 'N/A'}
+- Faceless: ${intel.is_faceless ? 'Sim' : 'Não'}
+- RPM estimado: $${intel.rpm_estimate || 0}`;
+    }
+
+    if (channelAnalysis?.topDNA?.length > 0) {
+      channelContext += `\n\nDNA DE CONTEÚDO (top vídeos analisados):`;
+      channelAnalysis.topDNA.slice(0, 5).forEach((d: any) => {
+        channelContext += `\n- Score viral: ${d.viral_score}, Hook: ${d.hook_type}, Modelo: ${d.content_model}, Views: ${d.views}`;
+      });
+    }
+
+    // Format-specific instructions
+    const formatInstructions = format === 'long' || strategy === 'longform-first'
+      ? `FOCO: LONGFORM (8-20 min). Meta: 1.000 subs + 4.000h watch time.
+- Cada vídeo deve ter 8-20 minutos para maximizar watch time
+- Foque em SEO evergreen + storytelling
+- 3-5 vídeos por semana
+- Estrutura: Hook 8s → Problema → Jornada → Payoff → CTA
+- Daily tasks devem incluir: pesquisa SEO, roteiro, gravação, edição, otimização`
+      : format === 'both' || strategy === 'hybrid'
+      ? `FOCO: HÍBRIDO (Shorts + Longform).
+- Shorts: 2-3/dia para crescer inscritos rápido
+- Longform: 2-3/semana para watch time
+- Shorts alimentam o canal, Longform monetiza
+- Semana 1-2: prioridade em Shorts. Semana 3-4: aumentar Longform`
+      : `FOCO: SHORTS ONLY. Meta: 10M views engajadas em 90 dias.
+- 2-3 shorts por dia (15-60 segundos)
+- Mix: 70% micro-shorts (15-25s) + 30% story-shorts (45-60s)
+- Escalada: Semana 1 = fundação, Semana 2 = consistência, Semana 3 = otimização, Semana 4 = escala
+- Foque em formatos que já viralizam no nicho`;
+
+    const systemPrompt = `Você é um estrategista de monetização YouTube.
+Gere um plano de 30 dias DETALHADO e PERSONALIZADO para o canal do usuário.
+
+${formatInstructions}
 
 CONHECIMENTO DE MONETIZAÇÃO:
 ${knowledgeBlock}
 
 CASES DE SUCESSO:
 ${casesBlock}
+
+HOOKS MAIS EFETIVOS:
+${hooksBlock}
+
+MODELOS DE CONTEÚDO:
+${modelsBlock}
+${channelContext}
 
 REGRAS:
 1. Retorne APENAS um JSON válido, sem markdown
@@ -73,23 +129,23 @@ REGRAS:
       "day": 1,
       "tasks": [
         {
-          "title": "Criar 2 micro-shorts sobre [tema]",
-          "description": "Detalhes...",
-          "task_type": "content",
-          "video_type": "short",
+          "title": "Tarefa específica e acionável",
+          "description": "Detalhes com base nos dados do canal",
+          "task_type": "content|research|optimization|analytics",
+          "video_type": "short|long",
           "target_shorts": 2,
           "target_longs": 0
         }
       ],
       "target_views": 500,
       "target_subs": 10,
-      "tip": "Dica do dia"
+      "tip": "Dica personalizada do dia baseada nos dados"
     }
   ],
   "milestones": [
     {
       "day_expected": 3,
-      "milestone_type": "subs",
+      "milestone_type": "subs|views|watch_hours|shorts_published|longs_published",
       "title": "Primeiros 50 inscritos",
       "target_value": 50,
       "icon": "🎯"
@@ -100,11 +156,15 @@ REGRAS:
   ]
 }
 
-3. Mix: 70% micro-shorts (15-25s) + 30% story-shorts (45-60s)
-4. Escalada realista: Semana 1 = fundação, Semana 2 = consistência, Semana 3 = otimização, Semana 4 = escala
-5. Milestones: 50 subs, 100 subs, 500 subs, 1000 subs, 10h watch, 100h watch, 1000h watch, 4000h watch
-6. Cada dia deve ter 2-4 tarefas variadas (conteúdo, pesquisa, otimização, análise)
-7. Idioma: ${language || 'português'}`;
+3. Cada dia deve ter 2-4 tarefas variadas (conteúdo, pesquisa, otimização, análise)
+4. Tarefas devem ser ULTRA ESPECÍFICAS para o nicho "${niche || 'curiosidades'}"
+5. Se canal é NOVO: foco em setup, branding, primeiros uploads
+6. Se canal TEM CONTEÚDO: foco em otimização, padrões virais, escala
+7. Milestones: adapte ao formato escolhido
+8. Idioma: ${language || 'português'}
+9. Dicas diárias baseadas nos dados reais do canal quando disponíveis`;
+
+    const userMessage = `Gere um plano de 30 dias para monetizar o canal no nicho "${niche || 'curiosidades'}" no mercado ${country || 'BR'} (${language || 'português'}). Estratégia: ${strategy || 'shorts-first'}. Formato: ${format || 'shorts'}.`;
 
     const res = await fetch(AI_URL, {
       method: "POST",
@@ -113,7 +173,7 @@ REGRAS:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Gere um plano de 30 dias para monetizar um canal faceless no nicho "${niche || 'curiosidades'}" no mercado ${country || 'BR'} (${language || 'português'}). Estratégia: ${strategy || 'shorts-first'}.` }
+          { role: "user", content: userMessage },
         ],
       }),
     });
@@ -121,13 +181,13 @@ REGRAS:
     if (!res.ok) {
       const t = await res.text();
       console.error("AI error:", res.status, t);
+      if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       throw new Error("AI generation failed");
     }
 
     const aiResult = await res.json();
     const raw = aiResult.choices?.[0]?.message?.content || "";
-    
-    // Parse JSON from response
+
     let planData;
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -189,6 +249,19 @@ REGRAS:
     if (milestones.length > 0) {
       await sb.from("monetization_milestones").insert(milestones);
     }
+
+    // Sync: Feed plan data back into ai_learning for self-improvement
+    await sb.from("ai_learning").insert({
+      topic: "plan-generated",
+      source: `tracker-30d:${plan.id}`,
+      insight: JSON.stringify({
+        niche, strategy, format,
+        channel_subs: channelStats?.subscribers || 0,
+        channel_videos: channelStats?.videos || 0,
+        tasks_count: dailyTasks.length,
+        milestones_count: milestones.length,
+      }),
+    }).catch(() => {});
 
     return new Response(JSON.stringify({ plan, planData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

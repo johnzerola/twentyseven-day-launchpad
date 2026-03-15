@@ -5,18 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
   Rocket, Trophy, Calendar, CheckCircle2, Target, TrendingUp, 
   Flame, Zap, Play, Clock, Star, ChevronLeft, ChevronRight,
-  BarChart3, Video, Eye, Users, Loader2, Brain
+  BarChart3, Video, Eye, Users, Loader2, Brain, Youtube, Trash2
 } from 'lucide-react';
 import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
 import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TrackerWizard } from '@/components/tracker/TrackerWizard';
 
 interface DailyTask {
   id: string;
@@ -55,6 +54,8 @@ interface Plan {
   total_longs_published: number;
   total_views: number;
   plan_json: any;
+  strategy: string;
+  channel_id: string | null;
 }
 
 export default function Tracker30Days() {
@@ -63,8 +64,7 @@ export default function Tracker30Days() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [niche, setNiche] = useState('curiosidades');
+  const [channelName, setChannelName] = useState('');
 
   const loadPlan = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -81,40 +81,29 @@ export default function Tracker30Days() {
     const activePlan = (plans as any)?.[0];
     if (activePlan) {
       setPlan(activePlan);
-      // Calculate current day
       const started = new Date(activePlan.started_at);
       const now = new Date();
       const diffDays = Math.min(30, Math.max(1, Math.ceil((now.getTime() - started.getTime()) / 86400000)));
       setSelectedDay(diffDays);
 
-      // Load tasks and milestones
-      const [tasksRes, milestonesRes] = await Promise.all([
+      // Load tasks, milestones, and channel name in parallel
+      const [tasksRes, milestonesRes, channelRes] = await Promise.all([
         supabase.from('daily_tasks' as any).select('*').eq('plan_id', activePlan.id).order('day_number'),
         supabase.from('monetization_milestones' as any).select('*').eq('plan_id', activePlan.id).order('day_expected'),
+        activePlan.channel_id
+          ? supabase.from('user_channels' as any).select('channel_name').eq('id', activePlan.channel_id).limit(1)
+          : Promise.resolve({ data: null }),
       ]);
       setTasks((tasksRes.data as any) || []);
       setMilestones((milestonesRes.data as any) || []);
+      if ((channelRes.data as any)?.[0]?.channel_name) {
+        setChannelName((channelRes.data as any)[0].channel_name);
+      }
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
-
-  const generatePlan = async () => {
-    setGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-30day-plan', {
-        body: { niche, language: 'pt', country: 'BR', strategy: 'shorts-first' },
-      });
-      if (error) throw error;
-      toast.success('Plano de 30 dias gerado!');
-      await loadPlan();
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao gerar plano');
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     const now = completed ? new Date().toISOString() : null;
@@ -125,7 +114,35 @@ export default function Tracker30Days() {
     } as any).eq('id', taskId);
     
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed, completed_at: now } : t));
-    if (completed) toast.success('Tarefa concluída! 🎉');
+    
+    if (completed) {
+      toast.success('Tarefa concluída! 🎉');
+      // Sync: update plan progress
+      const completedTasks = tasks.filter(t => t.completed || t.id === taskId);
+      const shortsCompleted = completedTasks.filter(t => t.video_type === 'short' && t.task_type === 'content').length;
+      const longsCompleted = completedTasks.filter(t => t.video_type === 'long' && t.task_type === 'content').length;
+      
+      await supabase.from('monetization_30day_plans' as any).update({
+        total_shorts_published: shortsCompleted,
+        total_longs_published: longsCompleted,
+        current_day: selectedDay,
+        updated_at: new Date().toISOString(),
+      } as any).eq('id', plan?.id);
+    }
+  };
+
+  const resetPlan = async () => {
+    if (!plan) return;
+    if (!confirm('Tem certeza que deseja resetar o plano? Isso apagará todo o progresso.')) return;
+    
+    await Promise.all([
+      supabase.from('monetization_30day_plans' as any).update({ status: 'archived' } as any).eq('id', plan.id),
+    ]);
+    
+    setPlan(null);
+    setTasks([]);
+    setMilestones([]);
+    toast.success('Plano arquivado. Você pode gerar um novo.');
   };
 
   const dayTasks = tasks.filter(t => t.day_number === selectedDay);
@@ -133,7 +150,6 @@ export default function Tracker30Days() {
   const totalTasks = tasks.length;
   const overallProgress = totalTasks > 0 ? (completedTotal / totalTasks) * 100 : 0;
 
-  // Day completion map
   const dayCompletionMap = new Map<number, { total: number; completed: number }>();
   tasks.forEach(t => {
     const curr = dayCompletionMap.get(t.day_number) || { total: 0, completed: 0 };
@@ -147,6 +163,9 @@ export default function Tracker30Days() {
   const phases = planJson.phases || [];
   const currentPhase = phases.find((p: any) => selectedDay >= p.days?.[0] && selectedDay <= p.days?.[1]);
 
+  const strategyLabel = plan?.strategy === 'shorts-first' ? '⚡ Shorts' :
+    plan?.strategy === 'longform-first' ? '🎬 Longform' : '🔄 Híbrido';
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -157,62 +176,11 @@ export default function Tracker30Days() {
     );
   }
 
-  // No active plan - show creation wizard
+  // No active plan - show wizard
   if (!plan) {
     return (
       <DashboardLayout>
-        <div className="max-w-2xl mx-auto py-12">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Rocket className="w-10 h-10 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold font-['Space_Grotesk'] mb-2">
-              Monetize em 30 Dias
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Plano diário personalizado com metas, checklist e milestones para atingir o YPP com Shorts.
-            </p>
-          </div>
-
-          <Card className="border-primary/20">
-            <CardContent className="p-6 space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Nicho do canal</label>
-                <Input 
-                  value={niche} 
-                  onChange={e => setNiche(e.target.value)}
-                  placeholder="Ex: curiosidades, terror, mitologia..."
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <Video className="w-5 h-5 mx-auto mb-1 text-primary" />
-                  <p className="text-xs text-muted-foreground">60+ Shorts</p>
-                  <p className="text-[10px] text-muted-foreground/70">em 30 dias</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
-                  <p className="text-xs text-muted-foreground">1.000 Subs</p>
-                  <p className="text-[10px] text-muted-foreground/70">meta YPP</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <Eye className="w-5 h-5 mx-auto mb-1 text-primary" />
-                  <p className="text-xs text-muted-foreground">4.000h Watch</p>
-                  <p className="text-[10px] text-muted-foreground/70">tempo total</p>
-                </div>
-              </div>
-
-              <Button onClick={generatePlan} disabled={generating} className="w-full" size="lg">
-                {generating ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando plano com IA...</>
-                ) : (
-                  <><Rocket className="w-4 h-4 mr-2" /> Gerar Meu Plano de 30 Dias</>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        <TrackerWizard onPlanGenerated={loadPlan} />
       </DashboardLayout>
     );
   }
@@ -227,14 +195,27 @@ export default function Tracker30Days() {
               <Rocket className="w-6 h-6 text-primary" />
               Tracker 30 Dias
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {plan.niche} • Iniciado em {new Date(plan.started_at).toLocaleDateString('pt-BR')}
-            </p>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <p className="text-sm text-muted-foreground">
+                {plan.niche} • {new Date(plan.started_at).toLocaleDateString('pt-BR')}
+              </p>
+              {channelName && (
+                <Badge variant="outline" className="text-[10px]">
+                  <Youtube className="w-3 h-3 mr-1" />{channelName}
+                </Badge>
+              )}
+              <Badge variant="secondary" className="text-[10px]">{strategyLabel}</Badge>
+            </div>
           </div>
-          <Badge variant="outline" className="text-sm px-3 py-1 self-start">
-            <Flame className="w-3.5 h-3.5 mr-1 text-orange-500" />
-            Dia {selectedDay}/30
-          </Badge>
+          <div className="flex items-center gap-2 self-start">
+            <Badge variant="outline" className="text-sm px-3 py-1">
+              <Flame className="w-3.5 h-3.5 mr-1 text-orange-500" />
+              Dia {selectedDay}/30
+            </Badge>
+            <Button variant="ghost" size="sm" onClick={resetPlan} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Progress Overview */}
@@ -253,7 +234,7 @@ export default function Tracker30Days() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Video className="w-4 h-4 text-primary" />
-                <span className="text-xs text-muted-foreground">Publicados</span>
+                <span className="text-xs text-muted-foreground">Concluídas</span>
               </div>
               <p className="text-2xl font-bold">{completedTotal}</p>
               <p className="text-[10px] text-muted-foreground">de {totalTasks} tarefas</p>
@@ -365,6 +346,9 @@ export default function Tracker30Days() {
                           {task.video_type === 'short' && (
                             <Badge className="text-[10px] bg-primary/10 text-primary border-0">Short</Badge>
                           )}
+                          {task.video_type === 'long' && (
+                            <Badge className="text-[10px] bg-blue-500/10 text-blue-400 border-0">Longform</Badge>
+                          )}
                         </div>
                         {task.description && (
                           <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
@@ -465,7 +449,9 @@ export default function Tracker30Days() {
                     }`}>
                       <div className="flex justify-between font-medium">
                         <span>Semana {wg.week}</span>
-                        <span className="text-muted-foreground">{wg.shorts} shorts</span>
+                        <span className="text-muted-foreground">
+                          {wg.shorts || 0} shorts {wg.longs ? `+ ${wg.longs} longos` : ''}
+                        </span>
                       </div>
                       <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
                         <span>{wg.target_subs} subs</span>
