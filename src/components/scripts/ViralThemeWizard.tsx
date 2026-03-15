@@ -135,6 +135,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
     setTopicInput('');
     setSelectedStyle('');
     setSelectedDuration('long');
+    setShortsDurationCat('flash');
     setThemes([]);
   };
 
