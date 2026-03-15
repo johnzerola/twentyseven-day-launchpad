@@ -338,6 +338,7 @@ export const ScriptGenerator = ({
           viralContext, intelligenceBriefing: briefing,
           videoType,
           phaseId: phaseIdRef.current,
+          channelKnowledge: channelKnowledge || undefined,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
