@@ -274,6 +274,11 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
 
     const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
 
+    // Channel knowledge from Dotti suggestions
+    const channelKnowledgeBlock = channelKnowledge ? `\n📝 CONHECIMENTO DO CANAL (salvo pelo usuário via Dotti):
+${channelKnowledge}
+INSTRUÇÃO: Use estas informações como contexto adicional sobre o canal. Adapte o roteiro para se alinhar com as preferências, temas e estilo que o usuário já explorou.\n` : '';
+
     // Intelligence briefing
     let intelBlock = '';
     if (intelligenceBriefing) {
