@@ -91,11 +91,24 @@ const Scripts = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showComparator, setShowComparator] = useState(false);
 
+  // v2.2: Read URL params from Tracker pipeline
+  const [searchParams] = useSearchParams();
+  
   useEffect(() => { loadHistory(); }, [scriptsPag.page]);
 
   useEffect(() => {
     loadTemplates();
     loadUserChannels();
+    
+    // Load from Tracker pipeline
+    const trackerNiche = searchParams.get('niche');
+    const trackerType = searchParams.get('type');
+    const trackerTopic = searchParams.get('topic');
+    if (trackerNiche) setNiche(trackerNiche);
+    if (trackerType === 'short') setVideoType('short');
+    if (trackerType === 'long') setVideoType('long');
+    if (trackerTopic) { setTopic(trackerTopic); toast.success('Contexto do Tracker carregado!'); }
+    
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
     loadLastProjectCharacters();
