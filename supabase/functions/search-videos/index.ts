@@ -43,21 +43,22 @@ function switchKey(): boolean {
 }
 
 async function fetchJSON(url: string): Promise<any> {
-  const res = await fetch(url);
-  const data = await res.json();
-  if (data.error) {
-    const reason = data.error.errors?.[0]?.reason;
-    if (reason === "quotaExceeded" && switchKey()) {
-      // Retry with the other key
-      const newUrl = url.replace(/key=[^&]+/, `key=${getCurrentKey()}`);
-      const res2 = await fetch(newUrl);
-      const data2 = await res2.json();
-      if (data2.error) throw new Error(data2.error.message || JSON.stringify(data2.error));
-      return data2;
+  const tried = new Set<number>();
+  while (tried.size < _ytKeys.length) {
+    tried.add(_currentKeyIndex);
+    const curUrl = url.replace(/key=[^&]+/, `key=${getCurrentKey()}`);
+    const res = await fetch(curUrl);
+    const data = await res.json();
+    if (data.error) {
+      const reason = data.error.errors?.[0]?.reason;
+      if (reason === "quotaExceeded" && switchKey() && !tried.has(_currentKeyIndex)) {
+        continue; // try next key
+      }
+      throw new Error(data.error.message || JSON.stringify(data.error));
     }
-    throw new Error(data.error.message || JSON.stringify(data.error));
+    return data;
   }
-  return data;
+  throw new Error("All YouTube API keys have exceeded their quota. Please try again tomorrow.");
 }
 
 async function resolveHandle(handle: string, apiKey: string): Promise<string | null> {
@@ -232,7 +233,14 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("search-videos error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    const isQuota = msg.includes("quota") || msg.includes("exceeded");
+    if (isQuota) {
+      return new Response(JSON.stringify({ results: [], channel: null, warning: "Cota do YouTube esgotada. Tente novamente amanhã ou use filtros mais específicos." }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
