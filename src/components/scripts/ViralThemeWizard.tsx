@@ -340,7 +340,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                   <Badge variant="outline" className="text-[9px]">{nicheData?.emoji} {nicheData?.label}</Badge>
                   {effectiveSubNiche && <Badge variant="secondary" className="text-[9px]">{effectiveSubNiche}</Badge>}
                   {selectedStyle && <Badge variant="outline" className="text-[9px]">{selectedStyle}</Badge>}
-                  <Badge variant="secondary" className="text-[9px]">{selectedDuration === 'short' ? '⚡ Shorts' : '🎬 Long'}</Badge>
+                  <Badge variant="secondary" className="text-[9px]">{selectedDuration === 'short' ? `⚡ ${shortsDurationCat === 'micro' ? 'Micro 15-25s' : shortsDurationCat === 'story' ? 'Story 45-60s' : 'Flash 25-40s'}` : '🎬 Long'}</Badge>
                 </div>
 
                 <Button onClick={generateThemes} disabled={loading} variant="outline" size="sm" className="w-full gap-1 text-[10px]">
