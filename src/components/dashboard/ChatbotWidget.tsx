@@ -478,17 +478,28 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
 
   // ===== Save Dotti suggestion =====
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
-  const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string } | null>(null);
+  const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string; channelId: string | null } | null>(null);
+  const [saveChannels, setSaveChannels] = useState<any[]>([]);
+
+  // Load user channels for save selector
+  useEffect(() => {
+    const loadChannels = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('user_channels').select('id, channel_name').eq('user_id', user.id).order('channel_name');
+      setSaveChannels(data || []);
+    };
+    loadChannels();
+  }, []);
 
   const saveSuggestion = async (msgContent: string, idx: number) => {
     if (!userId) { toast.error('Faça login'); return; }
     setSavingIdx(idx);
     
-    // Extract a title from first line or first 60 chars
     const firstLine = msgContent.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
     const title = firstLine.slice(0, 80) || 'Sugestão do Dotti';
 
-    setEditingSuggestion({ idx, title, content: msgContent });
+    setEditingSuggestion({ idx, title, content: msgContent, channelId: null });
   };
 
   const confirmSaveSuggestion = async () => {
@@ -499,6 +510,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
         title: editingSuggestion.title,
         content: editingSuggestion.content,
         topic: editingSuggestion.title,
+        channel_id: editingSuggestion.channelId || null,
       } as any);
       toast.success('💡 Sugestão salva! Acesse em Roteiros → Banco de Ideias');
       setEditingSuggestion(null);
