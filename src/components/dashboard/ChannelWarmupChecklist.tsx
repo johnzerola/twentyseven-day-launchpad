@@ -82,7 +82,7 @@ export const ChannelWarmupChecklist = () => {
   const progress = (completedCount / totalItems) * 100;
 
   const days = [0, 1, 3, 5, 7];
-  const dayLabels: Record<number, string> = { 0: 'Setup Inicial', 1: 'Dia 1-2', 3: 'Dia 3-4', 5: 'Dia 5-6', 7: 'Dia 7 — Teste' };
+  const dayLabels: Record<number, string> = { 0: 'Setup Inicial', 1: 'Dia 1-2: Pesquisa', 3: 'Dia 3-4: Aquecimento', 5: 'Dia 5-6: Preparação', 7: 'Dia 7 — Lançamento 🚀' };
 
   const isChannelReady = completed.has('test-post-1') && completed.has('test-post-2');
 
