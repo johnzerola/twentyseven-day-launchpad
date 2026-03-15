@@ -195,16 +195,22 @@ export default function Tracker30Days() {
           updated_at: new Date().toISOString(),
         } as any).eq('id', plan.id),
         // Auto-add to content queue when content task is completed
-        completed && tasks.find(t => t.id === taskId)?.task_type === 'content'
-          ? supabase.from('content_queue' as any).insert({
-              user_id: (await supabase.auth.getUser()).data.user?.id,
-              title: tasks.find(t => t.id === taskId)?.title || '',
-              video_type: tasks.find(t => t.id === taskId)?.video_type === 'short' ? 'short' : 'long',
-              status: 'done',
-              niche: plan.niche,
-              channel_id: plan.channel_id,
-            } as any).catch(() => {})
-          : Promise.resolve(),
+        (async () => {
+          const task = tasks.find(t => t.id === taskId);
+          if (completed && task?.task_type === 'content') {
+            const { data: { user: u } } = await supabase.auth.getUser();
+            if (u) {
+              await supabase.from('content_queue' as any).insert({
+                user_id: u.id,
+                title: task.title || '',
+                video_type: task.video_type === 'short' ? 'short' : 'long',
+                status: 'done',
+                niche: plan.niche,
+                channel_id: plan.channel_id,
+              } as any);
+            }
+          }
+        })(),
       ]);
     }
   };
