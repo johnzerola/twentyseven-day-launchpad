@@ -47,6 +47,46 @@ const KnowledgeAdmin = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [embeddingStatus, setEmbeddingStatus] = useState<{ total: number; loading: boolean }>({ total: 0, loading: false });
+  const [seedingPhase, setSeedingPhase] = useState<string | null>(null);
+  const [seedingReport, setSeedingReport] = useState<Record<string, any> | null>(null);
+  const [dbCounts, setDbCounts] = useState<Record<string, number>>({});
+
+  const fetchDbCounts = async () => {
+    const tables = ['content_dna', 'viral_patterns', 'score_calibration', 'knowledge_embeddings'];
+    const counts: Record<string, number> = {};
+    await Promise.all(tables.map(async (t) => {
+      const { count } = await supabase.from(t as any).select('*', { count: 'exact', head: true });
+      counts[t] = count || 0;
+    }));
+    setDbCounts(counts);
+  };
+
+  const runSeedingPhase = async (phase?: string) => {
+    setSeedingPhase(phase || 'all');
+    setSeedingReport(null);
+    toast.info(`🚀 Seeding Engine: ${phase || 'todas as fases'}... pode levar minutos`);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/data-seeding-engine`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phase, channelLimit: 50, embeddingLimit: 100 }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setSeedingReport(result.report);
+        toast.success('✅ Seeding concluído!');
+        fetchDbCounts();
+        fetchEmbeddingCount();
+      } else {
+        toast.error(result.error || 'Erro no seeding');
+      }
+    } catch (e) {
+      toast.error('Erro de conexão no seeding engine');
+    } finally {
+      setSeedingPhase(null);
+    }
+  };
 
   const fetchEmbeddingCount = async () => {
     const { count } = await supabase.from('knowledge_embeddings').select('*', { count: 'exact', head: true });

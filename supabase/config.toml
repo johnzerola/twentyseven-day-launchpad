@@ -135,4 +135,7 @@ verify_jwt = false
 [functions.youtube-analytics]
 verify_jwt = false
 
+[functions.data-seeding-engine]
+verify_jwt = false
+
 
