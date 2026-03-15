@@ -135,7 +135,7 @@ const KnowledgeAdmin = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); fetchEmbeddingCount(); }, []);
+  useEffect(() => { fetchAll(); fetchEmbeddingCount(); fetchDbCounts(); }, []);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
