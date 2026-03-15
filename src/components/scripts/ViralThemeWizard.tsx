@@ -297,6 +297,27 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                   </div>
                 </div>
 
+                {/* Shorts Duration Sub-Selection */}
+                {selectedDuration === 'short' && (
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">⚡ Tipo de Short</label>
+                    <div className="space-y-1">
+                      {SHORTS_DURATION_OPTIONS.map(sd => (
+                        <button key={sd.value} onClick={() => setShortsDurationCat(sd.value as any)}
+                          className={`w-full p-2 rounded-lg border text-[10px] text-left transition-all ${
+                            shortsDurationCat === sd.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+                          }`}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{sd.label}</span>
+                            <span className="text-[9px] text-muted-foreground">{sd.desc}</span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground/70 mt-0.5">Ex: {sd.example}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <Button onClick={generateThemes} disabled={loading} className="w-full gap-2 text-xs">
                   {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                   {loading ? 'Gerando temas virais...' : '🔥 Gerar Temas Virais com IA'}
