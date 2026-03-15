@@ -61,11 +61,33 @@ const calculateScore = (m: TrustMetrics): ScoreResult => {
     issues.push(`Duração em ${m.lov}s — sweet spot: 32s`);
     recommendations.push('Ajuste para 32 segundos — é o LOV ideal para maximizar retenção em shorts');
   }
+  
+  // Snowball effect estimation
+  const snowballMultiplier = cvRvRating >= 55 && retention >= 100 && m.swipeRatio >= 81.1 ? 3.5 : 
+    cvRvRating >= 45 && retention >= 80 ? 2.0 : 
+    cvRvRating >= 35 ? 1.3 : 1.0;
+  
+  // Monetization timeline estimation
+  const daysToMonetize = snowballMultiplier >= 3 ? '15-30 dias' : 
+    snowballMultiplier >= 2 ? '30-60 dias' : 
+    snowballMultiplier >= 1.3 ? '60-90 dias' : '90+ dias';
+
+  // Engaged views estimation (50% rule)
+  const estimatedEngagedViews = Math.round(m.totalViews * 0.5);
+  const engagedViewsNeeded = 10_000_000;
+  const viewsProgress = Math.min((estimatedEngagedViews / engagedViewsNeeded) * 100, 100);
+
   if (cvRvRating >= 55) {
-    recommendations.push('✅ CV+RV saudável! Continue usando CTAs integradas para manter');
+    recommendations.push('✅ CV+RV saudável! Efeito snowball ativo — multiplicador de ' + snowballMultiplier.toFixed(1) + 'x');
   }
   if (retention >= 100) {
     recommendations.push('✅ Retenção excelente! Seus vídeos estão gerando rewatches');
+  }
+  if (snowballMultiplier < 2) {
+    issues.push(`Snowball fraco (${snowballMultiplier.toFixed(1)}x) — monetização estimada: ${daysToMonetize}`);
+    recommendations.push(`Otimize Trust Score para ativar o efeito snowball (crescimento exponencial vs linear)`);
+  } else {
+    recommendations.push(`🚀 Snowball ativo! Multiplicador ${snowballMultiplier.toFixed(1)}x — monetização estimada: ${daysToMonetize}`);
   }
 
   const trustScore = (retentionScore * 0.35) + (swipeScore * 0.3) + (cvRvScore * 0.2) + (lovScore * 0.15);
@@ -74,7 +96,7 @@ const calculateScore = (m: TrustMetrics): ScoreResult => {
 
   const monetizationReady = m.engagedViews >= 10_000_000 && m.subscribers >= 1000;
 
-  return { trustScore, retention, cvRvRating, grade, issues, recommendations, monetizationReady, engagedViewPct: engagedViewPct };
+  return { trustScore, retention, cvRvRating, grade, issues, recommendations, monetizationReady, engagedViewPct, snowballMultiplier, daysToMonetize, viewsProgress, estimatedEngagedViews };
 };
 
 const gradeColors: Record<string, string> = {
