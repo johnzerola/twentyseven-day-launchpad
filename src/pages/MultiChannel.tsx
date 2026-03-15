@@ -242,9 +242,84 @@ const MultiChannel = () => {
   };
 
   const updateQueueStatus = async (id: string, status: string) => {
+    const item = queue.find(q => q.id === id);
     await supabase.from('content_queue').update({ status, updated_at: new Date().toISOString() } as any).eq('id', id);
     setQueue(prev => prev.map(q => q.id === id ? { ...q, status } : q));
     toast.success(`Status → ${STATUS_CONFIG[status]?.label || status}`);
+
+    // FEEDBACK LOOP: When published, save prediction data for learning
+    if (status === 'published' && item) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Get the metadata which may contain idea scores
+        const metadata = (item as any).metadata_json || {};
+        const predictedScore = metadata.viral_score || metadata.idea_score || null;
+
+        if (predictedScore) {
+          await supabase.from('prediction_vs_result').insert({
+            user_id: user.id,
+            prediction_type: 'queue_idea',
+            predicted_score: predictedScore,
+            niche: item.niche || 'general',
+            metadata: { title: item.title, channel_id: item.channel_id },
+          } as any).then(() => {
+            toast.info('📊 Score salvo para calibração futura');
+          });
+        }
+      }
+    }
+  };
+
+  const quickGenerateScript = async (item: QueueItem) => {
+    setGeneratingScript(item.id);
+    try {
+      const ch = channels.find(c => c.id === item.channel_id);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-script`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          topic: item.title,
+          niche: item.niche || ch?.niche || 'general',
+          channelName: ch?.channel_name || '',
+          videoType: 'long',
+          duration: '10min',
+          language: item.language || 'português',
+        }),
+      });
+      const result = await res.json();
+      if (result.script) {
+        // Save as project
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('video_projects').insert({
+            user_id: user.id,
+            title: item.title,
+            script_text: result.script,
+            status: 'script',
+            video_type: 'long',
+            niche: item.niche || ch?.niche,
+            channel_id: item.channel_id,
+          } as any);
+
+          // Update queue status
+          await supabase.from('content_queue').update({ 
+            status: 'scripting', 
+            metadata_json: { viral_score: result.viralScore, idea_score: result.ideaScore },
+            updated_at: new Date().toISOString() 
+          } as any).eq('id', item.id);
+
+          setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'scripting' } : q));
+          toast.success('✅ Roteiro gerado e salvo no Workflow!');
+        }
+      } else {
+        toast.error(result.error || 'Erro ao gerar roteiro');
+      }
+    } catch {
+      toast.error('Erro de conexão');
+    } finally {
+      setGeneratingScript(null);
+    }
   };
 
   const deleteQueueItem = async (id: string) => {
