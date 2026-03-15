@@ -40,16 +40,19 @@ export interface SyncedScene {
   endTime: number;
   visualPrompt: string;
   cameraAngle: string;
+  cameraMove?: string;
   mood: string;
   narrativeText?: string;
   narrativeSummary?: string;
   emotionalBeat?: string;
   lensSpec?: string;
+  lighting?: string;
   lightingSetup?: string;
   audioDirection?: string;
   negativePrompt?: string;
   charactersInScene?: string[];
   transitionNote?: string;
+  dopamineTrigger?: string;
 }
 
 export interface TranscriptionBlock {

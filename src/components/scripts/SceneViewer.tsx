@@ -26,9 +26,11 @@ export const SceneViewer = ({ scenes }: SceneViewerProps) => {
                 <Badge variant="outline" className="text-[9px]">⏱ {scene.sceneDurationSeconds}s</Badge>
               )}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <Badge variant="outline" className="text-[9px]">📷 {scene.cameraAngle}</Badge>
               <Badge variant="outline" className="text-[9px]">🎭 {scene.mood}</Badge>
+              {scene.cameraMove && <Badge variant="outline" className="text-[9px]">🎥 {scene.cameraMove}</Badge>}
+              {scene.dopamineTrigger && <Badge className="text-[9px] bg-accent/10 text-accent border-accent/20">⚡ {scene.dopamineTrigger}</Badge>}
             </div>
           </div>
           {scene.narrativeSummary && <p className="text-[10px] text-accent italic mb-1.5">🎯 {scene.narrativeSummary}</p>}
