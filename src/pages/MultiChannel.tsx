@@ -111,6 +111,41 @@ const MultiChannel = () => {
     setLoading(false);
   };
 
+  const generateIdeas = async () => {
+    const selectedChannel = channels.find(c => c.id === newChannel);
+    if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
+    setGeneratingIdeas(true);
+    setShowIdeaPanel(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ideas`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          niche: selectedChannel.niche || 'general',
+          channelName: selectedChannel.channel_name,
+          count: 8,
+        }),
+      });
+      const result = await res.json();
+      if (result.ideas) {
+        setGeneratedIdeas(result.ideas);
+      } else {
+        toast.error(result.error || 'Erro ao gerar ideias');
+      }
+    } catch {
+      toast.error('Erro de conexão');
+    } finally {
+      setGeneratingIdeas(false);
+    }
+  };
+
+  const selectIdea = (idea: any) => {
+    setNewTitle(idea.title || idea.tema || '');
+    setShowIdeaPanel(false);
+    toast.success('💡 Ideia selecionada!');
+  };
+
   const addQueueItem = async () => {
     if (!newTitle.trim()) return;
     const { data: { user } } = await supabase.auth.getUser();
