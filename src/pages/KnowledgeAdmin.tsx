@@ -220,7 +220,78 @@ const KnowledgeAdmin = () => {
           ))}
         </div>
 
-        {/* Tabs */}
+        {/* 🚀 Data Seeding Engine */}
+        <div className="glass rounded-xl p-5 border border-primary/20">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Rocket className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-bold font-['Space_Grotesk']">Data Seeding Engine</h2>
+                <p className="text-xs text-muted-foreground">Transforme dados brutos em inteligência real</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => runSeedingPhase()}
+              disabled={!!seedingPhase}
+              className="gap-2"
+              size="sm"
+            >
+              {seedingPhase ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
+              {seedingPhase ? `Fase: ${seedingPhase}...` : 'Executar Todas as Fases'}
+            </Button>
+          </div>
+
+          {/* Phase stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            {[
+              { key: 'content_dna', label: 'Content DNA', icon: Dna, desc: 'DNA viral de vídeos' },
+              { key: 'viral_patterns', label: 'Viral Patterns', icon: TrendingUp, desc: 'Padrões por nicho' },
+              { key: 'score_calibration', label: 'Score Calibration', icon: Layers, desc: 'Calibração de scores' },
+              { key: 'knowledge_embeddings', label: 'Embeddings', icon: Sparkles, desc: 'Busca semântica' },
+            ].map(({ key, label, icon: Icon, desc }) => (
+              <div key={key} className="bg-secondary/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Icon className="w-4 h-4 text-primary" />
+                  <span className="text-lg font-bold">{dbCounts[key] || 0}</span>
+                </div>
+                <p className="text-[10px] font-medium">{label}</p>
+                <p className="text-[9px] text-muted-foreground">{desc}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-7 text-[10px]"
+                  disabled={!!seedingPhase}
+                  onClick={() => runSeedingPhase(key === 'knowledge_embeddings' ? 'embeddings' : key)}
+                >
+                  {seedingPhase === key ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Executar'}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Report */}
+          {seedingReport && (
+            <div className="bg-background/50 rounded-lg p-3 border border-border/50">
+              <p className="text-xs font-medium mb-2 text-emerald-400">✅ Relatório do Seeding</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                {Object.entries(seedingReport).map(([phase, data]: [string, any]) => (
+                  <div key={phase} className="bg-secondary/20 rounded p-2">
+                    <p className="font-medium">{phase}</p>
+                    <p className="text-muted-foreground">
+                      {data.processed ?? 0} processados
+                      {data.errors ? ` · ${data.errors} erros` : ''}
+                      {data.duration_ms ? ` · ${(data.duration_ms / 1000).toFixed(1)}s` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabKey)}>
           <TabsList className="w-full grid grid-cols-4 h-auto">
             {(Object.entries(TAB_CONFIG) as [TabKey, typeof TAB_CONFIG[TabKey]][]).map(([key, cfg]) => (
