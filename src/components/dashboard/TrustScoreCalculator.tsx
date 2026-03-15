@@ -28,6 +28,10 @@ interface ScoreResult {
   recommendations: string[];
   monetizationReady: boolean;
   engagedViewPct: number;
+  snowballMultiplier: number;
+  daysToMonetize: string;
+  viewsProgress: number;
+  estimatedEngagedViews: number;
 }
 
 const calculateScore = (m: TrustMetrics): ScoreResult => {
