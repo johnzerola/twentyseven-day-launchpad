@@ -438,6 +438,7 @@ ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
 ${voiceInjection}
+${channelKnowledgeBlock}
 ${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
