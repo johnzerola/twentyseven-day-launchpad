@@ -632,44 +632,27 @@ const Scripts = () => {
               )}
             </div>
 
-            {/* Theme Suggestions */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <button onClick={() => setShowThemeSuggestions(!showThemeSuggestions)}
-                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-yellow-400" />
-                  <span className="font-semibold text-xs">Temas Virais</span>
-                  {themeSuggestions.length > 0 && <Badge variant="secondary" className="text-[10px]">{themeSuggestions.length}</Badge>}
-                </div>
-                {showThemeSuggestions ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-              </button>
-              {showThemeSuggestions && (
-                <div className="px-3 pb-3 space-y-2 border-t border-border/30 pt-2">
-                  <Button onClick={generateThemeSuggestions} disabled={loadingThemes} size="sm" className="w-full gap-2 text-xs">
-                    {loadingThemes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TrendingUp className="w-3.5 h-3.5" />}
-                    {loadingThemes ? 'Analisando...' : 'Gerar Temas Virais com IA'}
-                  </Button>
-                  <div className="space-y-1.5 max-h-[350px] overflow-y-auto">
-                    {themeSuggestions.map((theme: any, i: number) => (
-                      <button key={i} onClick={() => useTheme(theme)}
-                        className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all">
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-medium text-xs flex-1">{theme.title}</span>
-                          <span className={`text-[10px] font-bold ${theme.viral_score >= 8 ? 'text-emerald-400' : theme.viral_score >= 6 ? 'text-amber-400' : 'text-muted-foreground'}`}>
-                            🔥 {theme.viral_score}/10
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{theme.description}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <Badge variant="outline" className="text-[9px]">{theme.style}</Badge>
-                          <Badge variant="secondary" className="text-[9px]">{theme.estimated_duration}</Badge>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Theme Suggestions — Wizard */}
+            <ViralThemeWizard
+              onSelectTheme={(theme) => {
+                setTopic(theme.title);
+                if (theme.estimated_duration) {
+                  const dur = parseInt(theme.estimated_duration);
+                  if (dur) setDuration(String(dur));
+                }
+                if (theme.videoFormat === 'short') setVideoType('short');
+                const styleMap: Record<string, string> = {
+                  'documentário': 'documentário', 'listicle': 'listicle', 'tutorial': 'tutorial',
+                  'true crime': 'narração', 'motivacional': 'storytelling', 'storytelling': 'storytelling',
+                  'educativo': 'educativo', 'horror': 'narração', 'shorts': 'dopaminérgico',
+                  'narração': 'narração', 'cinematográfico': 'cinematográfico', 'dopaminérgico': 'dopaminérgico',
+                };
+                if (theme.style && styleMap[theme.style]) setStyle(styleMap[theme.style]);
+                if (theme.niche_tags?.length) setNiche(theme.niche_tags[0]);
+                toast.success('Tema aplicado! Configure detalhes e gere o roteiro.');
+              }}
+              userChannels={userChannels}
+            />
 
             {/* Viral Database Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
