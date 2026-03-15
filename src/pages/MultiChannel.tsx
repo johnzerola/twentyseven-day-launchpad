@@ -727,7 +727,9 @@ const MultiChannel = () => {
         <div className="flex gap-1 bg-card border border-border rounded-xl p-1">
           {[
             { key: 'overview', label: 'Canais', icon: Youtube },
-            { key: 'queue', label: 'Fila de Conteúdo', icon: Kanban },
+            { key: 'queue', label: 'Fila', icon: Kanban },
+            { key: 'calendar', label: 'Calendário', icon: Calendar },
+            { key: 'checklist', label: 'Checklist', icon: CheckCircle2 },
             { key: 'groups', label: 'Grupos', icon: FolderOpen },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
