@@ -442,13 +442,33 @@ const DOTTI_TOOLS = [
 ];
 
 // ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
-const TOOL_TIMEOUT_MS = 20000; // 20s per tool
+const DEFAULT_TOOL_TIMEOUT_MS = 12000;
+const TOOL_TIMEOUTS_MS: Record<string, number> = {
+  // YouTube-intensive tools can exhaust quota quickly; fail fast to avoid full chat failure.
+  "analyze-channel": 8000,
+  "youtube_channel_stats": 7000,
+  "youtube_channel_videos": 7000,
+  "youtube_video_stats": 7000,
+  "youtube_search_api": 7000,
+};
+
+const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
+  "analyze_channel",
+  "youtube_channel_stats",
+  "youtube_channel_videos",
+  "youtube_video_stats",
+  "youtube_search_api",
+]);
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms)),
   ]);
+}
+
+function getToolTimeoutMs(fnName: string, toolName: string): number {
+  return TOOL_TIMEOUTS_MS[toolName] || TOOL_TIMEOUTS_MS[fnName] || DEFAULT_TOOL_TIMEOUT_MS;
 }
 
 async function executeTool(
