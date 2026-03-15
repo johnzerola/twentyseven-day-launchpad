@@ -17,7 +17,7 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch intelligence from DB
-    const [channelRes, ytRes] = await Promise.all([
+    const fetchPromises: Promise<any>[] = [
       sb.from("channel_intelligence")
         .select("channel_name,niche,style,viral_patterns,top_videos,avg_views,growth_rate")
         .eq("is_faceless", true)
@@ -27,7 +27,23 @@ serve(async (req) => {
         .select("title,content")
         .order("priority", { ascending: false })
         .limit(5),
-    ]);
+    ];
+    // For shorts, also fetch shorts-specific models and hooks
+    if (videoFormat === 'short') {
+      fetchPromises.push(
+        sb.from("content_models").select("model_name,description,hook_pattern,pacing_guide")
+          .eq("video_type", "short").order("effectiveness_score", { ascending: false }).limit(5),
+        sb.from("hook_library").select("hook_text,hook_type,retention_score")
+          .order("retention_score", { ascending: false }).limit(15),
+        sb.from("audience_psychology_patterns").select("trigger_type,description,storytelling_pattern")
+          .eq("source", "shorts_engine").limit(5),
+      );
+    }
+    const results = await Promise.all(fetchPromises);
+    const [channelRes, ytRes] = results;
+    const shortsModels = results[2]?.data || [];
+    const shortsHooks = results[3]?.data || [];
+    const shortsPsych = results[4]?.data || [];
 
     const channelContext = (channelRes.data || []).map((c: any) => {
       const tops = Array.isArray(c.top_videos) ? c.top_videos.slice(0, 2).map((v: any) => v.title).join(", ") : "";
@@ -44,7 +60,13 @@ serve(async (req) => {
     const narrativeContext = narrativeStyle ? `\nESTILO NARRATIVO PREFERIDO: ${narrativeStyle} — todos os temas devem ser adequados para este estilo de narração.` : '';
     const subNicheContext = subNiche ? `\nSUB-NICHO ESPECÍFICO: "${subNiche}" — TODOS os temas devem focar especificamente neste sub-nicho. Exemplo: se o nicho é "história" e o sub-nicho é "Egito antigo", gere APENAS temas sobre o Egito antigo.` : '';
     const channelContext2 = channelKnowledge ? `\nCONHECIMENTO DO CANAL (insights e preferências do criador):\n${channelKnowledge}\n\nUse estes insights para personalizar os temas ao estilo e estratégia do canal.` : '';
-    const formatContext = videoFormat === 'short' ? `\nFORMATO: SHORTS (15-60 segundos). Gere temas que funcionam em formato ultra-curto. Cada tema deve ter potencial para ser cortado em 3+ cenas impactantes. O hook deve capturar em 1 segundo.` : '';
+    let formatContext = '';
+    if (videoFormat === 'short') {
+      const modelsBlock = shortsModels.map((m: any) => `• ${m.model_name}: ${m.hook_pattern}`).join('\n');
+      const hooksBlock = shortsHooks.slice(0, 8).map((h: any) => `• [${h.hook_type}] "${h.hook_text}"`).join('\n');
+      const psychBlock = shortsPsych.map((p: any) => `• ${p.trigger_type}: ${p.storytelling_pattern || p.description?.slice(0, 80)}`).join('\n');
+      formatContext = `\nFORMATO: SHORTS (15-60 segundos). Cada tema DEVE funcionar em formato ultra-curto com hook de 1 segundo e loop ending.\n\nMODELOS DE SHORTS VALIDADOS:\n${modelsBlock}\n\nHOOKS DE ALTA PERFORMANCE:\n${hooksBlock}\n\nGATILHOS PSICOLÓGICOS SHORTS:\n${psychBlock}\n\nREGRAS SHORTS: Temas com UMA ideia central, ângulo chocante ou contraintuitivo, potencial de loop (>200% watch time).`;
+    }
 
     const prompt = `Você é um estrategista de conteúdo YouTube com 15 anos de experiência em canais faceless/dark.
 
