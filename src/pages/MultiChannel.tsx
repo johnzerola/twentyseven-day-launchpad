@@ -87,6 +87,11 @@ const MultiChannel = () => {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupChannels, setNewGroupChannels] = useState<string[]>([]);
 
+  // Idea generator
+  const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
+  const [generatingIdeas, setGeneratingIdeas] = useState(false);
+  const [showIdeaPanel, setShowIdeaPanel] = useState(false);
+
   useEffect(() => { loadAll(); }, []);
 
   const loadAll = async () => {
