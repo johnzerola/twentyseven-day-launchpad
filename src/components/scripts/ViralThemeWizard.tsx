@@ -61,6 +61,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
   const [topicInput, setTopicInput] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<'short' | 'long'>('long');
+  const [shortsDurationCat, setShortsDurationCat] = useState<'micro' | 'flash' | 'story'>('flash');
   
   // Results
   const [themes, setThemes] = useState<any[]>([]);
