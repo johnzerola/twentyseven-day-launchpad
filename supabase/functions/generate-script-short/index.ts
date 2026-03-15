@@ -161,6 +161,13 @@ ${durationStrategy}
 🧬 CIÊNCIA DA ATENÇÃO PARA SHORTS:
 ${shortsKnowledge}
 
+💰 INTELIGÊNCIA DE MONETIZAÇÃO:
+${monetizationKnowledge}
+FATO: Shorts de 15-25s são o caminho MAIS RÁPIDO para monetização no YouTube.
+- Canais faceless atingem YPP em 15-30 dias com volume de shorts
+- Completion rate >90% = algoritmo escala de 200 para 20K views em 1 HORA
+- Estratégia: 70% micro-shorts (15-25s) para viralizar + 30% story-shorts para watch time
+
 O cérebro humano em Shorts:
 - 0-0.3s: Processamento pré-atencional (visual PRECISA ser diferente)
 - 0.3-2s: Decisão de continuar ou scrollar (HOOK verbal é TUDO)
