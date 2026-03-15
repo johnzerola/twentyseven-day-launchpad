@@ -289,7 +289,7 @@ const MultiChannel = () => {
     }
   };
 
-
+  const generateIdeas = async () => {
     const selectedChannel = channels.find(c => c.id === newChannel);
     if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
     setGeneratingIdeas(true);
