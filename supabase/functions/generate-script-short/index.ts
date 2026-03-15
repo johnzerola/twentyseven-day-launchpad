@@ -223,9 +223,29 @@ ${selectedShortStyle}
 Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'}
 
 ═══════════════════════════════════
+📢 MÉTODO 2CTA — MAXIMIZAR INSCRITOS SEM PERDER RETENÇÃO:
+═══════════════════════════════════
+Integre OBRIGATORIAMENTE 2 CTAs no roteiro:
+
+CTA1 — VCTA (Visual CTA) → No primeiro terço do vídeo:
+- SUTIL, integrado à cena. NÃO peça verbalmente.
+- Exemplos: personagem segurando placa "Subscribe", texto no cenário, popup discreto.
+- Marque no roteiro com [VCTA: descrição do visual]
+
+CTA2 — VACTA (Visual+Audio CTA) → No momento de MAIOR TENSÃO, ANTES do payoff:
+- Integrado com a narrativa. NUNCA pare o vídeo.
+- Formato: "Subscribe se acha que [X vai acontecer]" 
+- Use tensão emocional para manter a retenção DURANTE o CTA.
+- Marque no roteiro com [VACTA: "frase do CTA"]
+- Exemplos: "Subscribe se acha que ele vai sobreviver", "Subscribe se isso te chocou"
+
+RESULTADO ESPERADO: Retenção RETA (sem dip) + máximo de inscritos.
+Canais que usam 2CTA crescem de 0 a 200K subs em 20 dias.
+
+═══════════════════════════════════
 ⚠️ REGRAS ABSOLUTAS:
 ═══════════════════════════════════
-1. APENAS texto falado. ZERO timestamps, "Narrador:", "Cena:", indicações
+1. APENAS texto falado + marcações [VCTA] e [VACTA]. ZERO timestamps, "Narrador:", "Cena:"
 2. Frases CURTÍSSIMAS: máximo 6-8 palavras por frase
 3. UMA ideia central. ZERO enrolação. Cada palavra PAGA seu espaço
 4. Linguagem MAGNÉTICA: coloquial mas poderosa
@@ -233,6 +253,7 @@ Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'}
 6. Pattern interrupt VISUAL a cada 8s (indique com [CORTE])
 7. MÁXIMO ${targetWords + 10} palavras. NUNCA passe de ${dur}s
 8. Texto overlay: inclua 3 frases de impacto para colocar na tela
+9. VCTA no primeiro terço, VACTA no momento de maior tensão
 
 ═══════════════════════════════════
 📝 APÓS O ROTEIRO, inclua:
