@@ -38,6 +38,12 @@ const DURATION_OPTIONS = [
   { value: 'long', label: '🎬 Longform (5-60min)', desc: 'Formato completo, monetização' },
 ];
 
+const SHORTS_DURATION_OPTIONS = [
+  { value: 'micro', label: '⚡ Micro (15-25s)', desc: 'Completion rate máximo. Viraliza rápido.', example: 'Fatos, comparações, trends' },
+  { value: 'flash', label: '🔥 Flash (25-40s)', desc: 'Sweet spot do algoritmo. Fato + twist.', example: 'Revelações, listicles, hacks' },
+  { value: 'story', label: '📖 Story (45-60s)', desc: 'Narrativas emocionais. Alto engajamento.', example: 'Milionários, crime, mitologia' },
+];
+
 interface ViralThemeWizardProps {
   onSelectTheme: (theme: any) => void;
   userChannels: any[];
@@ -55,6 +61,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
   const [topicInput, setTopicInput] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<'short' | 'long'>('long');
+  const [shortsDurationCat, setShortsDurationCat] = useState<'micro' | 'flash' | 'story'>('flash');
   
   // Results
   const [themes, setThemes] = useState<any[]>([]);
@@ -104,6 +111,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
           narrativeStyle: selectedStyle || undefined,
           channelKnowledge: channelKnowledge || undefined,
           videoFormat: selectedDuration,
+          shortsDuration: selectedDuration === 'short' ? shortsDurationCat : undefined,
         },
       });
       if (error) throw error;
@@ -127,6 +135,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
     setTopicInput('');
     setSelectedStyle('');
     setSelectedDuration('long');
+    setShortsDurationCat('flash');
     setThemes([]);
   };
 
@@ -288,6 +297,27 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                   </div>
                 </div>
 
+                {/* Shorts Duration Sub-Selection */}
+                {selectedDuration === 'short' && (
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">⚡ Tipo de Short</label>
+                    <div className="space-y-1">
+                      {SHORTS_DURATION_OPTIONS.map(sd => (
+                        <button key={sd.value} onClick={() => setShortsDurationCat(sd.value as any)}
+                          className={`w-full p-2 rounded-lg border text-[10px] text-left transition-all ${
+                            shortsDurationCat === sd.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
+                          }`}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{sd.label}</span>
+                            <span className="text-[9px] text-muted-foreground">{sd.desc}</span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground/70 mt-0.5">Ex: {sd.example}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <Button onClick={generateThemes} disabled={loading} className="w-full gap-2 text-xs">
                   {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                   {loading ? 'Gerando temas virais...' : '🔥 Gerar Temas Virais com IA'}
@@ -310,7 +340,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                   <Badge variant="outline" className="text-[9px]">{nicheData?.emoji} {nicheData?.label}</Badge>
                   {effectiveSubNiche && <Badge variant="secondary" className="text-[9px]">{effectiveSubNiche}</Badge>}
                   {selectedStyle && <Badge variant="outline" className="text-[9px]">{selectedStyle}</Badge>}
-                  <Badge variant="secondary" className="text-[9px]">{selectedDuration === 'short' ? '⚡ Shorts' : '🎬 Long'}</Badge>
+                  <Badge variant="secondary" className="text-[9px]">{selectedDuration === 'short' ? `⚡ ${shortsDurationCat === 'micro' ? 'Micro 15-25s' : shortsDurationCat === 'story' ? 'Story 45-60s' : 'Flash 25-40s'}` : '🎬 Long'}</Badge>
                 </div>
 
                 <Button onClick={generateThemes} disabled={loading} variant="outline" size="sm" className="w-full gap-1 text-[10px]">
@@ -320,7 +350,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
 
                 <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
                   {themes.map((theme: any, i: number) => (
-                    <button key={i} onClick={() => onSelectTheme({ ...theme, videoFormat: selectedDuration })}
+                    <button key={i} onClick={() => onSelectTheme({ ...theme, videoFormat: selectedDuration, durationCategory: theme.duration_category || shortsDurationCat })}
                       className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-medium text-xs flex-1">{theme.title}</span>
@@ -333,7 +363,17 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-[9px]">{theme.style}</Badge>
                         <Badge variant="secondary" className="text-[9px]">{theme.estimated_duration}</Badge>
-                        {theme.why_viral && <span className="text-[9px] text-muted-foreground">💡 {theme.why_viral.slice(0, 60)}</span>}
+                        {theme.duration_category && (
+                          <Badge variant="outline" className={`text-[9px] ${
+                            theme.duration_category === 'micro' ? 'border-chart-2/50 text-chart-2' :
+                            theme.duration_category === 'flash' ? 'border-chart-3/50 text-chart-3' :
+                            'border-chart-4/50 text-chart-4'
+                          }`}>
+                            {theme.duration_category === 'micro' ? '⚡' : theme.duration_category === 'flash' ? '🔥' : '📖'} {theme.duration_category}
+                          </Badge>
+                        )}
+                        {theme.series_potential && <span className="text-[9px] text-primary/70">🔄 Série</span>}
+                        {theme.why_viral && <span className="text-[9px] text-muted-foreground">💡 {theme.why_viral.slice(0, 50)}</span>}
                       </div>
                     </button>
                   ))}

@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, durationSeconds, style, niche, language, viralContext, channelKnowledge } = await req.json();
+    const { topic, durationSeconds, style, niche, language, viralContext, channelKnowledge, durationCategory } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -23,8 +23,11 @@ serve(async (req) => {
     const wpm = 150;
     const targetWords = Math.round((dur / 60) * wpm);
 
-    // ═══════ FETCH SHORTS-SPECIFIC KNOWLEDGE (parallel) ═══════
-    const [hookRes, psychRes, attRes, viralTitlesRes, contentModelRes, scenePatternRes] = await Promise.all([
+    // ═══ DETERMINE DURATION CATEGORY ═══
+    const durCat = durationCategory || (dur <= 25 ? 'micro' : dur <= 40 ? 'flash' : 'story');
+
+    // ═══ FETCH SHORTS-SPECIFIC KNOWLEDGE (parallel) ═══
+    const [hookRes, psychRes, attRes, viralTitlesRes, contentModelRes, scenePatternRes, shortsKnowledgeRes] = await Promise.all([
       sb.from("hook_library").select("hook_text,hook_type,retention_score,niche")
         .order("retention_score", { ascending: false }).limit(15),
       sb.from("audience_psychology_patterns").select("trigger_type,description,example_hooks,storytelling_pattern,retention_score")
@@ -34,15 +37,18 @@ serve(async (req) => {
         .order("retention_impact", { ascending: false }).limit(12),
       sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
         .order("views", { ascending: false }).limit(8),
-      sb.from("content_models").select("model_name,description,hook_pattern,pacing_guide,structure_json,retention_profile")
+      sb.from("content_models").select("model_name,description,hook_pattern,pacing_guide,structure_json,retention_profile,best_for_duration")
         .eq("video_type", "short")
-        .order("effectiveness_score", { ascending: false }).limit(5),
+        .order("effectiveness_score", { ascending: false }).limit(8),
       sb.from("attention_library").select("pattern_name,scene_type,emotion,attention_score,recovery_technique,time_window")
         .gte("attention_score", 7)
         .order("attention_score", { ascending: false }).limit(8),
+      sb.from("youtube_knowledge").select("title,content")
+        .ilike("title", "%shorts%")
+        .order("priority", { ascending: false }).limit(3),
     ]);
 
-    // ═══════ BUILD KNOWLEDGE BLOCKS ═══════
+    // ═══ BUILD KNOWLEDGE BLOCKS ═══
     const hookLibrary = (hookRes.data || []).map((r: any) =>
       `• [${r.hook_type}] "${r.hook_text}" (retenção: ${r.retention_score}/10${r.niche ? ` | ${r.niche}` : ''})`
     ).join("\n");
@@ -53,105 +59,100 @@ serve(async (req) => {
     }).join("\n");
 
     const attEngineering = (attRes.data || []).map((r: any) =>
-      `• ${r.pattern_name} [${r.category}] (${r.trigger_second || 0}s, impacto: +${r.retention_impact}%): ${r.technique.slice(0, 150)}\n  Psicologia: ${(r.psychological_basis || '').slice(0, 100)}`
+      `• ${r.pattern_name} [${r.category}] (${r.trigger_second || 0}s, impacto: +${r.retention_impact}%): ${r.technique.slice(0, 150)}`
     ).join("\n");
 
     const viralTitles = (viralTitlesRes.data || []).slice(0, 5).map((t: any) =>
       `• "${t.title}" (${(t.views || 0).toLocaleString()} views) — ${t.why_viral || t.title_pattern || ''}`
     ).join("\n");
 
-    const contentModels = (contentModelRes.data || []).map((m: any) => {
+    // ═══ SELECT BEST MODEL FOR DURATION ═══
+    const allModels = contentModelRes.data || [];
+    const bestModel = allModels.find((m: any) => {
+      const bf = (m.best_for_duration || '').toLowerCase();
+      if (durCat === 'micro' && bf.includes('15')) return true;
+      if (durCat === 'flash' && (bf.includes('25') || bf.includes('30'))) return true;
+      if (durCat === 'story' && (bf.includes('45') || bf.includes('50') || bf.includes('60'))) return true;
+      return false;
+    }) || allModels[0];
+
+    const contentModels = allModels.map((m: any) => {
       const phases = Array.isArray(m.structure_json) ? m.structure_json.map((p: any) => `  ${p.phase} (${p.seconds}): ${p.action}`).join("\n") : '';
-      return `📐 ${m.model_name}: ${m.description}\n  Hook: ${m.hook_pattern}\n  Pacing: ${m.pacing_guide}\n${phases}`;
+      const selected = m === bestModel ? ' ⭐ RECOMENDADO' : '';
+      return `📐 ${m.model_name} (${m.best_for_duration})${selected}:\n  ${m.description}\n  Hook: ${m.hook_pattern}\n  Pacing: ${m.pacing_guide}\n${phases}`;
     }).join("\n\n");
 
     const scenePatterns = (scenePatternRes.data || []).map((s: any) =>
-      `• ${s.pattern_name} [${s.scene_type}] (${s.time_window}) — emoção: ${s.emotion}, score: ${s.attention_score}/10${s.recovery_technique ? ` | recovery: ${s.recovery_technique}` : ''}`
+      `• ${s.pattern_name} [${s.scene_type}] (${s.time_window}) — emoção: ${s.emotion}, score: ${s.attention_score}/10`
     ).join("\n");
 
-    const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS DO USUÁRIO:\n${viralContext}\n` : '';
+    const shortsKnowledge = (shortsKnowledgeRes.data || []).map((k: any) =>
+      `${k.title}: ${k.content?.slice(0, 300)}`
+    ).join("\n\n");
+
+    const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
     const channelBlock = channelKnowledge ? `\n📚 CONHECIMENTO DO CANAL:\n${channelKnowledge}\nAdapte o tom e estilo ao perfil deste canal.\n` : '';
 
-    // ═══════ STYLE-SPECIFIC SHORT INSTRUCTIONS ═══════
+    // ═══ DURATION-SPECIFIC STRATEGY ═══
+    const durationStrategies: Record<string, string> = {
+      micro: `🎯 MODO MICRO-SHORT (15-25s) — COMPLETION RATE MÁXIMO
+OBJETIVO: >95% de completion. UMA ideia nuclear. ZERO gordura.
+- Cada segundo = 1 punch dopaminérgico. Sem transições, sem buildup longo.
+- Hook em 0.3s + conteúdo denso + loop em 3s finais.
+- Pense: "Qual é o FATO ÚNICO mais chocante sobre esse tema?"
+- Se pode ser dito em 15s, NÃO use 25s. Brevidade = viralização.
+- DADO: Shorts de 15-25s têm 40% mais chance de entrar no feed "For You".`,
+
+      flash: `🎯 MODO FLASH-SHORT (25-40s) — SWEET SPOT DO ALGORITMO
+OBJETIVO: >88% de completion. Fato + contexto + twist.
+- Hook (2s) → Setup rápido (5s) → 2-3 revelações escalando (15s) → Twist (5s) → Loop (3s)
+- Permite um arco narrativo MÍNIMO: apresentar → escalar → surpreender.
+- Pattern interrupt a cada 8s para manter atenção.
+- Ideal para: "3 coisas que...", revelações com buildup, hacks com demonstração.`,
+
+      story: `🎯 MODO STORY-SHORT (45-60s) — NARRATIVA EMOCIONAL
+OBJETIVO: >78% de completion. A história JUSTIFICA cada segundo.
+- Flashforward (3s) → Setup personagem (10s) → Jornada (15s) → Escalada (10s) → Twist devastador (7s) → Loop emocional (5s)
+- SÓ funciona com temas de ALTO valor emocional: milionários, crime, tragédia, superação.
+- Precisa de retention engineering a cada 8s: pattern interrupt, revelação, mudança de tom.
+- Se o tema NÃO precisa de 45-60s, ENCURTE. Nunca estique conteúdo fraco.
+- CASE: Canais de história com shorts de 48s médios atingem 500K+ com storytelling comprimido.`,
+    };
+
+    const durationStrategy = durationStrategies[durCat] || durationStrategies.flash;
+
+    // ═══ STYLE-SPECIFIC SHORT INSTRUCTIONS ═══
     const styleLC = (style || '').toLowerCase();
     const shortStyleGuides: Record<string, string> = {
-      'dopaminérgico': `MODO DOPAMINA MÁXIMA:
-- Cada frase = 1 punch dopaminérgico. Zero frases de transição.
-- Técnica "Dopamine Stacking": micro-revelação a cada 3s, cada uma mais intensa.
-- Ritmo: pausa de 0.3s entre frases. Nunca mais que 6 palavras seguidas.
-- Final: "E o pior de tudo..." → loop para o início.`,
-      'cinematográfico': `MODO CINEMA COMPRIMIDO:
-- Micro-história visual em 3 atos comprimidos. Cada segundo é um frame de filme.
-- Descrições sensoriais densas: "O silêncio era tão pesado que..."
-- Use flashforward nos primeiros 2s, depois volte ao início.
-- Final épico que ressoa emocionalmente.`,
-      'mrbeast': `MODO IMPOSSÍVEL DE IGNORAR:
-- Energia 11/10 desde o segundo 0. "Em 30 SEGUNDOS eu vou..."
-- Promessa ABSURDA + entrega. Stakes impossíveis.
-- Contagem regressiva implícita. Urgência a cada frase.
-- Desafio relâmpago com resultado CHOCANTE.`,
-      'storytelling': `MODO MINI-HISTÓRIA:
-- Personagem + conflito em 5s. Empatia instantânea.
-- Cada frase avança a história. Zero descrição desnecessária.
-- Plot twist nos últimos 8s que muda TUDO.
-- Última frase ecoa na mente do espectador.`,
-      'narração': `MODO NARRAÇÃO HIPNÓTICA:
-- Tom confessional, como se contasse um segredo.
-- Uma revelação por frase. Pausas estratégicas.
-- Suspense comprimido ao máximo. "E foi aí que eu vi..."
-- Voz que gruda no ouvido. Cada palavra é intencional.`,
-      'educativo': `MODO DESTRUIDOR DE MITOS:
-- UM fato devastador que muda perspectiva em 30s.
-- "Tudo que te ensinaram sobre [X] está errado."
-- Dado específico + analogia visual + implicação chocante.
-- Final: "E sabe o que é pior?"`,
-      'tutorial': `MODO HACK RELÂMPAGO:
-- Resultado PRIMEIRO (nos primeiros 3s). Depois o método.
-- Máximo 3 passos. Cada um com resultado visível.
-- "O hack que ninguém conta..." → passo 1 → passo 2 → resultado.
-- "Salva esse vídeo" como CTA implícito.`,
-      'listicle': `MODO ESCALADA NUCLEAR:
-- 3 items máximo. Cada um MAIS chocante que o anterior.
-- "Número 3 vai te deixar sem dormir."
-- Transição brusca entre items. Sem enrolação.
-- O último item deve ser 3x mais impactante.`,
-      'reddit': `MODO CONFISSÃO:
-- "Eu nunca deveria ter..." — primeira pessoa.
-- Tom vulnerável e autêntico. Detalhes que validam.
-- Plot twist brutal que ninguém espera.
-- "E o pior? Ninguém me acreditou."`,
-      'conspiração': `MODO PROIBIDO:
-- "Eles não querem que você saiba isso."
-- Uma pergunta impossível + evidência visual forte.
-- Escalada de revelações, cada uma mais perturbadora.
-- "Se eu desaparecer... já sabe o motivo."`,
-      'mitologia': `MODO ÉPICO COMPRIMIDO:
-- Momento mais devastador de um mito em 30s.
-- Batalha, traição ou sacrifício. Emoção máxima.
-- Descrições grandiosas em frases curtas: "O céu se abriu."
-- Final que conecta mito com lição atemporal.`,
-      'teorias': `MODO MISTÉRIO RELÂMPAGO:
-- "E se eu te dissesse que..." — semente de dúvida.
-- 1 evidência → 1 contra-evidência → revelação final.
-- Cada frase aumenta a incerteza. Espectador PRECISA saber.
-- Loop: "Mas a verdade é ainda pior do que parece..."`,
+      'dopaminérgico': `MODO DOPAMINA MÁXIMA:\n- Cada frase = 1 punch dopaminérgico. Zero frases de transição.\n- Técnica "Dopamine Stacking": micro-revelação a cada 3s, cada uma mais intensa.\n- Ritmo: pausa de 0.3s entre frases. Nunca mais que 6 palavras seguidas.\n- Final: "E o pior de tudo..." → loop para o início.`,
+      'cinematográfico': `MODO CINEMA COMPRIMIDO:\n- Micro-história visual em 3 atos. Cada segundo é um frame de filme.\n- Descrições sensoriais densas: "O silêncio era tão pesado que..."\n- Flashforward nos primeiros 2s, depois volte ao início.\n- Final épico que ressoa emocionalmente.`,
+      'mrbeast': `MODO IMPOSSÍVEL DE IGNORAR:\n- Energia 11/10 desde o segundo 0. "Em 30 SEGUNDOS eu vou..."\n- Promessa ABSURDA + entrega. Stakes impossíveis.\n- Contagem regressiva implícita. Urgência a cada frase.`,
+      'storytelling': `MODO MINI-HISTÓRIA:\n- Personagem + conflito em 5s. Empatia instantânea.\n- Cada frase avança a história. Zero descrição desnecessária.\n- Plot twist nos últimos 8s que muda TUDO.`,
+      'narração': `MODO NARRAÇÃO HIPNÓTICA:\n- Tom confessional, como se contasse um segredo.\n- Uma revelação por frase. Pausas estratégicas.\n- Suspense comprimido ao máximo.`,
+      'educativo': `MODO DESTRUIDOR DE MITOS:\n- UM fato devastador que muda perspectiva.\n- "Tudo que te ensinaram sobre [X] está errado."\n- Dado específico + analogia visual + implicação chocante.`,
+      'tutorial': `MODO HACK RELÂMPAGO:\n- Resultado PRIMEIRO (3s). Depois o método.\n- Máximo 3 passos. Cada um com resultado visível.`,
+      'listicle': `MODO ESCALADA NUCLEAR:\n- 3 items máximo. Cada um MAIS chocante.\n- "Número 3 vai te deixar sem dormir."\n- O último item 3x mais impactante.`,
+      'reddit': `MODO CONFISSÃO:\n- "Eu nunca deveria ter..." — primeira pessoa.\n- Tom vulnerável e autêntico.\n- Plot twist brutal que ninguém espera.`,
+      'conspiração': `MODO PROIBIDO:\n- "Eles não querem que você saiba isso."\n- Escalada de revelações, cada uma mais perturbadora.`,
+      'mitologia': `MODO ÉPICO COMPRIMIDO:\n- Momento mais devastador de um mito em ${dur}s.\n- Batalha, traição ou sacrifício. Emoção máxima.`,
+      'teorias': `MODO MISTÉRIO RELÂMPAGO:\n- "E se eu te dissesse que..." — semente de dúvida.\n- 1 evidência → 1 contra-evidência → revelação final.`,
     };
     const selectedShortStyle = shortStyleGuides[styleLC] || shortStyleGuides['dopaminérgico'];
 
-    // ═══════ CHOOSE BEST CONTENT MODEL ═══════
-    const bestModel = contentModelRes.data?.[0];
-    const modelBlock = bestModel ? `\n📐 MODELO ESTRUTURAL RECOMENDADO: ${bestModel.model_name}\n${bestModel.description}\nHook: ${bestModel.hook_pattern}\nPacing: ${bestModel.pacing_guide}\n` : '';
+    const modelBlock = bestModel ? `\n📐 MODELO ESTRUTURAL RECOMENDADO: ${bestModel.model_name} (${bestModel.best_for_duration})\n${bestModel.description}\nHook: ${bestModel.hook_pattern}\nPacing: ${bestModel.pacing_guide}\n` : '';
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DE SHORTS DO MUNDO. Taxa de conclusão: 95%+. Cada Short seu faz >1M views.
 
 ═══════════════════════════════════
 📱 FORMATO: YouTube Short / TikTok / Reels — VERTICAL 9:16
 ⏱️ DURAÇÃO: EXATAMENTE ${dur} segundos (~${targetWords} palavras)
+📊 CATEGORIA: ${durCat.toUpperCase()} SHORT
 ═══════════════════════════════════
 
+${durationStrategy}
+
 🧬 CIÊNCIA DA ATENÇÃO PARA SHORTS:
-Shorts competem contra o scroll infinito. Você tem 0.3 segundos para capturar atenção.
-Cada segundo sem valor = espectador perdido PARA SEMPRE.
+${shortsKnowledge}
 
 O cérebro humano em Shorts:
 - 0-0.3s: Processamento pré-atencional (visual PRECISA ser diferente)
@@ -163,15 +164,26 @@ O cérebro humano em Shorts:
 ═══════════════════════════════════
 🎯 ESTRUTURA NEURAL-OTIMIZADA:
 ═══════════════════════════════════
-1. SCROLL STOPPER (0-0.3s): Visual + texto na tela que PARA o dedo
+${durCat === 'micro' ? `1. SCROLL STOPPER (0-0.3s): Visual + texto na tela que PARA o dedo
+2. VERBAL HOOK (0.3-2s): Frase IMPOSSÍVEL de ignorar. Máx 5 palavras.
+3. NUCLEAR CONTENT (2-${dur - 3}s): Informação densa, cada frase é explosão dopaminérgica
+4. LOOP MAGNET (últimos 3s): Final que CONECTA ao início → >200% watch time`
+: durCat === 'flash' ? `1. SCROLL STOPPER (0-0.3s): Visual + texto na tela
 2. VERBAL HOOK (0.3-2s): Frase IMPOSSÍVEL de ignorar. Máx 8 palavras.
-3. CURIOSITY GAP (2-5s): Abra um loop que SÓ fecha no final
-4. DOPAMINE STACK (5-${Math.round(dur * 0.6)}s): Micro-revelações a cada 3-5s, ESCALANDO
-5. EMOTIONAL PEAK (${Math.round(dur * 0.6)}-${Math.round(dur * 0.85)}s): Twist/Revelação/Choque
-6. LOOP MAGNET (últimos 3-5s): Final que CONECTA ao início → >200% watch time
+3. CONTEXT (2-7s): Setup mínimo: quem/quando/onde
+4. ESCALATION (7-${Math.round(dur * 0.7)}s): Micro-revelações escalando
+5. TWIST (${Math.round(dur * 0.7)}-${Math.round(dur * 0.85)}s): Informação que inverte tudo
+6. LOOP MAGNET (últimos 3-5s): Final → início`
+: `1. FLASHFORWARD (0-3s): Resultado dramático ANTES da história
+2. VERBAL HOOK (3-5s): "Essa é a história de..."
+3. ORIGIN (5-13s): Personagem + situação + empatia
+4. JOURNEY (13-28s): Ascensão ou queda com detalhes específicos
+5. PEAK (28-${Math.round(dur * 0.8)}s): Máxima tensão, stakes impossíveis
+6. DEVASTATION (${Math.round(dur * 0.8)}-${Math.round(dur * 0.9)}s): Twist devastador
+7. ECHO LOOP (últimos 5s): Frase que conecta ao flashforward`}
 ${modelBlock}
 ═══════════════════════════════════
-🎣 HOOKS REAIS DE ALTA PERFORMANCE (use como inspiração):
+🎣 HOOKS REAIS DE ALTA PERFORMANCE:
 ═══════════════════════════════════
 ${hookLibrary}
 
@@ -185,8 +197,7 @@ ${psychTriggers}
 ═══════════════════════════════════
 ${attEngineering}
 
-${scenePatterns ? `═══════════════════════════════════\n🎬 PADRÕES DE CENA DE ALTA ATENÇÃO:\n═══════════════════════════════════\n${scenePatterns}\n` : ''}
-
+${scenePatterns ? `═══════════════════════════════════\n🎬 PADRÕES DE CENA:\n═══════════════════════════════════\n${scenePatterns}\n` : ''}
 ${viralTitles ? `═══════════════════════════════════\n🏆 TÍTULOS VIRAIS REFERÊNCIA:\n═══════════════════════════════════\n${viralTitles}\n` : ''}
 ${viralInjection}
 ${channelBlock}
@@ -198,23 +209,24 @@ ${selectedShortStyle}
 Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'}
 
 ═══════════════════════════════════
-⚠️ REGRAS ABSOLUTAS (violação = roteiro rejeitado):
+⚠️ REGRAS ABSOLUTAS:
 ═══════════════════════════════════
-1. APENAS texto falado. ZERO: timestamps, "Narrador:", "Cena:", indicações
+1. APENAS texto falado. ZERO timestamps, "Narrador:", "Cena:", indicações
 2. Frases CURTÍSSIMAS: máximo 6-8 palavras por frase
 3. UMA ideia central. ZERO enrolação. Cada palavra PAGA seu espaço
-4. Linguagem MAGNÉTICA: coloquial mas poderosa. Sem ser formal
+4. Linguagem MAGNÉTICA: coloquial mas poderosa
 5. LOOP ENDING obrigatório: últimas palavras → primeiras palavras
 6. Pattern interrupt VISUAL a cada 8s (indique com [CORTE])
 7. MÁXIMO ${targetWords + 10} palavras. NUNCA passe de ${dur}s
+8. Texto overlay: inclua 3 frases de impacto para colocar na tela
 
 ═══════════════════════════════════
-📝 APÓS O ROTEIRO, inclua exatamente:
+📝 APÓS O ROTEIRO, inclua:
 ═══════════════════════════════════
 ---SHORT_META---
 TÍTULOS (3 opções virais):
 1. [título 1]
-2. [título 2]  
+2. [título 2]
 3. [título 3]
 
 HASHTAGS: #tag1 #tag2 #tag3 #tag4 #tag5
@@ -226,19 +238,21 @@ OVERLAY (frases para tela):
 - [frase impacto 2]
 - [frase impacto 3]
 
-LOOP SCORE: [0-10 quão bem o final conecta ao início]
-DOPAMINE SCORE: [0-10 densidade de micro-recompensas]
-HOOK SCORE: [0-10 força do hook de 2 segundos]
+LOOP SCORE: [0-10]
+DOPAMINE SCORE: [0-10]
+HOOK SCORE: [0-10]
+COMPLETION ESTIMATE: [%]
+DURATION CATEGORY: ${durCat}
 ---END_SHORT_META---`;
 
-    console.log(`Generating SHORT script: ${dur}s, ~${targetWords} words, style=${style}, niche=${niche}`);
+    console.log(`Generating SHORT: ${dur}s (~${targetWords}w), cat=${durCat}, style=${style}, niche=${niche}`);
     const res = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Escreva um SHORT VIRAL de ${dur}s sobre: "${topic}"\n\nAlvo: ${targetWords} palavras.\nHook de CHOQUE em 0.3s.\nDopamine stacking a cada 3-5s.\nLoop ending obrigatório.\nCada palavra deve MERECER estar no roteiro.\n\nComece IMEDIATAMENTE com o hook — sem preâmbulos!` }
+          { role: "user", content: `Escreva um ${durCat.toUpperCase()} SHORT VIRAL de ${dur}s sobre: "${topic}"\n\nAlvo: ${targetWords} palavras.\n${durCat === 'micro' ? 'Cada segundo = informação nova. ZERO gordura.' : durCat === 'story' ? 'Conte uma HISTÓRIA com personagem real, conflito e twist devastador.' : 'Fato surpreendente + buildup + twist.'}\nHook de CHOQUE em 0.3s.\nLoop ending obrigatório.\n\nComece IMEDIATAMENTE com o hook!` }
         ],
         stream: true,
       }),
