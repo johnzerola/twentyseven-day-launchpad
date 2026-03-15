@@ -176,7 +176,120 @@ const MultiChannel = () => {
     }
   };
 
-  const generateIdeas = async () => {
+  const loadDailyTasks = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: plan } = await supabase
+      .from('monetization_30day_plans')
+      .select('id, current_day')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (plan) {
+      setCurrentDay(plan.current_day || 1);
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('*')
+        .eq('plan_id', plan.id)
+        .gte('day_number', plan.current_day || 1)
+        .lte('day_number', (plan.current_day || 1) + 2)
+        .order('day_number');
+      setDailyTasks(tasks || []);
+    }
+  };
+
+  const generateSmartCalendar = async () => {
+    const selectedCh = channels[0];
+    if (!selectedCh) { toast.error('Vincule um canal primeiro'); return; }
+    setGeneratingCalendar(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-30day-plan`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          niche: selectedCh.niche || 'general',
+          channelName: selectedCh.channel_name,
+          language: 'português',
+          country: 'BR',
+          strategy: 'shorts-first',
+        }),
+      });
+      const result = await res.json();
+      if (result.plan) {
+        setCalendarData(result.plan.days || []);
+        toast.success('📅 Calendário de 30 dias gerado!');
+        loadDailyTasks();
+      } else {
+        toast.error(result.error || 'Erro ao gerar calendário');
+      }
+    } catch {
+      toast.error('Erro de conexão');
+    } finally {
+      setGeneratingCalendar(false);
+    }
+  };
+
+  const toggleTaskComplete = async (taskId: string, completed: boolean) => {
+    await supabase.from('daily_tasks').update({
+      completed: !completed,
+      completed_at: !completed ? new Date().toISOString() : null,
+    } as any).eq('id', taskId);
+    setDailyTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: !completed } : t));
+    if (!completed) toast.success('✅ Tarefa concluída!');
+  };
+
+  const trackCompetitors = async () => {
+    const selectedCh = channels[0];
+    if (!selectedCh?.niche) { toast.error('Seu canal precisa ter um nicho definido'); return; }
+    setTrackingCompetitors(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/competitor-tracker`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          niche: selectedCh.niche,
+          channel_id: selectedCh.id,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setCompetitors(result.competitors || []);
+        setCompetitorAlerts(result.alerts || []);
+        toast.success(`📡 ${result.total_analyzed} concorrentes analisados`);
+      }
+    } catch {
+      toast.error('Erro ao rastrear concorrentes');
+    } finally {
+      setTrackingCompetitors(false);
+    }
+  };
+
+  const loadNicheBenchmark = async (niche: string) => {
+    setLoadingBenchmark(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/niche-benchmark`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ niche }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setBenchmark(result.benchmark);
+      }
+    } catch {
+      toast.error('Erro ao carregar benchmark');
+    } finally {
+      setLoadingBenchmark(false);
+    }
+  };
+
+
     const selectedChannel = channels.find(c => c.id === newChannel);
     if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
     setGeneratingIdeas(true);
