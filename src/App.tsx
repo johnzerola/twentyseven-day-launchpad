@@ -23,6 +23,7 @@ import MultiChannel from "./pages/MultiChannel";
 import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 import ChannelIntelligence from "./pages/ChannelIntelligence";
 import Tracker30Days from "./pages/Tracker30Days";
+import GrowthTools from "./pages/GrowthTools";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
