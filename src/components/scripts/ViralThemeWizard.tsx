@@ -111,6 +111,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
           narrativeStyle: selectedStyle || undefined,
           channelKnowledge: channelKnowledge || undefined,
           videoFormat: selectedDuration,
+          shortsDuration: selectedDuration === 'short' ? shortsDurationCat : undefined,
         },
       });
       if (error) throw error;
