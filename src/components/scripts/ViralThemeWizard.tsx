@@ -350,7 +350,7 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
 
                 <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
                   {themes.map((theme: any, i: number) => (
-                    <button key={i} onClick={() => onSelectTheme({ ...theme, videoFormat: selectedDuration })}
+                    <button key={i} onClick={() => onSelectTheme({ ...theme, videoFormat: selectedDuration, durationCategory: theme.duration_category || shortsDurationCat })}
                       className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-medium text-xs flex-1">{theme.title}</span>
@@ -363,7 +363,17 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-[9px]">{theme.style}</Badge>
                         <Badge variant="secondary" className="text-[9px]">{theme.estimated_duration}</Badge>
-                        {theme.why_viral && <span className="text-[9px] text-muted-foreground">💡 {theme.why_viral.slice(0, 60)}</span>}
+                        {theme.duration_category && (
+                          <Badge variant="outline" className={`text-[9px] ${
+                            theme.duration_category === 'micro' ? 'border-chart-2/50 text-chart-2' :
+                            theme.duration_category === 'flash' ? 'border-chart-3/50 text-chart-3' :
+                            'border-chart-4/50 text-chart-4'
+                          }`}>
+                            {theme.duration_category === 'micro' ? '⚡' : theme.duration_category === 'flash' ? '🔥' : '📖'} {theme.duration_category}
+                          </Badge>
+                        )}
+                        {theme.series_potential && <span className="text-[9px] text-primary/70">🔄 Série</span>}
+                        {theme.why_viral && <span className="text-[9px] text-muted-foreground">💡 {theme.why_viral.slice(0, 50)}</span>}
                       </div>
                     </button>
                   ))}
