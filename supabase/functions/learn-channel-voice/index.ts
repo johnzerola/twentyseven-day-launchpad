@@ -120,7 +120,7 @@ Return JSON with:
         vocabulary_richness: vocabularyRichness,
         tone_keywords: voiceProfile.tone_keywords,
       },
-    }).catch(() => {});
+    });
 
     return new Response(JSON.stringify({
       success: true,
