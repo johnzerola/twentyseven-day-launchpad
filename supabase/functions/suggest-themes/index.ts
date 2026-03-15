@@ -42,6 +42,9 @@ serve(async (req) => {
 
     const topicContext = topic ? `\nTÓPICO DO USUÁRIO: "${topic}" — gere temas que EXPANDEM, COMPLEMENTAM ou dão ângulos diferentes sobre este tópico específico. NÃO repita o tópico, mas crie variações e ramificações.` : '';
     const narrativeContext = narrativeStyle ? `\nESTILO NARRATIVO PREFERIDO: ${narrativeStyle} — todos os temas devem ser adequados para este estilo de narração.` : '';
+    const subNicheContext = subNiche ? `\nSUB-NICHO ESPECÍFICO: "${subNiche}" — TODOS os temas devem focar especificamente neste sub-nicho. Exemplo: se o nicho é "história" e o sub-nicho é "Egito antigo", gere APENAS temas sobre o Egito antigo.` : '';
+    const channelContext2 = channelKnowledge ? `\nCONHECIMENTO DO CANAL (insights e preferências do criador):\n${channelKnowledge}\n\nUse estes insights para personalizar os temas ao estilo e estratégia do canal.` : '';
+    const formatContext = videoFormat === 'short' ? `\nFORMATO: SHORTS (15-60 segundos). Gere temas que funcionam em formato ultra-curto. Cada tema deve ter potencial para ser cortado em 3+ cenas impactantes. O hook deve capturar em 1 segundo.` : '';
 
     const prompt = `Você é um estrategista de conteúdo YouTube com 15 anos de experiência em canais faceless/dark.
 
@@ -52,11 +55,14 @@ TENDÊNCIAS YOUTUBE ${year}:
 ${ytContext}
 ${topicContext}
 ${narrativeContext}
+${subNicheContext}
+${channelContext2}
+${formatContext}
 
 Gere ${count || 10} ideias de vídeos ÚNICOS e VIRAIS para ${month} ${year}.
 
 Requisitos:
-- Nicho: ${niche || "geral (faceless/dark)"}
+- Nicho: ${niche || "geral (faceless/dark)"}${subNiche ? ` → Sub-nicho: ${subNiche}` : ''}
 - Estilo: ${style || "qualquer estilo faceless"}
 - Idioma: ${language || "português"}
 - Cada ideia deve ter potencial viral REAL baseado nos padrões dos canais analisados
@@ -64,6 +70,7 @@ Requisitos:
 ${topic ? `- TODOS os temas devem estar relacionados ao tópico "${topic}" — explore sub-temas, ângulos contrários, aprofundamentos, comparações e conexões surpreendentes.` : '- Pense em temas que ninguém está cobrindo ainda mas que têm DEMANDA.'}
 - Considere sazonalidade, notícias recentes, tendências emergentes.
 - Para cada ideia, sugira o estilo de roteiro ideal (documentário, listicle, storytelling, etc).
+${videoFormat === 'short' ? '- FORMATO SHORTS: durações curtas (15s, 30s, 45s, 60s). Hook de 1 segundo. Alta densidade de informação.' : ''}
 
 IMPORTANTE: Gere temas que fariam o espectador clicar IMEDIATAMENTE.`;
 
