@@ -2527,6 +2527,77 @@ export type Database = {
         }
         Relationships: []
       }
+      script_scores: {
+        Row: {
+          ai_feedback: Json | null
+          content_dna_match: number | null
+          created_at: string | null
+          emotion_score: number | null
+          hook_score: number | null
+          id: string
+          improvement_suggestions: string[] | null
+          niche: string | null
+          overall_grade: string | null
+          pacing_score: number | null
+          project_id: string | null
+          retention_score: number | null
+          script_text: string
+          similar_viral_videos: Json | null
+          title: string | null
+          user_id: string
+          video_type: string | null
+          viral_score: number | null
+        }
+        Insert: {
+          ai_feedback?: Json | null
+          content_dna_match?: number | null
+          created_at?: string | null
+          emotion_score?: number | null
+          hook_score?: number | null
+          id?: string
+          improvement_suggestions?: string[] | null
+          niche?: string | null
+          overall_grade?: string | null
+          pacing_score?: number | null
+          project_id?: string | null
+          retention_score?: number | null
+          script_text: string
+          similar_viral_videos?: Json | null
+          title?: string | null
+          user_id: string
+          video_type?: string | null
+          viral_score?: number | null
+        }
+        Update: {
+          ai_feedback?: Json | null
+          content_dna_match?: number | null
+          created_at?: string | null
+          emotion_score?: number | null
+          hook_score?: number | null
+          id?: string
+          improvement_suggestions?: string[] | null
+          niche?: string | null
+          overall_grade?: string | null
+          pacing_score?: number | null
+          project_id?: string | null
+          retention_score?: number | null
+          script_text?: string
+          similar_viral_videos?: Json | null
+          title?: string | null
+          user_id?: string
+          video_type?: string | null
+          viral_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       script_structures: {
         Row: {
           avg_retention: number | null

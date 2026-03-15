@@ -12,8 +12,11 @@ import { toast } from 'sonner';
 import { 
   Rocket, Trophy, Calendar, CheckCircle2, Target, TrendingUp, 
   Flame, Zap, Play, Clock, Star, ChevronLeft, ChevronRight,
-  BarChart3, Video, Eye, Users, Loader2
+  BarChart3, Video, Eye, Users, Loader2, Brain
 } from 'lucide-react';
+import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
+import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DailyTask {
   id: string;
@@ -392,40 +395,59 @@ export default function Tracker30Days() {
             )}
           </div>
 
-          {/* Milestones Sidebar */}
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Milestones
-            </h2>
+          {/* Right Sidebar */}
+          <div className="space-y-4">
+            <Tabs defaultValue="ypp" className="w-full">
+              <TabsList className="w-full grid grid-cols-3">
+                <TabsTrigger value="ypp" className="text-xs">YPP</TabsTrigger>
+                <TabsTrigger value="milestones" className="text-xs">Marcos</TabsTrigger>
+                <TabsTrigger value="calibration" className="text-xs">
+                  <Brain className="w-3 h-3 mr-1" />IA
+                </TabsTrigger>
+              </TabsList>
 
-            {milestones.map(m => (
-              <Card key={m.id} className={`transition-all ${m.reached ? 'border-yellow-500/30 bg-yellow-500/5' : ''}`}>
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{m.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${m.reached ? 'text-yellow-400' : ''}`}>
-                        {m.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Progress 
-                          value={Math.min(100, (m.current_value / m.target_value) * 100)} 
-                          className="h-1 flex-1" 
-                        />
-                        <span className="text-[10px] text-muted-foreground">
-                          {m.current_value}/{m.target_value}
-                        </span>
+              <TabsContent value="ypp" className="mt-3">
+                <YPPProgressDashboard />
+              </TabsContent>
+
+              <TabsContent value="milestones" className="mt-3 space-y-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  Milestones
+                </h2>
+                {milestones.map(m => (
+                  <Card key={m.id} className={`transition-all ${m.reached ? 'border-yellow-500/30 bg-yellow-500/5' : ''}`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{m.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${m.reached ? 'text-yellow-400' : ''}`}>
+                            {m.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Progress 
+                              value={Math.min(100, (m.current_value / m.target_value) * 100)} 
+                              className="h-1 flex-1" 
+                            />
+                            <span className="text-[10px] text-muted-foreground">
+                              {m.current_value}/{m.target_value}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Meta: Dia {m.day_expected}
+                          </p>
+                        </div>
+                        {m.reached && <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0" />}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Meta: Dia {m.day_expected}
-                      </p>
-                    </div>
-                    {m.reached && <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0" />}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+
+              <TabsContent value="calibration" className="mt-3">
+                <PredictionVsReality />
+              </TabsContent>
+            </Tabs>
 
             {/* Weekly Summary */}
             {planJson.weekly_goals && (

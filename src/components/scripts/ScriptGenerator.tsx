@@ -1078,13 +1078,38 @@ export const ScriptGenerator = ({
             )}
 
             {script && !generating && (
-              <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
-                <Button variant="ghost" size="sm" onClick={() => setWizardStep(1)} className="gap-1 text-xs">
-                  <ArrowLeft className="w-3 h-3" /> Voltar ao rascunho
-                </Button>
-                <Button size="sm" onClick={() => runStep3_DualScoreWithText()} disabled={generating} className="gap-2 text-xs">
-                  <Shield className="w-4 h-4" /> Avaliar (GPT + Gemini)
-                  <ArrowRight className="w-3 h-3" />
+              <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-border/50">
+                <div className="flex justify-between">
+                  <Button variant="ghost" size="sm" onClick={() => setWizardStep(1)} className="gap-1 text-xs">
+                    <ArrowLeft className="w-3 h-3" /> Voltar ao rascunho
+                  </Button>
+                  <Button size="sm" onClick={() => runStep3_DualScoreWithText()} disabled={generating} className="gap-2 text-xs">
+                    <Shield className="w-4 h-4" /> Avaliar (GPT + Gemini)
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full gap-2 text-xs border-primary/30 hover:bg-primary/10"
+                  onClick={async () => {
+                    toast.info('🧬 Analisando com Content DNA...');
+                    try {
+                      const { data: scoreResult, error } = await supabase.functions.invoke('score-script', {
+                        body: { scriptText: script, title: topic, niche, videoType },
+                      });
+                      if (error) throw error;
+                      const s = scoreResult.scores;
+                      toast.success(`Score DNA: ${s.overall_grade} (Viral: ${s.viral_score}, Hook: ${s.hook_score})`);
+                      if (s.improvement_suggestions?.length) {
+                        s.improvement_suggestions.forEach((tip: string) => toast.info(`💡 ${tip}`, { duration: 8000 }));
+                      }
+                    } catch (e: any) {
+                      toast.error(e.message || 'Erro ao avaliar');
+                    }
+                  }}
+                >
+                  <Brain className="w-4 h-4 text-primary" /> 🧬 Score com Content DNA (antes de publicar)
                 </Button>
               </div>
             )}
