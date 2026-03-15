@@ -104,7 +104,24 @@ const MultiChannel = () => {
   // Quick script generation
   const [generatingScript, setGeneratingScript] = useState<string | null>(null);
 
-  useEffect(() => { loadAll(); loadTrendAlerts(); loadPrecisionStats(); }, []);
+  // Smart Calendar
+  const [calendarData, setCalendarData] = useState<any[]>([]);
+  const [generatingCalendar, setGeneratingCalendar] = useState(false);
+
+  // Daily Checklist
+  const [dailyTasks, setDailyTasks] = useState<any[]>([]);
+  const [currentDay, setCurrentDay] = useState(1);
+
+  // Competitor Tracker
+  const [competitors, setCompetitors] = useState<any[]>([]);
+  const [competitorAlerts, setCompetitorAlerts] = useState<any[]>([]);
+  const [trackingCompetitors, setTrackingCompetitors] = useState(false);
+
+  // Niche Benchmark
+  const [benchmark, setBenchmark] = useState<any>(null);
+  const [loadingBenchmark, setLoadingBenchmark] = useState(false);
+
+  useEffect(() => { loadAll(); loadTrendAlerts(); loadPrecisionStats(); loadDailyTasks(); }, []);
 
   const loadAll = async () => {
     setLoading(true);
