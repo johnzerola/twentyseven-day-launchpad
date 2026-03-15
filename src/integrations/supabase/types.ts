@@ -1020,6 +1020,75 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_tasks: {
+        Row: {
+          actual_subs: number | null
+          actual_views: number | null
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          day_number: number
+          description: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          plan_id: string | null
+          target_longs: number | null
+          target_shorts: number | null
+          target_subs: number | null
+          target_views: number | null
+          task_type: string
+          title: string
+          updated_at: string | null
+          user_id: string
+          video_type: string | null
+        }
+        Insert: {
+          actual_subs?: number | null
+          actual_views?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          day_number: number
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          plan_id?: string | null
+          target_longs?: number | null
+          target_shorts?: number | null
+          target_subs?: number | null
+          target_views?: number | null
+          task_type?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+          video_type?: string | null
+        }
+        Update: {
+          actual_subs?: number | null
+          actual_views?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          day_number?: number
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          plan_id?: string | null
+          target_longs?: number | null
+          target_shorts?: number | null
+          target_subs?: number | null
+          target_views?: number | null
+          task_type?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          video_type?: string | null
+        }
+        Relationships: []
+      }
       dotti_suggestions: {
         Row: {
           channel_id: string | null
@@ -1421,6 +1490,117 @@ export type Database = {
           monetization_score?: number | null
           niche?: string
           trend_direction?: string | null
+        }
+        Relationships: []
+      }
+      monetization_30day_plans: {
+        Row: {
+          channel_id: string | null
+          country: string | null
+          created_at: string | null
+          current_day: number | null
+          id: string
+          language: string | null
+          niche: string | null
+          plan_json: Json | null
+          started_at: string | null
+          status: string | null
+          strategy: string | null
+          target_subs: number | null
+          target_watch_hours: number | null
+          total_longs_published: number | null
+          total_shorts_published: number | null
+          total_views: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          current_day?: number | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          plan_json?: Json | null
+          started_at?: string | null
+          status?: string | null
+          strategy?: string | null
+          target_subs?: number | null
+          target_watch_hours?: number | null
+          total_longs_published?: number | null
+          total_shorts_published?: number | null
+          total_views?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          current_day?: number | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          plan_json?: Json | null
+          started_at?: string | null
+          status?: string | null
+          strategy?: string | null
+          target_subs?: number | null
+          target_watch_hours?: number | null
+          total_longs_published?: number | null
+          total_shorts_published?: number | null
+          total_views?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monetization_milestones: {
+        Row: {
+          created_at: string | null
+          current_value: number | null
+          day_expected: number | null
+          description: string | null
+          icon: string | null
+          id: string
+          milestone_type: string
+          plan_id: string | null
+          reached: boolean | null
+          reached_at: string | null
+          target_value: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_value?: number | null
+          day_expected?: number | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          milestone_type: string
+          plan_id?: string | null
+          reached?: boolean | null
+          reached_at?: string | null
+          target_value?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_value?: number | null
+          day_expected?: number | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          milestone_type?: string
+          plan_id?: string | null
+          reached?: boolean | null
+          reached_at?: string | null
+          target_value?: number
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
