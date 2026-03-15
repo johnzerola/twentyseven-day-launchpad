@@ -478,17 +478,28 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
 
   // ===== Save Dotti suggestion =====
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
-  const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string } | null>(null);
+  const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string; channelId: string | null } | null>(null);
+  const [saveChannels, setSaveChannels] = useState<any[]>([]);
+
+  // Load user channels for save selector
+  useEffect(() => {
+    const loadChannels = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('user_channels').select('id, channel_name').eq('user_id', user.id).order('channel_name');
+      setSaveChannels(data || []);
+    };
+    loadChannels();
+  }, []);
 
   const saveSuggestion = async (msgContent: string, idx: number) => {
     if (!userId) { toast.error('Faça login'); return; }
     setSavingIdx(idx);
     
-    // Extract a title from first line or first 60 chars
     const firstLine = msgContent.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
     const title = firstLine.slice(0, 80) || 'Sugestão do Dotti';
 
-    setEditingSuggestion({ idx, title, content: msgContent });
+    setEditingSuggestion({ idx, title, content: msgContent, channelId: null });
   };
 
   const confirmSaveSuggestion = async () => {
@@ -499,6 +510,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
         title: editingSuggestion.title,
         content: editingSuggestion.content,
         topic: editingSuggestion.title,
+        channel_id: editingSuggestion.channelId || null,
       } as any);
       toast.success('💡 Sugestão salva! Acesse em Roteiros → Banco de Ideias');
       setEditingSuggestion(null);
@@ -746,6 +758,21 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
                     className="w-full bg-muted/30 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     placeholder="Título da sugestão"
                   />
+                  {saveChannels.length > 0 && (
+                    <div>
+                      <label className="text-[10px] text-muted-foreground font-medium mb-0.5 block">Salvar para canal:</label>
+                      <select
+                        value={editingSuggestion.channelId || ''}
+                        onChange={e => setEditingSuggestion(prev => prev ? { ...prev, channelId: e.target.value || null } : null)}
+                        className="w-full bg-muted/30 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">Geral (sem canal)</option>
+                        {saveChannels.map(ch => (
+                          <option key={ch.id} value={ch.id}>{ch.channel_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <textarea
                     value={editingSuggestion.content}
                     onChange={e => setEditingSuggestion(prev => prev ? { ...prev, content: e.target.value } : null)}

@@ -63,7 +63,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId } = await req.json();
+    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge } = await req.json();
     const isShort = videoType === 'short';
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -274,6 +274,11 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
 
     const viralInjection = viralContext ? `\n🔥 ELEMENTOS VIRAIS:\n${viralContext}\n` : '';
 
+    // Channel knowledge from Dotti suggestions
+    const channelKnowledgeBlock = channelKnowledge ? `\n📝 CONHECIMENTO DO CANAL (salvo pelo usuário via Dotti):
+${channelKnowledge}
+INSTRUÇÃO: Use estas informações como contexto adicional sobre o canal. Adapte o roteiro para se alinhar com as preferências, temas e estilo que o usuário já explorou.\n` : '';
+
     // Intelligence briefing
     let intelBlock = '';
     if (intelligenceBriefing) {
@@ -433,6 +438,7 @@ ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
 ${voiceInjection}
+${channelKnowledgeBlock}
 ${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
