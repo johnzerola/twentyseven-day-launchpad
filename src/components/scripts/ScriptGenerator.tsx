@@ -138,6 +138,7 @@ export const ScriptGenerator = ({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [channelKnowledge, setChannelKnowledge] = useState<string>('');
 
   useEffect(() => {
     const loadSuggestions = async () => {
@@ -154,8 +155,21 @@ export const ScriptGenerator = ({
         query = query.eq('channel_id', selectedChannelId);
       }
       const { data } = await query;
-      setSuggestions((data as any[]) || []);
+      const items = (data as any[]) || [];
+      setSuggestions(items);
       setLoadingSuggestions(false);
+
+      // Build channel knowledge context from saved Dotti suggestions for this channel
+      if (selectedChannelId && items.length > 0) {
+        const knowledge = items
+          .filter(s => s.channel_id === selectedChannelId)
+          .slice(0, 10)
+          .map(s => `- ${s.title}: ${(s.content || '').slice(0, 200)}`)
+          .join('\n');
+        setChannelKnowledge(knowledge);
+      } else {
+        setChannelKnowledge('');
+      }
     };
     loadSuggestions();
   }, [selectedChannelId]);
