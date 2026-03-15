@@ -266,7 +266,8 @@ TÍTULOS (3 opções virais):
 
 HASHTAGS: #tag1 #tag2 #tag3 #tag4 #tag5
 
-CTA: [call to action sugerido]
+VCTA: [descrição do visual CTA sutil integrado à cena]
+VACTA: [frase do CTA verbal durante tensão emocional]
 
 OVERLAY (frases para tela):
 - [frase impacto 1]
