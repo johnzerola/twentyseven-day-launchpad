@@ -165,6 +165,32 @@ const MultiChannel = () => {
     setGeneratingIdeas(true);
     setShowIdeaPanel(true);
     try {
+      // Fetch Dotti suggestions for this channel to inject as context
+      const { data: { user } } = await supabase.auth.getUser();
+      let dottiContext: string[] = [];
+      if (user) {
+        const { data: dottiData } = await supabase
+          .from('dotti_suggestions')
+          .select('title, content, niche, topic')
+          .eq('user_id', user.id)
+          .eq('channel_id', newChannel)
+          .order('updated_at', { ascending: false })
+          .limit(10);
+        
+        // Also get general suggestions if channel-specific are few
+        if (!dottiData?.length) {
+          const { data: generalDotti } = await supabase
+            .from('dotti_suggestions')
+            .select('title, content, niche, topic')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(5);
+          dottiContext = (generalDotti || []).map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
+        } else {
+          dottiContext = dottiData.map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
+        }
+      }
+
       const headers = await getAuthHeaders();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ideas`, {
         method: 'POST',
@@ -173,6 +199,9 @@ const MultiChannel = () => {
           niche: selectedChannel.niche || 'general',
           channelName: selectedChannel.channel_name,
           count: 8,
+          existingIdeas: dottiContext.length > 0 
+            ? `Contexto do usuário (insights salvos): ${dottiContext.join(' | ')}` 
+            : undefined,
         }),
       });
       const result = await res.json();
@@ -190,6 +219,7 @@ const MultiChannel = () => {
 
   const selectIdea = (idea: any) => {
     setNewTitle(idea.title || idea.tema || '');
+    setSelectedIdea(idea);
     setShowIdeaPanel(false);
     toast.success('💡 Ideia selecionada!');
   };
