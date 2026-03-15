@@ -28,16 +28,22 @@ import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 import { ViralThemeWizard } from '@/components/scripts/ViralThemeWizard';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
-  { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Ultra-realista, estilo filme, iluminação dramática' },
-  { value: '2d', label: '🎨 2D Animação', desc: 'Motion graphics, Kurzgesagt style, flat design' },
-  { value: '3d', label: '🧊 3D Render', desc: 'Estilo Pixar/Disney, personagens estilizados' },
-  { value: 'anime', label: '⛩️ Anime', desc: 'Estilo anime japonês, expressivo e dinâmico' },
-  { value: 'wojak', label: '😐 Wojak/Meme', desc: 'Desenho simples, expressões emocionais, cultura internet' },
-  { value: 'stickmen', label: '🧍 Stickmen', desc: 'Figuras palito, minimalista, humor pela simplicidade' },
-  { value: 'realista', label: '📷 Fotorrealista', desc: 'Parece foto real, 8K, iluminação natural' },
-  { value: 'dark', label: '🌑 Dark/Cyberpunk', desc: 'Sombras profundas, neon, atmosférico' },
-  { value: 'whiteboard', label: '📝 Whiteboard', desc: 'Quadro branco, desenhos à mão, educativo' },
-  { value: 'comic', label: '💥 HQ/Comic', desc: 'Estilo quadrinhos, bold outlines, ação' },
+  { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
+  { value: '2d', label: '🎨 Kurzgesagt Style', desc: 'Motion graphics 2D clean, cores vibrantes, flat design educativo' },
+  { value: '3d', label: '🧊 Pixar World', desc: 'Render 3D estilizado, personagens cartoon, ambientes imersivos' },
+  { value: 'anime', label: '⛩️ Anime Epic', desc: 'Anime japonês expressivo, cenas de ação dinâmicas, olhos grandes' },
+  { value: 'wojak', label: '😐 Wojak/Meme Art', desc: 'Desenho meme, expressões emocionais exageradas, viral TikTok' },
+  { value: 'stickmen', label: '🧍 Stickman Comedy', desc: 'Figuras palito animadas, humor pela simplicidade' },
+  { value: 'realista', label: '📷 Hyper Real 8K', desc: 'Fotorrealismo extremo, iluminação natural cinematográfica' },
+  { value: 'dark', label: '🌑 Cyberpunk Neon', desc: 'Neon azul/roxo, cidade futurista, atmosfera blade runner' },
+  { value: 'whiteboard', label: '📝 Whiteboard Pro', desc: 'Quadro branco animado, estilo TED-Ed, educativo premium' },
+  { value: 'comic', label: '💥 Comic Book', desc: 'Estilo Marvel/DC, painéis dinâmicos, onomatopeias' },
+  { value: 'lego', label: '🧱 Lego World', desc: 'Tudo em LEGO, cenários blocados, estilo stop-motion' },
+  { value: 'minecraft', label: '⛏️ Minecraft Style', desc: 'Mundo pixelado, blocos, estilo gameplay Minecraft' },
+  { value: 'disney_toon', label: '✨ Disney Toon', desc: 'Animação clássica Disney, personagens carismáticos' },
+  { value: 'documentary_bbc', label: '📹 Documentary BBC', desc: 'Cinematografia BBC/NatGeo, narração autoritária, natureza épica' },
+  { value: 'gtav', label: '🏎️ GTA V Style', desc: 'Estética Grand Theft Auto, saturação alta, ação urbana' },
+  { value: 'expressionism', label: '🎭 Expressionism', desc: 'Arte expressionista, cores ousadas, distorções dramáticas' },
 ];
 
 const Scripts = () => {
