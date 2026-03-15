@@ -93,8 +93,18 @@ const MultiChannel = () => {
   const [generatedIdeas, setGeneratedIdeas] = useState<any[]>([]);
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [showIdeaPanel, setShowIdeaPanel] = useState(false);
+  const [selectedIdea, setSelectedIdea] = useState<any>(null);
 
-  useEffect(() => { loadAll(); }, []);
+  // Trend alerts
+  const [trendAlerts, setTrendAlerts] = useState<any[]>([]);
+
+  // Precision stats
+  const [precisionStats, setPrecisionStats] = useState<{ predictions: number; avgError: number; accuracy: number } | null>(null);
+
+  // Quick script generation
+  const [generatingScript, setGeneratingScript] = useState<string | null>(null);
+
+  useEffect(() => { loadAll(); loadTrendAlerts(); loadPrecisionStats(); }, []);
 
   const loadAll = async () => {
     setLoading(true);
