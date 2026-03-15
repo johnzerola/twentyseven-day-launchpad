@@ -67,6 +67,8 @@ serve(async (req) => {
     const shortsPsych = results[5]?.data || [];
     const shortsAttention = results[6]?.data || [];
     const shortsKnowledge = results[7]?.data || [];
+    const monetizationKnowledge = results[8]?.data || [];
+    const caseStudies = results[9]?.data || [];
 
     // ═══ BUILD CONTEXT BLOCKS ═══
     const channelContext = (channelRes.data || []).map((c: any) => {
@@ -114,6 +116,16 @@ serve(async (req) => {
       const shortsKnowledgeBlock = shortsKnowledge.map((k: any) =>
         `${k.title}: ${k.content?.slice(0, 400)}`
       ).join('\n\n');
+
+      // ═══ MONETIZATION INTELLIGENCE ═══
+      const monetizationBlock = monetizationKnowledge.map((k: any) =>
+        `${k.title}: ${k.content?.slice(0, 500)}`
+      ).join('\n\n');
+
+      const caseStudiesBlock = caseStudies.map((c: any) => {
+        const lessons = Array.isArray(c.lessons_learned) ? c.lessons_learned.slice(0, 3).join('; ') : '';
+        return `• ${c.channel_name} (${c.niche}): ${c.total_shorts || '?'} shorts, ${(c.total_views || 0).toLocaleString()} views, monetizado em ${c.days_to_monetization} dias${lessons ? ` — Lições: ${lessons}` : ''}`;
+      }).join('\n');
 
       formatContext = `
 ═══════════════════════════════════
