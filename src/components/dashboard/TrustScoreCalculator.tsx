@@ -224,9 +224,9 @@ export const TrustScoreCalculator = () => {
                   ) : (
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">
-                        Views engajadas: {(metrics.engagedViews / 1_000_000).toFixed(1)}M / 10M
+                        Views engajadas: {(result.estimatedEngagedViews / 1_000_000).toFixed(1)}M / 10M
                       </p>
-                      <Progress value={Math.min(metrics.engagedViews / 10_000_000 * 100, 100)} className="h-1.5" />
+                      <Progress value={result.viewsProgress} className="h-1.5" />
                       <p className="text-sm text-muted-foreground">
                         Inscritos: {metrics.subscribers.toLocaleString()} / 1.000
                       </p>
@@ -236,6 +236,40 @@ export const TrustScoreCalculator = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Snowball Effect Card */}
+            <Card className="border-border bg-card">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" /> Efeito Snowball
+                    </p>
+                    <p className="text-xs text-muted-foreground">Crescimento exponencial vs linear</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-bold ${result.snowballMultiplier >= 3 ? 'text-green-400' : result.snowballMultiplier >= 2 ? 'text-primary' : 'text-orange-400'}`}>
+                      {result.snowballMultiplier.toFixed(1)}x
+                    </p>
+                    <p className="text-xs text-muted-foreground">multiplicador</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-2 rounded-lg bg-secondary/50 border border-border text-center">
+                    <p className="text-lg font-bold text-foreground">{result.daysToMonetize}</p>
+                    <p className="text-[10px] text-muted-foreground">Monetização estimada</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-secondary/50 border border-border text-center">
+                    <p className="text-lg font-bold text-foreground">{result.engagedViewPct.toFixed(0)}%</p>
+                    <p className="text-[10px] text-muted-foreground">Views engajadas</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-secondary/50 border border-border text-center">
+                    <p className="text-lg font-bold text-foreground">{Math.round(20_000_000 / result.snowballMultiplier).toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Views necessárias</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Issues & Recommendations */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
