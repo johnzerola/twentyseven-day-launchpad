@@ -723,6 +723,14 @@ const MultiChannel = () => {
                             <option key={k} value={k}>{v.label}</option>
                           ))}
                         </select>
+                        {item.status === 'idea' && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            disabled={generatingScript === item.id}
+                            onClick={() => quickGenerateScript(item)}
+                            title="Gerar roteiro automaticamente">
+                            {generatingScript === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3 text-primary" />}
+                          </Button>
+                        )}
                         <Button size="icon" variant="ghost" className="h-7 w-7"
                           onClick={() => {
                             const otherChannels = channels.filter(c => c.id !== item.channel_id);
