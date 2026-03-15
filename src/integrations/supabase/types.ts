@@ -981,6 +981,80 @@ export type Database = {
           },
         ]
       }
+      content_series: {
+        Row: {
+          auto_generate: boolean | null
+          channel_id: string | null
+          content_style: string
+          created_at: string | null
+          custom_prompt: string | null
+          frequency: string
+          id: string
+          language: string
+          niche: string
+          series_name: string
+          settings_json: Json | null
+          status: string
+          sub_niche: string | null
+          total_generated: number | null
+          total_published: number | null
+          updated_at: string | null
+          user_id: string
+          video_format: string
+          visual_style: string
+        }
+        Insert: {
+          auto_generate?: boolean | null
+          channel_id?: string | null
+          content_style?: string
+          created_at?: string | null
+          custom_prompt?: string | null
+          frequency?: string
+          id?: string
+          language?: string
+          niche?: string
+          series_name: string
+          settings_json?: Json | null
+          status?: string
+          sub_niche?: string | null
+          total_generated?: number | null
+          total_published?: number | null
+          updated_at?: string | null
+          user_id: string
+          video_format?: string
+          visual_style?: string
+        }
+        Update: {
+          auto_generate?: boolean | null
+          channel_id?: string | null
+          content_style?: string
+          created_at?: string | null
+          custom_prompt?: string | null
+          frequency?: string
+          id?: string
+          language?: string
+          niche?: string
+          series_name?: string
+          settings_json?: Json | null
+          status?: string
+          sub_niche?: string | null
+          total_generated?: number | null
+          total_published?: number | null
+          updated_at?: string | null
+          user_id?: string
+          video_format?: string
+          visual_style?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_series_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_templates: {
         Row: {
           category: string
@@ -2044,6 +2118,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reference_channels: {
+        Row: {
+          avg_views: number | null
+          channel_name: string
+          content_format: string | null
+          country: string | null
+          created_at: string | null
+          estimated_revenue_max: number | null
+          estimated_revenue_min: number | null
+          id: string
+          is_faceless: boolean | null
+          language: string | null
+          niche: string
+          subscribers: number | null
+          top_videos: Json | null
+          visual_style: string | null
+          youtube_channel_id: string | null
+          youtube_handle: string | null
+        }
+        Insert: {
+          avg_views?: number | null
+          channel_name: string
+          content_format?: string | null
+          country?: string | null
+          created_at?: string | null
+          estimated_revenue_max?: number | null
+          estimated_revenue_min?: number | null
+          id?: string
+          is_faceless?: boolean | null
+          language?: string | null
+          niche?: string
+          subscribers?: number | null
+          top_videos?: Json | null
+          visual_style?: string | null
+          youtube_channel_id?: string | null
+          youtube_handle?: string | null
+        }
+        Update: {
+          avg_views?: number | null
+          channel_name?: string
+          content_format?: string | null
+          country?: string | null
+          created_at?: string | null
+          estimated_revenue_max?: number | null
+          estimated_revenue_min?: number | null
+          id?: string
+          is_faceless?: boolean | null
+          language?: string | null
+          niche?: string
+          subscribers?: number | null
+          top_videos?: Json | null
+          visual_style?: string | null
+          youtube_channel_id?: string | null
+          youtube_handle?: string | null
+        }
+        Relationships: []
       }
       research_cache: {
         Row: {
