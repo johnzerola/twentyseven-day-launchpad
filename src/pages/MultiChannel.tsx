@@ -71,7 +71,7 @@ const MultiChannel = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [groups, setGroups] = useState<ChannelGroup[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'queue' | 'groups'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'queue' | 'groups' | 'calendar' | 'checklist'>('overview');
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
@@ -104,7 +104,24 @@ const MultiChannel = () => {
   // Quick script generation
   const [generatingScript, setGeneratingScript] = useState<string | null>(null);
 
-  useEffect(() => { loadAll(); loadTrendAlerts(); loadPrecisionStats(); }, []);
+  // Smart Calendar
+  const [calendarData, setCalendarData] = useState<any[]>([]);
+  const [generatingCalendar, setGeneratingCalendar] = useState(false);
+
+  // Daily Checklist
+  const [dailyTasks, setDailyTasks] = useState<any[]>([]);
+  const [currentDay, setCurrentDay] = useState(1);
+
+  // Competitor Tracker
+  const [competitors, setCompetitors] = useState<any[]>([]);
+  const [competitorAlerts, setCompetitorAlerts] = useState<any[]>([]);
+  const [trackingCompetitors, setTrackingCompetitors] = useState(false);
+
+  // Niche Benchmark
+  const [benchmark, setBenchmark] = useState<any>(null);
+  const [loadingBenchmark, setLoadingBenchmark] = useState(false);
+
+  useEffect(() => { loadAll(); loadTrendAlerts(); loadPrecisionStats(); loadDailyTasks(); }, []);
 
   const loadAll = async () => {
     setLoading(true);
@@ -159,7 +176,120 @@ const MultiChannel = () => {
     }
   };
 
-  const generateIdeas = async () => {
+  const loadDailyTasks = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: plan } = await supabase
+      .from('monetization_30day_plans')
+      .select('id, current_day')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (plan) {
+      setCurrentDay(plan.current_day || 1);
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('*')
+        .eq('plan_id', plan.id)
+        .gte('day_number', plan.current_day || 1)
+        .lte('day_number', (plan.current_day || 1) + 2)
+        .order('day_number');
+      setDailyTasks(tasks || []);
+    }
+  };
+
+  const generateSmartCalendar = async () => {
+    const selectedCh = channels[0];
+    if (!selectedCh) { toast.error('Vincule um canal primeiro'); return; }
+    setGeneratingCalendar(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-30day-plan`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          niche: selectedCh.niche || 'general',
+          channelName: selectedCh.channel_name,
+          language: 'português',
+          country: 'BR',
+          strategy: 'shorts-first',
+        }),
+      });
+      const result = await res.json();
+      if (result.plan) {
+        setCalendarData(result.plan.days || []);
+        toast.success('📅 Calendário de 30 dias gerado!');
+        loadDailyTasks();
+      } else {
+        toast.error(result.error || 'Erro ao gerar calendário');
+      }
+    } catch {
+      toast.error('Erro de conexão');
+    } finally {
+      setGeneratingCalendar(false);
+    }
+  };
+
+  const toggleTaskComplete = async (taskId: string, completed: boolean) => {
+    await supabase.from('daily_tasks').update({
+      completed: !completed,
+      completed_at: !completed ? new Date().toISOString() : null,
+    } as any).eq('id', taskId);
+    setDailyTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: !completed } : t));
+    if (!completed) toast.success('✅ Tarefa concluída!');
+  };
+
+  const trackCompetitors = async () => {
+    const selectedCh = channels[0];
+    if (!selectedCh?.niche) { toast.error('Seu canal precisa ter um nicho definido'); return; }
+    setTrackingCompetitors(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/competitor-tracker`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          niche: selectedCh.niche,
+          channel_id: selectedCh.id,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setCompetitors(result.competitors || []);
+        setCompetitorAlerts(result.alerts || []);
+        toast.success(`📡 ${result.total_analyzed} concorrentes analisados`);
+      }
+    } catch {
+      toast.error('Erro ao rastrear concorrentes');
+    } finally {
+      setTrackingCompetitors(false);
+    }
+  };
+
+  const loadNicheBenchmark = async (niche: string) => {
+    setLoadingBenchmark(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/niche-benchmark`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ niche }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setBenchmark(result.benchmark);
+      }
+    } catch {
+      toast.error('Erro ao carregar benchmark');
+    } finally {
+      setLoadingBenchmark(false);
+    }
+  };
+
+
     const selectedChannel = channels.find(c => c.id === newChannel);
     if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
     setGeneratingIdeas(true);
@@ -597,7 +727,9 @@ const MultiChannel = () => {
         <div className="flex gap-1 bg-card border border-border rounded-xl p-1">
           {[
             { key: 'overview', label: 'Canais', icon: Youtube },
-            { key: 'queue', label: 'Fila de Conteúdo', icon: Kanban },
+            { key: 'queue', label: 'Fila', icon: Kanban },
+            { key: 'calendar', label: 'Calendário', icon: Calendar },
+            { key: 'checklist', label: 'Checklist', icon: CheckCircle2 },
             { key: 'groups', label: 'Grupos', icon: FolderOpen },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
@@ -821,6 +953,223 @@ const MultiChannel = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Smart Calendar Tab */}
+        {activeTab === 'calendar' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" /> Calendário Inteligente de 30 Dias
+                </h3>
+                <p className="text-[10px] text-muted-foreground">Plano otimizado para monetização acelerada</p>
+              </div>
+              <div className="flex gap-2">
+                {channels[0]?.niche && (
+                  <Button variant="outline" size="sm" className="gap-1 text-xs"
+                    onClick={() => loadNicheBenchmark(channels[0].niche!)}
+                    disabled={loadingBenchmark}>
+                    {loadingBenchmark ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />}
+                    Benchmark do Nicho
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className="gap-1 text-xs"
+                  onClick={trackCompetitors} disabled={trackingCompetitors}>
+                  {trackingCompetitors ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                  Rastrear Concorrentes
+                </Button>
+                <Button size="sm" className="gap-1 text-xs" onClick={generateSmartCalendar} disabled={generatingCalendar}>
+                  {generatingCalendar ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                  Gerar Calendário IA
+                </Button>
+              </div>
+            </div>
+
+            {/* Niche Benchmark Panel */}
+            {benchmark && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                className="bg-card border border-primary/20 rounded-xl p-4">
+                <h4 className="text-xs font-semibold flex items-center gap-1.5 mb-3">
+                  <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                  Benchmark: {benchmark.niche} ({benchmark.total_channels_analyzed} canais)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="bg-muted/20 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold">{benchmark.views?.viral_threshold?.toLocaleString()}</p>
+                    <p className="text-[9px] text-muted-foreground">Views p/ viralizar</p>
+                  </div>
+                  <div className="bg-muted/20 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold">{benchmark.views?.median?.toLocaleString()}</p>
+                    <p className="text-[9px] text-muted-foreground">Views mediana</p>
+                  </div>
+                  <div className="bg-muted/20 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold">{benchmark.rpm?.avg || '—'}</p>
+                    <p className="text-[9px] text-muted-foreground">RPM médio</p>
+                  </div>
+                  <div className="bg-muted/20 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold">{benchmark.demographics?.faceless_percentage}%</p>
+                    <p className="text-[9px] text-muted-foreground">Faceless</p>
+                  </div>
+                </div>
+                {benchmark.recommendations && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="text-[10px] text-muted-foreground">
+                      🎨 Melhor estilo: <span className="text-foreground font-medium">{benchmark.recommendations.best_style}</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      💰 Receita estimada/mês: <span className="text-foreground font-medium">
+                        ${benchmark.recommendations.estimated_monthly_revenue_at_median?.toLocaleString() || '—'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Competitor Alerts */}
+            {competitorAlerts.length > 0 && (
+              <div className="bg-card border border-amber-500/20 rounded-xl p-3">
+                <p className="text-xs font-medium flex items-center gap-1.5 mb-2">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-amber-400">Alertas de Concorrentes</span>
+                </p>
+                <div className="space-y-1.5">
+                  {competitorAlerts.map((alert: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
+                      <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium truncate">{alert.title}</p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {alert.channel} • {alert.views?.toLocaleString()} views • {alert.views_per_hour} views/hora
+                        </p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-6 text-[9px] px-2 shrink-0"
+                        onClick={() => { setNewTitle(`Inspirado em: ${alert.title}`); setShowAddForm(true); setActiveTab('queue'); }}>
+                        Criar Similar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Calendar Grid */}
+            {calendarData.length > 0 ? (
+              <div className="grid grid-cols-7 gap-1.5">
+                {calendarData.slice(0, 30).map((day: any, i: number) => (
+                  <div key={i} className={`bg-card border rounded-lg p-2 text-center transition-all ${
+                    i + 1 === currentDay ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/20'
+                  }`}>
+                    <p className={`text-xs font-bold ${i + 1 === currentDay ? 'text-primary' : ''}`}>Dia {i + 1}</p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2">
+                      {day.focus || day.title || `${day.shorts || 0}S + ${day.longs || 0}L`}
+                    </p>
+                    {day.shorts > 0 && <Badge variant="outline" className="text-[8px] mt-1">{day.shorts}S</Badge>}
+                    {day.longs > 0 && <Badge variant="secondary" className="text-[8px] mt-1 ml-0.5">{day.longs}L</Badge>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-xl p-12 text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                <p className="text-muted-foreground text-sm">Clique em "Gerar Calendário IA" para criar um plano de 30 dias personalizado.</p>
+              </div>
+            )}
+
+            {/* Top Competitors Table */}
+            {competitors.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-3">
+                <h4 className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Top Concorrentes ({competitors.length})
+                </h4>
+                <div className="space-y-1">
+                  {competitors.slice(0, 8).map((comp: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
+                      <span className="text-[10px] font-bold text-muted-foreground w-4">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium truncate">{comp.title}</p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {comp.channel_name} • {comp.views?.toLocaleString()} views • {comp.engagement_rate}% eng
+                        </p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        {comp.is_outlier && <Badge variant="destructive" className="text-[8px]">Outlier</Badge>}
+                        {comp.is_trending && <Badge className="text-[8px] bg-amber-500/20 text-amber-400">Trending</Badge>}
+                        <span className="text-[10px] font-bold">{comp.multiplier}x</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Daily Checklist Tab */}
+        {activeTab === 'checklist' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-primary" /> Checklist Diário — Dia {currentDay}/30
+                </h3>
+                <p className="text-[10px] text-muted-foreground">Tarefas otimizadas para monetização acelerada</p>
+              </div>
+              <Progress value={(currentDay / 30) * 100} className="w-32 h-2" />
+            </div>
+
+            {dailyTasks.length > 0 ? (
+              <div className="space-y-2">
+                {dailyTasks.map((task: any) => (
+                  <motion.div key={task.id} layout
+                    className={`bg-card border rounded-xl p-3 transition-all cursor-pointer ${
+                      task.completed ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border hover:border-primary/30'
+                    }`}
+                    onClick={() => toggleTaskComplete(task.id, task.completed)}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                        task.completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'
+                      }`}>
+                        {task.completed && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                          {task.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{task.description}</p>
+                        <div className="flex gap-1.5 mt-1">
+                          <Badge variant="outline" className="text-[9px]">Dia {task.day_number}</Badge>
+                          <Badge variant="secondary" className="text-[9px]">{task.task_type}</Badge>
+                          {task.video_type && <Badge variant="outline" className="text-[9px]">{task.video_type}</Badge>}
+                        </div>
+                      </div>
+                      {task.target_shorts > 0 && (
+                        <div className="text-center shrink-0">
+                          <p className="text-lg font-bold">{task.target_shorts}</p>
+                          <p className="text-[9px] text-muted-foreground">Shorts</p>
+                        </div>
+                      )}
+                      {task.target_longs > 0 && (
+                        <div className="text-center shrink-0">
+                          <p className="text-lg font-bold">{task.target_longs}</p>
+                          <p className="text-[9px] text-muted-foreground">Longos</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-xl p-12 text-center">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                <p className="text-muted-foreground text-sm mb-3">Nenhuma tarefa para hoje. Gere um plano de 30 dias primeiro.</p>
+                <Button onClick={() => setActiveTab('calendar')} variant="outline" size="sm" className="gap-1">
+                  <Calendar className="w-3 h-3" /> Ir para Calendário
+                </Button>
               </div>
             )}
           </div>
