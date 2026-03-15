@@ -8,6 +8,141 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// ==========================================
+// DOPAMINERGIC MASTER PROMPT BLOCK SYSTEM
+// ==========================================
+// Each scene prompt follows the "Master Prompt Block" format:
+//   "{timestamp}: {camera_move} of {subject} {action}, {environment_detail}"
+// This creates hyper-specific, magnetic visual sequences that
+// force viewers to stop scrolling in the first 0-3 seconds.
+
+const MASTER_PROMPT_EXAMPLES: Record<string, string> = {
+  wojak: `REFERENCE MASTER BLOCK (Wojak Style):
+0–3s: wide cinematic shot of yellow wojak character waking up in messy bedroom, morning light through window, camera slowly dollying in
+3–5s: extreme close-up of worried yellow wojak face illuminated by phone screen glow, shallow DOF
+5–8s: cut to rooftop panoramic establishing shot, dense urban skyline at sunrise, camera slowly pulling away revealing scale
+8–12s: medium shot of wojak walking through crowded street, handheld camera tracking, people blurred around him
+12–15s: dramatic low angle of wojak looking up at massive building, lens flare, hero moment composition`,
+
+  cinematográfico: `REFERENCE MASTER BLOCK (Cinematic):
+0–3s: aerial drone sweeping over dramatic landscape at golden hour, camera rapidly descending toward subject
+3–5s: extreme close-up of eyes widening in shock/realization, rack focus from background to face, shallow DOF f/1.4
+5–8s: dynamic tracking shot following subject through environment, Steadicam movement, volumetric light rays
+8–12s: wide establishing shot revealing the full scope of the situation, ARRI ALEXA look, film grain
+12–15s: intimate close-up of hands/details that tell the story, macro lens, emotional lighting`,
+
+  anime: `REFERENCE MASTER BLOCK (Anime):
+0–3s: dramatic speed-line zoom into character's shocked face, screen shake, Ufotable-style impact frame
+3–5s: atmospheric wide shot with Shinkai-quality sky/clouds, character silhouetted, parallax depth layers
+5–8s: dynamic action cut with sakuga-quality movement, camera rotating around subject, rim lighting
+8–12s: emotional close-up with tear/sweat detail, cel-shading, soft glow particles floating
+12–15s: bird's eye establishing shot pulling out to reveal full scene scale, MAPPA color grading`,
+
+  '3d': `REFERENCE MASTER BLOCK (3D Pixar):
+0–3s: dramatic camera push through environment into character's face, Pixar-quality subsurface scattering
+3–5s: over-the-shoulder shot revealing new information, depth of field blur, global illumination
+5–8s: dynamic tracking shot with character running/moving, PBR materials, motion blur, 8K textures
+8–12s: emotional medium shot, expressive face animation, rim light highlighting silhouette
+12–15s: wide cinematic pullback showing full environment, volumetric fog, sunset lighting`,
+
+  '2d': `REFERENCE MASTER BLOCK (2D Motion):
+0–3s: bold graphic zoom into central element, Kurzgesagt-style flat design, color burst transition
+3–5s: info-reveal with animated icons/diagrams flowing in from sides, smooth 24fps easing
+5–8s: split composition showing contrast/comparison, parallax depth layers, bold color palette
+8–12s: dynamic element assembly building the key visual, kinetic typography vibes
+12–15s: satisfying zoom-out revealing full picture, all elements connected, loop-ready composition`,
+
+  dark: `REFERENCE MASTER BLOCK (Dark/Noir):
+0–3s: slow reveal through darkness, single light source illuminating subject, deep shadows, fog machine
+3–5s: extreme close-up of detail (eye, hand, object), neon accent lighting, Blade Runner 2049 palette
+5–8s: wide shot of oppressive environment, crushed blacks, rain/particles, silhouette composition
+8–12s: dutch angle medium shot creating unease, flickering light, desaturated with single color accent
+12–15s: dramatic pullback into complete darkness, subject disappearing, loop back to opening light`,
+
+  realista: `REFERENCE MASTER BLOCK (Photorealistic):
+0–3s: handheld documentary-style close-up catching a raw emotional moment, Sony A7R V, natural light
+3–5s: shallow DOF portrait with bokeh, 85mm f/1.2, golden hour sidelight, authentic expression
+5–8s: tracking shot through real environment, steadicam feel, available light, 8K detail
+8–12s: intimate detail shot (hands, textures, objects), macro quality, natural color grading
+12–15s: wide environmental portrait, subject in context, photojournalistic composition`,
+
+  comic: `REFERENCE MASTER BLOCK (Comic/HQ):
+0–3s: dramatic panel-burst composition, character breaking through frame, bold ink outlines, impact lines
+3–5s: close-up with halftone shading, speech bubble composition space, saturated primary colors
+5–8s: dynamic action pose, multiple motion lines, comic panel layout transition
+8–12s: emotional panel with dramatic lighting, cross-hatching shadows, high contrast
+12–15s: splash page composition revealing full scene, bold outlines, Ben-Day dots texture`,
+
+  stickmen: `REFERENCE MASTER BLOCK (Stickmen):
+0–3s: simple stick figure in exaggerated pose of surprise/shock, clean white background, bold lines
+3–5s: rapid sequence of stick figures showing action, minimalist humor, expressive despite simplicity
+5–8s: environment drawn in with simple lines, stick figure reacting, comedic timing in composition
+8–12s: split frame showing cause/effect with stick figures, visual punchline setup
+12–15s: final stick figure pose for reaction/loop, clean composition, meme-ready framing`,
+
+  whiteboard: `REFERENCE MASTER BLOCK (Whiteboard):
+0–3s: hand drawing the first element rapidly, marker on whiteboard, real-time illustration feel
+3–5s: diagram expanding with arrows and connections, educational reveal, clean hand-drawn style
+5–8s: key concept illustrated with bold underline/circle, emphasis through drawing technique
+8–12s: full diagram visible, hand adding final details, satisfying completion
+12–15s: camera pulling back to show full whiteboard, all concepts connected, zoom to key point for loop`,
+};
+
+// Dopaminergic timing rules based on duration category
+const DOPAMINE_TIMING = {
+  micro: { // 15-25s
+    hookWindow: '0-2s',
+    hookDuration: 2,
+    sceneDuration: '3-5s per scene',
+    minScenes: 3,
+    maxScenes: 5,
+    rules: `MICRO-SHORT DOPAMINE RULES (15-25s):
+- 0-2s: NUCLEAR HOOK — single most shocking/curious visual, must stop scrolling INSTANTLY
+- Every scene = 3-5 seconds MAX, zero filler frames
+- Each cut = dopamine spike (new angle, new revelation, new emotion)
+- Final 2s = PERFECT LOOP back to opening shot (viewer watches again without realizing)
+- ONE idea only. ONE emotion. MAXIMUM density.
+- Camera moves: rapid zooms, whip pans, snap cuts ONLY
+- No establishing shots longer than 2s — audience is GONE by 3s if bored`,
+  },
+  flash: { // 25-40s
+    hookWindow: '0-3s',
+    hookDuration: 3,
+    sceneDuration: '4-6s per scene',
+    minScenes: 5,
+    maxScenes: 7,
+    rules: `FLASH-SHORT DOPAMINE RULES (25-40s):
+- 0-3s: MAGNETIC HOOK — wide cinematic + extreme close-up combo in 3 seconds
+- 3-8s: PATTERN INTERRUPT — completely unexpected angle or revelation
+- Every 8s: NEW dopamine trigger (visual shock, information bomb, emotional shift)
+- Escalating intensity: each scene more dramatic than the last
+- 3-second CLIFFHANGER before final reveal
+- Final scene: LOOP MAGNET — visual/emotional callback to scene 1
+- Camera variety: minimum 5 different angles, NEVER repeat consecutively`,
+  },
+  story: { // 40-60s
+    hookWindow: '0-3s',
+    hookDuration: 3,
+    sceneDuration: '5-8s per scene',
+    minScenes: 6,
+    maxScenes: 8,
+    rules: `STORY-SHORT DOPAMINE RULES (40-60s):
+- 0-3s: FLASHFORWARD — show the climax/most dramatic moment FIRST
+- 3-8s: REWIND — "Let me tell you how we got here" — reset with establishing context
+- Every 10s: OPEN LOOP — introduce unanswered question to prevent scroll-away
+- 25-30s: MIDPOINT TWIST — unexpected turn that re-hooks anyone about to leave
+- Final 5s: EMOTIONAL PAYOFF + LOOP setup
+- Camera progression: intimate → wide → intimate → wide (breathing rhythm)
+- Emotional arc: shock → curiosity → empathy → revelation → awe → loop`,
+  },
+};
+
+function getDurationCategory(dur: number): 'micro' | 'flash' | 'story' {
+  if (dur <= 25) return 'micro';
+  if (dur <= 40) return 'flash';
+  return 'story';
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -20,17 +155,33 @@ serve(async (req) => {
     const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
 
     const dur = parseInt(durationSeconds) || 45;
-    // Shorts = 4-8 scenes of 4-8s each
-    const sceneCount = Math.max(3, Math.min(8, Math.round(dur / 6)));
+    const category = getDurationCategory(dur);
+    const timing = DOPAMINE_TIMING[category];
+    const sceneCount = Math.max(timing.minScenes, Math.min(timing.maxScenes, Math.round(dur / 6)));
 
-    // Fetch scene prompt knowledge for style
-    const { data: promptKnowledge } = await sb.from("scene_prompt_knowledge")
-      .select("prompt_template,category,title")
-      .order("viral_score", { ascending: false })
-      .limit(5);
+    // Parallel data fetches
+    const [promptKnowledgeRes, hooksRes, attentionRes] = await Promise.all([
+      sb.from("scene_prompt_knowledge")
+        .select("prompt_template,category,title")
+        .order("viral_score", { ascending: false }).limit(5),
+      sb.from("hook_library")
+        .select("hook_text,hook_type,retention_score")
+        .order("retention_score", { ascending: false }).limit(5),
+      sb.from("attention_engineering")
+        .select("pattern_name,technique,category")
+        .order("retention_impact", { ascending: false }).limit(5),
+    ]);
 
-    const knowledgeBlock = (promptKnowledge || []).map((r: any) =>
+    const knowledgeBlock = (promptKnowledgeRes.data || []).map((r: any) =>
       `[${r.category}] ${r.title}: ${r.prompt_template.slice(0, 200)}`
+    ).join("\n");
+
+    const hooksBlock = (hooksRes.data || []).map((r: any) =>
+      `🪝 [${r.hook_type}] ${r.hook_text} (retenção: ${r.retention_score}%)`
+    ).join("\n");
+
+    const attentionBlock = (attentionRes.data || []).map((r: any) =>
+      `⚡ ${r.pattern_name}: ${r.technique}`
     ).join("\n");
 
     // Character descriptions
@@ -40,57 +191,77 @@ serve(async (req) => {
       ).join("\n")
       : '';
 
-    const styleGuides: Record<string, string> = {
-      'cinematográfico': 'Ultra-cinematic, dramatic lighting, shallow DOF, film grain. Aspect: 9:16 vertical.',
-      '2d': 'Flat 2D motion graphics, bold colors, clean shapes. Vertical composition.',
-      '3d': '3D stylized render, Pixar-quality, expressive characters. Vertical framing.',
-      'anime': 'Anime style, dynamic angles, expressive faces. Vertical 9:16.',
-      'wojak': 'Wojak/meme style, simple emotional faces, internet culture. Vertical.',
-      'stickmen': 'Stick figure animation, minimalist, humor through simplicity. Vertical.',
-      'realista': 'Photorealistic, 8K, natural lighting, vertical composition.',
-      'dark': 'Dark/cyberpunk, deep shadows, neon accents, atmospheric. Vertical.',
-      'whiteboard': 'Whiteboard animation, hand-drawn style, educational. Vertical.',
-      'comic': 'Comic/HQ style, bold outlines, action poses. Vertical panels.',
-    };
-    const selectedVisual = styleGuides[(videoStyle || '').toLowerCase()] || styleGuides['cinematográfico'];
+    // Get style-specific master prompt reference
+    const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
+    const masterRef = MASTER_PROMPT_EXAMPLES[styleKey] || MASTER_PROMPT_EXAMPLES['cinematográfico'];
 
-    const systemPrompt = `Você é um diretor de arte especialista em YouTube Shorts / TikTok / Reels.
+    const systemPrompt = `You are a WORLD-CLASS SHORT-FORM VIDEO DIRECTOR specializing in DOPAMINERGIC content.
+Your scenes MUST make viewers STOP SCROLLING in the first 0-3 seconds.
 
-📱 FORMATO: VERTICAL 9:16 — Shorts de ${dur} segundos
-🎬 ESTILO: ${selectedVisual}
-${customStyleNotes ? `✨ NOTAS DO USUÁRIO: ${customStyleNotes}` : ''}
+📱 FORMAT: VERTICAL 9:16 — ${dur} second Short
+🎬 STYLE: ${styleKey.toUpperCase()}
+📊 CATEGORY: ${category.toUpperCase()} (${dur}s)
+${customStyleNotes ? `✨ USER NOTES: ${customStyleNotes}` : ''}
 
-${knowledgeBlock ? `📚 REFERÊNCIAS VISUAIS:\n${knowledgeBlock}\n` : ''}
-${charBlock ? `👥 PERSONAGENS:\n${charBlock}\n` : ''}
+═══════════════════════════════════════
+🧠 DOPAMINERGIC SCIENCE — FOLLOW EXACTLY:
+═══════════════════════════════════════
+${timing.rules}
 
-Gere EXATAMENTE ${sceneCount} cenas para este Short.
+═══════════════════════════════════════
+🎬 MASTER PROMPT BLOCK FORMAT
+═══════════════════════════════════════
+Each visualPrompt MUST follow this EXACT cinematic format:
 
-Retorne um JSON array VÁLIDO com esta estrutura EXATA:
+${masterRef}
+
+CRITICAL FORMAT RULES:
+1. Each visualPrompt = ONE continuous shot description with SPECIFIC camera move
+2. Start with camera type: "wide cinematic shot", "extreme close-up", "aerial drone", "tracking shot", "low angle", "dutch angle", "POV shot"
+3. Include SPECIFIC details: lighting (golden hour, neon, moonlight), lens (shallow DOF, f/1.4, macro), movement (dollying in, pulling away, whip pan)
+4. Character actions must be EMOTIONALLY CHARGED — no neutral poses
+5. Environment details create ATMOSPHERE — not just backdrop
+6. ALWAYS end with: (do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)
+
+═══════════════════════════════════════
+🪝 VIRAL HOOKS DATABASE:
+═══════════════════════════════════════
+${hooksBlock || 'Use scroll-stopping techniques: shock value, curiosity gap, visual spectacle'}
+
+═══════════════════════════════════════
+⚡ ATTENTION ENGINEERING:
+═══════════════════════════════════════
+${attentionBlock || 'Pattern interrupts every 8s, dopamine stacking, emotional whiplash'}
+
+${knowledgeBlock ? `\n📚 VISUAL REFERENCES:\n${knowledgeBlock}\n` : ''}
+${charBlock ? `\n👥 CHARACTERS:\n${charBlock}\n` : ''}
+
+Generate EXACTLY ${sceneCount} scenes.
+
+Return a VALID JSON array with this EXACT structure:
 [
   {
     "sceneIndex": 1,
     "startTime": 0,
-    "endTime": 6,
-    "sceneDurationSeconds": 6,
-    "narrativeText": "texto falado nesta cena",
-    "visualPrompt": "prompt visual detalhado em inglês para geração de imagem/vídeo, VERTICAL 9:16, ...",
-    "cameraAngle": "close-up / medium / wide / extreme close-up / bird eye / low angle",
-    "mood": "tense / exciting / mysterious / funny / shocking / calm",
-    "emotionalBeat": "hook / curiosity / reveal / twist / loop",
-    "transitionNote": "hard cut / whip pan / zoom / glitch / none",
-    "negativePrompt": "blurry, horizontal, watermark, text, low quality"
+    "endTime": 3,
+    "sceneDurationSeconds": 3,
+    "narrativeText": "spoken text for this scene",
+    "narrativeSummary": "1-line emotional beat summary",
+    "visualPrompt": "MASTER PROMPT BLOCK format: {camera_type} of {subject} {emotional_action}, {environment_detail}, {lighting}, {lens_spec}, {camera_movement}, vertical 9:16 composition (do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)",
+    "cameraAngle": "specific: extreme close-up / wide cinematic / aerial drone / low angle dutch / tracking handheld / POV first-person / bird eye / macro detail",
+    "cameraMove": "specific: dolly in / pull away / whip pan right / snap zoom / orbit 180° / crane up / steadicam track",
+    "lensSpec": "specific: 85mm f/1.2 shallow DOF / 24mm wide angle / 50mm standard / 100mm macro / anamorphic 2x",
+    "lighting": "specific: golden hour sidelight / neon accent / single source dramatic / volumetric rays / moonlight blue",
+    "mood": "tense / exciting / mysterious / shocking / heartbreaking / triumphant / eerie / euphoric",
+    "emotionalBeat": "hook / curiosity / pattern-interrupt / escalation / reveal / twist / climax / loop",
+    "dopamineTrigger": "what makes viewer's brain release dopamine in this scene",
+    "transitionNote": "hard cut / whip pan / snap zoom / glitch / match cut / J-cut",
+    "negativePrompt": "blurry, horizontal composition, 16:9, letterbox, watermark, text, titles, captions, logos, signatures, UI overlays, low quality, platform logos"
   }
 ]
 
-REGRAS VERTICAIS (9:16):
-1. TODOS os prompts visuais devem especificar "vertical 9:16 composition"
-2. Foco no CENTRO do frame — texto e faces no terço central
-3. Cortes RÁPIDOS — máximo 8s por cena, ideal 4-6s
-4. Primeiro scene = HOOK VISUAL (impacto imediato, 2-4s)
-5. Último scene = LOOP (visual que conecta ao início)
-6. Negativa: SEMPRE incluir "horizontal composition, 16:9, letterbox"
-7. Cada transição deve ser DINÂMICA (hard cut, whip pan, zoom)
-8. Incluir referências de lente/câmera específicas para mobile`;
+SCENE 1 IS EVERYTHING. If scene 1 doesn't STOP THE SCROLL, the video FAILS.
+The LAST scene must create an irresistible LOOP back to scene 1.`;
 
     const res = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
@@ -98,7 +269,7 @@ REGRAS VERTICAIS (9:16):
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Gere ${sceneCount} cenas VERTICAIS 9:16 para este Short de ${dur}s:\n\n${script}\n\nRetorne APENAS o JSON array.` }
+          { role: "user", content: `Generate ${sceneCount} DOPAMINERGIC scenes (${category} category, ${dur}s) using Master Prompt Block format for this Short:\n\n${script}\n\nStyle: ${styleKey}\nReturn ONLY the JSON array. Each visualPrompt must be a vivid, timestamped cinematic shot description.` }
         ],
         stream: false,
       }),
@@ -107,7 +278,7 @@ REGRAS VERTICAIS (9:16):
     if (!res.ok) {
       if (res.status === 429) return errResp("Rate limit.", 429);
       if (res.status === 402) return errResp("Créditos insuficientes.", 402);
-      throw new Error("Scene generation failed");
+      throw new Error("Scene generation failed: " + res.status);
     }
 
     const d = await res.json();
@@ -121,7 +292,29 @@ REGRAS VERTICAIS (9:16):
       return errResp("Erro ao parsear cenas geradas", 500);
     }
 
-    return new Response(JSON.stringify({ scenes, sceneCount: scenes.length, format: "9:16" }), {
+    // Post-process: ensure anti-watermark suffix on every visualPrompt
+    const antiSuffix = "(do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)";
+    for (const scene of scenes) {
+      if (scene.visualPrompt && !scene.visualPrompt.includes("no UI overlays")) {
+        scene.visualPrompt = scene.visualPrompt.replace(/\s*$/, ` ${antiSuffix}`);
+      }
+      // Ensure negative prompt is comprehensive
+      if (!scene.negativePrompt || scene.negativePrompt.length < 30) {
+        scene.negativePrompt = "blurry, horizontal composition, 16:9, letterbox, watermark, text, titles, captions, logos, signatures, UI overlays, low quality, platform logos";
+      }
+    }
+
+    return new Response(JSON.stringify({
+      scenes,
+      sceneCount: scenes.length,
+      format: "9:16",
+      durationCategory: category,
+      dopamineProfile: {
+        hookWindow: timing.hookWindow,
+        scenePacing: timing.sceneDuration,
+        technique: "Master Prompt Block",
+      },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
