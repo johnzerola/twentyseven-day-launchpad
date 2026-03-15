@@ -86,9 +86,6 @@ const Scripts = () => {
   // Templates & Themes
   const [templates, setTemplates] = useState<any[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [showThemeSuggestions, setShowThemeSuggestions] = useState(false);
-  const [themeSuggestions, setThemeSuggestions] = useState<any[]>([]);
-  const [loadingThemes, setLoadingThemes] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showComparator, setShowComparator] = useState(false);
