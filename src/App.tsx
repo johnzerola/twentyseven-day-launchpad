@@ -23,6 +23,7 @@ import MultiChannel from "./pages/MultiChannel";
 import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 import ChannelIntelligence from "./pages/ChannelIntelligence";
 import Tracker30Days from "./pages/Tracker30Days";
+import GrowthTools from "./pages/GrowthTools";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
@@ -57,7 +58,8 @@ const App = () => (
             <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
             <Route path="/intelligence" element={<P><ChannelIntelligence /></P>} />
             <Route path="/tracker" element={<P><Tracker30Days /></P>} />
-            
+            <Route path="/growth-tools" element={<P><GrowthTools /></P>} />
+
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
