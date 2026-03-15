@@ -1469,8 +1469,14 @@ ${knowledgeBlock}
       toolRound++;
       // Cap parallel tools to avoid timeout
       const toolCalls = currentChoice.tool_calls.slice(0, MAX_PARALLEL_TOOLS);
-      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`, 
-        toolCalls.map((t: any) => `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`));
+      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`,
+        toolCalls.map((t: any) => {
+          try {
+            return `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`;
+          } catch {
+            return `${t.function.name}(invalid-args)`;
+          }
+        }));
 
       // Execute tool calls in parallel (capped)
       const toolResults = await Promise.all(
