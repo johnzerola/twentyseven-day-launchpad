@@ -123,6 +123,42 @@ const MultiChannel = () => {
     setLoading(false);
   };
 
+  const loadTrendAlerts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Get user's channel niches
+    const { data: userCh } = await supabase.from('user_channels').select('niche').eq('user_id', user.id);
+    const niches = [...new Set((userCh || []).map((c: any) => c.niche).filter(Boolean))];
+    if (!niches.length) return;
+
+    // Fetch emerging videos matching user's niches
+    const { data: emerging } = await supabase
+      .from('emerging_videos')
+      .select('title, views, channel_name, niche, pre_viral_score, velocity_score, video_id, thumbnail_url')
+      .in('niche', niches)
+      .order('pre_viral_score', { ascending: false })
+      .limit(5);
+
+    setTrendAlerts(emerging || []);
+  };
+
+  const loadPrecisionStats = async () => {
+    const { data: preds } = await supabase
+      .from('prediction_vs_result')
+      .select('predicted_score, actual_score')
+      .not('actual_score', 'is', null);
+
+    if (preds && preds.length > 0) {
+      const errors = preds.map((p: any) => Math.abs((p.predicted_score || 0) - (p.actual_score || 0)));
+      const avgError = errors.reduce((a: number, b: number) => a + b, 0) / errors.length;
+      setPrecisionStats({
+        predictions: preds.length,
+        avgError: Math.round(avgError * 10) / 10,
+        accuracy: Math.round((1 - avgError / 100) * 100),
+      });
+    }
+  };
+
   const generateIdeas = async () => {
     const selectedChannel = channels.find(c => c.id === newChannel);
     if (!selectedChannel) { toast.error('Selecione um canal primeiro'); return; }
