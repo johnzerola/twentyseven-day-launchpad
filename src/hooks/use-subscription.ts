@@ -72,9 +72,9 @@ export function useSubscription() {
     return () => authSub.unsubscribe();
   }, []);
 
-  const hasAccess = (_path: string): boolean => {
-    // TODO: re-enable tier gating after testing
-    return true;
+  const hasAccess = (path: string): boolean => {
+    const requiredTier = FEATURE_TIERS[path] || 'starter';
+    return TIER_HIERARCHY[subscription.tier] >= TIER_HIERARCHY[requiredTier];
   };
 
   const getRequiredTier = (path: string): SubscriptionTier => {
