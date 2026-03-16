@@ -80,9 +80,9 @@ serve(async (req) => {
     
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Credit check (3 credits for bulk scan)
-    if (user_id) {
-      const { data: hasCredits } = await sb.rpc("consume_credits", { _user_id: user_id, _amount: 3 });
+    // Credit check (3 credits for bulk scan) — uses authenticated user ID
+    if (authedUserId) {
+      const { data: hasCredits } = await sb.rpc("consume_credits", { _user_id: authedUserId, _amount: 3 });
       if (!hasCredits) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes (necessário: 3)" }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
