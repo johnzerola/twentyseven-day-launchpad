@@ -26,7 +26,23 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { channel_id, channel_url, max_videos = 50, user_id, analyze_patterns = true } = await req.json();
+    // ═══ AUTH CHECK ═══
+    const authHeader = req.headers.get("authorization") || '';
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const sbAuth = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: claimsData, error: claimsError } = await sbAuth.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const authedUserId = claimsData.claims.sub;
+
+    const { channel_id, channel_url, max_videos = 50, analyze_patterns = true } = await req.json();
     
     let resolvedChannelId = channel_id;
     

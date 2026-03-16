@@ -63,37 +63,33 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // ═══ AUTH CHECK ═══
+    const authHeader = req.headers.get("authorization") || '';
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: claimsData, error: claimsError } = await sb.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const currentUserId: string | null = claimsData.claims.sub || null;
+
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge } = await req.json();
     const isShort = videoType === 'short';
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // ═══ ORCHESTRATION CONTRACT ═══
-    // This function is PHASE 1 (Draft Generation). It receives:
-    //   - topic, duration, style, niche, language (user config)
-    //   - viralContext (optional viral DB context)
-    //   - intelligenceBriefing (optional analyze-topic output)
-    //   - phaseId (unique ID to track this generation run)
-    // It outputs: SSE stream of the draft script text
-    // It does NOT score, refine, or save the script.
     const runId = phaseId || crypto.randomUUID();
     console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min`);
 
     const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
-
-    // ========== Fetch ALL Knowledge + Voice Profile (parallel — 12 queries) ==========
-    // Extract userId from auth header for voice profile lookup
-    const authHeader = req.headers.get("authorization") || '';
-    let currentUserId: string | null = null;
-    if (authHeader.startsWith("Bearer ")) {
-      try {
-        const { data: { user } } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
-        currentUserId = user?.id || null;
-      } catch {}
-    }
 
     const [
       ytRes, scriptRes, channelRes, triggersRes, formatsRes, psychPatternsRes,
