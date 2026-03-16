@@ -17,7 +17,7 @@ const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
   full: 2,
 };
 
-// Which features require which minimum tier
+// MVP MODE: All features unlocked for testing
 const FEATURE_TIERS: Record<string, SubscriptionTier> = {
   '/dashboard': 'starter',
   '/search': 'starter',
@@ -25,10 +25,10 @@ const FEATURE_TIERS: Record<string, SubscriptionTier> = {
   '/niches': 'starter',
   '/titles': 'starter',
   '/channels': 'starter',
-  '/scripts': 'pro',
-  '/workflow': 'pro',
-  '/viral-db': 'pro',
-  '/multichannel': 'full',
+  '/scripts': 'starter',
+  '/workflow': 'starter',
+  '/viral-db': 'starter',
+  '/multichannel': 'starter',
 };
 
 export function useSubscription() {
