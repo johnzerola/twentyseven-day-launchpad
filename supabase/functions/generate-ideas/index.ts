@@ -24,11 +24,17 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ═══ Gather intelligence from multiple sources ═══
+    // Extract individual keywords from niche for broader matching
+    const nicheKeywords = (niche || "").split(/[,\/\s]+/).filter((w: string) => w.length > 3);
+    const nicheFilter = nicheKeywords.length > 0 ? nicheKeywords[0] : (niche || "");
+
     const [viralRes, channelRes, emergingRes, calibRes, learningRes, hookRes] = await Promise.all([
       sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern")
-        .ilike("niche", `%${niche || ""}%`).order("views", { ascending: false }).limit(20),
+        .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${niche || ""}%`)
+        .order("views", { ascending: false }).limit(20),
       sb.from("channel_intelligence").select("channel_name, niche, avg_views, style, viral_patterns")
-        .ilike("niche", `%${niche || ""}%`).limit(10),
+        .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${niche || ""}%`)
+        .limit(10),
       sb.from("emerging_videos").select("title, views, pre_viral_score, velocity_score, niche")
         .eq("status", "pre_viral").order("pre_viral_score", { ascending: false }).limit(10),
       sb.from("score_calibration").select("score_type, niche, avg_error, bias_correction")
@@ -37,7 +43,8 @@ serve(async (req) => {
         .in("topic", ["calibration_meta", "backtest_meta_analysis"])
         .order("created_at", { ascending: false }).limit(3),
       sb.from("hook_library").select("hook_text, hook_type, retention_score")
-        .ilike("niche", `%${niche || ""}%`).order("retention_score", { ascending: false }).limit(10),
+        .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${niche || ""}%`)
+        .order("retention_score", { ascending: false }).limit(10),
     ]);
 
     const viralExamples = (viralRes.data || []).map(v => 
