@@ -161,7 +161,36 @@ Ordene por idea_score decrescente.`;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     let allIdeas: any[] = [];
     if (toolCall) {
-      allIdeas = JSON.parse(toolCall.function.arguments).ideas || [];
+      try {
+        allIdeas = JSON.parse(toolCall.function.arguments).ideas || [];
+      } catch (e) {
+        console.error("Failed to parse tool_call arguments:", e);
+      }
+    }
+    
+    // Fallback: try to parse from message content if no tool_calls
+    if (allIdeas.length === 0) {
+      const content = aiData.choices?.[0]?.message?.content || "";
+      console.log("No tool_calls found, trying content fallback. Content length:", content.length);
+      if (content) {
+        try {
+          // Try to find JSON array in the content
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(parsed)) allIdeas = parsed;
+          } else {
+            // Try to find JSON object with ideas key
+            const objMatch = content.match(/\{[\s\S]*"ideas"[\s\S]*\}/);
+            if (objMatch) {
+              const parsed = JSON.parse(objMatch[0]);
+              allIdeas = parsed.ideas || [];
+            }
+          }
+        } catch (e2) {
+          console.error("Content fallback parsing failed:", e2);
+        }
+      }
     }
 
     // Sort by idea_score descending and return top N
