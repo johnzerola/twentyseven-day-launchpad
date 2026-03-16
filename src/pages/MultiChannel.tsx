@@ -295,31 +295,44 @@ const MultiChannel = () => {
     setGeneratingIdeas(true);
     setShowIdeaPanel(true);
     try {
-      // Fetch Dotti suggestions for this channel to inject as context
       const { data: { user } } = await supabase.auth.getUser();
-      let dottiContext: string[] = [];
-      if (user) {
-        const { data: dottiData } = await supabase
-          .from('dotti_suggestions')
-          .select('title, content, niche, topic')
-          .eq('user_id', user.id)
-          .eq('channel_id', newChannel)
-          .order('updated_at', { ascending: false })
-          .limit(10);
-        
-        // Also get general suggestions if channel-specific are few
-        if (!dottiData?.length) {
-          const { data: generalDotti } = await supabase
-            .from('dotti_suggestions')
-            .select('title, content, niche, topic')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false })
-            .limit(5);
-          dottiContext = (generalDotti || []).map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
-        } else {
-          dottiContext = dottiData.map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
-        }
-      }
+      if (!user) { toast.error('Faça login primeiro'); setGeneratingIdeas(false); return; }
+
+      // Parallel fetch: dotti suggestions, channel intelligence, published queue, top emerging in niche
+      const nicheKeywords = (selectedChannel.niche || '').split(/[,\/\s]+/).filter((w: string) => w.length > 3);
+      const [dottiRes, intelRes, publishedRes, emergingRes, topQueueRes] = await Promise.all([
+        supabase.from('dotti_suggestions').select('title, content, niche, topic')
+          .eq('user_id', user.id).eq('channel_id', newChannel)
+          .order('updated_at', { ascending: false }).limit(10),
+        supabase.from('channel_intelligence').select('channel_name, avg_views, style, viral_patterns, top_videos, niche, sub_niche')
+          .eq('youtube_channel_id', selectedChannel.youtube_channel_id).limit(1),
+        supabase.from('content_queue').select('title, status, metadata_json')
+          .eq('user_id', user.id).eq('channel_id', newChannel)
+          .in('status', ['published', 'scheduled'])
+          .order('created_at', { ascending: false }).limit(20),
+        supabase.from('emerging_videos').select('title, views, pre_viral_score, velocity_score, niche')
+          .eq('status', 'pre_viral')
+          .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${selectedChannel.niche || ''}%`)
+          .order('pre_viral_score', { ascending: false }).limit(8),
+        supabase.from('content_queue').select('title, metadata_json')
+          .eq('user_id', user.id).eq('channel_id', newChannel)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false }).limit(10),
+      ]);
+
+      // Build context objects
+      const dottiContext = (dottiRes.data || []).map((d: any) => `${d.title}: ${d.content?.slice(0, 100)}`);
+      const channelIntel = intelRes.data?.[0] || null;
+      const publishedTitles = (publishedRes.data || []).map((q: any) => q.title);
+      const topPerformers = (topQueueRes.data || [])
+        .filter((q: any) => q.metadata_json?.idea_score)
+        .sort((a: any, b: any) => (b.metadata_json?.idea_score || 0) - (a.metadata_json?.idea_score || 0))
+        .slice(0, 5)
+        .map((q: any) => ({ title: q.title, score: q.metadata_json?.idea_score }));
+
+      const emergingTrends = (emergingRes.data || []).map((e: any) => ({
+        title: e.title, views: e.views, score: e.pre_viral_score,
+      }));
 
       const headers = await getAuthHeaders();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ideas`, {
@@ -328,15 +341,27 @@ const MultiChannel = () => {
         body: JSON.stringify({
           niche: selectedChannel.niche || 'general',
           channelName: selectedChannel.channel_name,
+          youtubeChannelId: selectedChannel.youtube_channel_id,
           count: 8,
-          existingIdeas: dottiContext.length > 0 
-            ? `Contexto do usuário (insights salvos): ${dottiContext.join(' | ')}` 
-            : undefined,
+          existingIdeas: publishedTitles,
+          channelContext: {
+            dottiInsights: dottiContext,
+            channelIntel: channelIntel ? {
+              style: channelIntel.style,
+              avgViews: channelIntel.avg_views,
+              viralPatterns: channelIntel.viral_patterns,
+              topVideos: channelIntel.top_videos,
+              subNiche: channelIntel.sub_niche,
+            } : null,
+            topPerformers,
+            emergingInNiche: emergingTrends,
+          },
         }),
       });
       const result = await res.json();
       if (result.ideas) {
         setGeneratedIdeas(result.ideas);
+        toast.success(`🧠 ${result.ideas.length} ideias geradas com inteligência do canal!`);
       } else {
         toast.error(result.error || 'Erro ao gerar ideias');
       }
