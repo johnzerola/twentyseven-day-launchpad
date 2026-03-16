@@ -24,11 +24,17 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ═══ Gather intelligence from multiple sources ═══
+    // Extract individual keywords from niche for broader matching
+    const nicheKeywords = (niche || "").split(/[,\/\s]+/).filter((w: string) => w.length > 3);
+    const nicheFilter = nicheKeywords.length > 0 ? nicheKeywords[0] : (niche || "");
+
     const [viralRes, channelRes, emergingRes, calibRes, learningRes, hookRes] = await Promise.all([
       sb.from("viral_titles_db").select("title, views, niche, emotional_triggers, title_pattern")
-        .ilike("niche", `%${niche || ""}%`).order("views", { ascending: false }).limit(20),
+        .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${niche || ""}%`)
+        .order("views", { ascending: false }).limit(20),
       sb.from("channel_intelligence").select("channel_name, niche, avg_views, style, viral_patterns")
-        .ilike("niche", `%${niche || ""}%`).limit(10),
+        .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${niche || ""}%`)
+        .limit(10),
       sb.from("emerging_videos").select("title, views, pre_viral_score, velocity_score, niche")
         .eq("status", "pre_viral").order("pre_viral_score", { ascending: false }).limit(10),
       sb.from("score_calibration").select("score_type, niche, avg_error, bias_correction")
@@ -37,7 +43,8 @@ serve(async (req) => {
         .in("topic", ["calibration_meta", "backtest_meta_analysis"])
         .order("created_at", { ascending: false }).limit(3),
       sb.from("hook_library").select("hook_text, hook_type, retention_score")
-        .ilike("niche", `%${niche || ""}%`).order("retention_score", { ascending: false }).limit(10),
+        .or(nicheKeywords.map((k: string) => `niche.ilike.%${k}%`).join(',') || `niche.ilike.%${niche || ""}%`)
+        .order("retention_score", { ascending: false }).limit(10),
     ]);
 
     const viralExamples = (viralRes.data || []).map(v => 
@@ -154,7 +161,36 @@ Ordene por idea_score decrescente.`;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     let allIdeas: any[] = [];
     if (toolCall) {
-      allIdeas = JSON.parse(toolCall.function.arguments).ideas || [];
+      try {
+        allIdeas = JSON.parse(toolCall.function.arguments).ideas || [];
+      } catch (e) {
+        console.error("Failed to parse tool_call arguments:", e);
+      }
+    }
+    
+    // Fallback: try to parse from message content if no tool_calls
+    if (allIdeas.length === 0) {
+      const content = aiData.choices?.[0]?.message?.content || "";
+      console.log("No tool_calls found, trying content fallback. Content length:", content.length);
+      if (content) {
+        try {
+          // Try to find JSON array in the content
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(parsed)) allIdeas = parsed;
+          } else {
+            // Try to find JSON object with ideas key
+            const objMatch = content.match(/\{[\s\S]*"ideas"[\s\S]*\}/);
+            if (objMatch) {
+              const parsed = JSON.parse(objMatch[0]);
+              allIdeas = parsed.ideas || [];
+            }
+          }
+        } catch (e2) {
+          console.error("Content fallback parsing failed:", e2);
+        }
+      }
     }
 
     // Sort by idea_score descending and return top N
