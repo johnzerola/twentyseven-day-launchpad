@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network, History, Trash2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
