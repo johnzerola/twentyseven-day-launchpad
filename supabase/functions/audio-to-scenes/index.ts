@@ -315,13 +315,14 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
 
     // ========== STEP 7: Merge, validate timing & re-index ==========
     allScenes.sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
-    // Enforce 5-10s scene duration — split or merge scenes that are out of range
+    const minDur = isShort ? 1.5 : 5;
+    const maxDur = isShort ? 4 : 10;
     for (let i = 0; i < allScenes.length; i++) {
       const s = allScenes[i];
       const dur = (s.endTime || 0) - (s.startTime || 0);
-      if (dur < 5) s.sceneDurationSeconds = 5;
-      else if (dur > 10) s.sceneDurationSeconds = 10;
-      else s.sceneDurationSeconds = Math.round(dur);
+      if (dur < minDur) s.sceneDurationSeconds = minDur;
+      else if (dur > maxDur) s.sceneDurationSeconds = maxDur;
+      else s.sceneDurationSeconds = Math.round(dur * 10) / 10;
     }
     allScenes.forEach((s, i) => { s.sceneIndex = i + 1; });
 
