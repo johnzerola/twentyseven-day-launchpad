@@ -210,12 +210,32 @@ serve(async (req) => {
       },
     };
 
-    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating Netflix-grade video scenes from narrated audio.
+    const shortsTimingRules = `SHORTS TIMING RULES (CRITICAL):
+- Each scene MUST be between 2 and 4 seconds long. NEVER longer than 4s.
+- Target approximately ${sceneDuration} seconds per scene (2-3s ideal for Shorts)
+- Generate AT LEAST one scene every 2-3 seconds of audio. MORE scenes = BETTER.
+- For a 15s audio, generate 5-7 scenes. For 30s, generate 8-12 scenes.
+- RAPID FIRE cuts. Every cut = new visual, new angle, new context.
+- Scene 1 (0-2s) = SCROLL-STOPPING HOOK — most visually spectacular shot`;
 
-CRITICAL TIMING RULES:
+    const longTimingRules = `TIMING RULES:
 - Each scene MUST be between 5 and 10 seconds long. NEVER shorter than 5s or longer than 10s.
 - Target approximately ${sceneDuration} seconds per scene, but adjust between 5-10s based on narrative pacing
-- You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio. Do NOT skip any portion.
+- You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio.`;
+
+    const semanticMappingBlock = isShort ? `
+SEMANTIC VISUAL MAPPING — CRITICAL FOR SHORTS:
+EVERY scene MUST visually represent EXACTLY what the narrator says at that moment.
+DO NOT create generic shots. MAP narration to CONCRETE visuals:
+- If narrator says "Egypt" → show pyramids, hieroglyphics, pharaohs, archaeological digs
+- If narrator says "school" → show classroom, students, textbooks
+- If narrator says "documentary" → show person watching TV, screen glow on face
+- Each scene = a DIFFERENT visual context. Mix: landscapes, close-ups, people reacting, dramatic reveals.
+- NEVER repeat similar angles in consecutive scenes.` : '';
+
+    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating ${isShort ? 'VIRAL SHORT-FORM (9:16)' : 'Netflix-grade'} video scenes from narrated audio.
+
+${isShort ? shortsTimingRules : longTimingRules}
 - Cover the ENTIRE transcript chunk — from first word to last word
 - startTime and endTime MUST match actual transcript timestamps precisely
 
@@ -224,6 +244,7 @@ VISUAL RULES:
 - NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
 - End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 - Use 5+ different camera angles — never repeat consecutively
+${semanticMappingBlock}
 
 VISUAL STYLE: ${selectedStyleGuide}
 ${characterBlock}
