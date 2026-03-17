@@ -145,6 +145,7 @@ RULES:
       'wojak': 'Wojak/meme internet art style. Simple drawn faces with exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic.',
       'stickmen': 'Stick figure animation. Minimalist black line drawings, simple backgrounds, hand-drawn feel.',
       'whiteboard': 'Whiteboard animation. Hand-drawn sketches on white. Black ink, educational, clean lines.',
+      'animal_chase': 'HYPER-REALISTIC WILDLIFE SURVIVAL. Shot like National Geographic meets Hollywood thriller. ARRI ALEXA Mini LF, 8K, 120fps slow-motion for chase sequences. Photorealistic animals with visible fur/feather detail, sweat, mud splashes. Dramatic volumetric lighting, golden hour or stormy skies. Handheld camera energy for chase POVs. Extreme close-ups on animal eyes showing fear/determination. Wide epic landscape shots showing the danger. Dust particles, water splashes, debris flying. Color grading: desaturated with punchy warm highlights.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
     const extraStyle = customStyleNotes ? `\nUSER STYLE INSTRUCTIONS: ${customStyleNotes}` : '';

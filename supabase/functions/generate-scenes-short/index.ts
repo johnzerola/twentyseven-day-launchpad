@@ -86,6 +86,13 @@ const MASTER_PROMPT_EXAMPLES: Record<string, string> = {
 5–8s: key concept illustrated with bold underline/circle, emphasis through drawing technique
 8–12s: full diagram visible, hand adding final details, satisfying completion
 12–15s: camera pulling back to show full whiteboard, all concepts connected, zoom to key point for loop`,
+
+  animal_chase: `REFERENCE MASTER BLOCK (Animal Chase/Survival — Hyper-Realistic):
+0–3s: EXTREME CLOSE-UP on terrified animal eyes reflecting danger, 120fps slow-motion, visible fur texture, sweat/water droplets, shallow DOF f/1.4, ARRI ALEXA Mini LF 8K, heartbeat sound design
+3–5s: WIDE EPIC shot revealing the threat — flood water/predator/angry person — dramatic volumetric golden hour lighting, dust particles flying, animal sprinting into frame, handheld camera shake
+5–8s: LOW ANGLE tracking shot of animal running at full speed, mud splashing, paws hitting ground in slow-motion, debris flying, National Geographic meets Hollywood thriller cinematography
+8–12s: AERIAL drone chase POV following animal through landscape, epic scale reveal of danger behind, stormy skies or golden hour, desaturated color grading with warm punchy highlights
+12–15s: EXTREME CLOSE-UP animal looks back in fear/determination, then turns forward — snap cut to wide shot of escape route, perfect loop back to opening eye shot`,
 };
 
 // Dopaminergic timing rules based on duration category

@@ -44,6 +44,7 @@ const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'documentary_bbc', label: '📹 Documentary BBC', desc: 'Cinematografia BBC/NatGeo, narração autoritária, natureza épica' },
   { value: 'gtav', label: '🏎️ GTA V Style', desc: 'Estética Grand Theft Auto, saturação alta, ação urbana' },
   { value: 'expressionism', label: '🎭 Expressionism', desc: 'Arte expressionista, cores ousadas, distorções dramáticas' },
+  { value: 'animal_chase', label: '🐾 Animal Chase/Survival', desc: 'Hiper-realista National Geographic + Hollywood, 120fps slow-motion, close nos olhos dos animais' },
 ];
 
 const Scripts = () => {
