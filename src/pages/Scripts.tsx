@@ -120,6 +120,11 @@ const Scripts = () => {
     loadLastProjectCharacters();
   }, []);
 
+  // Auto-set video style when niche changes
+  useEffect(() => {
+    if (niche === 'animal_survival') setVideoStyle('animal_chase');
+  }, [niche]);
+
   // Load channel styles when channel changes
   useEffect(() => {
     if (selectedChannelId) {
