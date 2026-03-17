@@ -294,6 +294,79 @@ const KnowledgeAdmin = () => {
           )}
         </div>
 
+        {/* 📺 Seed Reference Channels (Veo3) */}
+        <div className="glass rounded-xl p-5 border border-amber-500/20">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Tv2 className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="font-bold font-['Space_Grotesk']">🎬 Seed Reference Channels (Veo3)</h2>
+                <p className="text-xs text-muted-foreground">25 canais curados — Western, Restoration, Drama, Survival, Inspirational</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">Batch {refChannelBatch}/5</span>
+              <Button
+                onClick={async () => {
+                  setRefChannelLoading(true);
+                  setRefChannelReport(null);
+                  toast.info(`🎬 Analisando canais batch ${refChannelBatch}... pode levar ~2min`);
+                  try {
+                    const headers = await getAuthHeaders();
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seed-reference-channels`, {
+                      method: 'POST',
+                      headers: { ...headers, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ start_index: refChannelBatch * 5, batch_size: 5 }),
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                      setRefChannelReport(result);
+                      if (result.next_index !== null) {
+                        setRefChannelBatch(prev => prev + 1);
+                      }
+                      toast.success(`✅ ${result.processed} canais processados! ${result.next_index !== null ? 'Clique novamente para o próximo batch.' : '🎉 Todos concluídos!'}`);
+                      fetchDbCounts();
+                    } else {
+                      toast.error(result.error || 'Erro ao analisar canais');
+                    }
+                  } catch (e) {
+                    toast.error('Erro de conexão');
+                  } finally {
+                    setRefChannelLoading(false);
+                  }
+                }}
+                disabled={refChannelLoading}
+                className="gap-2 bg-amber-600 hover:bg-amber-700"
+                size="sm"
+              >
+                {refChannelLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Tv2 className="w-4 h-4" />}
+                {refChannelLoading ? 'Analisando...' : `Analisar Próximo Batch (5 canais)`}
+              </Button>
+            </div>
+          </div>
+
+          {refChannelReport && (
+            <div className="bg-background/50 rounded-lg p-3 border border-border/50">
+              <p className="text-xs font-medium mb-2 text-amber-400">
+                ✅ {refChannelReport.processed} processados · {refChannelReport.errors} erros · {refChannelReport.total_channels} canais total
+                {refChannelReport.next_index !== null && ` · Próximo: batch ${Math.floor(refChannelReport.next_index / 5)}`}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                {(refChannelReport.report || []).map((r: any, i: number) => (
+                  <div key={i} className={`rounded p-2 ${r.status === 'ok' ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                    <p className="font-medium">{r.channel}</p>
+                    <p className="text-muted-foreground">
+                      {r.status === 'ok' ? `✅ ${r.niche} · ${r.videos} vídeos` : `❌ ${r.error}`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
 
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabKey)}>
           <TabsList className="w-full grid grid-cols-4 h-auto">
