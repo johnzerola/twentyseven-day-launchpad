@@ -49,6 +49,7 @@ const TABS = [
 ];
 
 const ChannelSearch = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('videos');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VideoResult[]>([]);
