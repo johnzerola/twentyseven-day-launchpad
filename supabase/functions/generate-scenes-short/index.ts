@@ -160,7 +160,9 @@ serve(async (req) => {
     const dur = parseInt(durationSeconds) || 45;
     const category = getDurationCategory(dur);
     const timing = DOPAMINE_TIMING[category];
-    const sceneCount = Math.max(timing.minScenes, Math.min(timing.maxScenes, Math.round(dur / 6)));
+    // For Shorts: 1 scene every 2-3s for micro, 3-4s for flash, 3-5s for story
+    const sceneDivisor = category === 'micro' ? 2.5 : category === 'flash' ? 3.5 : 4;
+    const sceneCount = Math.max(timing.minScenes, Math.min(timing.maxScenes, Math.round(dur / sceneDivisor)));
 
     // Parallel data fetches
     const [promptKnowledgeRes, hooksRes, attentionRes] = await Promise.all([
