@@ -254,6 +254,38 @@ ${charBlock ? `\n👥 CHARACTERS:\n${charBlock}\n` : ''}
 EVERY scene MUST visually represent EXACTLY what the narrator is saying at that moment.
 DO NOT create generic shots. Instead, MAP narration to CONCRETE visuals:
 
+KEYWORD → VISUAL MAPPING (use these when the narration mentions):
+- Money/fortune → Stacks of cash, gold bars, luxury cars, bank vaults, crypto charts
+- Fear/danger → Dark corridors, shadows moving, red emergency lights, heartbeat monitor
+- Water/flood → Rushing water, submerged streets, rain drops in slow-motion
+- Animal → Fur texture extreme close-up, paw prints, eyes reflecting danger
+- History → Ancient artifacts, dusty scrolls, archaeological sites, period clothing
+- Science → Lab equipment, microscope views, molecular structures, DNA helixes
+- Crime → Police tape, fingerprints, evidence bags, courtroom gavels
+- Space → Nebulae, astronaut helmets, Earth from orbit, rocket launches
+- Food → Extreme macro of textures, steam rising, knife cutting, ingredients falling
+- Technology → Circuit boards, holographic displays, code scrolling, robot eyes
+- War/battle → Explosions in slow-motion, soldier silhouettes, smoke clouds
+- Love/emotion → Hands touching, tears falling, sunset silhouettes, heartbeat
+- City → Aerial drone over skyline, neon reflections in puddles, crowded streets
+
+CAMERA ANGLE VARIETY (use ALL of these across scenes — NEVER repeat consecutively):
+- Extreme close-up (ECU) with shallow DOF f/1.2
+- Wide establishing shot with leading lines
+- Low angle hero shot (looking up)
+- High angle vulnerability shot (looking down)
+- Dutch angle for tension/unease
+- Over-the-shoulder for intimacy
+- POV first-person for immersion
+- Aerial drone for scale/epic
+- Tracking handheld for energy
+- Macro detail shot for texture
+- Bird's eye for pattern/layout
+- Whip pan transition shot
+- Orbit 360° for drama
+- Crane up/down for reveal
+- Split diopter for dual focus
+
 EXAMPLE: If narrator says "No Egito antigo foi achado isso, esqueça tudo que aprendeu na escola sobre o Egito":
 - Scene 1 (0-2s): Aerial drone over Egyptian pyramids at sunset, sand particles floating, golden hour
 - Scene 2 (2-4s): Close-up of ancient hieroglyphics being illuminated by torch, dust particles, dark tomb

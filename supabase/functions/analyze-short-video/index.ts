@@ -100,29 +100,33 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           {
-            role: "system", content: `Você é um analista especialista em YouTube Shorts virais.
-Analise os Shorts encontrados e extraia inteligência competitiva.
+            role: "system", content: `Você é o MELHOR analista de engenharia reversa de YouTube Shorts virais do mundo.
+Extraia o DNA COMPLETO de cada Short analisado.
 
 Retorne um JSON válido com esta estrutura EXATA:
 {
   "shorts_found": number,
-  "top_shorts": [{"title": string, "views": number, "channel": string, "duration": number, "why_viral": string}],
-  "hook_patterns": [{"pattern": string, "example": string, "effectiveness": number}],
-  "structure_patterns": [{"name": string, "description": string, "frequency": string}],
-  "visual_patterns": [{"pattern": string, "description": string}],
-  "loop_techniques": [{"technique": string, "example": string}],
+  "top_shorts": [{"title": string, "views": number, "channel": string, "duration": number, "why_viral": string, "dna": {"hook_type": string, "hook_technique": string, "narrative_structure": string, "emotional_arc": string, "loop_type": string, "pacing": string, "visual_style": string, "target_emotion": string, "retention_tricks": [string]}}],
+  "hook_patterns": [{"pattern": string, "example": string, "effectiveness": number, "psychology": string, "first_words": string}],
+  "structure_patterns": [{"name": string, "description": string, "frequency": string, "beat_map": [{"beat": string, "timestamp": string, "purpose": string}]}],
+  "visual_patterns": [{"pattern": string, "description": string, "camera_moves": [string], "color_palette": string}],
+  "loop_techniques": [{"technique": string, "example": string, "loop_type": "visual|audio|narrative|emotional", "effectiveness": number}],
+  "audio_patterns": [{"pattern": string, "description": string, "timing": string}],
+  "text_overlay_patterns": [{"pattern": string, "placement": string, "font_style": string}],
   "content_gaps": [string],
   "recommended_angles": [string],
   "dominant_styles": [string],
   "avg_duration_seconds": number,
   "engagement_insights": string,
-  "what_to_avoid": [string]
+  "what_to_avoid": [string],
+  "replication_blueprint": {"step1_hook": string, "step2_structure": string, "step3_visual": string, "step4_loop": string, "step5_audio": string}
 }
 
-IMPORTANTE: effectiveness é 1-10. Analise HOOKS, ESTRUTURA NARRATIVA, VISUAL, e LOOPS dos Shorts.`
+IMPORTANTE: Analise PROFUNDAMENTE os HOOKS (primeiras palavras, técnica psicológica), ESTRUTURA NARRATIVA (beat map temporal), VISUAL (câmeras, cores, transições), LOOPS (tipo e técnica), ÁUDIO (efeitos sonoros, música, timing) e TEXT OVERLAYS de cada Short.
+effectiveness é 1-10.`
           },
           {
-            role: "user", content: `Analise estes Shorts virais sobre "${topic}" (nicho: ${niche || 'geral'}, idioma: ${language || 'pt'}):\n\n${shortsContext}\n\nRetorne APENAS o JSON.`
+            role: "user", content: `Faça engenharia reversa COMPLETA destes Shorts virais sobre "${topic}" (nicho: ${niche || 'geral'}, idioma: ${language || 'pt'}):\n\n${shortsContext}\n\nExtraia o DNA COMPLETO incluindo hook_technique, beat_map, camera_moves, loop_type, audio_patterns e um blueprint de replicação. Retorne APENAS o JSON.`
           }
         ],
         stream: false,

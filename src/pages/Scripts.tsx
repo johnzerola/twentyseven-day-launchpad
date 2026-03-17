@@ -641,6 +641,43 @@ const Scripts = () => {
               userChannels={userChannels}
             />
 
+            {/* ═══ 1-Click Short Templates ═══ */}
+            {videoType === 'short' && (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="w-4 h-4 text-chart-4" />
+                    <span className="font-semibold text-xs">1-Click Short — Templates por Nicho</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { emoji: '🐾', name: 'Animal Survival', topic: 'Animal selvagem fugindo de predador em perseguição intensa', niche: 'animal_survival', style: 'dopaminérgico', vStyle: 'animal_chase', dur: '25' },
+                      { emoji: '👻', name: 'Horror/Terror', topic: 'Lugar abandonado com eventos inexplicáveis e final chocante', niche: 'horror', style: 'narração', vStyle: 'dark', dur: '35' },
+                      { emoji: '💰', name: 'Finanças', topic: 'Fato financeiro chocante que muda perspectiva sobre dinheiro', niche: 'finanças', style: 'educativo', vStyle: 'cinematográfico', dur: '30' },
+                      { emoji: '🧠', name: 'Curiosidades', topic: 'Fato científico surpreendente que ninguém sabe', niche: 'curiosidades', style: 'dopaminérgico', vStyle: '2d', dur: '20' },
+                      { emoji: '📜', name: 'História', topic: 'Momento histórico pouco conhecido com consequências enormes', niche: 'história', style: 'storytelling', vStyle: 'cinematográfico', dur: '45' },
+                      { emoji: '🔪', name: 'True Crime', topic: 'Caso criminal perturbador com reviravolta inesperada', niche: 'true_crime', style: 'narração', vStyle: 'dark', dur: '40' },
+                      { emoji: '👁️', name: 'Conspiração', topic: 'Teoria proibida com evidências reais e perturbadoras', niche: 'conspiração', style: 'conspiração', vStyle: 'dark', dur: '35' },
+                      { emoji: '⛩️', name: 'Mitologia', topic: 'Mito épico com batalha, traição e sacrifício devastador', niche: 'mitologia', style: 'mitologia', vStyle: 'anime', dur: '40' },
+                    ].map(t => (
+                      <button key={t.name} onClick={() => {
+                        setTopic(t.topic); setNiche(t.niche); setStyle(t.style);
+                        setVideoStyle(t.vStyle); setDuration(t.dur);
+                        toast.success(`Template "${t.name}" aplicado! Clique "Gerar Roteiro"`);
+                      }}
+                        className="flex items-center gap-2 p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all text-left">
+                        <span className="text-lg">{t.emoji}</span>
+                        <div>
+                          <p className="text-[10px] font-medium">{t.name}</p>
+                          <p className="text-[9px] text-muted-foreground">{t.dur}s • {t.style}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Viral Database Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <button onClick={() => setShowViralPanel(!showViralPanel)}

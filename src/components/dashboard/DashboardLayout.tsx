@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +23,7 @@ const navItems = [
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
+  { key: 'Shorts Trends', icon: TrendingUp, path: '/shorts-trends' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
 ];
