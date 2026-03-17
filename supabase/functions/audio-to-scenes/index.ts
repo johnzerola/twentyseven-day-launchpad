@@ -24,6 +24,8 @@ serve(async (req) => {
     const charactersJson = formData.get("characters") as string || "[]";
     const sceneDurationStr = formData.get("sceneDuration") as string || "8";
     const language = formData.get("language") as string || "português";
+    const videoType = formData.get("videoType") as string || "long";
+    const isShort = videoType === 'short' || videoType === 'shorts';
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -31,7 +33,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
     if (!audioFile) throw new Error("Arquivo de áudio obrigatório.");
 
-    const sceneDuration = parseInt(sceneDurationStr) || 8;
+    const sceneDuration = isShort ? Math.min(parseInt(sceneDurationStr) || 3, 4) : (parseInt(sceneDurationStr) || 8);
     let characters: any[] = [];
     try {
       const parsed = JSON.parse(charactersJson);
@@ -208,12 +210,32 @@ serve(async (req) => {
       },
     };
 
-    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating Netflix-grade video scenes from narrated audio.
+    const shortsTimingRules = `SHORTS TIMING RULES (CRITICAL):
+- Each scene MUST be between 2 and 4 seconds long. NEVER longer than 4s.
+- Target approximately ${sceneDuration} seconds per scene (2-3s ideal for Shorts)
+- Generate AT LEAST one scene every 2-3 seconds of audio. MORE scenes = BETTER.
+- For a 15s audio, generate 5-7 scenes. For 30s, generate 8-12 scenes.
+- RAPID FIRE cuts. Every cut = new visual, new angle, new context.
+- Scene 1 (0-2s) = SCROLL-STOPPING HOOK — most visually spectacular shot`;
 
-CRITICAL TIMING RULES:
+    const longTimingRules = `TIMING RULES:
 - Each scene MUST be between 5 and 10 seconds long. NEVER shorter than 5s or longer than 10s.
 - Target approximately ${sceneDuration} seconds per scene, but adjust between 5-10s based on narrative pacing
-- You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio. Do NOT skip any portion.
+- You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio.`;
+
+    const semanticMappingBlock = isShort ? `
+SEMANTIC VISUAL MAPPING — CRITICAL FOR SHORTS:
+EVERY scene MUST visually represent EXACTLY what the narrator says at that moment.
+DO NOT create generic shots. MAP narration to CONCRETE visuals:
+- If narrator says "Egypt" → show pyramids, hieroglyphics, pharaohs, archaeological digs
+- If narrator says "school" → show classroom, students, textbooks
+- If narrator says "documentary" → show person watching TV, screen glow on face
+- Each scene = a DIFFERENT visual context. Mix: landscapes, close-ups, people reacting, dramatic reveals.
+- NEVER repeat similar angles in consecutive scenes.` : '';
+
+    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating ${isShort ? 'VIRAL SHORT-FORM (9:16)' : 'Netflix-grade'} video scenes from narrated audio.
+
+${isShort ? shortsTimingRules : longTimingRules}
 - Cover the ENTIRE transcript chunk — from first word to last word
 - startTime and endTime MUST match actual transcript timestamps precisely
 
@@ -222,6 +244,7 @@ VISUAL RULES:
 - NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
 - End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 - Use 5+ different camera angles — never repeat consecutively
+${semanticMappingBlock}
 
 VISUAL STYLE: ${selectedStyleGuide}
 ${characterBlock}
@@ -292,13 +315,14 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
 
     // ========== STEP 7: Merge, validate timing & re-index ==========
     allScenes.sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
-    // Enforce 5-10s scene duration — split or merge scenes that are out of range
+    const minDur = isShort ? 1.5 : 5;
+    const maxDur = isShort ? 4 : 10;
     for (let i = 0; i < allScenes.length; i++) {
       const s = allScenes[i];
       const dur = (s.endTime || 0) - (s.startTime || 0);
-      if (dur < 5) s.sceneDurationSeconds = 5;
-      else if (dur > 10) s.sceneDurationSeconds = 10;
-      else s.sceneDurationSeconds = Math.round(dur);
+      if (dur < minDur) s.sceneDurationSeconds = minDur;
+      else if (dur > maxDur) s.sceneDurationSeconds = maxDur;
+      else s.sceneDurationSeconds = Math.round(dur * 10) / 10;
     }
     allScenes.forEach((s, i) => { s.sceneIndex = i + 1; });
 

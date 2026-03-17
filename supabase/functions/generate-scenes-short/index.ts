@@ -91,47 +91,50 @@ const MASTER_PROMPT_EXAMPLES: Record<string, string> = {
 // Dopaminergic timing rules based on duration category
 const DOPAMINE_TIMING = {
   micro: { // 15-25s
-    hookWindow: '0-2s',
-    hookDuration: 2,
-    sceneDuration: '3-5s per scene',
-    minScenes: 3,
-    maxScenes: 5,
+    hookWindow: '0-1.5s',
+    hookDuration: 1.5,
+    sceneDuration: '2-3s per scene',
+    minScenes: 5,
+    maxScenes: 8,
     rules: `MICRO-SHORT DOPAMINE RULES (15-25s):
-- 0-2s: NUCLEAR HOOK — single most shocking/curious visual, must stop scrolling INSTANTLY
-- Every scene = 3-5 seconds MAX, zero filler frames
+- 0-1.5s: NUCLEAR HOOK — single most shocking/curious visual, must stop scrolling INSTANTLY
+- Every scene = 2-3 seconds MAX. RAPID FIRE cuts. Zero filler frames.
+- You MUST generate AT LEAST 5-7 scenes even for 15s videos. Each scene = a NEW visual.
 - Each cut = dopamine spike (new angle, new revelation, new emotion)
-- Final 2s = PERFECT LOOP back to opening shot (viewer watches again without realizing)
+- Final 1.5s = PERFECT LOOP back to opening shot
 - ONE idea only. ONE emotion. MAXIMUM density.
 - Camera moves: rapid zooms, whip pans, snap cuts ONLY
 - No establishing shots longer than 2s — audience is GONE by 3s if bored`,
   },
   flash: { // 25-40s
-    hookWindow: '0-3s',
-    hookDuration: 3,
-    sceneDuration: '4-6s per scene',
-    minScenes: 5,
-    maxScenes: 7,
+    hookWindow: '0-2s',
+    hookDuration: 2,
+    sceneDuration: '3-4s per scene',
+    minScenes: 7,
+    maxScenes: 10,
     rules: `FLASH-SHORT DOPAMINE RULES (25-40s):
-- 0-3s: MAGNETIC HOOK — wide cinematic + extreme close-up combo in 3 seconds
+- 0-2s: MAGNETIC HOOK — wide cinematic + extreme close-up combo in 2 seconds
+- Generate 7-10 scenes with 3-4s each. FAST PACING. Every cut = new visual.
 - 3-8s: PATTERN INTERRUPT — completely unexpected angle or revelation
-- Every 8s: NEW dopamine trigger (visual shock, information bomb, emotional shift)
+- Every 6s: NEW dopamine trigger (visual shock, information bomb, emotional shift)
 - Escalating intensity: each scene more dramatic than the last
-- 3-second CLIFFHANGER before final reveal
+- 2-second CLIFFHANGER before final reveal
 - Final scene: LOOP MAGNET — visual/emotional callback to scene 1
-- Camera variety: minimum 5 different angles, NEVER repeat consecutively`,
+- Camera variety: minimum 7 different angles, NEVER repeat consecutively`,
   },
   story: { // 40-60s
-    hookWindow: '0-3s',
-    hookDuration: 3,
-    sceneDuration: '5-8s per scene',
-    minScenes: 6,
-    maxScenes: 8,
+    hookWindow: '0-2s',
+    hookDuration: 2,
+    sceneDuration: '3-5s per scene',
+    minScenes: 10,
+    maxScenes: 15,
     rules: `STORY-SHORT DOPAMINE RULES (40-60s):
-- 0-3s: FLASHFORWARD — show the climax/most dramatic moment FIRST
-- 3-8s: REWIND — "Let me tell you how we got here" — reset with establishing context
-- Every 10s: OPEN LOOP — introduce unanswered question to prevent scroll-away
-- 25-30s: MIDPOINT TWIST — unexpected turn that re-hooks anyone about to leave
-- Final 5s: EMOTIONAL PAYOFF + LOOP setup
+- 0-2s: FLASHFORWARD — show the climax/most dramatic moment FIRST
+- Generate 10-15 scenes with 3-5s each. DENSE visual storytelling.
+- 3-6s: REWIND — "Let me tell you how we got here" — reset with establishing context
+- Every 6-8s: OPEN LOOP — introduce unanswered question to prevent scroll-away
+- 20-25s: MIDPOINT TWIST — unexpected turn that re-hooks anyone about to leave
+- Final 3s: EMOTIONAL PAYOFF + LOOP setup
 - Camera progression: intimate → wide → intimate → wide (breathing rhythm)
 - Emotional arc: shock → curiosity → empathy → revelation → awe → loop`,
   },
@@ -157,7 +160,9 @@ serve(async (req) => {
     const dur = parseInt(durationSeconds) || 45;
     const category = getDurationCategory(dur);
     const timing = DOPAMINE_TIMING[category];
-    const sceneCount = Math.max(timing.minScenes, Math.min(timing.maxScenes, Math.round(dur / 6)));
+    // For Shorts: 1 scene every 2-3s for micro, 3-4s for flash, 3-5s for story
+    const sceneDivisor = category === 'micro' ? 2.5 : category === 'flash' ? 3.5 : 4;
+    const sceneCount = Math.max(timing.minScenes, Math.min(timing.maxScenes, Math.round(dur / sceneDivisor)));
 
     // Parallel data fetches
     const [promptKnowledgeRes, hooksRes, attentionRes] = await Promise.all([
@@ -236,15 +241,33 @@ ${attentionBlock || 'Pattern interrupts every 8s, dopamine stacking, emotional w
 ${knowledgeBlock ? `\n📚 VISUAL REFERENCES:\n${knowledgeBlock}\n` : ''}
 ${charBlock ? `\n👥 CHARACTERS:\n${charBlock}\n` : ''}
 
-Generate EXACTLY ${sceneCount} scenes.
+═══════════════════════════════════════
+🗺️ SEMANTIC VISUAL MAPPING — CRITICAL!
+═══════════════════════════════════════
+EVERY scene MUST visually represent EXACTLY what the narrator is saying at that moment.
+DO NOT create generic shots. Instead, MAP narration to CONCRETE visuals:
+
+EXAMPLE: If narrator says "No Egito antigo foi achado isso, esqueça tudo que aprendeu na escola sobre o Egito":
+- Scene 1 (0-2s): Aerial drone over Egyptian pyramids at sunset, sand particles floating, golden hour
+- Scene 2 (2-4s): Close-up of ancient hieroglyphics being illuminated by torch, dust particles, dark tomb
+- Scene 3 (4-7s): Student in classroom looking shocked at textbook about Egypt, fluorescent lights, rack focus
+- Scene 4 (7-9s): Man watching documentary about Egypt on TV, screen glow on face, living room at night  
+- Scene 5 (9-12s): Dramatic aerial shot diving INTO the Great Sphinx at golden hour, sand storm approaching
+- Scene 6 (12-14s): Extreme close-up of archaeological dig revealing golden artifact, hands brushing sand
+- Scene 7 (14-15s): Wide shot of pyramids with mysterious light beam, loop back to scene 1 composition
+
+EACH SCENE = A DIFFERENT VISUAL CONTEXT that illustrates the narration.
+Mix: landscapes, close-ups, people reacting, documentary footage style, dramatic reveals.
+
+Generate EXACTLY ${sceneCount} scenes. Each scene = 2-4 seconds MAX.
 
 Return a VALID JSON array with this EXACT structure:
 [
   {
     "sceneIndex": 1,
     "startTime": 0,
-    "endTime": 3,
-    "sceneDurationSeconds": 3,
+    "endTime": 2.5,
+    "sceneDurationSeconds": 2.5,
     "narrativeText": "spoken text for this scene",
     "narrativeSummary": "1-line emotional beat summary",
     "visualPrompt": "MASTER PROMPT BLOCK format: {camera_type} of {subject} {emotional_action}, {environment_detail}, {lighting}, {lens_spec}, {camera_movement}, vertical 9:16 composition (do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)",
@@ -261,7 +284,8 @@ Return a VALID JSON array with this EXACT structure:
 ]
 
 SCENE 1 IS EVERYTHING. If scene 1 doesn't STOP THE SCROLL, the video FAILS.
-The LAST scene must create an irresistible LOOP back to scene 1.`;
+The LAST scene must create an irresistible LOOP back to scene 1.
+NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
 
     const res = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
