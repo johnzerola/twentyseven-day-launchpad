@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network, History, Trash2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ const TABS = [
 ];
 
 const ChannelSearch = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('videos');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VideoResult[]>([]);
@@ -565,7 +567,15 @@ const ChannelSearch = () => {
             {/* Deep Scan Result Panel */}
             <AnimatePresence>
               {deepScanResult && (
-                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} />
+                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={(outline) => {
+                  sessionStorage.setItem('clone_script_outline', outline);
+                  sessionStorage.setItem('clone_video_title', deepScanResult.videoInfo.title);
+                  sessionStorage.setItem('clone_video_style', deepScanResult.analysis.visualStyle?.primaryStyle || 'cinematográfico');
+                  sessionStorage.setItem('clone_hook', deepScanResult.analysis.hookAnalysis.hookText || '');
+                  sessionStorage.setItem('clone_niche', deepScanResult.analysis.contentDNA?.nicheCategory || '');
+                  navigate('/scripts');
+                  toast.success('🎬 Dados do vídeo carregados! Gerando roteiro modelado...');
+                }} />
               )}
             </AnimatePresence>
 
