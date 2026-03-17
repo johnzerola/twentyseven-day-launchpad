@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, Rocket, Dna, TrendingUp, Layers } from 'lucide-react';
+import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, Rocket, Dna, TrendingUp, Layers, Tv2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
