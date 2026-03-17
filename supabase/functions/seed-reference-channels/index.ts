@@ -306,17 +306,19 @@ This channel appears to use AI-generated video (Veo3/Sora style). Analyze:
 
         // 6. Save top videos to viral_titles_db
         for (const v of topVideos.slice(0, 8)) {
-          await sb.from("viral_titles_db").upsert({
-            title: v.title,
-            views: v.views,
-            likes: v.likes,
-            channel_id: channelId,
-            channel_name: channel.snippet.title,
-            duration_seconds: v.duration_seconds,
-            published_at: v.published_at,
-            niche: analysis.niche || ch.category,
-            language: analysis.language || "en",
-          }, { onConflict: "title" }).catch(() => {});
+          try {
+            await sb.from("viral_titles_db").upsert({
+              title: v.title,
+              views: v.views,
+              likes: v.likes,
+              channel_id: channelId,
+              channel_name: channel.snippet.title,
+              duration_seconds: v.duration_seconds,
+              published_at: v.published_at,
+              niche: analysis.niche || ch.category,
+              language: analysis.language || "en",
+            }, { onConflict: "title" });
+          } catch (_) { /* skip */ }
         }
 
         // 7. Save content DNA for each top video
