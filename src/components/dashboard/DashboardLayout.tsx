@@ -23,6 +23,7 @@ const navItems = [
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
+  { key: 'Shorts Trends', icon: TrendingUp, path: '/shorts-trends' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
 ];
