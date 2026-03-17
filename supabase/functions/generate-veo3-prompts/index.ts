@@ -26,7 +26,7 @@ serve(async (req) => {
       characterBlock = `MAIN CHARACTER: ${characterDescription}`;
     }
 
-    const customStyleNotes = body.customStyleNotes || '';
+    const customStyleNotes = '';
 
     const styleGuides: Record<string, string> = {
       'cinematográfico': 'Netflix/Disney cinematic. Ultra-realistic, ARRI ALEXA, Kodak Vision3, film grain.',

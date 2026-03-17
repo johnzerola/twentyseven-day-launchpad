@@ -42,6 +42,7 @@ const STYLES = [
   { value: 'conspiração', label: '🔍 Conspiração/Mistério', desc: 'Investigação profunda, evidências progressivas' },
   { value: 'mitologia', label: '⚡ Mitologia Épica', desc: 'Mitos gregos, nórdicos, egípcios — tom grandioso' },
   { value: 'teorias', label: '🌊 Teorias & Mistérios', desc: 'Pirâmides, oceano, civilizações perdidas' },
+  { value: 'animal_chase', label: '🐾 Animal Chase/Survival', desc: 'Animais fugindo de perigos — tensão máxima, Veo3 hiper-realista' },
 ];
 
 interface ScriptGeneratorProps {
