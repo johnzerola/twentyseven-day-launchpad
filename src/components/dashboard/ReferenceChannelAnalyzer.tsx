@@ -82,6 +82,7 @@ export const ReferenceChannelAnalyzer = () => {
         body: JSON.stringify({
           mode: 'custom',
           custom_channels: lines,
+          target_channel_id: selectedChannelId || undefined,
         }),
       });
       const result = await res.json();
