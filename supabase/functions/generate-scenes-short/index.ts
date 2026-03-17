@@ -241,15 +241,33 @@ ${attentionBlock || 'Pattern interrupts every 8s, dopamine stacking, emotional w
 ${knowledgeBlock ? `\n📚 VISUAL REFERENCES:\n${knowledgeBlock}\n` : ''}
 ${charBlock ? `\n👥 CHARACTERS:\n${charBlock}\n` : ''}
 
-Generate EXACTLY ${sceneCount} scenes.
+═══════════════════════════════════════
+🗺️ SEMANTIC VISUAL MAPPING — CRITICAL!
+═══════════════════════════════════════
+EVERY scene MUST visually represent EXACTLY what the narrator is saying at that moment.
+DO NOT create generic shots. Instead, MAP narration to CONCRETE visuals:
+
+EXAMPLE: If narrator says "No Egito antigo foi achado isso, esqueça tudo que aprendeu na escola sobre o Egito":
+- Scene 1 (0-2s): Aerial drone over Egyptian pyramids at sunset, sand particles floating, golden hour
+- Scene 2 (2-4s): Close-up of ancient hieroglyphics being illuminated by torch, dust particles, dark tomb
+- Scene 3 (4-7s): Student in classroom looking shocked at textbook about Egypt, fluorescent lights, rack focus
+- Scene 4 (7-9s): Man watching documentary about Egypt on TV, screen glow on face, living room at night  
+- Scene 5 (9-12s): Dramatic aerial shot diving INTO the Great Sphinx at golden hour, sand storm approaching
+- Scene 6 (12-14s): Extreme close-up of archaeological dig revealing golden artifact, hands brushing sand
+- Scene 7 (14-15s): Wide shot of pyramids with mysterious light beam, loop back to scene 1 composition
+
+EACH SCENE = A DIFFERENT VISUAL CONTEXT that illustrates the narration.
+Mix: landscapes, close-ups, people reacting, documentary footage style, dramatic reveals.
+
+Generate EXACTLY ${sceneCount} scenes. Each scene = 2-4 seconds MAX.
 
 Return a VALID JSON array with this EXACT structure:
 [
   {
     "sceneIndex": 1,
     "startTime": 0,
-    "endTime": 3,
-    "sceneDurationSeconds": 3,
+    "endTime": 2.5,
+    "sceneDurationSeconds": 2.5,
     "narrativeText": "spoken text for this scene",
     "narrativeSummary": "1-line emotional beat summary",
     "visualPrompt": "MASTER PROMPT BLOCK format: {camera_type} of {subject} {emotional_action}, {environment_detail}, {lighting}, {lens_spec}, {camera_movement}, vertical 9:16 composition (do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)",
@@ -266,7 +284,8 @@ Return a VALID JSON array with this EXACT structure:
 ]
 
 SCENE 1 IS EVERYTHING. If scene 1 doesn't STOP THE SCROLL, the video FAILS.
-The LAST scene must create an irresistible LOOP back to scene 1.`;
+The LAST scene must create an irresistible LOOP back to scene 1.
+NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
 
     const res = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
