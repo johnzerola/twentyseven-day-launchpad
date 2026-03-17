@@ -26,6 +26,7 @@ const navItems = [
   { key: 'Shorts Trends', icon: TrendingUp, path: '/shorts-trends' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
+  { key: 'Knowledge Admin', icon: Search, path: '/knowledge' },
 ];
 
 const TIER_COLORS: Record<string, string> = {
