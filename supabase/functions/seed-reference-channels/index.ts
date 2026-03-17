@@ -415,7 +415,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { start_index = 0, batch_size = 5, custom_channels, mode = "default" } = body;
+    const { start_index = 0, batch_size = 5, custom_channels, mode = "default", target_channel_id } = body;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -452,11 +452,47 @@ serve(async (req) => {
     const report: any[] = [];
     let processed = 0, errors = 0;
 
+    // Get user_id from auth header for Dotti sync
+    let userId: string | null = null;
+    const authHeader = req.headers.get("authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await sb.auth.getUser(token);
+      userId = user?.id || null;
+    }
+
     for (const ch of batch) {
       try {
         const result = await processChannel(ch, ytKeys, LOVABLE_API_KEY, sb);
         report.push(result);
         processed++;
+
+        // Save to Dotti suggestions if target channel is specified
+        if (target_channel_id && userId && result.status === "ok" && result.analysis_summary) {
+          const summary = result.analysis_summary;
+          const dottiContent = [
+            `📺 Canal Referência: ${result.channel}`,
+            `🎬 Modelo: ${summary.content_model}`,
+            summary.hook_patterns?.length ? `🎣 Hooks: ${summary.hook_patterns.join(", ")}` : "",
+            summary.first_10s ? `⏱️ Primeiros 10s: ${summary.first_10s}` : "",
+            summary.seo ? `🔍 SEO: ${summary.seo}` : "",
+            summary.script_guide ? `📝 Guia: ${summary.script_guide}` : "",
+            `💡 ${summary.ideas_count} ideias · ${summary.scene_templates} templates de cena`,
+          ].filter(Boolean).join("\n");
+
+          try {
+            await sb.from("dotti_suggestions").insert({
+              user_id: userId,
+              channel_id: target_channel_id,
+              title: `🎬 Análise de Referência: ${result.channel}`,
+              content: dottiContent,
+              niche: result.niche || "general",
+              topic: "reference_analysis",
+              style: summary.content_model || "storytelling",
+            });
+          } catch (e) { console.error("Dotti save error:", e); }
+        }
+
         await new Promise(r => setTimeout(r, 2000));
       } catch (e: any) {
         console.error(`Error processing ${ch.url}:`, e.message);

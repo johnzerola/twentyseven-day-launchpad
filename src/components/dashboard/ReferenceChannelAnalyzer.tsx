@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Tv2, Plus, Trash2, ExternalLink, BookOpen, Sparkles, Eye, Target, Film } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Tv2, Plus, Trash2, ExternalLink, BookOpen, Sparkles, Eye, Target, Film, Youtube } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthHeaders } from '@/lib/auth-fetch';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+
+interface UserChannel {
+  id: string;
+  channel_name: string;
+  niche?: string;
+}
 
 interface AnalysisReport {
   channel: string;
@@ -30,6 +38,21 @@ export const ReferenceChannelAnalyzer = () => {
   const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
+  const [userChannels, setUserChannels] = useState<UserChannel[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+
+  useEffect(() => {
+    const fetchChannels = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_channels')
+        .select('id, channel_name, niche')
+        .eq('user_id', user.id);
+      if (data) setUserChannels(data);
+    };
+    fetchChannels();
+  }, []);
 
   const handleAnalyze = async () => {
     const lines = urls
@@ -59,6 +82,7 @@ export const ReferenceChannelAnalyzer = () => {
         body: JSON.stringify({
           mode: 'custom',
           custom_channels: lines,
+          target_channel_id: selectedChannelId || undefined,
         }),
       });
       const result = await res.json();
@@ -89,6 +113,30 @@ export const ReferenceChannelAnalyzer = () => {
             Cole URLs de canais YouTube para a IA analisar roteiros, SEO, títulos, cenas e criar guias de replicação
           </p>
         </div>
+      </div>
+
+      {/* Channel Selector */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Youtube className="w-4 h-4 text-red-500" />
+          <span className="text-xs font-semibold">Salvar análise para qual canal?</span>
+        </div>
+        <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+          <SelectTrigger className="h-9 text-xs">
+            <SelectValue placeholder="Selecione um canal (opcional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nenhum (análise global)</SelectItem>
+            {userChannels.map(ch => (
+              <SelectItem key={ch.id} value={ch.id}>
+                {ch.channel_name} {ch.niche ? `(${ch.niche})` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[9px] text-muted-foreground">
+          A análise será salva junto com as informações do Dotti para o canal selecionado
+        </p>
       </div>
 
       {/* Input */}
