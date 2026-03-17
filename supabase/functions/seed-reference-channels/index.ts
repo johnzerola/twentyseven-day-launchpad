@@ -392,20 +392,22 @@ This channel appears to use AI-generated video (Veo3/Sora style). Analyze:
     }
 
     // Log execution
-    await sb.from("execution_logs").insert({
-      function_name: "seed-reference-channels",
-      success: errors === 0,
-      duration_ms: 0,
-      metadata: {
-        batch_start: start_index,
-        batch_size,
-        processed,
-        errors,
-        total_channels: uniqueChannels.length,
-        next_index: start_index + batch_size < uniqueChannels.length ? start_index + batch_size : null,
-        report,
-      },
-    }).catch(() => {});
+    try {
+      await sb.from("execution_logs").insert({
+        function_name: "seed-reference-channels",
+        success: errors === 0,
+        duration_ms: 0,
+        metadata: {
+          batch_start: start_index,
+          batch_size,
+          processed,
+          errors,
+          total_channels: uniqueChannels.length,
+          next_index: start_index + batch_size < uniqueChannels.length ? start_index + batch_size : null,
+          report,
+        },
+      });
+    } catch (_) { /* ignore */ }
 
     return new Response(JSON.stringify({
       success: true,
