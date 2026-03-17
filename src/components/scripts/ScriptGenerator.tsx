@@ -683,8 +683,15 @@ export const ScriptGenerator = ({
                   <button key={key} onClick={() => {
                     setNiche(key);
                     if (!style || !preset.styles.includes(style)) setStyle(preset.styles[0]);
-                    if (videoType === 'long') setDuration(String(preset.defaultDuration));
-                    toast.success(`${preset.emoji} Nicho "${preset.label}" configurado! Escolha um tópico abaixo.`);
+                    if (videoType === 'long') {
+                      setDuration(String(preset.defaultDuration));
+                    } else {
+                      // Shorts: auto-configure optimal duration for niche
+                      const shortDur = key === 'animal_survival' ? '30' : '30';
+                      setDuration(shortDur);
+                    }
+                    toast.success(`${preset.emoji} Nicho "${preset.label}" configurado!${key === 'animal_survival' ? ' Use estilo Animal Chase nas cenas.' : ' Escolha um tópico abaixo.'}`);
+
                   }}
                     className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-[10px] ${
                       niche === key ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
