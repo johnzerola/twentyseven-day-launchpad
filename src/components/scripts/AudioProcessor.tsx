@@ -53,8 +53,8 @@ export const AudioProcessor = ({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 25 * 1024 * 1024) {
-      toast.error('Áudio deve ter no máximo 25MB');
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error('Áudio deve ter no máximo 100MB');
       return;
     }
     setAudioFile(file);
