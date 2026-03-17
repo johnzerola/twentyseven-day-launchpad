@@ -38,6 +38,21 @@ export const ReferenceChannelAnalyzer = () => {
   const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
+  const [userChannels, setUserChannels] = useState<UserChannel[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+
+  useEffect(() => {
+    const fetchChannels = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_channels')
+        .select('id, channel_name, niche')
+        .eq('user_id', user.id);
+      if (data) setUserChannels(data);
+    };
+    fetchChannels();
+  }, []);
 
   const handleAnalyze = async () => {
     const lines = urls
