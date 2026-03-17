@@ -368,6 +368,11 @@ const KnowledgeAdmin = () => {
           )}
         </div>
 
+        {/* 🎬 User Reference Channel Analyzer */}
+        <div className="glass rounded-xl p-5 border border-primary/20">
+          <ReferenceChannelAnalyzer />
+        </div>
+
 
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabKey)}>
           <TabsList className="w-full grid grid-cols-4 h-auto">
