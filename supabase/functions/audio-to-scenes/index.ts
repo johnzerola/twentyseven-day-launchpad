@@ -33,7 +33,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
     if (!audioFile) throw new Error("Arquivo de áudio obrigatório.");
 
-    const sceneDuration = parseInt(sceneDurationStr) || 8;
+    const sceneDuration = isShort ? Math.min(parseInt(sceneDurationStr) || 3, 4) : (parseInt(sceneDurationStr) || 8);
     let characters: any[] = [];
     try {
       const parsed = JSON.parse(charactersJson);
