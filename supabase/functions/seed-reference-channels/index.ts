@@ -323,57 +323,61 @@ This channel appears to use AI-generated video (Veo3/Sora style). Analyze:
 
         // 7. Save content DNA for each top video
         for (const v of topVideos.slice(0, 5)) {
-          const multiplier = avgViews > 0 ? Math.round(v.views / avgViews * 100) / 100 : 1;
-          await sb.from("content_dna").upsert({
-            video_id: v.video_id,
-            video_title: v.title,
-            channel_id: channelId,
-            channel_name: channel.snippet.title,
-            niche: analysis.niche || ch.category,
-            language: analysis.language || "en",
-            views: v.views,
-            subscribers: subs,
-            multiplier,
-            hook_type: analysis.hook_patterns?.[0] || "story",
-            hook_pattern: analysis.hook_patterns?.join(", "),
-            title_structure: "story",
-            story_structure: analysis.narrative_structure || "hero_journey",
-            pacing: analysis.pacing || "medium",
-            visual_style: analysis.visual_style_notes,
-            emotion_primary: analysis.emotion_primary || "curiosity",
-            psychological_triggers: analysis.psychological_triggers || [],
-            attention_score: 80,
-            curiosity_score: 85,
-            dopamine_score: 75,
-            estimated_retention: 65,
-            why_viral: analysis.why_successful,
-            content_model: analysis.content_model || "storytelling",
-            viral_score: multiplier >= 3 ? 90 : multiplier >= 2 ? 80 : 70,
-            source: "seed-reference-channels",
-            video_type: "long",
-          }, { onConflict: "video_id" }).catch(e => console.error(`DNA upsert error:`, e));
+          try {
+            const multiplier = avgViews > 0 ? Math.round(v.views / avgViews * 100) / 100 : 1;
+            await sb.from("content_dna").upsert({
+              video_id: v.video_id,
+              video_title: v.title,
+              channel_id: channelId,
+              channel_name: channel.snippet.title,
+              niche: analysis.niche || ch.category,
+              language: analysis.language || "en",
+              views: v.views,
+              subscribers: subs,
+              multiplier,
+              hook_type: analysis.hook_patterns?.[0] || "story",
+              hook_pattern: analysis.hook_patterns?.join(", "),
+              title_structure: "story",
+              story_structure: analysis.narrative_structure || "hero_journey",
+              pacing: analysis.pacing || "medium",
+              visual_style: analysis.visual_style_notes,
+              emotion_primary: analysis.emotion_primary || "curiosity",
+              psychological_triggers: analysis.psychological_triggers || [],
+              attention_score: 80,
+              curiosity_score: 85,
+              dopamine_score: 75,
+              estimated_retention: 65,
+              why_viral: analysis.why_successful,
+              content_model: analysis.content_model || "storytelling",
+              viral_score: multiplier >= 3 ? 90 : multiplier >= 2 ? 80 : 70,
+              source: "seed-reference-channels",
+              video_type: "long",
+            }, { onConflict: "video_id" });
+          } catch (e) { console.error(`DNA upsert:`, e); }
         }
 
         // 8. Save viral patterns by niche/category
-        await sb.from("viral_patterns").insert({
-          pattern_name: `${analysis.content_model || ch.category}_${channel.snippet.title.slice(0, 20)}`,
-          niche: analysis.niche || ch.category,
-          source_video: topVideos[0]?.title || channel.snippet.title,
-          pattern_json: {
-            hook_types: analysis.hook_patterns,
-            emotional_triggers: analysis.psychological_triggers,
-            title_formulas: analysis.title_formulas,
-            pacing: analysis.pacing,
-            scene_types: analysis.scene_types,
-            camera_techniques: analysis.camera_techniques,
-            narrative_structure: analysis.narrative_structure,
-            content_model: analysis.content_model,
-            is_veo3: analysis.is_veo3_style,
-            replication_guide_pt: analysis.replication_guide_pt,
-            best_markets: analysis.best_markets,
-            success_factor: analysis.why_successful,
-          },
-        }).catch(() => {});
+        try {
+          await sb.from("viral_patterns").insert({
+            pattern_name: `${analysis.content_model || ch.category}_${channel.snippet.title.slice(0, 20)}`,
+            niche: analysis.niche || ch.category,
+            source_video: topVideos[0]?.title || channel.snippet.title,
+            pattern_json: {
+              hook_types: analysis.hook_patterns,
+              emotional_triggers: analysis.psychological_triggers,
+              title_formulas: analysis.title_formulas,
+              pacing: analysis.pacing,
+              scene_types: analysis.scene_types,
+              camera_techniques: analysis.camera_techniques,
+              narrative_structure: analysis.narrative_structure,
+              content_model: analysis.content_model,
+              is_veo3: analysis.is_veo3_style,
+              replication_guide_pt: analysis.replication_guide_pt,
+              best_markets: analysis.best_markets,
+              success_factor: analysis.why_successful,
+            },
+          });
+        } catch (_) { /* skip */ }
 
         processed++;
         report.push({ channel: channel.snippet.title, channelId, status: "ok", niche: analysis.niche, videos: topVideos.length });
