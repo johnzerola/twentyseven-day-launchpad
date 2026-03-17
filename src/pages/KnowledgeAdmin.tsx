@@ -50,6 +50,9 @@ const KnowledgeAdmin = () => {
   const [seedingPhase, setSeedingPhase] = useState<string | null>(null);
   const [seedingReport, setSeedingReport] = useState<Record<string, any> | null>(null);
   const [dbCounts, setDbCounts] = useState<Record<string, number>>({});
+  const [refChannelLoading, setRefChannelLoading] = useState(false);
+  const [refChannelBatch, setRefChannelBatch] = useState(0);
+  const [refChannelReport, setRefChannelReport] = useState<any>(null);
 
   const fetchDbCounts = async () => {
     const tables = ['content_dna', 'viral_patterns', 'score_calibration', 'knowledge_embeddings'];
