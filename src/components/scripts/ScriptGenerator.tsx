@@ -683,7 +683,17 @@ export const ScriptGenerator = ({
                   <button key={key} onClick={() => {
                     setNiche(key);
                     if (!style || !preset.styles.includes(style)) setStyle(preset.styles[0]);
-                    if (videoType === 'long') setDuration(String(preset.defaultDuration));
+                    if (videoType === 'long') {
+                      setDuration(String(preset.defaultDuration));
+                    } else {
+                      // Shorts: auto-configure optimal duration for niche
+                      const shortDur = key === 'animal_survival' ? '30' : '30';
+                      setDuration(shortDur);
+                    }
+                    // Auto-set video style for visual-heavy niches
+                    if (key === 'animal_survival') {
+                      setVideoStyle?.('animal_chase');
+                    }
                     toast.success(`${preset.emoji} Nicho "${preset.label}" configurado! Escolha um tópico abaixo.`);
                   }}
                     className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-[10px] ${
