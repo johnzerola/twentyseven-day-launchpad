@@ -415,7 +415,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { start_index = 0, batch_size = 5, custom_channels, mode = "default" } = body;
+    const { start_index = 0, batch_size = 5, custom_channels, mode = "default", target_channel_id } = body;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
