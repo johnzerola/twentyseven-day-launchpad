@@ -33,13 +33,25 @@ const REFERENCE_CHANNELS = [
   { url: "@TheFindersTale", category: "survival_stories" },
   { url: "@Outlanderssurvivalstories", category: "survival_stories" },
   { url: "@ForgottenOutlandsTeachings", category: "survival_stories" },
+  { url: "@simplesurvival6", category: "survival_stories" },
+  { url: "@MoutainFarmerStories", category: "survival_stories" },
   // Inspirational / Age Stories
   { url: "@DreamsDontAge", category: "inspirational" },
   { url: "@GrandmaTrueStories", category: "inspirational" },
   { url: "@EverydayValorStories-o3t", category: "inspirational" },
+  { url: "@SoulStories02", category: "inspirational" },
   // Heartbreak / Drama
   { url: "@HEARTBREAK-STORIES-CHANNEL", category: "drama_stories" },
   { url: "@IntoThePastStories", category: "drama_stories" },
+  { url: "@LoganStories", category: "drama_stories" },
+  // True Crime
+  { url: "@48HourTrueCrime01", category: "true_crime" },
+  { url: "@StoriesoftheMıssıng-HO", category: "true_crime" },
+  { url: "@UNSOLVEDSTORIES-q9d", category: "true_crime" },
+  { url: "@TrueCrimeDarkBonds", category: "true_crime" },
+  { url: "@TrueCrimeBreakdown1", category: "true_crime" },
+  { url: "@TajnéPřípady", category: "true_crime" },
+  { url: "@ScaryInteresting", category: "true_crime" },
   // Channel IDs
   { url: "channel/UCHL5AxOuChnnkXAzW4E5hgQ", category: "stories" },
   { url: "channel/UCqxEDM4DwBKgSkJc6zK-Dvw", category: "stories" },
