@@ -690,11 +690,8 @@ export const ScriptGenerator = ({
                       const shortDur = key === 'animal_survival' ? '30' : '30';
                       setDuration(shortDur);
                     }
-                    // Auto-set video style for visual-heavy niches
-                    if (key === 'animal_survival') {
-                      setVideoStyle?.('animal_chase');
-                    }
-                    toast.success(`${preset.emoji} Nicho "${preset.label}" configurado! Escolha um tópico abaixo.`);
+                    toast.success(`${preset.emoji} Nicho "${preset.label}" configurado!${key === 'animal_survival' ? ' Use estilo Animal Chase nas cenas.' : ' Escolha um tópico abaixo.'}`);
+
                   }}
                     className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-[10px] ${
                       niche === key ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:border-primary/30'
