@@ -115,6 +115,30 @@ export const ReferenceChannelAnalyzer = () => {
         </div>
       </div>
 
+      {/* Channel Selector */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Youtube className="w-4 h-4 text-red-500" />
+          <span className="text-xs font-semibold">Salvar análise para qual canal?</span>
+        </div>
+        <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+          <SelectTrigger className="h-9 text-xs">
+            <SelectValue placeholder="Selecione um canal (opcional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nenhum (análise global)</SelectItem>
+            {userChannels.map(ch => (
+              <SelectItem key={ch.id} value={ch.id}>
+                {ch.channel_name} {ch.niche ? `(${ch.niche})` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[9px] text-muted-foreground">
+          A análise será salva junto com as informações do Dotti para o canal selecionado
+        </p>
+      </div>
+
       {/* Input */}
       <div className="space-y-3">
         <Textarea

@@ -23,7 +23,7 @@ serve(async (req) => {
     const { audioBase64, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = body;
 
     if (!audioBase64) throw new Error("Áudio obrigatório.");
-    const cleanScript = (script || "").slice(0, 5000);
+    const cleanScript = (script || "").slice(0, 30000);
 
     console.log("transcribe-and-generate-scenes: starting pipeline");
 

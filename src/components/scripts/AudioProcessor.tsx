@@ -167,7 +167,7 @@ export const AudioProcessor = ({
           <label className="flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-lg p-6 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
             <Upload className="w-8 h-8 text-muted-foreground mb-2" />
             <span className="text-xs font-medium text-foreground">Clique para selecionar áudio</span>
-            <span className="text-[10px] text-muted-foreground mt-1">MP3, WAV, M4A, OGG — até 25MB</span>
+            <span className="text-[10px] text-muted-foreground mt-1">MP3, WAV, M4A, OGG — até 100MB (~50 min)</span>
             <input
               ref={fileInputRef}
               type="file"
