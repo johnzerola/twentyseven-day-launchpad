@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Tv2, Plus, Trash2, ExternalLink, BookOpen, Sparkles, Eye, Target, Film } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Tv2, Plus, Trash2, ExternalLink, BookOpen, Sparkles, Eye, Target, Film, Youtube } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthHeaders } from '@/lib/auth-fetch';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+
+interface UserChannel {
+  id: string;
+  channel_name: string;
+  niche?: string;
+}
 
 interface AnalysisReport {
   channel: string;
