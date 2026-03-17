@@ -25,6 +25,7 @@ const NICHE_PRESETS: Record<string, { label: string; emoji: string; styles: stri
   curiosidades: { label: 'Curiosidades', emoji: '🧠', styles: ['dopaminérgico', 'listicle', 'educativo'], topics: ['15 fatos que vão explodir sua mente', 'Coisas proibidas ao redor do mundo', 'O que acontece se você NÃO dormir por 7 dias'], defaultDuration: 15, tips: 'Escalada de impacto, cada fato mais surpreendente que o anterior.' },
   relacionamentos: { label: 'Relacionamentos', emoji: '❤️', styles: ['storytelling', 'reddit', 'educativo'], topics: ['Sinais que ele/ela não te ama de verdade', 'A psicologia por trás da atração', 'O que ninguém te conta sobre morar junto'], defaultDuration: 12, tips: 'Histórias reais, vulnerabilidade, psicologia aplicada.' },
   empreendedorismo: { label: 'Empreendedorismo', emoji: '🚀', styles: ['dopaminérgico', 'educativo', 'mrbeast'], topics: ['De R$0 a R$100k em 12 meses', 'O negócio que ninguém está fazendo', '3 ideias de negócio para 2026'], defaultDuration: 15, tips: 'Case studies reais, números específicos, passo-a-passo acionável.' },
+  animal_survival: { label: 'Animal Survival', emoji: '🐾', styles: ['cinematográfico', 'dopaminérgico', 'animal_chase'], topics: ['Animal fugindo da enchente — vai conseguir escapar?', 'Mulher doida perseguindo o bichinho indefeso', 'Predadores cercando um animal indefeso — quem vence?', 'Filhote perdido foge de predador gigante', 'Animal preso em rio de lava — fuga impossível', 'Cachorro vs cobra gigante — batalha pela sobrevivência'], defaultDuration: 20, tips: 'Foco em tensão visual máxima: animal correndo em câmera lenta, close nos olhos, perseguição com cortes rápidos. Estilo hiper-realista Veo3. Sem texto na tela. Loop perfeito: última cena reconecta ao gancho.' },
 };
 
 const STYLES = [
@@ -41,6 +42,7 @@ const STYLES = [
   { value: 'conspiração', label: '🔍 Conspiração/Mistério', desc: 'Investigação profunda, evidências progressivas' },
   { value: 'mitologia', label: '⚡ Mitologia Épica', desc: 'Mitos gregos, nórdicos, egípcios — tom grandioso' },
   { value: 'teorias', label: '🌊 Teorias & Mistérios', desc: 'Pirâmides, oceano, civilizações perdidas' },
+  { value: 'animal_chase', label: '🐾 Animal Chase/Survival', desc: 'Animais fugindo de perigos — tensão máxima, Veo3 hiper-realista' },
 ];
 
 interface ScriptGeneratorProps {

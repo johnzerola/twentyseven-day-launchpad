@@ -26,7 +26,7 @@ serve(async (req) => {
       characterBlock = `MAIN CHARACTER: ${characterDescription}`;
     }
 
-    const customStyleNotes = body.customStyleNotes || '';
+    const customStyleNotes = '';
 
     const styleGuides: Record<string, string> = {
       'cinematográfico': 'Netflix/Disney cinematic. Ultra-realistic, ARRI ALEXA, Kodak Vision3, film grain.',
@@ -39,6 +39,7 @@ serve(async (req) => {
       'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accents. Blade Runner 2049 mood.',
       'whiteboard': 'Whiteboard animation. Black ink sketches on white, hand-drawn, educational.',
       'comic': 'Comic book / graphic novel. Bold ink outlines, halftone, dynamic panels, saturated colors.',
+      'animal_chase': 'HYPER-REALISTIC WILDLIFE SURVIVAL. Shot like National Geographic meets Hollywood thriller. ARRI ALEXA Mini LF, 8K, 120fps slow-motion for chase sequences. Photorealistic animals with visible fur/feather detail, sweat, mud splashes. Dramatic volumetric lighting, golden hour or stormy skies. Handheld camera energy for chase POVs. Extreme close-ups on animal eyes showing fear/determination. Wide epic landscape shots showing the danger. Dust particles, water splashes, debris flying. Color grading: desaturated with punchy warm highlights. Sound design: heavy breathing, heartbeat, environmental chaos.',
     };
 
     const effectiveStyle = (videoStyle || 'cinematográfico').toLowerCase();
