@@ -566,7 +566,15 @@ const ChannelSearch = () => {
             {/* Deep Scan Result Panel */}
             <AnimatePresence>
               {deepScanResult && (
-                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} />
+                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={(outline) => {
+                  sessionStorage.setItem('clone_script_outline', outline);
+                  sessionStorage.setItem('clone_video_title', deepScanResult.videoInfo.title);
+                  sessionStorage.setItem('clone_video_style', deepScanResult.analysis.visualStyle?.primaryStyle || 'cinematográfico');
+                  sessionStorage.setItem('clone_hook', deepScanResult.analysis.hookAnalysis.hookText || '');
+                  sessionStorage.setItem('clone_niche', deepScanResult.analysis.contentDNA?.nicheCategory || '');
+                  navigate('/scripts');
+                  toast.success('🎬 Dados do vídeo carregados! Gerando roteiro modelado...');
+                }} />
               )}
             </AnimatePresence>
 

@@ -118,6 +118,30 @@ const Scripts = () => {
     
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
+
+    // Load from Video Clone Engine (TubySpy "Modelar Vídeo")
+    const cloneOutline = sessionStorage.getItem('clone_script_outline');
+    const cloneTitle = sessionStorage.getItem('clone_video_title');
+    const cloneStyle = sessionStorage.getItem('clone_video_style');
+    const cloneHook = sessionStorage.getItem('clone_hook');
+    const cloneNiche = sessionStorage.getItem('clone_niche');
+    if (cloneOutline) {
+      setTopic(cloneTitle || 'Vídeo Modelado');
+      setScript(cloneOutline);
+      if (cloneNiche) setNiche(cloneNiche);
+      if (cloneStyle) {
+        const matchedStyle = VIDEO_STYLES.find(s => s.value === cloneStyle.toLowerCase() || s.label.toLowerCase().includes(cloneStyle.toLowerCase()));
+        if (matchedStyle) setVideoStyle(matchedStyle.value);
+      }
+      setActiveStep('script');
+      sessionStorage.removeItem('clone_script_outline');
+      sessionStorage.removeItem('clone_video_title');
+      sessionStorage.removeItem('clone_video_style');
+      sessionStorage.removeItem('clone_hook');
+      sessionStorage.removeItem('clone_niche');
+      toast.success('🎬 Roteiro modelado carregado do Video Clone Engine!');
+    }
+
     loadLastProjectCharacters();
   }, []);
 
