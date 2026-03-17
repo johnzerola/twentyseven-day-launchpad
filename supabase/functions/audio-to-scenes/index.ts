@@ -24,6 +24,8 @@ serve(async (req) => {
     const charactersJson = formData.get("characters") as string || "[]";
     const sceneDurationStr = formData.get("sceneDuration") as string || "8";
     const language = formData.get("language") as string || "português";
+    const videoType = formData.get("videoType") as string || "long";
+    const isShort = videoType === 'short' || videoType === 'shorts';
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
