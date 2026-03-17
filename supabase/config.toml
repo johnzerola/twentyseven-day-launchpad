@@ -138,4 +138,6 @@ verify_jwt = false
 [functions.data-seeding-engine]
 verify_jwt = false
 
+[functions.seed-reference-channels]
+verify_jwt = false
 
