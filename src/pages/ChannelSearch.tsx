@@ -586,7 +586,7 @@ const ChannelSearch = () => {
 
             {/* Deep Scanning Loader */}
             {deepScanning && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              <motion.div ref={deepScanRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="glass rounded-xl p-8 text-center border border-primary/20">
                 <Brain className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
                 <h3 className="font-bold text-lg">Deep Scan em Andamento...</h3>
