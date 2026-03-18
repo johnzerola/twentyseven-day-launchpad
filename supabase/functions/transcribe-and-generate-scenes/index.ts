@@ -333,15 +333,23 @@ TIMING RULES:
 - Cover the ENTIRE audio — NO GAPS
 - startTime/endTime MUST align with transcript timestamps
 
-PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [CHARACTER]. [ACTION]. [ENVIRONMENT]. [LIGHTING]. [ATMOSPHERE]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [FULL CHARACTER DESCRIPTION — skin, hair, eyes, face, clothing]. [ACTION + EXPRESSION]. [ENVIRONMENT + PROPS]. [LIGHTING]. [COLOR GRADING]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+
+🚨 CHARACTER CONSISTENCY RULES (CRITICAL):
+- NEVER use just a character name in visualPrompt. ALWAYS describe their FULL appearance every single time.
+- Include: skin tone, hair (color + style + length), eye color + shape, face shape, eyebrows, nose, mouth, jawline, facial hair, clothing (top, bottom, shoes, accessories), body build.
+- Copy the CHARACTER SHEET descriptions VERBATIM into each scene's visualPrompt and charactersInScene.visualDescription.
+- If a character has a scar, tattoo, or distinctive mark, it MUST appear in EVERY scene.
+- Clothing must stay consistent unless the narrative describes a change.
+${characterBlock}
 
 SYNC RULES:
 - EVERY visual prompt MUST illustrate what the narrator says at THAT moment
 - Concrete → show them. Abstract → visual metaphors
 - NEVER show generic visuals disconnected from narration
 - CAMERA VARIETY: Never repeat angles consecutively
-${characterBlock}
-PROMPT QUALITY: 80-150 words per prompt.
+
+PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.`;
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
