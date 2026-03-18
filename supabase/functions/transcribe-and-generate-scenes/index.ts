@@ -349,7 +349,7 @@ SYNC RULES:
 - NEVER show generic visuals disconnected from narration
 - CAMERA VARIETY: Never repeat angles consecutively
 
-PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.
+PROMPT QUALITY: 70-120 words per prompt. Include lens, lighting, color grading, environment textures.
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
@@ -377,35 +377,51 @@ ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneB
 
     console.log(`Processing ${chunks.length} chunk(s) for ${audioDuration.toFixed(1)}s audio`);
 
-    // Process chunks SEQUENTIALLY to avoid rate limits and timeout
-    const allScenes: any[] = [];
-    for (let ci = 0; ci < chunks.length; ci++) {
-      const chunk = chunks[ci];
+    const parseScenesFromToolArgs = (rawArgs: string): any[] => {
+      if (!rawArgs) return [];
+      try {
+        const parsed = JSON.parse(rawArgs);
+        return Array.isArray(parsed?.scenes) ? parsed.scenes : [];
+      } catch {
+        const arrStart = rawArgs.indexOf('[');
+        const arrEnd = rawArgs.lastIndexOf(']');
+        if (arrStart !== -1 && arrEnd !== -1 && arrEnd > arrStart) {
+          try {
+            const recovered = JSON.parse(rawArgs.slice(arrStart, arrEnd + 1));
+            return Array.isArray(recovered) ? recovered : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      }
+    };
+
+    const generateChunkScenes = async (chunk: { blocks: typeof transcriptBlocks; startTime: number; endTime: number }, ci: number) => {
       const chunkTranscript = chunk.blocks
         .map(b => `[${b.start.toFixed(1)}s-${b.end.toFixed(1)}s] ${b.text}`)
         .join("\n");
 
       const chunkDuration = chunk.endTime - chunk.startTime;
-      const expectedScenes = Math.max(2, Math.ceil(chunkDuration / 8));
+      const expectedScenes = Math.max(2, Math.ceil(chunkDuration / 10));
 
       console.log(`Chunk ${ci + 1}/${chunks.length}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s, ~${expectedScenes} scenes`);
 
-      try {
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            tools: [toolDef],
-            tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
-            messages: [
-              { role: "system", content: systemPrompt },
-              {
-                role: "user",
-                content: `TRANSCRIPTION (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):
+      const resp = await retryFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          tools: [toolDef],
+          tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: `TRANSCRIPTION (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):
 
 ${chunkTranscript}
 
@@ -413,38 +429,45 @@ ${cleanScript ? `SCRIPT CONTEXT:\n${cleanScript.slice(0, 1500)}` : ''}
 
 Generate ~${expectedScenes} scenes for this segment. Each scene 5-10s. Style: ${videoStyle}. Language: ${language}.
 Visual content MUST match what is narrated at each timestamp.`
-              }
-            ],
-          }),
-        });
+            }
+          ],
+        }),
+      });
 
-        if (!resp.ok) {
-          const t = await resp.text();
-          console.error(`Chunk ${ci + 1} error: ${resp.status}`, t.slice(0, 200));
-          if (resp.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
-          if (resp.status === 402) throw new Error("Créditos insuficientes.");
-          continue; // Skip failed chunk but continue others
-        }
-
-        const data = await resp.json();
-        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-        if (toolCall) {
-          const parsed = JSON.parse(toolCall.function.arguments);
-          const scenes = parsed.scenes || [];
-          console.log(`Chunk ${ci + 1}: ${scenes.length} scenes generated`);
-          allScenes.push(...scenes);
-        }
-      } catch (err: any) {
-        console.error(`Chunk ${ci + 1} failed:`, err.message);
-        if (err.message?.includes('Rate limit') || err.message?.includes('Créditos')) throw err;
-        // Continue with other chunks on non-critical errors
+      if (!resp.ok) {
+        const t = await resp.text();
+        console.error(`Chunk ${ci + 1} error: ${resp.status}`, t.slice(0, 200));
+        if (resp.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
+        if (resp.status === 402) throw new Error("Créditos insuficientes.");
+        return [];
       }
 
-      // Small delay between chunks to avoid rate limits
-      if (ci < chunks.length - 1) {
-        await new Promise(r => setTimeout(r, 1000));
+      const data = await resp.json();
+      const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
+      const scenes = parseScenesFromToolArgs(args);
+      console.log(`Chunk ${ci + 1}: ${scenes.length} scenes generated`);
+      return scenes;
+    };
+
+    // Process chunks in parallel to stay under function timeout for long audios
+    const settled = await Promise.allSettled(chunks.map((chunk, ci) => generateChunkScenes(chunk, ci)));
+
+    const allScenes: any[] = [];
+    let criticalError: Error | null = null;
+
+    settled.forEach((result, ci) => {
+      if (result.status === "fulfilled") {
+        allScenes.push(...result.value);
+      } else {
+        const msg = result.reason?.message || `Chunk ${ci + 1} failed`;
+        console.error(`Chunk ${ci + 1} failed:`, msg);
+        if (!criticalError && (msg.includes("Rate limit") || msg.includes("Créditos"))) {
+          criticalError = result.reason;
+        }
       }
-    }
+    });
+
+    if (criticalError) throw criticalError;
 
     // ========== PHASE 5: Merge and validate ==========
     allScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
