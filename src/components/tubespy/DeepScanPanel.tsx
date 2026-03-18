@@ -127,7 +127,7 @@ const Section = ({ id, icon: Icon, iconColor, label, badge, expanded, onToggle, 
 
 export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPanelProps) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    hook: true, retention: false, dna: false, title: false, thumbnail: true, visual: true, rewatch: false, clone: true,
+    hook: true, retention: false, dna: false, title: false, thumbnail: true, visual: true, visualDna: false, sceneTimeline: false, rewatch: false, clone: true,
   });
   const { videoInfo, analysis } = result;
   const toggle = (key: string) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
