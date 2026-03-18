@@ -349,7 +349,7 @@ SYNC RULES:
 - NEVER show generic visuals disconnected from narration
 - CAMERA VARIETY: Never repeat angles consecutively
 
-PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.`;
+PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
