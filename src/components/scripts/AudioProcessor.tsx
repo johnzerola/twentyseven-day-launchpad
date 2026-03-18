@@ -130,13 +130,16 @@ export const AudioProcessor = ({
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!Array.isArray(data?.scenes) || data.scenes.length === 0) {
+        throw new Error('Nenhuma cena foi retornada. Tente novamente com áudio menor ou gere de novo.');
+      }
 
       setPhase('generating');
       await new Promise(r => setTimeout(r, 500));
 
-      setSyncedScenes(data.scenes || []);
+      setSyncedScenes(data.scenes);
       setPhase('done');
-      toast.success(`${data.scenes?.length || 0} cenas sincronizadas com o áudio!`);
+      toast.success(`${data.scenes.length} cenas sincronizadas com o áudio!`);
 
       setTimeout(() => setPhase('idle'), 3000);
     } catch (err: any) {
