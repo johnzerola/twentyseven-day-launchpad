@@ -159,7 +159,7 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                     <FileText className="w-2.5 h-2.5" /> Transcrição
                   </Badge>
                 )}
-                <Badge variant="outline" className="text-[9px]">{videoInfo.duration}</Badge>
+                <Badge variant="outline" className="text-[9px]">{videoInfo.duration}{videoInfo.durationMinutes ? ` (${videoInfo.durationMinutes}min)` : ''}</Badge>
                 {analysis.visualStyle && (
                   <Badge variant="outline" className="text-[9px] gap-1 text-purple-400 border-purple-500/30">
                     <Film className="w-2.5 h-2.5" /> {analysis.visualStyle.primaryStyle}
@@ -168,6 +168,16 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                 {analysis.visualStyle?.faceless && (
                   <Badge variant="outline" className="text-[9px] gap-1 text-blue-400 border-blue-500/30">
                     👤 Faceless
+                  </Badge>
+                )}
+                {videoInfo.capturedFrames && videoInfo.capturedFrames > 0 && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-indigo-400 border-indigo-500/30">
+                    📸 {videoInfo.capturedFrames} frames
+                  </Badge>
+                )}
+                {analysis.sceneTimeline && analysis.sceneTimeline.length > 0 && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-orange-400 border-orange-500/30">
+                    🎬 {analysis.sceneTimeline.length} cenas
                   </Badge>
                 )}
               </div>
