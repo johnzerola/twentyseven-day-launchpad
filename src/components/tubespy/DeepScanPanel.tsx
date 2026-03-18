@@ -63,7 +63,7 @@ interface DeepScanResult {
 interface DeepScanPanelProps {
   result: DeepScanResult;
   onClose: () => void;
-  onCloneToScript?: (outline: string) => void;
+  onCloneToScript?: () => void;
 }
 
 const ScoreCircle = ({ score, label, color }: { score: number; label: string; color: string }) => (
@@ -487,7 +487,7 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                 </Button>
                 {onCloneToScript && (
                   <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 gap-1 text-primary"
-                    onClick={() => onCloneToScript(analysis.cloneTemplate.scriptOutline)}>
+                    onClick={() => onCloneToScript()}>
                     <Sparkles className="w-2.5 h-2.5" /> Usar no Roteiro
                   </Button>
                 )}
@@ -555,7 +555,7 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
           {/* 🎬 MODELAR VÍDEO — Main CTA */}
           {onCloneToScript && (
             <Button className="w-full gap-2 h-12 text-sm gradient-hero border-0 mt-3" 
-              onClick={() => onCloneToScript(analysis.cloneTemplate.scriptOutline)}>
+              onClick={() => onCloneToScript()}>
               <Film className="w-5 h-5" /> 🎬 Modelar Vídeo — Criar Roteiro Similar
             </Button>
           )}
