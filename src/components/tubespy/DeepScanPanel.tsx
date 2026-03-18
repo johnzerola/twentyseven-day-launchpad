@@ -15,8 +15,10 @@ interface DeepScanResult {
   videoInfo: {
     id: string; title: string; channelTitle: string; channelId: string;
     thumbnail: string; views: number; likes: number; comments: number;
-    duration: string; publishedAt: string; tags: string[];
+    duration: string; durationSeconds?: number; durationMinutes?: number;
+    publishedAt: string; tags: string[];
     outlierScore: string; channelSubs: number; hasTranscript: boolean;
+    capturedFrames?: number;
   };
   analysis: {
     hookAnalysis: {
@@ -45,6 +47,19 @@ interface DeepScanResult {
       bRollUsage: string; productionLevel: string;
       replicabilityAsFaceless: number; toolsSuggested: string[];
     };
+    visualDNA?: {
+      colorPalette?: string[]; lightingStyle?: string;
+      cameraPatterns?: string[]; textOnScreenStyle?: string;
+      imageTypes?: string[]; backgroundStyle?: string;
+      overallAesthetic?: string; referenceStylePrompt?: string;
+      frameAnalysis?: { framePosition: string; description: string; keyElements: string[]; mood: string }[];
+    };
+    sceneTimeline?: {
+      sceneIndex: number; startTime: string; endTime: string; durationSeconds: number;
+      narrationSummary: string; visualDescription: string; visualPrompt: string;
+      cameraAngle?: string; mood: string; energyLevel: string;
+      retentionTechnique?: string; textOnScreen?: string; transitionToNext?: string;
+    }[];
     rewatchSegments?: {
       timeRange: string; reason: string; rewatchScore: number; contentSummary: string;
     }[];
@@ -53,6 +68,7 @@ interface DeepScanResult {
       scriptOutline: string; estimatedViewsSmallChannel: string;
       suggestedDuration?: string; thumbnailRecipe?: string;
       hookScript?: string; ctaScript?: string;
+      wordCountTarget?: number;
     };
     scores: {
       virality: number; replicability: number; monetization: number; overall: number;
