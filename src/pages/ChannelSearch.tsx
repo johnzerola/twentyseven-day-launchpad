@@ -217,9 +217,14 @@ const ChannelSearch = () => {
     toast.success(`${video.channelTitle} rastreado!`);
   };
 
+  const deepScanRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const deepScanVideo = async (videoId: string) => {
     setDeepScanning(videoId);
     setDeepScanResult(null);
+    toast.info('🧠 Deep Scan iniciado! Analisando vídeo...');
     try {
       const { data, error } = await supabase.functions.invoke('deep-scan-video', {
         body: { videoId },
@@ -227,7 +232,7 @@ const ChannelSearch = () => {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setDeepScanResult(data);
-      toast.success('Deep Scan completo!');
+      toast.success('✅ Deep Scan completo! Veja o resultado abaixo.');
       // Auto-learn from video analysis (fire-and-forget)
       if (data?.analysis) {
         supabase.functions.invoke('learn-from-user', {
