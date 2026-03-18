@@ -393,7 +393,8 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
           </Section>
         )}
 
-
+        {/* ══════ THUMBNAIL ANALYSIS ══════ */}
+        {analysis.thumbnailAnalysis && (
           <Section id="thumbnail" icon={Image} iconColor="text-pink-400" label="Análise de Thumbnail"
             badge={<Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-[10px]">Clickbait: {analysis.thumbnailAnalysis.clickbaitLevel}/10</Badge>}
             expanded={expandedSections.thumbnail} onToggle={() => toggle('thumbnail')}>
