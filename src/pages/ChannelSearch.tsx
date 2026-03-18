@@ -575,12 +575,22 @@ const ChannelSearch = () => {
                 <div ref={deepScanRef}>
                 <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={() => {
                   // Store FULL clone data for Scripts page
+                  // Parse duration string to seconds (e.g. "36:12" -> 2172)
+                  const durStr = deepScanResult.videoInfo.duration || '';
+                  const durParts = durStr.split(':').map(Number);
+                  let durationSeconds = 0;
+                  if (durParts.length === 3) durationSeconds = durParts[0] * 3600 + durParts[1] * 60 + durParts[2];
+                  else if (durParts.length === 2) durationSeconds = durParts[0] * 60 + durParts[1];
+                  
                   const cloneData = {
                     videoTitle: deepScanResult.videoInfo.title,
                     channelTitle: deepScanResult.videoInfo.channelTitle,
                     views: deepScanResult.videoInfo.views,
                     duration: deepScanResult.videoInfo.duration,
+                    durationSeconds,
+                    durationMinutes: Math.round(durationSeconds / 60),
                     visualStyle: deepScanResult.analysis.visualStyle?.primaryStyle || 'cinematográfico',
+                    visualDna: deepScanResult.analysis.visualStyle || {},
                     niche: deepScanResult.analysis.contentDNA?.nicheCategory || '',
                     emotionalTone: deepScanResult.analysis.contentDNA?.emotionalTone || '',
                     format: deepScanResult.analysis.contentDNA?.format || '',

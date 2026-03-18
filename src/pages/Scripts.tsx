@@ -142,8 +142,10 @@ const Scripts = () => {
           if (matchedStyle) setVideoStyle(matchedStyle.value);
         }
         
-        // Pre-fill duration from suggested or original
-        if (clone.suggestedDuration) {
+        // Pre-fill duration: USE ORIGINAL VIDEO DURATION (exact clone)
+        if (clone.durationMinutes && clone.durationMinutes > 0) {
+          setDuration(String(clone.durationMinutes));
+        } else if (clone.suggestedDuration) {
           const durationMatch = clone.suggestedDuration.match(/(\d+)/);
           if (durationMatch) setDuration(durationMatch[1]);
         }
@@ -191,6 +193,8 @@ const Scripts = () => {
           originalTitle: clone.videoTitle,
           channel: clone.channelTitle,
           views: clone.views,
+          durationSeconds: clone.durationSeconds,
+          durationMinutes: clone.durationMinutes,
           hookType: clone.hookType,
           emotionalTone: clone.emotionalTone,
           format: clone.format,
@@ -198,6 +202,7 @@ const Scripts = () => {
           whyItWorks: clone.whyItWorks,
           titleVariations: clone.titleVariations,
           thumbnailRecipe: clone.thumbnailRecipe,
+          visualDna: clone.visualDna,
         }));
         
         setActiveStep('script');
