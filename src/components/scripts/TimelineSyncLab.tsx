@@ -260,7 +260,7 @@ export const TimelineSyncLab = ({ scenes, onUpdateScene }: TimelineSyncLabProps)
           {scenes[selectedScene].charactersInScene && scenes[selectedScene].charactersInScene!.length > 0 && (
             <div className="flex gap-1 flex-wrap">
               {scenes[selectedScene].charactersInScene!.map((c, ci) => (
-                <Badge key={ci} variant="secondary" className="text-[9px]">👤 {c}</Badge>
+                <Badge key={ci} variant="secondary" className="text-[9px]">👤 {typeof c === 'string' ? c : c.name}</Badge>
               ))}
             </div>
           )}
