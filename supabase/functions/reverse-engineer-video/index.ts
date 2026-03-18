@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -33,7 +33,7 @@ serve(async (req) => {
       }
     }
 
-    // Credit check (5 credits for reverse engineering)
+    // Credit check (5 credits)
     if (user_id) {
       const { data: hasCredits } = await sb.rpc("consume_credits", { _user_id: user_id, _amount: 5 });
       if (!hasCredits) {
@@ -49,7 +49,7 @@ serve(async (req) => {
     if (BRAVE_API_KEY) {
       try {
         const searchQuery = `"${video_title}" transcript analysis breakdown`;
-        const braveRes = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=2`, {
+        const braveRes = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=3`, {
           headers: { "X-Subscription-Token": BRAVE_API_KEY },
         });
         const braveData = await braveRes.json();
@@ -59,7 +59,15 @@ serve(async (req) => {
       } catch (e) { console.error("Brave error:", e); }
     }
 
-    // Phase 1: Deep analysis via Gemini Pro
+    // ═══ Calculate exact timing ═══
+    const totalDurationSec = duration_seconds || 0;
+    const totalDurationMin = totalDurationSec > 0 ? Math.round(totalDurationSec / 60) : 0;
+    const sceneDuration = 30; // ~30s per scene block
+    const expectedScenes = totalDurationSec > 0 ? Math.max(6, Math.ceil(totalDurationSec / sceneDuration)) : 20;
+
+    console.log(`Reverse-engineering: "${video_title}" | ${totalDurationMin}min | ${expectedScenes} scenes expected`);
+
+    // ═══ Phase 1: Deep structural + visual analysis ═══
     const analysisRes = await fetch(AI_URL, {
       method: "POST", headers: aiH,
       body: JSON.stringify({
@@ -67,11 +75,43 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an elite YouTube reverse-engineering analyst. Analyze viral long-form videos to extract replicable patterns. Focus on: hook structure, retention mechanics, pacing, psychological triggers, narrative arc, and scene composition. Output structured analysis.`
+            content: `You are an ELITE YouTube reverse-engineering analyst specializing in EXACT CLONING of viral videos.
+
+YOUR MISSION: Extract EVERY replicable element so someone can create a video with the SAME duration, SAME pacing, SAME visual patterns, and SAME emotional arc.
+
+CRITICAL DURATION RULE: The original video is ${totalDurationMin} minutes (${totalDurationSec} seconds). Your scene_timeline MUST cover the ENTIRE duration from 00:00 to ${totalDurationMin > 0 ? `${String(Math.floor(totalDurationMin / 60)).padStart(2,'0')}:${String(totalDurationMin % 60).padStart(2,'0')}:00` : 'the end'}.
+Each scene block should be ~${sceneDuration} seconds. Generate EXACTLY ${expectedScenes} scene blocks.
+
+For EACH scene, describe:
+- EXACT visual style (camera angle, color grading, lighting, composition)
+- What is shown on screen (B-roll type, graphics, text overlays, transitions)
+- Narration style at that moment (pace, tone, energy level)
+- Retention technique used (open loop, pattern interrupt, cliffhanger, reveal)
+- Visual prompt that could recreate a SIMILAR image/video with AI
+
+OUTPUT FORMAT: Use the save_analysis function with ALL fields filled.`
           },
           {
             role: "user",
-            content: `Reverse-engineer this viral video:\n\nTitle: "${video_title}"\nChannel: ${channel_name || "Unknown"}\nNiche: ${niche || "general"}\nViews: ${views || "N/A"}\nDuration: ${duration_seconds ? Math.round(duration_seconds / 60) + " min" : "N/A"}\n\nWeb context:\n${webContext}\n\nProvide deep analysis.`
+            content: `Reverse-engineer this viral video for EXACT CLONING:
+
+Title: "${video_title}"
+Channel: ${channel_name || "Unknown"}
+Niche: ${niche || "general"}
+Views: ${views || "N/A"}
+EXACT Duration: ${totalDurationMin} minutes (${totalDurationSec} seconds)
+Language: ${language}
+
+Web context/transcript fragments:
+${webContext}
+
+REQUIREMENTS:
+1. Generate EXACTLY ${expectedScenes} scene blocks covering the FULL ${totalDurationMin}-minute duration
+2. Each scene_timeline entry must have start_time and end_time in "MM:SS" format
+3. Include DETAILED visual_prompt for each scene (what AI image/video generator should create)
+4. Map the EXACT emotional arc and pacing changes
+5. Identify EVERY visual pattern (color shifts, camera movements, text overlays, B-roll types)
+6. The clone script should result in a video of the SAME length: ${totalDurationMin} minutes`
           }
         ],
         tools: [{
@@ -88,16 +128,18 @@ serve(async (req) => {
                     hook_text_estimate: { type: "string" },
                     first_3s_technique: { type: "string" },
                     curiosity_gap: { type: "string" },
-                    retention_loop_count: { type: "number" }
+                    retention_loop_count: { type: "number" },
+                    visual_hook_description: { type: "string", description: "Exact visual description of the first 3-5 seconds" }
                   }
                 },
                 narrative_structure: {
                   type: "object",
                   properties: {
                     arc_type: { type: "string" },
-                    segments: { type: "array", items: { type: "object", properties: { name: { type: "string" }, purpose: { type: "string" }, duration_pct: { type: "number" } } } },
+                    segments: { type: "array", items: { type: "object", properties: { name: { type: "string" }, purpose: { type: "string" }, duration_pct: { type: "number" }, duration_seconds: { type: "number" } } } },
                     cliffhanger_count: { type: "number" },
-                    payoff_style: { type: "string" }
+                    payoff_style: { type: "string" },
+                    total_duration_minutes: { type: "number" }
                   }
                 },
                 psychological_triggers: { type: "array", items: { type: "string" } },
@@ -107,19 +149,47 @@ serve(async (req) => {
                     avg_scene_duration_sec: { type: "number" },
                     intensity_curve: { type: "string" },
                     music_usage: { type: "string" },
-                    visual_variety_score: { type: "number" }
+                    visual_variety_score: { type: "number" },
+                    cuts_per_minute: { type: "number" },
+                    b_roll_percentage: { type: "number" }
                   }
                 },
-                scene_structure: {
+                visual_dna: {
+                  type: "object",
+                  description: "Complete visual identity of the video",
+                  properties: {
+                    primary_style: { type: "string" },
+                    color_palette: { type: "array", items: { type: "string" } },
+                    lighting_style: { type: "string" },
+                    camera_patterns: { type: "array", items: { type: "string" } },
+                    transition_types: { type: "array", items: { type: "string" } },
+                    text_overlay_style: { type: "string" },
+                    b_roll_types: { type: "array", items: { type: "string" } },
+                    aspect_ratio: { type: "string" },
+                    production_level: { type: "string" },
+                    is_faceless: { type: "boolean" },
+                    reference_style_prompt: { type: "string", description: "A comprehensive prompt that captures the ENTIRE visual identity for AI image generation" }
+                  }
+                },
+                scene_timeline: {
                   type: "array",
+                  description: `EXACTLY ${expectedScenes} scenes covering full ${totalDurationMin} minutes`,
                   items: {
                     type: "object",
                     properties: {
                       scene_index: { type: "number" },
-                      timestamp_estimate: { type: "string" },
-                      visual_style: { type: "string" },
-                      purpose: { type: "string" },
-                      retention_technique: { type: "string" }
+                      start_time: { type: "string", description: "MM:SS format" },
+                      end_time: { type: "string", description: "MM:SS format" },
+                      duration_seconds: { type: "number" },
+                      narration_summary: { type: "string", description: "What the narrator says in this segment" },
+                      visual_description: { type: "string", description: "Detailed description of what is shown on screen" },
+                      visual_prompt: { type: "string", description: "AI-ready prompt to recreate this scene's visuals" },
+                      camera_angle: { type: "string" },
+                      mood: { type: "string" },
+                      retention_technique: { type: "string" },
+                      energy_level: { type: "string", description: "low/medium/high/explosive" },
+                      text_on_screen: { type: "string" },
+                      transition_to_next: { type: "string" }
                     }
                   }
                 },
@@ -129,14 +199,17 @@ serve(async (req) => {
                     replicable_elements: { type: "array", items: { type: "string" } },
                     unique_angle_needed: { type: "string" },
                     estimated_production_cost: { type: "string" },
-                    recommended_duration_min: { type: "number" }
+                    recommended_duration_min: { type: "number", description: "MUST match original duration" },
+                    script_word_count_target: { type: "number", description: "Words needed for exact duration match at 150 wpm" },
+                    visual_style_to_use: { type: "string" },
+                    key_visual_moments: { type: "array", items: { type: "string" }, description: "Most impactful visual moments to recreate" }
                   }
                 },
                 viral_score: { type: "number" },
                 quality_score: { type: "number" },
                 monetization_score: { type: "number" }
               },
-              required: ["hook_analysis", "narrative_structure", "psychological_triggers", "scene_structure", "clone_template", "viral_score"],
+              required: ["hook_analysis", "narrative_structure", "psychological_triggers", "scene_timeline", "visual_dna", "clone_template", "viral_score"],
               additionalProperties: false
             }
           }
@@ -156,6 +229,25 @@ serve(async (req) => {
       throw new Error(`AI analysis failed: ${analysisRes.status}`);
     }
 
+    // Ensure recommended_duration matches original
+    if (analysis.clone_template) {
+      analysis.clone_template.recommended_duration_min = totalDurationMin || analysis.clone_template.recommended_duration_min;
+      if (!analysis.clone_template.script_word_count_target && totalDurationMin > 0) {
+        analysis.clone_template.script_word_count_target = totalDurationMin * 150;
+      }
+    }
+
+    console.log(`Analysis complete: ${(analysis.scene_timeline || []).length} scenes, visual_dna: ${analysis.visual_dna?.primary_style}`);
+
+    // ═══ Build backward-compatible scene_structure from scene_timeline ═══
+    const scene_structure = (analysis.scene_timeline || []).map((s: any) => ({
+      scene_index: s.scene_index,
+      timestamp_estimate: `${s.start_time}-${s.end_time}`,
+      visual_style: s.visual_description || s.visual_prompt || '',
+      purpose: s.narration_summary || '',
+      retention_technique: s.retention_technique || '',
+    }));
+
     // Persist analysis
     const { data: inserted, error: insertErr } = await sb.from("reverse_engineering_analyses").insert({
       video_id: video_id || `manual_${Date.now()}`,
@@ -166,24 +258,24 @@ serve(async (req) => {
       language,
       views: views || 0,
       subscribers: subscribers || 0,
-      duration_seconds: duration_seconds || 0,
+      duration_seconds: totalDurationSec,
       hook_analysis: analysis.hook_analysis || {},
       retention_curve: analysis.retention_curve || [],
       narrative_structure: analysis.narrative_structure || {},
-      scene_structure: analysis.scene_structure || [],
+      scene_structure: scene_structure,
       psychological_triggers: analysis.psychological_triggers || [],
       pacing_analysis: analysis.pacing_analysis || {},
       clone_template: analysis.clone_template || {},
       viral_score: analysis.viral_score || 0,
       quality_score: analysis.quality_score || 0,
       monetization_score: analysis.monetization_score || 0,
-      analyzed_by: "ensemble-gemini-pro",
+      analyzed_by: "ensemble-gemini-pro-v2",
       user_id: user_id || null,
     }).select("id").single();
 
     if (insertErr) console.error("Insert error:", insertErr);
 
-    // Also save to video_blueprints for cross-referencing
+    // Save to video_blueprints
     await sb.from("video_blueprints").upsert({
       video_id: video_id || `manual_${Date.now()}`,
       video_title,
@@ -195,17 +287,16 @@ serve(async (req) => {
       hook_type: analysis.hook_analysis?.hook_type,
       narrative_style: analysis.narrative_structure?.arc_type,
       psychological_triggers: analysis.psychological_triggers,
-      scene_structure: analysis.scene_structure,
+      scene_structure: scene_structure,
       story_structure: analysis.narrative_structure,
       clone_template: analysis.clone_template,
       scores: { viral: analysis.viral_score, quality: analysis.quality_score, monetization: analysis.monetization_score },
       source: "reverse-engineer",
     }, { onConflict: "video_id" }).catch(() => {});
 
-    // ========== AUTO-FEED PIPELINE: Libraries enrichment ==========
+    // ═══ AUTO-FEED PIPELINE ═══
     const feedPromises: Promise<any>[] = [];
 
-    // 1. Feed hook_library with extracted hook
     if (analysis.hook_analysis?.hook_text_estimate) {
       feedPromises.push(
         sb.from("hook_library").upsert({
@@ -218,9 +309,8 @@ serve(async (req) => {
       );
     }
 
-    // 2. Feed attention_library with scene-level retention patterns
-    if (analysis.scene_structure?.length > 0) {
-      for (const scene of analysis.scene_structure.slice(0, 8)) {
+    if (scene_structure?.length > 0) {
+      for (const scene of scene_structure.slice(0, 8)) {
         feedPromises.push(
           sb.from("attention_library").insert({
             pattern_name: `${scene.retention_technique || scene.purpose || "scene"}_${niche}`,
@@ -238,7 +328,6 @@ serve(async (req) => {
       }
     }
 
-    // 3. Feed viral_patterns with narrative structure
     if (analysis.narrative_structure?.arc_type) {
       feedPromises.push(
         sb.from("viral_patterns").upsert({
@@ -257,7 +346,6 @@ serve(async (req) => {
       );
     }
 
-    // 4. Feed viral_titles_db if high viral score
     if ((analysis.viral_score || 0) >= 7 && video_title) {
       feedPromises.push(
         sb.from("viral_titles_db").upsert({
@@ -266,7 +354,7 @@ serve(async (req) => {
           channel_id: channel_id || null,
           channel_name: channel_name || null,
           niche: niche || "general",
-          duration_seconds: duration_seconds || 0,
+          duration_seconds: totalDurationSec,
           language: language || "pt",
           emotional_triggers: analysis.psychological_triggers || [],
           title_pattern: analysis.hook_analysis?.hook_type || null,
@@ -275,7 +363,6 @@ serve(async (req) => {
       );
     }
 
-    // 5. Feed audience_psychology_patterns with triggers
     if (analysis.psychological_triggers?.length > 0) {
       for (const trigger of analysis.psychological_triggers.slice(0, 3)) {
         feedPromises.push(
@@ -292,7 +379,6 @@ serve(async (req) => {
       }
     }
 
-    // 6. Feed content_dna with full DNA extraction
     feedPromises.push(
       sb.from("content_dna").upsert({
         video_id: video_id || `manual_${Date.now()}`,
@@ -313,7 +399,7 @@ serve(async (req) => {
           payoff: analysis.narrative_structure.payoff_style,
         } : {},
         cliffhanger_count: analysis.narrative_structure?.cliffhanger_count || 0,
-        visual_style: analysis.pacing_analysis?.music_usage || null,
+        visual_style: analysis.visual_dna?.primary_style || analysis.pacing_analysis?.music_usage || null,
         emotion_primary: analysis.psychological_triggers?.[0] || null,
         emotion_secondary: analysis.psychological_triggers?.[1] || null,
         psychological_triggers: analysis.psychological_triggers || [],
@@ -327,19 +413,18 @@ serve(async (req) => {
         viral_score: analysis.viral_score || 0,
         gold_score: analysis.quality_score || 0,
         source: "reverse-engineer",
-        duration_seconds: duration_seconds || 0,
+        duration_seconds: totalDurationSec,
       }, { onConflict: "video_id" }).catch(() => {})
     );
 
     await Promise.all(feedPromises);
-    // ========== END AUTO-FEED PIPELINE ==========
 
     await sb.from("execution_logs").insert({
       function_name: "reverse-engineer-video",
       success: true,
       duration_ms: Date.now() - startTime,
       api_calls_made: 2,
-      metadata: { video_id, niche, viral_score: analysis.viral_score, libraries_fed: feedPromises.length },
+      metadata: { video_id, niche, viral_score: analysis.viral_score, scenes: (analysis.scene_timeline || []).length, libraries_fed: feedPromises.length },
     }).catch(() => {});
 
     return new Response(JSON.stringify({
@@ -349,7 +434,11 @@ serve(async (req) => {
       quality_score: analysis.quality_score,
       hook_analysis: analysis.hook_analysis,
       clone_template: analysis.clone_template,
-      scenes_extracted: (analysis.scene_structure || []).length,
+      visual_dna: analysis.visual_dna,
+      scene_timeline: analysis.scene_timeline,
+      scenes_extracted: (analysis.scene_timeline || []).length,
+      duration_seconds: totalDurationSec,
+      duration_minutes: totalDurationMin,
       duration_ms: Date.now() - startTime,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
