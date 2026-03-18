@@ -120,26 +120,107 @@ const Scripts = () => {
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
 
     // Load from Video Clone Engine (TubySpy "Modelar Vídeo")
-    const cloneOutline = sessionStorage.getItem('clone_script_outline');
-    const cloneTitle = sessionStorage.getItem('clone_video_title');
-    const cloneStyle = sessionStorage.getItem('clone_video_style');
-    const cloneHook = sessionStorage.getItem('clone_hook');
-    const cloneNiche = sessionStorage.getItem('clone_niche');
-    if (cloneOutline) {
-      setTopic(cloneTitle || 'Vídeo Modelado');
-      setScript(cloneOutline);
-      if (cloneNiche) setNiche(cloneNiche);
-      if (cloneStyle) {
-        const matchedStyle = VIDEO_STYLES.find(s => s.value === cloneStyle.toLowerCase() || s.label.toLowerCase().includes(cloneStyle.toLowerCase()));
-        if (matchedStyle) setVideoStyle(matchedStyle.value);
+    const cloneRaw = sessionStorage.getItem('clone_full_data');
+    if (cloneRaw) {
+      try {
+        const clone = JSON.parse(cloneRaw);
+        sessionStorage.removeItem('clone_full_data');
+        
+        // Pre-fill topic
+        setTopic(clone.videoTitle || 'Vídeo Modelado');
+        
+        // Pre-fill niche
+        if (clone.niche) setNiche(clone.niche);
+        
+        // Pre-fill visual style
+        if (clone.visualStyle) {
+          const matchedStyle = VIDEO_STYLES.find(s => 
+            s.value === clone.visualStyle.toLowerCase() || 
+            s.label.toLowerCase().includes(clone.visualStyle.toLowerCase())
+          );
+          if (matchedStyle) setVideoStyle(matchedStyle.value);
+        }
+        
+        // Pre-fill duration from suggested or original
+        if (clone.suggestedDuration) {
+          const durationMatch = clone.suggestedDuration.match(/(\d+)/);
+          if (durationMatch) setDuration(durationMatch[1]);
+        }
+
+        // Build a COMPLETE modeled script from all clone data
+        const scriptParts: string[] = [];
+        
+        // Hook section
+        if (clone.hookScript) {
+          scriptParts.push(clone.hookScript);
+        } else if (clone.hookText) {
+          scriptParts.push(clone.hookText);
+        }
+        
+        // Main script body from outline
+        if (clone.scriptOutline) {
+          scriptParts.push('\n' + clone.scriptOutline);
+        }
+        
+        // Template structure as context
+        if (clone.templateStructure && !clone.scriptOutline?.includes(clone.templateStructure)) {
+          scriptParts.push('\n--- ESTRUTURA DO TEMPLATE ---\n' + clone.templateStructure);
+        }
+        
+        // CTA
+        if (clone.ctaScript) {
+          scriptParts.push('\n--- CTA ---\n' + clone.ctaScript);
+        }
+        
+        // Retention map as scene blueprint
+        if (clone.retentionMap?.structure?.length > 0) {
+          const retentionNotes = clone.retentionMap.structure
+            .map((p: any) => `[${p.timeRange}] ${p.phase}: ${p.technique} (retenção ~${p.retentionEstimate}%)`)
+            .join('\n');
+          scriptParts.push('\n--- MAPA DE RETENÇÃO (referência) ---\n' + retentionNotes);
+        }
+        
+        const fullScript = scriptParts.join('\n\n');
+        if (fullScript.trim()) {
+          setScript(fullScript);
+        }
+        
+        // Store clone context for ScriptGenerator to use in refinement
+        sessionStorage.setItem('clone_context', JSON.stringify({
+          originalTitle: clone.videoTitle,
+          channel: clone.channelTitle,
+          views: clone.views,
+          hookType: clone.hookType,
+          emotionalTone: clone.emotionalTone,
+          format: clone.format,
+          psychTriggers: clone.psychTriggers,
+          whyItWorks: clone.whyItWorks,
+          titleVariations: clone.titleVariations,
+          thumbnailRecipe: clone.thumbnailRecipe,
+        }));
+        
+        setActiveStep('script');
+        setVideoType('long');
+        toast.success('🎬 Roteiro modelado do Video Clone Engine carregado! Revise e refine.');
+      } catch (e) {
+        console.error('Failed to parse clone data:', e);
       }
+    }
+    
+    // Legacy fallback
+    const cloneOutline = sessionStorage.getItem('clone_script_outline');
+    if (cloneOutline) {
+      setTopic(sessionStorage.getItem('clone_video_title') || 'Vídeo Modelado');
+      setScript(cloneOutline);
+      const cloneNiche = sessionStorage.getItem('clone_niche');
+      if (cloneNiche) setNiche(cloneNiche);
       setActiveStep('script');
       sessionStorage.removeItem('clone_script_outline');
       sessionStorage.removeItem('clone_video_title');
       sessionStorage.removeItem('clone_video_style');
       sessionStorage.removeItem('clone_hook');
       sessionStorage.removeItem('clone_niche');
-      toast.success('🎬 Roteiro modelado carregado do Video Clone Engine!');
+      toast.success('🎬 Roteiro modelado carregado!');
     }
 
     loadLastProjectCharacters();
