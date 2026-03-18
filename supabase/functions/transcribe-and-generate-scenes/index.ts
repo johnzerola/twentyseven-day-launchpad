@@ -247,12 +247,30 @@ RULES:
     const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES: ${referenceImageUrls.length} reference images uploaded. Match that exact art style, color palette, and character design.` : '';
 
     const characterBlock = characters?.length > 0
-      ? `\nCHARACTERS:\n${characters.slice(0, 5).map((c: any) => {
+      ? `\n🎭 CHARACTER SHEETS (MANDATORY — reproduce EXACTLY in every scene they appear):
+${characters.slice(0, 5).map((c: any) => {
           const a = c.appearance || {};
           const cl = c.clothing || {};
           const ff = c.facial_features || {};
-          return `"${c.name}": ${c.gender||'?'}, ${c.age||'?'}y, ${c.role||'character'}, ${a.body_type||'average'} build, ${a.skin_color||'medium'} skin, ${a.hair_color||'dark'} ${a.hair_style||'short'} hair, wearing ${cl.shirt||'casual'} and ${cl.pants||'jeans'}`;
-        }).join('\n')}\n`
+          const per = c.personality || {};
+          const lines = [
+            `━━━ "${c.name}" ━━━`,
+            `Role: ${c.role || 'character'} | Gender: ${c.gender || '?'} | Age: ${c.age || '?'}`,
+            `BUILD: ${a.body_type || 'average'} build, ${a.height || 'medium height'}`,
+            `SKIN: ${a.skin_color || 'medium'} skin tone`,
+            `HAIR: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair`,
+            `EYES: ${ff.eye_color || a.eye_color || 'dark'} eyes, ${ff.eye_shape || 'normal'} shape`,
+            `FACE: ${ff.face_shape || 'oval'} face, ${ff.eyebrows || 'normal'} eyebrows, ${ff.nose || 'straight'} nose, ${ff.mouth || 'normal'} mouth, ${ff.jaw || 'defined'} jaw`,
+            `FACIAL HAIR: ${ff.facial_hair || ff.beard || 'none'}`,
+            `DISTINCTIVE: ${ff.scars || ff.marks || a.distinctive_features || 'none'}`,
+            `SHIRT/TOP: ${cl.shirt || cl.top || 'casual top'}`,
+            `PANTS/BOTTOM: ${cl.pants || cl.bottom || 'jeans'}`,
+            `SHOES: ${cl.shoes || 'standard'}`,
+            `ACCESSORIES: ${cl.accessories || cl.hat || 'none'}`,
+            c.reference_image_url ? `REF IMAGE: ${c.reference_image_url}` : '',
+          ].filter(Boolean);
+          return lines.join('\n');
+        }).join('\n\n')}\n`
       : '';
 
     // ========== PHASE 4: Generate scenes ==========
