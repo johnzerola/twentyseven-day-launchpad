@@ -573,14 +573,35 @@ const ChannelSearch = () => {
             <AnimatePresence>
               {deepScanResult && (
                 <div ref={deepScanRef}>
-                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={(outline) => {
-                  sessionStorage.setItem('clone_script_outline', outline);
-                  sessionStorage.setItem('clone_video_title', deepScanResult.videoInfo.title);
-                  sessionStorage.setItem('clone_video_style', deepScanResult.analysis.visualStyle?.primaryStyle || 'cinematográfico');
-                  sessionStorage.setItem('clone_hook', deepScanResult.analysis.hookAnalysis.hookText || '');
-                  sessionStorage.setItem('clone_niche', deepScanResult.analysis.contentDNA?.nicheCategory || '');
+                <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={() => {
+                  // Store FULL clone data for Scripts page
+                  const cloneData = {
+                    videoTitle: deepScanResult.videoInfo.title,
+                    channelTitle: deepScanResult.videoInfo.channelTitle,
+                    views: deepScanResult.videoInfo.views,
+                    duration: deepScanResult.videoInfo.duration,
+                    visualStyle: deepScanResult.analysis.visualStyle?.primaryStyle || 'cinematográfico',
+                    niche: deepScanResult.analysis.contentDNA?.nicheCategory || '',
+                    emotionalTone: deepScanResult.analysis.contentDNA?.emotionalTone || '',
+                    format: deepScanResult.analysis.contentDNA?.format || '',
+                    psychTriggers: deepScanResult.analysis.contentDNA?.psychTriggers || [],
+                    hookType: deepScanResult.analysis.hookAnalysis?.hookType || '',
+                    hookText: deepScanResult.analysis.hookAnalysis?.hookText || '',
+                    hookScript: deepScanResult.analysis.cloneTemplate?.hookScript || '',
+                    whyItWorks: deepScanResult.analysis.hookAnalysis?.whyItWorks || '',
+                    templateStructure: deepScanResult.analysis.cloneTemplate?.templateStructure || '',
+                    scriptOutline: deepScanResult.analysis.cloneTemplate?.scriptOutline || '',
+                    ctaScript: deepScanResult.analysis.cloneTemplate?.ctaScript || '',
+                    titleVariations: deepScanResult.analysis.cloneTemplate?.titleVariations || [],
+                    thumbnailRecipe: deepScanResult.analysis.cloneTemplate?.thumbnailRecipe || '',
+                    suggestedDuration: deepScanResult.analysis.cloneTemplate?.suggestedDuration || '',
+                    retentionMap: deepScanResult.analysis.retentionMap || {},
+                    rewatchSegments: deepScanResult.analysis.rewatchSegments || [],
+                    scores: deepScanResult.analysis.scores || {},
+                  };
+                  sessionStorage.setItem('clone_full_data', JSON.stringify(cloneData));
                   navigate('/scripts');
-                  toast.success('🎬 Dados do vídeo carregados! Gerando roteiro modelado...');
+                  toast.success('🎬 Engenharia reversa completa! Gerando roteiro modelado...');
                 }} />
                 </div>
               )}
