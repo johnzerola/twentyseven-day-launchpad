@@ -247,12 +247,30 @@ RULES:
     const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES: ${referenceImageUrls.length} reference images uploaded. Match that exact art style, color palette, and character design.` : '';
 
     const characterBlock = characters?.length > 0
-      ? `\nCHARACTERS:\n${characters.slice(0, 5).map((c: any) => {
+      ? `\n🎭 CHARACTER SHEETS (MANDATORY — reproduce EXACTLY in every scene they appear):
+${characters.slice(0, 5).map((c: any) => {
           const a = c.appearance || {};
           const cl = c.clothing || {};
           const ff = c.facial_features || {};
-          return `"${c.name}": ${c.gender||'?'}, ${c.age||'?'}y, ${c.role||'character'}, ${a.body_type||'average'} build, ${a.skin_color||'medium'} skin, ${a.hair_color||'dark'} ${a.hair_style||'short'} hair, wearing ${cl.shirt||'casual'} and ${cl.pants||'jeans'}`;
-        }).join('\n')}\n`
+          const per = c.personality || {};
+          const lines = [
+            `━━━ "${c.name}" ━━━`,
+            `Role: ${c.role || 'character'} | Gender: ${c.gender || '?'} | Age: ${c.age || '?'}`,
+            `BUILD: ${a.body_type || 'average'} build, ${a.height || 'medium height'}`,
+            `SKIN: ${a.skin_color || 'medium'} skin tone`,
+            `HAIR: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair`,
+            `EYES: ${ff.eye_color || a.eye_color || 'dark'} eyes, ${ff.eye_shape || 'normal'} shape`,
+            `FACE: ${ff.face_shape || 'oval'} face, ${ff.eyebrows || 'normal'} eyebrows, ${ff.nose || 'straight'} nose, ${ff.mouth || 'normal'} mouth, ${ff.jaw || 'defined'} jaw`,
+            `FACIAL HAIR: ${ff.facial_hair || ff.beard || 'none'}`,
+            `DISTINCTIVE: ${ff.scars || ff.marks || a.distinctive_features || 'none'}`,
+            `SHIRT/TOP: ${cl.shirt || cl.top || 'casual top'}`,
+            `PANTS/BOTTOM: ${cl.pants || cl.bottom || 'jeans'}`,
+            `SHOES: ${cl.shoes || 'standard'}`,
+            `ACCESSORIES: ${cl.accessories || cl.hat || 'none'}`,
+            c.reference_image_url ? `REF IMAGE: ${c.reference_image_url}` : '',
+          ].filter(Boolean);
+          return lines.join('\n');
+        }).join('\n\n')}\n`
       : '';
 
     // ========== PHASE 4: Generate scenes ==========
@@ -276,20 +294,22 @@ RULES:
                   sceneDurationSeconds: { type: "number" },
                   startTime: { type: "number" },
                   endTime: { type: "number" },
-                  narrativeText: { type: "string" },
-                  narrativeSummary: { type: "string" },
-                  visualPrompt: { type: "string" },
+                  narrativeText: { type: "string", description: "Exact narration text for this time window" },
+                  narrativeSummary: { type: "string", description: "1-sentence summary of what happens" },
+                  visualPrompt: { type: "string", description: "80-150 word cinematic prompt. MUST include FULL physical description of every character present: skin tone, hair color+style, eye color, facial features, exact clothing. Never use character names alone." },
                   negativePrompt: { type: "string" },
                   cameraAngle: { type: "string" },
-                  lensSpec: { type: "string" },
-                  lightingSetup: { type: "string" },
+                  lensSpec: { type: "string", description: "e.g. 85mm f/1.4, 24mm wide, 50mm anamorphic" },
+                  lightingSetup: { type: "string", description: "e.g. golden hour rim light, neon underexposed, studio 3-point" },
+                  colorGrading: { type: "string", description: "e.g. teal-orange, desaturated cold, warm vintage" },
                   audioDirection: { type: "string" },
                   mood: { type: "string" },
                   emotionalBeat: { type: "string" },
-                  charactersInScene: { type: "array", items: { type: "string" } },
+                  charactersInScene: { type: "array", items: { type: "object", properties: { name: { type: "string" }, visualDescription: { type: "string", description: "FULL appearance: skin, hair, eyes, face shape, clothing, accessories" }, action: { type: "string" }, expression: { type: "string" } }, required: ["name", "visualDescription"] } },
+                  environmentDetails: { type: "string", description: "Detailed setting: location, props, weather, textures" },
                   transitionNote: { type: "string" },
                 },
-                required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "visualPrompt", "cameraAngle", "mood"],
+                required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "visualPrompt", "cameraAngle", "mood", "charactersInScene"],
                 additionalProperties: false,
               },
             },
@@ -313,15 +333,23 @@ TIMING RULES:
 - Cover the ENTIRE audio — NO GAPS
 - startTime/endTime MUST align with transcript timestamps
 
-PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [CHARACTER]. [ACTION]. [ENVIRONMENT]. [LIGHTING]. [ATMOSPHERE]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [FULL CHARACTER DESCRIPTION — skin, hair, eyes, face, clothing]. [ACTION + EXPRESSION]. [ENVIRONMENT + PROPS]. [LIGHTING]. [COLOR GRADING]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+
+🚨 CHARACTER CONSISTENCY RULES (CRITICAL):
+- NEVER use just a character name in visualPrompt. ALWAYS describe their FULL appearance every single time.
+- Include: skin tone, hair (color + style + length), eye color + shape, face shape, eyebrows, nose, mouth, jawline, facial hair, clothing (top, bottom, shoes, accessories), body build.
+- Copy the CHARACTER SHEET descriptions VERBATIM into each scene's visualPrompt and charactersInScene.visualDescription.
+- If a character has a scar, tattoo, or distinctive mark, it MUST appear in EVERY scene.
+- Clothing must stay consistent unless the narrative describes a change.
+${characterBlock}
 
 SYNC RULES:
 - EVERY visual prompt MUST illustrate what the narrator says at THAT moment
 - Concrete → show them. Abstract → visual metaphors
 - NEVER show generic visuals disconnected from narration
 - CAMERA VARIETY: Never repeat angles consecutively
-${characterBlock}
-PROMPT QUALITY: 80-150 words per prompt.
+
+PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
