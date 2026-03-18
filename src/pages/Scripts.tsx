@@ -153,6 +153,11 @@ const Scripts = () => {
         // Build a COMPLETE modeled script from all clone data
         const scriptParts: string[] = [];
         
+        // Duration header
+        if (clone.durationMinutes) {
+          scriptParts.push(`📐 CLONE: ${clone.videoTitle}\n⏱️ Duração Alvo: ${clone.durationMinutes} minutos (~${clone.durationMinutes * 150} palavras)\n🎬 Canal: ${clone.channelTitle} (${clone.views?.toLocaleString()} views)`);
+        }
+        
         // Hook section
         if (clone.hookScript) {
           scriptParts.push(clone.hookScript);
@@ -175,12 +180,25 @@ const Scripts = () => {
           scriptParts.push('\n--- CTA ---\n' + clone.ctaScript);
         }
         
+        // Scene Timeline with visual prompts
+        if (clone.sceneTimeline?.length > 0) {
+          const sceneNotes = clone.sceneTimeline
+            .map((s: any) => `[${s.startTime}-${s.endTime}] Cena ${s.sceneIndex}: ${s.narrationSummary || s.visualDescription}\n  🎨 Visual: ${s.visualPrompt || 'N/A'}\n  🎭 Mood: ${s.mood || ''} | Energia: ${s.energyLevel || ''}`)
+            .join('\n\n');
+          scriptParts.push(`\n--- TIMELINE DE CENAS (${clone.sceneTimeline.length} cenas, ${clone.durationMinutes}min) ---\n${sceneNotes}`);
+        }
+        
         // Retention map as scene blueprint
         if (clone.retentionMap?.structure?.length > 0) {
           const retentionNotes = clone.retentionMap.structure
             .map((p: any) => `[${p.timeRange}] ${p.phase}: ${p.technique} (retenção ~${p.retentionEstimate}%)`)
             .join('\n');
-          scriptParts.push('\n--- MAPA DE RETENÇÃO (referência) ---\n' + retentionNotes);
+          scriptParts.push('\n--- MAPA DE RETENÇÃO ---\n' + retentionNotes);
+        }
+
+        // Visual DNA reference
+        if (clone.visualDna?.referenceStylePrompt) {
+          scriptParts.push(`\n--- REFERÊNCIA VISUAL (MASTER PROMPT) ---\n${clone.visualDna.referenceStylePrompt}`);
         }
         
         const fullScript = scriptParts.join('\n\n');
@@ -203,6 +221,7 @@ const Scripts = () => {
           titleVariations: clone.titleVariations,
           thumbnailRecipe: clone.thumbnailRecipe,
           visualDna: clone.visualDna,
+          sceneTimeline: clone.sceneTimeline,
         }));
         
         setActiveStep('script');

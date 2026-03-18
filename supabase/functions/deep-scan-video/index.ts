@@ -12,6 +12,17 @@ function formatNumber(n: number): string {
   return n.toString();
 }
 
+function parseDuration(iso: string): number {
+  const d = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  return d ? (parseInt(d[1]||'0')*3600 + parseInt(d[2]||'0')*60 + parseInt(d[3]||'0')) : 0;
+}
+
+function formatTimestamp(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
 function extractTranscript(xml: string): string {
   const textMatches = xml.match(/<text[^>]*>(.*?)<\/text>/gs);
   if (!textMatches) return "";
@@ -21,16 +32,30 @@ function extractTranscript(xml: string): string {
     .slice(0, 8000);
 }
 
-async function fetchTranscript(videoId: string): Promise<string> {
+function extractTimedTranscript(xml: string): { text: string; start: number; dur: number }[] {
+  const matches = xml.match(/<text start="([^"]+)" dur="([^"]+)"[^>]*>(.*?)<\/text>/gs);
+  if (!matches) return [];
+  return matches.map(m => {
+    const startMatch = m.match(/start="([^"]+)"/);
+    const durMatch = m.match(/dur="([^"]+)"/);
+    const text = m.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    return {
+      text,
+      start: parseFloat(startMatch?.[1] || '0'),
+      dur: parseFloat(durMatch?.[1] || '0'),
+    };
+  });
+}
+
+async function fetchTranscriptRaw(videoId: string): Promise<string> {
   for (const lang of ['pt', 'en', 'es', 'de', 'pl']) {
     try {
       const res = await fetch(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=srv3`);
       if (res.ok) {
         const xml = await res.text();
-        const t = extractTranscript(xml);
-        if (t) return t;
+        if (xml.includes('<text')) return xml;
       } else {
-        await res.text(); // consume body
+        await res.text();
       }
     } catch { /* continue */ }
   }
@@ -48,16 +73,18 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!videoId) throw new Error("videoId is required");
 
-    // 1. Fetch video + channel details in parallel
-    const [vRes, transcriptPromise] = await Promise.all([
+    // 1. Fetch video + channel details + transcript in parallel
+    const [vRes, transcriptXml] = await Promise.all([
       fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails,topicDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`),
-      fetchTranscript(videoId),
+      fetchTranscriptRaw(videoId),
     ]);
 
     const vData = await vRes.json();
     const video = vData.items?.[0];
     if (!video) throw new Error("Vídeo não encontrado");
-    const transcript = transcriptPromise;
+    
+    const transcript = extractTranscript(transcriptXml);
+    const timedTranscript = extractTimedTranscript(transcriptXml);
 
     // 2. Fetch channel details
     const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${video.snippet.channelId}&key=${YOUTUBE_API_KEY}`);
@@ -70,21 +97,98 @@ serve(async (req) => {
     const likes = parseInt(video.statistics.likeCount || '0');
     const comments = parseInt(video.statistics.commentCount || '0');
     const outlierScore = channelAvgViews > 0 ? (views / channelAvgViews).toFixed(1) : 'N/A';
+    const durationSeconds = parseDuration(video.contentDetails.duration);
+    const durationMinutes = Math.round(durationSeconds / 60);
 
+    // ═══ CAPTURE VIDEO FRAMES ═══
+    // YouTube auto-generates 3 thumbnail captures at ~25%, 50%, 75% of the video
     const thumbnailUrl = video.snippet.thumbnails?.maxres?.url || video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.medium?.url || '';
+    const frameUrls = [
+      thumbnailUrl, // Main thumbnail (custom or auto)
+      `https://i.ytimg.com/vi/${videoId}/hq1.jpg`, // ~25% of video
+      `https://i.ytimg.com/vi/${videoId}/hq2.jpg`, // ~50% of video  
+      `https://i.ytimg.com/vi/${videoId}/hq3.jpg`, // ~75% of video
+    ].filter(Boolean);
 
-    // 3. Build the analysis prompt with thumbnail for multimodal analysis
+    // Validate which frames are actually accessible
+    const frameChecks = await Promise.allSettled(
+      frameUrls.map(async (url) => {
+        const res = await fetch(url, { method: 'HEAD' });
+        return res.ok ? url : null;
+      })
+    );
+    const validFrames = frameChecks
+      .map(r => r.status === 'fulfilled' ? r.value : null)
+      .filter(Boolean) as string[];
+    
+    console.log(`Captured ${validFrames.length} video frames for visual analysis`);
+
+    // ═══ BUILD TIMED TRANSCRIPT BLOCKS for scene mapping ═══
+    const sceneDuration = 30; // seconds per scene block
+    const expectedScenes = Math.max(6, Math.ceil(durationSeconds / sceneDuration));
+    
+    let timedBlocks = '';
+    if (timedTranscript.length > 0) {
+      // Group transcript by scene blocks
+      const blocks: { startTime: number; endTime: number; text: string }[] = [];
+      for (let i = 0; i < expectedScenes; i++) {
+        const blockStart = i * sceneDuration;
+        const blockEnd = Math.min((i + 1) * sceneDuration, durationSeconds);
+        const wordsInBlock = timedTranscript
+          .filter(w => w.start >= blockStart && w.start < blockEnd)
+          .map(w => w.text)
+          .join(' ');
+        if (wordsInBlock.trim()) {
+          blocks.push({ startTime: blockStart, endTime: blockEnd, text: wordsInBlock.slice(0, 300) });
+        }
+      }
+      timedBlocks = blocks
+        .map(b => `[${formatTimestamp(b.startTime)}-${formatTimestamp(b.endTime)}] ${b.text}`)
+        .join('\n');
+    }
+
+    // 3. Build multimodal messages with ALL captured frames
+    const imageContent: any[] = validFrames.map((url, i) => ({
+      type: "image_url",
+      image_url: { url },
+    }));
+
+    const frameDescriptions = validFrames.map((_, i) => {
+      if (i === 0) return "Thumbnail principal";
+      const pct = i * 25;
+      const time = formatTimestamp(Math.round(durationSeconds * pct / 100));
+      return `Frame ~${pct}% (${time})`;
+    }).join(', ');
+
     const messages: any[] = [
       {
         role: "system",
-        content: `Você é o maior especialista em YouTube do mundo — CEO com 25 anos, 1000+ canais monetizados. Faça uma ENGENHARIA REVERSA COMPLETA incluindo análise visual de thumbnail e detecção de estilo do vídeo. Responda em português BR.`
+        content: `Você é o maior especialista em YouTube do mundo — CEO com 25 anos, 1000+ canais monetizados. 
+Faça uma ENGENHARIA REVERSA COMPLETA para CLONAR este vídeo.
+
+MISSÃO CRÍTICA: O vídeo original tem ${durationMinutes} minutos (${durationSeconds} segundos).
+O clone DEVE ter a MESMA duração. Gere uma timeline de cenas cobrindo CADA SEGUNDO do vídeo.
+
+Você está recebendo ${validFrames.length} FRAMES do vídeo (${frameDescriptions}).
+ANALISE cada frame para extrair:
+- Paleta de cores EXATA
+- Estilo visual (2D, 3D, cinematográfico, etc.)
+- Tipos de imagens/B-roll usados
+- Composição e enquadramento
+- Se usa textos na tela, qual estilo
+- Transições visuais entre frames
+- Nível de produção
+
+Gere visual_prompts que, ao serem usados num gerador de imagens IA, produziriam imagens VISUALMENTE IDÊNTICAS ao vídeo original.
+
+Responda em português BR.`
       },
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE
+            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3
 
 DADOS DO VÍDEO:
 - Título: "${video.snippet.title}"
@@ -92,25 +196,23 @@ DADOS DO VÍDEO:
 - Views: ${formatNumber(views)} | Likes: ${formatNumber(likes)} | Comentários: ${formatNumber(comments)}
 - Outlier Score: ${outlierScore}x
 - Publicado: ${video.snippet.publishedAt}
-- Duração: ${video.contentDetails.duration}
+- DURAÇÃO EXATA: ${durationMinutes} minutos (${durationSeconds} segundos)
 - Tags: ${(video.snippet.tags || []).slice(0, 20).join(', ')}
 - Descrição: ${video.snippet.description?.slice(0, 600)}
-${transcript ? `\nTRANSCRIÇÃO (primeiros 8000 chars):\n${transcript}` : '\n(Transcrição não disponível)'}
+${transcript ? `\nTRANSCRIÇÃO:\n${transcript}` : '\n(Transcrição não disponível)'}
+${timedBlocks ? `\nTRANSCRIÇÃO COM TIMESTAMPS:\n${timedBlocks}` : ''}
 
-ANALISE:
-1. HOOK (5-30s): tipo, texto reconstruído, psicologia, score
-2. RETENÇÃO: estrutura por fases, open loops, pattern interrupts, pontos de queda
+ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e extraia:
+1. HOOK (5-30s): tipo, texto, psicologia, score
+2. RETENÇÃO: estrutura por fases com timestamps EXATOS
 3. DNA: formato, tom emocional, gatilhos, persona, nicho
-4. TÍTULO & THUMBNAIL: CTR score, power words, técnica de copy, análise visual da thumbnail (cores, composição, elementos, texto overlay)
-5. ESTILO VISUAL: detecte o estilo do vídeo (2D animação, 3D, cartoon, cinematográfico, documentary, footage real, screen recording, whiteboard, etc.)
-6. SEGMENTOS MAIS ASSISTIDOS: estime quais partes do vídeo têm picos de rewatch baseado na estrutura
-7. CLONAGEM: template completo, variações de título, roteiro estruturado, estimativa de views
-8. SCORES: viralidade, replicabilidade, monetização, overall`
+4. TÍTULO & THUMBNAIL: CTR score, power words, análise visual
+5. ESTILO VISUAL COMPLETO: com base nos frames, extraia CADA detalhe visual
+6. TIMELINE DE CENAS: ${expectedScenes} cenas cobrindo os ${durationMinutes} minutos COMPLETOS
+   - Cada cena com visual_prompt detalhado baseado no estilo visto nos frames
+7. CLONAGEM: template + roteiro da MESMA duração (${durationMinutes}min)`
           },
-          ...(thumbnailUrl ? [{
-            type: "image_url",
-            image_url: { url: thumbnailUrl }
-          }] : [])
+          ...imageContent,
         ]
       }
     ];
@@ -128,7 +230,7 @@ ANALISE:
           type: "function",
           function: {
             name: "video_clone_engine",
-            description: "Complete reverse engineering of a viral YouTube video",
+            description: "Complete reverse engineering of a viral YouTube video with visual cloning",
             parameters: {
               type: "object",
               properties: {
@@ -193,14 +295,14 @@ ANALISE:
                 thumbnailAnalysis: {
                   type: "object",
                   properties: {
-                    dominantColors: { type: "array", items: { type: "string" }, description: "Main colors used" },
+                    dominantColors: { type: "array", items: { type: "string" } },
                     hasTextOverlay: { type: "boolean" },
-                    textOverlayContent: { type: "string", description: "Text visible on thumbnail" },
-                    composition: { type: "string", description: "Layout: centered face, split, collage, etc." },
-                    emotionalExpression: { type: "string", description: "Facial expression or emotional vibe" },
-                    elements: { type: "array", items: { type: "string" }, description: "Key visual elements" },
-                    clickbaitLevel: { type: "number", description: "1-10 clickbait level" },
-                    suggestions: { type: "array", items: { type: "string" }, description: "How to improve this thumbnail" },
+                    textOverlayContent: { type: "string" },
+                    composition: { type: "string" },
+                    emotionalExpression: { type: "string" },
+                    elements: { type: "array", items: { type: "string" } },
+                    clickbaitLevel: { type: "number" },
+                    suggestions: { type: "array", items: { type: "string" } },
                   },
                   required: ["dominantColors", "hasTextOverlay", "textOverlayContent", "composition", "emotionalExpression", "elements", "clickbaitLevel", "suggestions"],
                   additionalProperties: false,
@@ -212,15 +314,70 @@ ANALISE:
                     secondaryStyles: { type: "array", items: { type: "string" } },
                     faceless: { type: "boolean" },
                     editingPace: { type: "string", enum: ["Slow", "Medium", "Fast", "Ultra Fast"] },
-                    colorGrading: { type: "string", description: "Color palette/mood" },
+                    colorGrading: { type: "string" },
                     transitionStyle: { type: "string" },
-                    bRollUsage: { type: "string", description: "How B-roll is used" },
+                    bRollUsage: { type: "string" },
                     productionLevel: { type: "string", enum: ["Low Budget", "Medium", "High Production", "Hollywood Level"] },
-                    replicabilityAsFaceless: { type: "number", description: "0-100 how easy to replicate as faceless" },
-                    toolsSuggested: { type: "array", items: { type: "string" }, description: "Tools to recreate this style" },
+                    replicabilityAsFaceless: { type: "number" },
+                    toolsSuggested: { type: "array", items: { type: "string" } },
                   },
                   required: ["primaryStyle", "secondaryStyles", "faceless", "editingPace", "colorGrading", "transitionStyle", "bRollUsage", "productionLevel", "replicabilityAsFaceless", "toolsSuggested"],
                   additionalProperties: false,
+                },
+                visualDNA: {
+                  type: "object",
+                  description: "Extracted from analyzing actual video frames",
+                  properties: {
+                    colorPalette: { type: "array", items: { type: "string" }, description: "Exact colors seen in frames (hex or descriptive)" },
+                    lightingStyle: { type: "string" },
+                    cameraPatterns: { type: "array", items: { type: "string" } },
+                    textOnScreenStyle: { type: "string", description: "Font style, size, position of text overlays" },
+                    imageTypes: { type: "array", items: { type: "string" }, description: "Types of images used: photos, illustrations, maps, diagrams, etc." },
+                    backgroundStyle: { type: "string" },
+                    overallAesthetic: { type: "string", description: "One-paragraph description of the complete visual identity" },
+                    referenceStylePrompt: { type: "string", description: "A MASTER PROMPT that captures the entire visual style — use this as prefix for all scene prompts to maintain consistency" },
+                    frameAnalysis: {
+                      type: "array",
+                      description: "Analysis of each captured frame",
+                      items: {
+                        type: "object",
+                        properties: {
+                          framePosition: { type: "string" },
+                          description: { type: "string" },
+                          keyElements: { type: "array", items: { type: "string" } },
+                          mood: { type: "string" },
+                        },
+                        required: ["framePosition", "description", "keyElements", "mood"],
+                        additionalProperties: false,
+                      }
+                    },
+                  },
+                  required: ["colorPalette", "lightingStyle", "cameraPatterns", "imageTypes", "overallAesthetic", "referenceStylePrompt", "frameAnalysis"],
+                  additionalProperties: false,
+                },
+                sceneTimeline: {
+                  type: "array",
+                  description: `EXACTLY ${expectedScenes} scenes covering full ${durationMinutes} minutes (${durationSeconds}s)`,
+                  items: {
+                    type: "object",
+                    properties: {
+                      sceneIndex: { type: "number" },
+                      startTime: { type: "string", description: "MM:SS format" },
+                      endTime: { type: "string", description: "MM:SS format" },
+                      durationSeconds: { type: "number" },
+                      narrationSummary: { type: "string" },
+                      visualDescription: { type: "string", description: "What is SHOWN on screen at this moment" },
+                      visualPrompt: { type: "string", description: "AI image generation prompt to recreate this exact visual. Include style, colors, composition, lighting from the frames." },
+                      cameraAngle: { type: "string" },
+                      mood: { type: "string" },
+                      energyLevel: { type: "string", enum: ["low", "medium", "high", "explosive"] },
+                      retentionTechnique: { type: "string" },
+                      textOnScreen: { type: "string" },
+                      transitionToNext: { type: "string" },
+                    },
+                    required: ["sceneIndex", "startTime", "endTime", "durationSeconds", "narrationSummary", "visualDescription", "visualPrompt", "mood", "energyLevel"],
+                    additionalProperties: false,
+                  }
                 },
                 rewatchSegments: {
                   type: "array",
@@ -229,25 +386,25 @@ ANALISE:
                     properties: {
                       timeRange: { type: "string" },
                       reason: { type: "string" },
-                      rewatchScore: { type: "number", description: "1-10" },
+                      rewatchScore: { type: "number" },
                       contentSummary: { type: "string" },
                     },
                     required: ["timeRange", "reason", "rewatchScore", "contentSummary"],
                     additionalProperties: false,
                   },
-                  description: "Estimated most rewatched segments",
                 },
                 cloneTemplate: {
                   type: "object",
                   properties: {
                     templateStructure: { type: "string" },
                     titleVariations: { type: "array", items: { type: "string" } },
-                    scriptOutline: { type: "string" },
+                    scriptOutline: { type: "string", description: `COMPLETE script outline for a ${durationMinutes}-minute video. Must have enough content for the FULL duration.` },
                     estimatedViewsSmallChannel: { type: "string" },
-                    suggestedDuration: { type: "string" },
-                    thumbnailRecipe: { type: "string", description: "Step-by-step to recreate thumbnail" },
-                    hookScript: { type: "string", description: "Ready-to-use hook script for clone" },
-                    ctaScript: { type: "string", description: "Ready-to-use CTA script" },
+                    suggestedDuration: { type: "string", description: `MUST be "${durationMinutes} minutos" to match original` },
+                    thumbnailRecipe: { type: "string" },
+                    hookScript: { type: "string" },
+                    ctaScript: { type: "string" },
+                    wordCountTarget: { type: "number", description: "Words needed at 150wpm for exact duration" },
                   },
                   required: ["templateStructure", "titleVariations", "scriptOutline", "estimatedViewsSmallChannel", "suggestedDuration", "thumbnailRecipe", "hookScript", "ctaScript"],
                   additionalProperties: false,
@@ -264,7 +421,7 @@ ANALISE:
                   additionalProperties: false,
                 },
               },
-              required: ["hookAnalysis", "retentionMap", "contentDNA", "titleAnalysis", "thumbnailAnalysis", "visualStyle", "rewatchSegments", "cloneTemplate", "scores"],
+              required: ["hookAnalysis", "retentionMap", "contentDNA", "titleAnalysis", "thumbnailAnalysis", "visualStyle", "visualDNA", "sceneTimeline", "rewatchSegments", "cloneTemplate", "scores"],
               additionalProperties: false,
             },
           },
@@ -286,12 +443,19 @@ ANALISE:
     if (!toolCall) throw new Error("No AI response");
     const analysis = JSON.parse(toolCall.function.arguments);
 
-    // ========== AUTO-LEARN: Save insights to knowledge tables ==========
+    // Force duration to match original
+    if (analysis.cloneTemplate) {
+      analysis.cloneTemplate.suggestedDuration = `${durationMinutes} minutos`;
+      analysis.cloneTemplate.wordCountTarget = durationMinutes * 150;
+    }
+
+    console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, visual DNA: ${analysis.visualDNA?.overallAesthetic?.slice(0, 100)}`);
+
+    // ═══ AUTO-LEARN ═══
     try {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const learnPromises: Promise<any>[] = [];
 
-      // 1. Save hook to script_knowledge
       if (analysis.hookAnalysis?.powerScore >= 7) {
         learnPromises.push(sb.from("script_knowledge").insert({
           category: "hook",
@@ -302,20 +466,18 @@ ANALISE:
         }));
       }
 
-      // 2. Save retention techniques
       if (analysis.retentionMap?.structure?.length) {
         for (const phase of analysis.retentionMap.structure.filter((p: any) => p.retentionEstimate >= 70).slice(0, 3)) {
           learnPromises.push(sb.from("script_knowledge").insert({
             category: "retention_technique",
             title: `${phase.phase} — ${phase.technique}`,
-            content: `Técnica de retenção "${phase.technique}" usada na fase "${phase.phase}" (${phase.timeRange}). Retenção estimada: ${phase.retentionEstimate}%. Extraída do vídeo "${video.snippet.title}" do canal "${video.snippet.channelTitle}".`,
+            content: `Técnica "${phase.technique}" na fase "${phase.phase}" (${phase.timeRange}). Retenção: ${phase.retentionEstimate}%. Vídeo: "${video.snippet.title}".`,
             effectiveness_score: Math.round(phase.retentionEstimate / 10),
             examples: JSON.stringify([`${video.snippet.title} (${phase.timeRange})`]),
           }));
         }
       }
 
-      // 3. Save psychology triggers to viral_content_library
       if (analysis.contentDNA?.psychTriggers?.length) {
         learnPromises.push(sb.from("viral_content_library").insert({
           category: "psychology_triggers",
@@ -333,46 +495,39 @@ ANALISE:
         }));
       }
 
-      // 4. Save visual style as scene prompt knowledge
       if (analysis.visualStyle?.replicabilityAsFaceless >= 60) {
         learnPromises.push(sb.from("scene_prompt_knowledge").insert({
           category: analysis.visualStyle.primaryStyle.toLowerCase().replace(/\s+/g, '_'),
           title: `Visual: ${analysis.visualStyle.primaryStyle} — "${video.snippet.title}"`,
-          prompt_template: `Style: ${analysis.visualStyle.primaryStyle}. Color grading: ${analysis.visualStyle.colorGrading}. Transitions: ${analysis.visualStyle.transitionStyle}. B-roll: ${analysis.visualStyle.bRollUsage}. Editing pace: ${analysis.visualStyle.editingPace}. Production: ${analysis.visualStyle.productionLevel}. Tools: ${(analysis.visualStyle.toolsSuggested || []).join(', ')}.`,
+          prompt_template: analysis.visualDNA?.referenceStylePrompt || 
+            `Style: ${analysis.visualStyle.primaryStyle}. Colors: ${(analysis.visualDNA?.colorPalette || []).join(', ')}. Lighting: ${analysis.visualDNA?.lightingStyle || ''}. ${analysis.visualDNA?.overallAesthetic || ''}`,
           viral_score: Math.round(analysis.scores?.virality / 10) || 7,
           tags: JSON.stringify([analysis.visualStyle.primaryStyle, ...analysis.visualStyle.secondaryStyles || []]),
         }));
       }
 
-      // 5. Save title to viral_titles_db if high performing
       if (views >= 350000) {
         learnPromises.push(sb.from("viral_titles_db").insert({
           title: video.snippet.title,
           channel_name: video.snippet.channelTitle,
           channel_id: video.snippet.channelId,
-          views,
-          likes,
+          views, likes,
           niche: analysis.contentDNA?.nicheCategory || 'unknown',
           why_viral: analysis.hookAnalysis?.whyItWorks || null,
           title_pattern: analysis.titleAnalysis?.copywritingTechnique || null,
           emotional_triggers: analysis.contentDNA?.psychTriggers || [],
           seo_score: analysis.titleAnalysis?.ctrScore ? Math.round(analysis.titleAnalysis.ctrScore) : 0,
           published_at: video.snippet.publishedAt,
-          duration_seconds: (() => {
-            const d = video.contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            return d ? (parseInt(d[1]||'0')*3600 + parseInt(d[2]||'0')*60 + parseInt(d[3]||'0')) : 0;
-          })(),
-        }).then(() => {}).catch(() => {}));
+          duration_seconds: durationSeconds,
+        }).catch(() => {}));
       }
 
-      // 6. Save complete video blueprint for reuse
       learnPromises.push(sb.from("video_blueprints").upsert({
         video_id: videoId,
         video_title: video.snippet.title,
         channel_name: video.snippet.channelTitle,
         channel_id: video.snippet.channelId,
-        views,
-        likes,
+        views, likes,
         niche: analysis.contentDNA?.nicheCategory || 'unknown',
         story_structure: {
           format: analysis.contentDNA?.format,
@@ -385,16 +540,16 @@ ANALISE:
         narrative_style: analysis.contentDNA?.format || null,
         pacing_type: analysis.visualStyle?.editingPace || null,
         visual_style: analysis.visualStyle?.primaryStyle || null,
-        scene_structure: analysis.rewatchSegments || [],
+        scene_structure: analysis.sceneTimeline || [],
         retention_map: analysis.retentionMap || {},
         clone_template: analysis.cloneTemplate || {},
         scores: analysis.scores || {},
         thumbnail_analysis: analysis.thumbnailAnalysis || {},
-        source: 'deep-scan',
-      }, { onConflict: "video_id" }).then(() => {}).catch(() => {}));
+        source: 'deep-scan-v3',
+      }, { onConflict: "video_id" }).catch(() => {}));
 
       await Promise.allSettled(learnPromises);
-      console.log(`Auto-learn: saved ${learnPromises.length} insights + blueprint from "${video.snippet.title}"`);
+      console.log(`Auto-learn: saved ${learnPromises.length} insights from "${video.snippet.title}"`);
     } catch (learnErr) {
       console.error("Auto-learn error (non-fatal):", learnErr);
     }
@@ -408,11 +563,14 @@ ANALISE:
         thumbnail: thumbnailUrl,
         views, likes, comments,
         duration: video.contentDetails.duration,
+        durationSeconds,
+        durationMinutes,
         publishedAt: video.snippet.publishedAt,
         tags: video.snippet.tags || [],
         outlierScore,
         channelSubs,
         hasTranscript: !!transcript,
+        capturedFrames: validFrames.length,
       },
       analysis,
       autoLearn: true,

@@ -15,8 +15,10 @@ interface DeepScanResult {
   videoInfo: {
     id: string; title: string; channelTitle: string; channelId: string;
     thumbnail: string; views: number; likes: number; comments: number;
-    duration: string; publishedAt: string; tags: string[];
+    duration: string; durationSeconds?: number; durationMinutes?: number;
+    publishedAt: string; tags: string[];
     outlierScore: string; channelSubs: number; hasTranscript: boolean;
+    capturedFrames?: number;
   };
   analysis: {
     hookAnalysis: {
@@ -45,6 +47,19 @@ interface DeepScanResult {
       bRollUsage: string; productionLevel: string;
       replicabilityAsFaceless: number; toolsSuggested: string[];
     };
+    visualDNA?: {
+      colorPalette?: string[]; lightingStyle?: string;
+      cameraPatterns?: string[]; textOnScreenStyle?: string;
+      imageTypes?: string[]; backgroundStyle?: string;
+      overallAesthetic?: string; referenceStylePrompt?: string;
+      frameAnalysis?: { framePosition: string; description: string; keyElements: string[]; mood: string }[];
+    };
+    sceneTimeline?: {
+      sceneIndex: number; startTime: string; endTime: string; durationSeconds: number;
+      narrationSummary: string; visualDescription: string; visualPrompt: string;
+      cameraAngle?: string; mood: string; energyLevel: string;
+      retentionTechnique?: string; textOnScreen?: string; transitionToNext?: string;
+    }[];
     rewatchSegments?: {
       timeRange: string; reason: string; rewatchScore: number; contentSummary: string;
     }[];
@@ -53,6 +68,7 @@ interface DeepScanResult {
       scriptOutline: string; estimatedViewsSmallChannel: string;
       suggestedDuration?: string; thumbnailRecipe?: string;
       hookScript?: string; ctaScript?: string;
+      wordCountTarget?: number;
     };
     scores: {
       virality: number; replicability: number; monetization: number; overall: number;
@@ -111,7 +127,7 @@ const Section = ({ id, icon: Icon, iconColor, label, badge, expanded, onToggle, 
 
 export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPanelProps) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    hook: true, retention: false, dna: false, title: false, thumbnail: true, visual: true, rewatch: false, clone: true,
+    hook: true, retention: false, dna: false, title: false, thumbnail: true, visual: true, visualDna: false, sceneTimeline: false, rewatch: false, clone: true,
   });
   const { videoInfo, analysis } = result;
   const toggle = (key: string) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -143,7 +159,7 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                     <FileText className="w-2.5 h-2.5" /> Transcrição
                   </Badge>
                 )}
-                <Badge variant="outline" className="text-[9px]">{videoInfo.duration}</Badge>
+                <Badge variant="outline" className="text-[9px]">{videoInfo.duration}{videoInfo.durationMinutes ? ` (${videoInfo.durationMinutes}min)` : ''}</Badge>
                 {analysis.visualStyle && (
                   <Badge variant="outline" className="text-[9px] gap-1 text-purple-400 border-purple-500/30">
                     <Film className="w-2.5 h-2.5" /> {analysis.visualStyle.primaryStyle}
@@ -152,6 +168,16 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                 {analysis.visualStyle?.faceless && (
                   <Badge variant="outline" className="text-[9px] gap-1 text-blue-400 border-blue-500/30">
                     👤 Faceless
+                  </Badge>
+                )}
+                {videoInfo.capturedFrames && videoInfo.capturedFrames > 0 && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-indigo-400 border-indigo-500/30">
+                    📸 {videoInfo.capturedFrames} frames
+                  </Badge>
+                )}
+                {analysis.sceneTimeline && analysis.sceneTimeline.length > 0 && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-orange-400 border-orange-500/30">
+                    🎬 {analysis.sceneTimeline.length} cenas
                   </Badge>
                 )}
               </div>
@@ -231,6 +257,139 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                 </div>
               </div>
             )}
+          </Section>
+        )}
+
+        {/* ══════ VISUAL DNA (from frame analysis) ══════ */}
+        {analysis.visualDNA && (
+          <Section id="visualDna" icon={Palette} iconColor="text-indigo-400" label="DNA Visual (Frames Capturados)"
+            badge={<Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px]">{analysis.visualDNA.frameAnalysis?.length || 0} frames</Badge>}
+            expanded={expandedSections.visualDna} onToggle={() => toggle('visualDna')}>
+            
+            {analysis.visualDNA.overallAesthetic && (
+              <div className="bg-secondary/50 rounded-lg p-3 border-l-2 border-indigo-400">
+                <p className="text-[10px] uppercase tracking-wider text-indigo-400 mb-1">Estética Geral</p>
+                <p className="text-xs">{analysis.visualDNA.overallAesthetic}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              {analysis.visualDNA.lightingStyle && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Iluminação</p>
+                  <p className="text-xs font-medium">{analysis.visualDNA.lightingStyle}</p>
+                </div>
+              )}
+              {analysis.visualDNA.backgroundStyle && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Background</p>
+                  <p className="text-xs font-medium">{analysis.visualDNA.backgroundStyle}</p>
+                </div>
+              )}
+              {analysis.visualDNA.textOnScreenStyle && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Texto na Tela</p>
+                  <p className="text-xs font-medium">{analysis.visualDNA.textOnScreenStyle}</p>
+                </div>
+              )}
+            </div>
+
+            {analysis.visualDNA.colorPalette && analysis.visualDNA.colorPalette.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-indigo-400 mb-1.5">Paleta de Cores</p>
+                <div className="flex flex-wrap gap-2">
+                  {analysis.visualDNA.colorPalette.map((c, i) => (
+                    <div key={i} className="flex items-center gap-1.5 bg-secondary/50 rounded px-2 py-1">
+                      <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: c.startsWith('#') ? c : undefined }} />
+                      <span className="text-[10px]">{c}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analysis.visualDNA.imageTypes && analysis.visualDNA.imageTypes.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Tipos de Imagem</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysis.visualDNA.imageTypes.map((t, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px] border-indigo-500/30 text-indigo-400">{t}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analysis.visualDNA.frameAnalysis && analysis.visualDNA.frameAnalysis.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-indigo-400 mb-1.5">Análise de Frames Capturados</p>
+                <div className="space-y-2">
+                  {analysis.visualDNA.frameAnalysis.map((f, i) => (
+                    <div key={i} className="bg-secondary/50 rounded-lg p-2.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-[9px]">{f.framePosition}</Badge>
+                        <span className="text-[10px] text-muted-foreground">{f.mood}</span>
+                      </div>
+                      <p className="text-xs">{f.description}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {f.keyElements.map((e, j) => (
+                          <span key={j} className="text-[9px] bg-secondary/80 rounded px-1.5 py-0.5">{e}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analysis.visualDNA.referenceStylePrompt && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] uppercase tracking-wider text-emerald-400">Master Style Prompt</p>
+                  <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 gap-1"
+                    onClick={() => copy(analysis.visualDNA!.referenceStylePrompt!, 'Master Prompt')}>
+                    <Copy className="w-2.5 h-2.5" /> Copiar
+                  </Button>
+                </div>
+                <div className="bg-secondary/50 rounded-lg p-3 border-l-2 border-emerald-400">
+                  <p className="text-xs whitespace-pre-line">{analysis.visualDNA.referenceStylePrompt}</p>
+                </div>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {/* ══════ SCENE TIMELINE ══════ */}
+        {analysis.sceneTimeline && analysis.sceneTimeline.length > 0 && (
+          <Section id="sceneTimeline" icon={Film} iconColor="text-orange-400" label="Timeline de Cenas"
+            badge={<Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">{analysis.sceneTimeline.length} cenas | {videoInfo.durationMinutes || '?'}min</Badge>}
+            expanded={expandedSections.sceneTimeline} onToggle={() => toggle('sceneTimeline')}>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+              {analysis.sceneTimeline.map((scene, i) => (
+                <div key={i} className="bg-secondary/50 rounded-lg p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-orange-400 font-bold">{scene.startTime}-{scene.endTime}</span>
+                      <Badge variant="outline" className="text-[9px]">Cena {scene.sceneIndex}</Badge>
+                      <Badge variant="outline" className={`text-[9px] ${
+                        scene.energyLevel === 'explosive' ? 'border-red-500/30 text-red-400' :
+                        scene.energyLevel === 'high' ? 'border-orange-500/30 text-orange-400' :
+                        scene.energyLevel === 'medium' ? 'border-yellow-500/30 text-yellow-400' :
+                        'border-blue-500/30 text-blue-400'
+                      }`}>{scene.energyLevel}</Badge>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 gap-1"
+                      onClick={() => copy(scene.visualPrompt, `Prompt Cena ${scene.sceneIndex}`)}>
+                      <Copy className="w-2.5 h-2.5" /> Prompt
+                    </Button>
+                  </div>
+                  <p className="text-xs font-medium">{scene.narrationSummary}</p>
+                  <p className="text-[10px] text-muted-foreground">{scene.visualDescription}</p>
+                  {scene.retentionTechnique && (
+                    <p className="text-[10px] text-primary">🎯 {scene.retentionTechnique}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </Section>
         )}
 
