@@ -20,6 +20,7 @@ import { ScriptGenerator } from '@/components/scripts/ScriptGenerator';
 import { CharacterManager } from '@/components/scripts/CharacterManager';
 import { AudioProcessor } from '@/components/scripts/AudioProcessor';
 import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
+import { SceneViewer } from '@/components/scripts/SceneViewer';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
