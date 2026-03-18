@@ -487,7 +487,7 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
                 </Button>
                 {onCloneToScript && (
                   <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 gap-1 text-primary"
-                    onClick={() => onCloneToScript(analysis.cloneTemplate.scriptOutline)}>
+                    onClick={() => onCloneToScript()}>
                     <Sparkles className="w-2.5 h-2.5" /> Usar no Roteiro
                   </Button>
                 )}
