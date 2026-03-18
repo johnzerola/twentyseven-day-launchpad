@@ -555,7 +555,7 @@ export const DeepScanPanel = ({ result, onClose, onCloneToScript }: DeepScanPane
           {/* 🎬 MODELAR VÍDEO — Main CTA */}
           {onCloneToScript && (
             <Button className="w-full gap-2 h-12 text-sm gradient-hero border-0 mt-3" 
-              onClick={() => onCloneToScript(analysis.cloneTemplate.scriptOutline)}>
+              onClick={() => onCloneToScript()}>
               <Film className="w-5 h-5" /> 🎬 Modelar Vídeo — Criar Roteiro Similar
             </Button>
           )}
