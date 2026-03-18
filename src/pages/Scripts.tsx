@@ -142,8 +142,10 @@ const Scripts = () => {
           if (matchedStyle) setVideoStyle(matchedStyle.value);
         }
         
-        // Pre-fill duration from suggested or original
-        if (clone.suggestedDuration) {
+        // Pre-fill duration: USE ORIGINAL VIDEO DURATION (exact clone)
+        if (clone.durationMinutes && clone.durationMinutes > 0) {
+          setDuration(String(clone.durationMinutes));
+        } else if (clone.suggestedDuration) {
           const durationMatch = clone.suggestedDuration.match(/(\d+)/);
           if (durationMatch) setDuration(durationMatch[1]);
         }
