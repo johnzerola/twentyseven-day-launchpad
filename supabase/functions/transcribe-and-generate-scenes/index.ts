@@ -497,7 +497,7 @@ Visual content MUST match what is narrated at each timestamp.`
         customStyleNotes: !!customStyleNotes,
         charactersCount: characters?.length || 0,
         chunksProcessed: chunks.length,
-        method: "gemini-flash-sequential",
+        method: "gemini-flash-parallel",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
