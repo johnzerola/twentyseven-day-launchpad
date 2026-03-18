@@ -193,6 +193,8 @@ const Scripts = () => {
           originalTitle: clone.videoTitle,
           channel: clone.channelTitle,
           views: clone.views,
+          durationSeconds: clone.durationSeconds,
+          durationMinutes: clone.durationMinutes,
           hookType: clone.hookType,
           emotionalTone: clone.emotionalTone,
           format: clone.format,
@@ -200,6 +202,7 @@ const Scripts = () => {
           whyItWorks: clone.whyItWorks,
           titleVariations: clone.titleVariations,
           thumbnailRecipe: clone.thumbnailRecipe,
+          visualDna: clone.visualDna,
         }));
         
         setActiveStep('script');
