@@ -30,18 +30,86 @@ serve(async (req) => {
     // ========== PHASE 1: Transcribe with Gemini Flash ==========
     console.log("Phase 1: Transcribing audio...");
 
-    const transcribeResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+    const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+
+    // Helper: retry fetch with backoff
+    async function retryFetch(url: string, opts: RequestInit, maxRetries = 3): Promise<Response> {
+      for (let i = 0; i <= maxRetries; i++) {
+        const resp = await fetch(url, opts);
+        if (resp.ok || (resp.status !== 502 && resp.status !== 503 && resp.status !== 500)) return resp;
+        const t = await resp.text();
+        console.warn(`Retry ${i+1}/${maxRetries}: ${resp.status} ${t.slice(0,200)}`);
+        if (i < maxRetries) await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+        if (i === maxRetries) {
+          // Return a failed response-like object
+          return new Response(t, { status: resp.status });
+        }
+      }
+      throw new Error("Unreachable");
+    }
+
+    let transcribeData: any = null;
+
+    // Strategy A: Use Google AI native API (handles audio better, larger payloads)
+    if (GOOGLE_AI_KEY) {
+      console.log("Using Google AI native API for transcription...");
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+        const geminiResp = await retryFetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+
+OUTPUT FORMAT (strict JSON array):
+[
+  {"start": 0.0, "end": 3.5, "text": "First sentence here."},
+  {"start": 3.6, "end": 7.2, "text": "Second sentence here."}
+]
+
+RULES:
+- Transcribe EVERY spoken word
+- Estimate timestamps as accurately as possible per sentence
+- Each entry should be one complete sentence or natural phrase
+- Start times should be sequential and non-overlapping
+- Return ONLY the JSON array, no other text` },
+                { inlineData: { mimeType: audioMimeType || "audio/mp3", data: audioBase64 } }
+              ]
+            }],
+            generationConfig: { temperature: 0.1 },
+          }),
+        });
+        if (geminiResp.ok) {
+          const gData = await geminiResp.json();
+          const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          transcribeData = { choices: [{ message: { content: text } }] };
+          console.log("Google AI transcription OK, length:", text.length);
+        } else {
+          const errText = await geminiResp.text();
+          console.warn("Google AI failed:", geminiResp.status, errText.slice(0, 300));
+        }
+      } catch (e: any) {
+        console.warn("Google AI error:", e.message);
+      }
+    }
+
+    // Strategy B: Fallback to Lovable Gateway
+    if (!transcribeData) {
+      console.log("Falling back to Lovable Gateway for transcription...");
+      const transcribeResponse = await retryFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
 
 OUTPUT FORMAT (strict JSON array):
 [
@@ -55,30 +123,28 @@ RULES:
 - Each entry should be one complete sentence or natural phrase
 - Start times should be sequential and non-overlapping
 - Return ONLY the JSON array, no other text`
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Transcribe this audio with timestamps per sentence. Return ONLY a JSON array." },
-              {
-                type: "image_url",
-                image_url: { url: `data:${audioMimeType};base64,${audioBase64}` }
-              }
-            ]
-          }
-        ],
-      }),
-    });
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Transcribe this audio with timestamps per sentence. Return ONLY a JSON array." },
+                { type: "image_url", image_url: { url: `data:${audioMimeType};base64,${audioBase64}` } }
+              ]
+            }
+          ],
+        }),
+      });
 
-    if (!transcribeResponse.ok) {
-      const t = await transcribeResponse.text();
-      console.error("Transcription error:", transcribeResponse.status, t.slice(0, 300));
-      if (transcribeResponse.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
-      if (transcribeResponse.status === 402) throw new Error("Créditos insuficientes. Adicione créditos ao workspace.");
-      throw new Error(`Erro na transcrição: ${transcribeResponse.status}`);
+      if (!transcribeResponse.ok) {
+        const t = await transcribeResponse.text();
+        console.error("Transcription error:", transcribeResponse.status, t.slice(0, 300));
+        if (transcribeResponse.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
+        if (transcribeResponse.status === 402) throw new Error("Créditos insuficientes. Adicione créditos ao workspace.");
+        throw new Error(`Erro na transcrição: ${transcribeResponse.status}`);
+      }
+
+      transcribeData = await transcribeResponse.json();
     }
-
-    const transcribeData = await transcribeResponse.json();
     let transcriptText = transcribeData.choices?.[0]?.message?.content || "";
     console.log("Raw transcription (first 500):", transcriptText.slice(0, 500));
 
