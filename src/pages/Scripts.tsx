@@ -20,6 +20,7 @@ import { ScriptGenerator } from '@/components/scripts/ScriptGenerator';
 import { CharacterManager } from '@/components/scripts/CharacterManager';
 import { AudioProcessor } from '@/components/scripts/AudioProcessor';
 import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
+import { SceneViewer } from '@/components/scripts/SceneViewer';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
@@ -1065,11 +1066,19 @@ const Scripts = () => {
                         onReferenceImagesChange={(urls) => setReferenceImages(urls.map(url => ({ url })))}
                       />
                       {syncedScenes.length > 0 && (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <PromptExporter scenes={syncedScenes} characters={characters} topic={topic} videoStyle={videoStyle} language={language} />
                           <TimelineSyncLab scenes={syncedScenes} onUpdateScene={(index, updates) => {
                             setSyncedScenes(prev => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
                           }} />
+                          <div className="border border-border/50 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Film className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-semibold">Todas as Cenas — Detalhes Completos</span>
+                              <Badge variant="outline" className="text-[10px]">{syncedScenes.length} cenas</Badge>
+                            </div>
+                            <SceneViewer scenes={syncedScenes} />
+                          </div>
                         </div>
                       )}
                     </>

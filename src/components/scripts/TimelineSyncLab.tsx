@@ -251,17 +251,43 @@ export const TimelineSyncLab = ({ scenes, onUpdateScene }: TimelineSyncLabProps)
               <p className="text-xs">{scenes[selectedScene].lightingSetup}</p>
             </div>
           )}
+          {scenes[selectedScene].colorGrading && (
+            <div>
+              <span className="text-[10px] text-muted-foreground">🎨 Color Grading</span>
+              <p className="text-xs">{scenes[selectedScene].colorGrading}</p>
+            </div>
+          )}
           {scenes[selectedScene].negativePrompt && (
             <div>
               <span className="text-[10px] text-muted-foreground">🚫 Negative Prompt</span>
               <p className="text-xs text-destructive/70">{scenes[selectedScene].negativePrompt}</p>
             </div>
           )}
+          {scenes[selectedScene].environmentDetails && (
+            <div>
+              <span className="text-[10px] text-muted-foreground">🏔️ Ambiente</span>
+              <p className="text-xs">{scenes[selectedScene].environmentDetails}</p>
+            </div>
+          )}
           {scenes[selectedScene].charactersInScene && scenes[selectedScene].charactersInScene!.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {scenes[selectedScene].charactersInScene!.map((c, ci) => (
-                <Badge key={ci} variant="secondary" className="text-[9px]">👤 {c}</Badge>
-              ))}
+            <div className="space-y-2">
+              <span className="text-[10px] text-muted-foreground font-semibold">👥 Personagens na Cena</span>
+              {scenes[selectedScene].charactersInScene!.map((c, ci) => {
+                const detail = typeof c === 'object' ? c : null;
+                if (detail) {
+                  return (
+                    <div key={ci} className="bg-muted/20 rounded-md p-2 space-y-0.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-primary">👤 {detail.name}</span>
+                        {detail.expression && <Badge variant="outline" className="text-[8px]">😶 {detail.expression}</Badge>}
+                      </div>
+                      {detail.visualDescription && <p className="text-[9px] text-muted-foreground">🎨 {detail.visualDescription}</p>}
+                      {detail.action && <p className="text-[9px] text-muted-foreground">🎬 {detail.action}</p>}
+                    </div>
+                  );
+                }
+                return <Badge key={ci} variant="secondary" className="text-[9px]">👤 {String(c)}</Badge>;
+              })}
             </div>
           )}
           {onUpdateScene && (
