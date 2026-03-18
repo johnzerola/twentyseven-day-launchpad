@@ -63,7 +63,7 @@ interface DeepScanResult {
 interface DeepScanPanelProps {
   result: DeepScanResult;
   onClose: () => void;
-  onCloneToScript?: (outline: string) => void;
+  onCloneToScript?: () => void;
 }
 
 const ScoreCircle = ({ score, label, color }: { score: number; label: string; color: string }) => (
