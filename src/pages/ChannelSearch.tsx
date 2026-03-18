@@ -572,6 +572,7 @@ const ChannelSearch = () => {
             {/* Deep Scan Result Panel */}
             <AnimatePresence>
               {deepScanResult && (
+                <div ref={deepScanRef}>
                 <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={(outline) => {
                   sessionStorage.setItem('clone_script_outline', outline);
                   sessionStorage.setItem('clone_video_title', deepScanResult.videoInfo.title);
