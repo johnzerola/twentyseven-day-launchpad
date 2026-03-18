@@ -353,8 +353,11 @@ PROMPT QUALITY: 70-120 words per prompt. Include lens, lighting, color grading, 
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
-    // Split into chunks — 180s each for longer segments
-    const CHUNK_SECONDS = 180;
+    // Split into chunks — adaptive sizing to keep requests fast enough
+    const CHUNK_SECONDS = audioDuration > 600 ? 90 : 120;
+    const TARGET_SCENE_SECONDS = audioDuration > 600 ? 12 : 10;
+    const MAX_SCENES_PER_CHUNK = 14;
+
     const chunks: { blocks: typeof transcriptBlocks; startTime: number; endTime: number }[] = [];
 
     if (audioDuration <= CHUNK_SECONDS) {
@@ -364,18 +367,42 @@ ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneB
       let chunkStart = 0;
       for (const block of transcriptBlocks) {
         if (currentChunkBlocks.length > 0 && block.start - chunkStart >= CHUNK_SECONDS) {
-          chunks.push({ blocks: currentChunkBlocks, startTime: chunkStart, endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end });
+          chunks.push({
+            blocks: currentChunkBlocks,
+            startTime: chunkStart,
+            endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end,
+          });
           currentChunkBlocks = [];
           chunkStart = block.start;
         }
         currentChunkBlocks.push(block);
       }
       if (currentChunkBlocks.length > 0) {
-        chunks.push({ blocks: currentChunkBlocks, startTime: chunkStart, endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end });
+        chunks.push({
+          blocks: currentChunkBlocks,
+          startTime: chunkStart,
+          endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end,
+        });
       }
     }
 
     console.log(`Processing ${chunks.length} chunk(s) for ${audioDuration.toFixed(1)}s audio`);
+
+    const fallbackCharacters = (characters || []).slice(0, 5).map((c: any) => {
+      const a = c.appearance || {};
+      const cl = c.clothing || {};
+      const ff = c.facial_features || {};
+      return {
+        name: c.name || "Personagem",
+        visualDescription: `${a.skin_color || 'pele média'}, ${a.hair_color || 'cabelo escuro'} ${a.hair_style || 'curto'}, olhos ${ff.eye_color || a.eye_color || 'escuros'}, rosto ${ff.face_shape || 'oval'}, sobrancelhas ${ff.eyebrows || 'naturais'}, nariz ${ff.nose || 'reto'}, boca ${ff.mouth || 'natural'}, roupa: ${cl.shirt || cl.top || 'top casual'}, ${cl.pants || cl.bottom || 'calça casual'}, ${cl.shoes || 'calçado padrão'}, acessórios: ${cl.accessories || 'nenhum'}`,
+        action: "em cena",
+        expression: "neutra",
+      };
+    });
+
+    const fallbackCharacterText = fallbackCharacters
+      .map((c: any) => `${c.name}: ${c.visualDescription}`)
+      .join(" | ");
 
     const parseScenesFromToolArgs = (rawArgs: string): any[] => {
       if (!rawArgs) return [];
@@ -397,71 +424,189 @@ ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneB
       }
     };
 
-    const generateChunkScenes = async (chunk: { blocks: typeof transcriptBlocks; startTime: number; endTime: number }, ci: number) => {
+    const buildFallbackScenes = (
+      chunk: { blocks: typeof transcriptBlocks; startTime: number; endTime: number },
+      expectedScenes: number,
+      chunkIndex: number
+    ) => {
+      const cameraAngles = [
+        "wide establishing shot",
+        "medium shot",
+        "close-up",
+        "low-angle shot",
+        "over-the-shoulder shot",
+        "tracking shot",
+      ];
+      const moods = ["dramático", "tenso", "cinematográfico", "misterioso", "épico", "emocional"];
+      const chunkDuration = Math.max(1, chunk.endTime - chunk.startTime);
+      const sceneSpan = Math.max(5, chunkDuration / expectedScenes);
+
+      return Array.from({ length: expectedScenes }).map((_, i) => {
+        const startTime = +(chunk.startTime + i * sceneSpan).toFixed(1);
+        const endTime = +Math.min(chunk.endTime, chunk.startTime + (i + 1) * sceneSpan).toFixed(1);
+        const overlapping = chunk.blocks.filter((b) => b.start < endTime && b.end > startTime);
+        const narrativeText = overlapping.map((b) => b.text).join(" ").trim() || "Continuação da narração.";
+        const narrativeSummary = narrativeText.split(/\s+/).slice(0, 18).join(" ");
+
+        const cameraAngle = cameraAngles[(i + chunkIndex) % cameraAngles.length];
+        const mood = moods[(i + chunkIndex) % moods.length];
+        const lensSpec = "35mm cinematic";
+        const lightingSetup = "cinematic soft key light with contrast fill";
+        const colorGrading = "teal-orange cinematic grade";
+        const environmentDetails = "Ambiente coerente com a narração, com textura realista e profundidade.";
+
+        return {
+          __fallback: true,
+          sceneIndex: i + 1,
+          sceneDurationSeconds: Math.max(5, Math.min(10, Math.round(endTime - startTime))),
+          startTime,
+          endTime,
+          narrativeText,
+          narrativeSummary,
+          visualPrompt: `${cameraAngle}, ${lensSpec}. ${narrativeText}. ${fallbackCharacterText ? `Personagens: ${fallbackCharacterText}. ` : ''}${environmentDetails} ${lightingSetup}. ${colorGrading}. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)`,
+          negativePrompt: "no subtitles, no text, no logos, no watermarks, no artifacts",
+          cameraAngle,
+          lensSpec,
+          lightingSetup,
+          colorGrading,
+          audioDirection: "sync with narration pacing",
+          mood,
+          emotionalBeat: "narrative progression",
+          charactersInScene: fallbackCharacters,
+          environmentDetails,
+          transitionNote: "Corte limpo para próxima cena",
+        };
+      });
+    };
+
+    const generateChunkScenes = async (
+      chunk: { blocks: typeof transcriptBlocks; startTime: number; endTime: number },
+      ci: number
+    ) => {
       const chunkTranscript = chunk.blocks
-        .map(b => `[${b.start.toFixed(1)}s-${b.end.toFixed(1)}s] ${b.text}`)
+        .map((b) => `[${b.start.toFixed(1)}s-${b.end.toFixed(1)}s] ${b.text}`)
         .join("\n");
 
       const chunkDuration = chunk.endTime - chunk.startTime;
-      const expectedScenes = Math.max(2, Math.ceil(chunkDuration / 10));
+      const expectedScenes = Math.max(
+        2,
+        Math.min(MAX_SCENES_PER_CHUNK, Math.ceil(chunkDuration / TARGET_SCENE_SECONDS))
+      );
+      const fallbackScenes = buildFallbackScenes(chunk, expectedScenes, ci);
 
-      console.log(`Chunk ${ci + 1}/${chunks.length}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s, ~${expectedScenes} scenes`);
+      console.log(
+        `Chunk ${ci + 1}/${chunks.length}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s, ${expectedScenes} scenes`
+      );
 
-      const resp = await retryFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          tools: [toolDef],
-          tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `TRANSCRIPTION (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):
+      try {
+        const resp = await retryFetch(
+          "https://ai.gateway.lovable.dev/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              tools: [toolDef],
+              tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
+              messages: [
+                { role: "system", content: systemPrompt },
+                {
+                  role: "user",
+                  content: `TRANSCRIPTION (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):
 
 ${chunkTranscript}
 
-${cleanScript ? `SCRIPT CONTEXT:\n${cleanScript.slice(0, 1500)}` : ''}
+${cleanScript ? `SCRIPT CONTEXT:\n${cleanScript.slice(0, 1200)}` : ''}
 
-Generate ~${expectedScenes} scenes for this segment. Each scene 5-10s. Style: ${videoStyle}. Language: ${language}.
-Visual content MUST match what is narrated at each timestamp.`
-            }
-          ],
-        }),
-      });
+Generate EXACTLY ${expectedScenes} scenes for this segment. Each scene 5-10s. Style: ${videoStyle}. Language: ${language}.
+Visual content MUST match what is narrated at each timestamp.`,
+                },
+              ],
+            }),
+          },
+          1
+        );
 
-      if (!resp.ok) {
-        const t = await resp.text();
-        console.error(`Chunk ${ci + 1} error: ${resp.status}`, t.slice(0, 200));
-        if (resp.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
-        if (resp.status === 402) throw new Error("Créditos insuficientes.");
-        return [];
+        if (!resp.ok) {
+          const t = await resp.text();
+          console.error(`Chunk ${ci + 1} error: ${resp.status}`, t.slice(0, 200));
+          if (resp.status === 402) throw new Error("Créditos insuficientes.");
+          return fallbackScenes;
+        }
+
+        const data = await resp.json();
+        const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
+        const parsedScenes = parseScenesFromToolArgs(args);
+
+        if (!parsedScenes.length) {
+          console.warn(`Chunk ${ci + 1}: empty AI scenes, using fallback`);
+          return fallbackScenes;
+        }
+
+        const normalized = parsedScenes
+          .filter((s: any) => s && typeof s === "object")
+          .slice(0, expectedScenes)
+          .map((s: any, idx: number) => {
+            const fb = fallbackScenes[Math.min(idx, fallbackScenes.length - 1)];
+            const startCandidate = Number(s.startTime);
+            const endCandidate = Number(s.endTime);
+            const startTime = Number.isFinite(startCandidate) ? startCandidate : fb.startTime;
+            const endTimeRaw = Number.isFinite(endCandidate) ? endCandidate : fb.endTime;
+            const endTime = endTimeRaw > startTime ? endTimeRaw : fb.endTime;
+
+            const visualPrompt =
+              typeof s.visualPrompt === "string" && s.visualPrompt.trim().length > 0
+                ? s.visualPrompt.trim()
+                : fb.visualPrompt;
+
+            const charactersInScene =
+              Array.isArray(s.charactersInScene) && s.charactersInScene.length > 0
+                ? s.charactersInScene
+                : fb.charactersInScene;
+
+            return {
+              ...fb,
+              ...s,
+              __fallback: false,
+              startTime,
+              endTime,
+              visualPrompt,
+              charactersInScene,
+              sceneDurationSeconds: Math.max(5, Math.min(10, Math.round(endTime - startTime))),
+            };
+          });
+
+        while (normalized.length < expectedScenes) {
+          normalized.push({ ...fallbackScenes[normalized.length], __fallback: true });
+        }
+
+        console.log(`Chunk ${ci + 1}: ${normalized.length} scenes generated`);
+        return normalized;
+      } catch (err: any) {
+        if (err?.message?.includes("Créditos")) throw err;
+        console.warn(`Chunk ${ci + 1} fallback mode:`, err?.message || err);
+        return fallbackScenes;
       }
-
-      const data = await resp.json();
-      const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
-      const scenes = parseScenesFromToolArgs(args);
-      console.log(`Chunk ${ci + 1}: ${scenes.length} scenes generated`);
-      return scenes;
     };
 
-    // Process chunks in parallel to stay under function timeout for long audios
+    // Process chunks in parallel
     const settled = await Promise.allSettled(chunks.map((chunk, ci) => generateChunkScenes(chunk, ci)));
 
     const allScenes: any[] = [];
     let criticalError: Error | null = null;
+    let fallbackChunks = 0;
 
     settled.forEach((result, ci) => {
       if (result.status === "fulfilled") {
+        if (result.value.some((s: any) => s.__fallback)) fallbackChunks += 1;
         allScenes.push(...result.value);
       } else {
         const msg = result.reason?.message || `Chunk ${ci + 1} failed`;
         console.error(`Chunk ${ci + 1} failed:`, msg);
-        if (!criticalError && (msg.includes("Rate limit") || msg.includes("Créditos"))) {
+        if (!criticalError && msg.includes("Créditos")) {
           criticalError = result.reason;
         }
       }
@@ -470,40 +615,64 @@ Visual content MUST match what is narrated at each timestamp.`
     if (criticalError) throw criticalError;
 
     // ========== PHASE 5: Merge and validate ==========
-    allScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
+    const sanitizedScenes = allScenes
+      .filter((s: any) => typeof s?.visualPrompt === "string" && s.visualPrompt.trim().length > 0)
+      .map(({ __fallback, ...scene }: any) => scene);
 
-    for (const s of allScenes) {
-      const dur = (s.endTime || 0) - (s.startTime || 0);
-      s.sceneDurationSeconds = Math.max(5, Math.min(10, Math.round(dur)));
+    sanitizedScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
+
+    for (const s of sanitizedScenes) {
+      const start = Number(s.startTime) || 0;
+      const end = Number(s.endTime) || start + 6;
+      const dur = Math.max(5, Math.min(10, Math.round(Math.max(0.1, end - start))));
+      s.startTime = start;
+      s.endTime = end > start ? end : start + 6;
+      s.sceneDurationSeconds = dur;
     }
-    allScenes.forEach((s: any, i: number) => { s.sceneIndex = i + 1; });
+    sanitizedScenes.forEach((s: any, i: number) => {
+      s.sceneIndex = i + 1;
+    });
 
-    if (allScenes.length === 0) throw new Error("Nenhuma cena gerada. Tente novamente.");
+    if (sanitizedScenes.length === 0) {
+      throw new Error("Nenhuma cena gerada. Tente novamente.");
+    }
 
-    console.log(`DONE: ${allScenes.length} scenes, ${audioDuration.toFixed(1)}s audio`);
+    const MAX_BLOCKS_IN_RESPONSE = 300;
+    const responseBlocks = transcriptBlocks.length > MAX_BLOCKS_IN_RESPONSE
+      ? transcriptBlocks.slice(0, MAX_BLOCKS_IN_RESPONSE)
+      : transcriptBlocks;
+
+    console.log(`DONE: ${sanitizedScenes.length} scenes, ${audioDuration.toFixed(1)}s audio`);
 
     return new Response(JSON.stringify({
       transcription: {
         fullText,
         wordCount: fullText.split(/\s+/).length,
         audioDuration,
-        blocks: transcriptBlocks,
+        blocks: responseBlocks,
       },
-      scenes: allScenes,
+      scenes: sanitizedScenes,
       metadata: {
-        totalScenes: allScenes.length,
+        totalScenes: sanitizedScenes.length,
         totalDuration: audioDuration,
         videoStyle,
         customStyleNotes: !!customStyleNotes,
         charactersCount: characters?.length || 0,
         chunksProcessed: chunks.length,
-        method: "gemini-flash-parallel",
+        fallbackUsed: fallbackChunks > 0,
+        fallbackChunks,
+        transcriptBlocksTotal: transcriptBlocks.length,
+        transcriptBlocksReturned: responseBlocks.length,
+        method: "gemini-flash-adaptive-parallel",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
     console.error("transcribe-and-generate-scenes error:", e);
-    return errResp(e.message || "Erro desconhecido", e.message?.includes('402') ? 402 : e.message?.includes('429') ? 429 : 500);
+    return errResp(
+      e.message || "Erro desconhecido",
+      e.message?.includes('402') ? 402 : e.message?.includes('429') ? 429 : 500
+    );
   }
 });
