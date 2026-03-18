@@ -104,11 +104,15 @@ export const AudioProcessor = ({
 
     setPhase('uploading');
     try {
-      // Convert audio to base64
+      // Convert audio to base64 using chunked buffer (safer for large files)
       const arrayBuffer = await audioFile.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
       const mimeType = audioFile.type || 'audio/mp3';
 
       setPhase('transcribing');
@@ -128,24 +132,45 @@ export const AudioProcessor = ({
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const status = (error as any)?.context?.status;
+        if (status === 504) throw new Error('Tempo limite no processamento do áudio. Tente novamente.');
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
-      if (!Array.isArray(data?.scenes) || data.scenes.length === 0) {
-        throw new Error('Nenhuma cena foi retornada. Tente novamente com áudio menor ou gere de novo.');
+
+      const scenes = (Array.isArray(data?.scenes) ? data.scenes : [])
+        .filter((scene: any) => scene && typeof scene.visualPrompt === 'string' && scene.visualPrompt.trim().length > 0)
+        .map((scene: any, index: number) => ({
+          ...scene,
+          sceneIndex: typeof scene.sceneIndex === 'number' ? scene.sceneIndex : index + 1,
+          startTime: Number(scene.startTime) || 0,
+          endTime: Number(scene.endTime) || (Number(scene.startTime) || 0) + 6,
+        }));
+
+      if (scenes.length === 0) {
+        throw new Error('Nenhuma cena válida foi retornada. Gere novamente com este mesmo áudio.');
       }
 
       setPhase('generating');
       await new Promise(r => setTimeout(r, 500));
 
-      setSyncedScenes(data.scenes);
+      setSyncedScenes(scenes);
       setPhase('done');
-      toast.success(`${data.scenes.length} cenas sincronizadas com o áudio!`);
+      toast.success(`${scenes.length} cenas sincronizadas com o áudio!`);
+
+      if (data?.metadata?.fallbackUsed) {
+        toast.message('Alguns blocos foram recuperados em modo de segurança para garantir o retorno dos prompts.');
+      }
 
       setTimeout(() => setPhase('idle'), 3000);
     } catch (err: any) {
       setPhase('idle');
       if (err?.message?.includes('402')) toast.error('Créditos insuficientes.');
       else if (err?.message?.includes('429')) toast.error('Rate limit. Tente novamente.');
+      else if (err?.message?.toLowerCase?.().includes('timeout') || err?.message?.includes('Tempo limite')) {
+        toast.error('A geração demorou demais. Tente novamente que agora está otimizado para áudio longo.');
+      }
       else toast.error(err.message || 'Erro ao processar áudio');
     }
   };
