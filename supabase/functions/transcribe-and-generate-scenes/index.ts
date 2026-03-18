@@ -148,37 +148,66 @@ RULES:
     let transcriptText = transcribeData.choices?.[0]?.message?.content || "";
     console.log("Raw transcription (first 500):", transcriptText.slice(0, 500));
 
+    // ---- Robust JSON parser with repair for truncated responses ----
+    function repairAndParseJsonArray(raw: string): any[] {
+      // Clean markdown wrappers
+      let cleaned = raw.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
+      
+      // Extract JSON array portion
+      const arrStart = cleaned.indexOf('[');
+      if (arrStart === -1) return [];
+      cleaned = cleaned.slice(arrStart);
+      
+      // Try direct parse first
+      try { return JSON.parse(cleaned); } catch {}
+      
+      // Strategy: extract individual objects with regex (handles truncated JSON)
+      const objects: any[] = [];
+      const objRegex = /\{[^{}]*?"start"\s*:\s*([\d.]+)[^{}]*?"end"\s*:\s*([\d.]+)[^{}]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+      let m;
+      while ((m = objRegex.exec(cleaned)) !== null) {
+        objects.push({
+          start: parseFloat(m[1]),
+          end: parseFloat(m[2]),
+          text: m[3].replace(/\\"/g, '"').replace(/\\n/g, ' ').trim(),
+        });
+      }
+      if (objects.length > 0) {
+        console.log(`JSON repair: extracted ${objects.length} blocks via regex`);
+        return objects;
+      }
+      
+      // Last resort: try to close truncated JSON
+      const lastBrace = cleaned.lastIndexOf('}');
+      if (lastBrace > 0) {
+        const truncated = cleaned.slice(0, lastBrace + 1) + ']';
+        try { return JSON.parse(truncated); } catch {}
+      }
+      
+      return [];
+    }
+
     // Parse transcript JSON
     let transcriptBlocks: { start: number; end: number; text: string }[] = [];
     
-    // Strategy 1: Extract JSON array
-    const jsonMatch = transcriptText.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      try { transcriptBlocks = JSON.parse(jsonMatch[0]); } catch (e) {
-        console.error("JSON parse failed:", e);
-      }
-    }
+    // Strategy 1: Robust JSON parse with repair
+    transcriptBlocks = repairAndParseJsonArray(transcriptText);
 
-    // Strategy 2: Clean markdown then parse
+    // Strategy 2: Split plain text as fallback
     if (!transcriptBlocks.length && transcriptText.trim()) {
-      const cleaned = transcriptText.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
-      try {
-        const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed)) transcriptBlocks = parsed;
-      } catch {
-        // Strategy 3: Split plain text
-        console.log("Falling back to plain text splitting");
-        const sentences = transcriptText.replace(/```[\s\S]*?```/g, '').trim()
-          .split(/[.!?]+/).filter(s => s.trim().length > 3);
-        if (sentences.length > 0) {
-          const estDuration = 60;
-          const perSentence = estDuration / sentences.length;
-          transcriptBlocks = sentences.map((s, i) => ({
-            start: +(i * perSentence).toFixed(1),
-            end: +((i + 1) * perSentence).toFixed(1),
-            text: s.trim(),
-          }));
-        }
+      console.log("Falling back to plain text splitting");
+      const plainText = transcriptText.replace(/```[\s\S]*?```/g, '').replace(/[\[\]{}]/g, '').trim();
+      // Extract sentences from any readable text
+      const sentences = plainText.split(/[.!?\n]+/).map(s => s.trim()).filter(s => s.length > 5);
+      if (sentences.length > 0) {
+        const estDuration = Math.max(60, sentences.length * 4); // ~4s per sentence
+        const perSentence = estDuration / sentences.length;
+        transcriptBlocks = sentences.map((s, i) => ({
+          start: +(i * perSentence).toFixed(1),
+          end: +((i + 1) * perSentence).toFixed(1),
+          text: s,
+        }));
+        console.log(`Plain text fallback: ${transcriptBlocks.length} blocks, ~${estDuration}s`);
       }
     }
 
