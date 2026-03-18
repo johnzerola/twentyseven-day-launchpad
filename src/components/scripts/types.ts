@@ -33,6 +33,13 @@ export interface Character {
   personality: string[];
 }
 
+export interface SceneCharacter {
+  name: string;
+  visualDescription?: string;
+  action?: string;
+  expression?: string;
+}
+
 export interface SyncedScene {
   sceneIndex: number;
   sceneDurationSeconds?: number;
@@ -48,9 +55,11 @@ export interface SyncedScene {
   lensSpec?: string;
   lighting?: string;
   lightingSetup?: string;
+  colorGrading?: string;
   audioDirection?: string;
   negativePrompt?: string;
-  charactersInScene?: string[];
+  charactersInScene?: (string | SceneCharacter)[];
+  environmentDetails?: string;
   transitionNote?: string;
   dopamineTrigger?: string;
 }
