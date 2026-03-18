@@ -574,23 +574,31 @@ const ChannelSearch = () => {
               {deepScanResult && (
                 <div ref={deepScanRef}>
                 <DeepScanPanel result={deepScanResult} onClose={() => setDeepScanResult(null)} onCloneToScript={() => {
-                  // Store FULL clone data for Scripts page
-                  // Parse duration string to seconds (e.g. "36:12" -> 2172)
+                  // Parse duration - handle ISO 8601 (PT36M12S) and MM:SS formats
                   const durStr = deepScanResult.videoInfo.duration || '';
-                  const durParts = durStr.split(':').map(Number);
-                  let durationSeconds = 0;
-                  if (durParts.length === 3) durationSeconds = durParts[0] * 3600 + durParts[1] * 60 + durParts[2];
-                  else if (durParts.length === 2) durationSeconds = durParts[0] * 60 + durParts[1];
+                  let durationSeconds = (deepScanResult.videoInfo as any).durationSeconds || 0;
+                  if (!durationSeconds) {
+                    const isoMatch = durStr.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                    if (isoMatch) {
+                      durationSeconds = (parseInt(isoMatch[1]||'0')*3600) + (parseInt(isoMatch[2]||'0')*60) + parseInt(isoMatch[3]||'0');
+                    } else {
+                      const parts = durStr.split(':').map(Number);
+                      if (parts.length === 3) durationSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                      else if (parts.length === 2) durationSeconds = parts[0] * 60 + parts[1];
+                    }
+                  }
+                  const durationMinutes = (deepScanResult.videoInfo as any).durationMinutes || Math.round(durationSeconds / 60);
                   
                   const cloneData = {
                     videoTitle: deepScanResult.videoInfo.title,
                     channelTitle: deepScanResult.videoInfo.channelTitle,
                     views: deepScanResult.videoInfo.views,
-                    duration: deepScanResult.videoInfo.duration,
+                    duration: durStr,
                     durationSeconds,
-                    durationMinutes: Math.round(durationSeconds / 60),
+                    durationMinutes,
                     visualStyle: deepScanResult.analysis.visualStyle?.primaryStyle || 'cinematográfico',
-                    visualDna: deepScanResult.analysis.visualStyle || {},
+                    visualDna: deepScanResult.analysis.visualDNA || deepScanResult.analysis.visualStyle || {},
+                    sceneTimeline: deepScanResult.analysis.sceneTimeline || [],
                     niche: deepScanResult.analysis.contentDNA?.nicheCategory || '',
                     emotionalTone: deepScanResult.analysis.contentDNA?.emotionalTone || '',
                     format: deepScanResult.analysis.contentDNA?.format || '',
@@ -604,7 +612,7 @@ const ChannelSearch = () => {
                     ctaScript: deepScanResult.analysis.cloneTemplate?.ctaScript || '',
                     titleVariations: deepScanResult.analysis.cloneTemplate?.titleVariations || [],
                     thumbnailRecipe: deepScanResult.analysis.cloneTemplate?.thumbnailRecipe || '',
-                    suggestedDuration: deepScanResult.analysis.cloneTemplate?.suggestedDuration || '',
+                    suggestedDuration: `${durationMinutes} minutos`,
                     retentionMap: deepScanResult.analysis.retentionMap || {},
                     rewatchSegments: deepScanResult.analysis.rewatchSegments || [],
                     scores: deepScanResult.analysis.scores || {},
