@@ -582,6 +582,7 @@ const ChannelSearch = () => {
                   navigate('/scripts');
                   toast.success('🎬 Dados do vídeo carregados! Gerando roteiro modelado...');
                 }} />
+                </div>
               )}
             </AnimatePresence>
 
