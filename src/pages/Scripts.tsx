@@ -101,7 +101,52 @@ const Scripts = () => {
 
   // v2.2: Read URL params from Tracker pipeline
   const [searchParams] = useSearchParams();
+
+  // ─── Auto-Save wizard state to localStorage ───
+  const AUTOSAVE_KEY = 'scripts_wizard_autosave';
   
+  // Restore on mount (only if no URL params or session data override)
+  useEffect(() => {
+    const hasUrlParams = searchParams.get('niche') || searchParams.get('topic');
+    const hasCloneData = sessionStorage.getItem('clone_full_data') || sessionStorage.getItem('clone_script_outline');
+    if (hasUrlParams || hasCloneData) return; // Skip restore if pipeline data exists
+
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (state.topic) setTopic(state.topic);
+        if (state.niche) setNiche(state.niche);
+        if (state.script) setScript(state.script);
+        if (state.videoType) setVideoType(state.videoType);
+        if (state.videoStyle) setVideoStyle(state.videoStyle);
+        if (state.duration) setDuration(state.duration);
+        if (state.language) setLanguage(state.language);
+        if (state.activeStep) setActiveStep(state.activeStep);
+        if (state.characters?.length) setCharacters(state.characters);
+        if (state.syncedScenes?.length) setSyncedScenes(state.syncedScenes);
+        if (state.customStyleNotes) setCustomStyleNotes(state.customStyleNotes);
+        if (state.selectedChannelId) setSelectedChannelId(state.selectedChannelId);
+        if (state.sceneBlueprintJson?.length) setSceneBlueprintJson(state.sceneBlueprintJson);
+      }
+    } catch {}
+  }, []);
+
+  // Save on change (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      try {
+        const state = {
+          topic, niche, script, videoType, videoStyle, duration, language,
+          activeStep, characters, syncedScenes, customStyleNotes,
+          selectedChannelId, sceneBlueprintJson,
+        };
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+      } catch {}
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [topic, niche, script, videoType, videoStyle, duration, language, activeStep, characters, syncedScenes, customStyleNotes, selectedChannelId, sceneBlueprintJson]);
+
   useEffect(() => { loadHistory(); }, [scriptsPag.page]);
 
   useEffect(() => {
