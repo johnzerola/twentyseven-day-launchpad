@@ -51,6 +51,8 @@ export const AudioProcessor = ({
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [uploadingRefImage, setUploadingRefImage] = useState(false);
+  const [masteringOpen, setMasteringOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
