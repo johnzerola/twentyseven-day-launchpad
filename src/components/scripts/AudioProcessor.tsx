@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { AudioMasteringPanel } from './AudioMasteringPanel';
 import type { SyncedScene, Character, VideoStyleOption } from './types';
 
 interface AudioProcessorProps {
@@ -215,8 +216,13 @@ export const AudioProcessor = ({
               <X className="w-3.5 h-3.5" />
             </Button>
           </div>
-        )}
+      )}
       </div>
+
+      {/* Audio Mastering */}
+      {audioFile && (
+        <AudioMasteringPanel audioFile={audioFile} />
+      )}
 
       {/* Reference Images */}
       {onReferenceImagesChange && (
