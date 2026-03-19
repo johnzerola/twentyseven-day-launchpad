@@ -276,7 +276,25 @@ ${characterBlock}
 KNOWLEDGE: ${knowledgeBlock}
 
 PROMPT FORMULA: [Cinematography] + [Subject matching narration] + [Action] + [Environment] + [Style] + anti-text block
-Quality: masterpiece, award-winning, 8K UHD, photorealistic`;
+Quality: masterpiece, award-winning, 8K UHD, photorealistic
+
+═══ ENVIRONMENT IDENTITY SHEET — MANDATORY FOR EVERY SCENE ═══
+Generate a complete "environment" object for EACH scene with:
+- locationName: SPECIFIC place (not generic), e.g. "dimly lit medieval dungeon with iron chains"
+- locationType: interior/exterior/underwater/aerial/underground/space
+- timeOfDay: PRECISE ("golden hour 6:30pm", "midnight", "overcast noon")
+- weather: atmospheric conditions ("light rain with mist", "dense fog", "clear starry sky")
+- lightSource: primary light with direction ("low sun from west", "single candle from below")
+- shadowDirection & shadowIntensity: where/how shadows fall
+- colorTemperature: Kelvin + feeling ("2700K warm amber", "7500K cold blue")
+- dominantColors: 3-5 colors defining the palette
+- atmosphericElements: particles/effects ("dust motes in beams", "embers floating")
+- surfaceTextures: key textures ("wet cobblestone", "mossy stone walls")
+- depthLayers: Z-depth ("FG: blur | MID: sharp subject | BG: haze")
+- framingComposition: composition rule ("rule of thirds left", "centered symmetry")
+- continuityNotes: how this connects to adjacent scenes visually
+
+⚠️ CONTINUITY: Same location across scenes = IDENTICAL environment fields. Track time/shadow/light changes progressively.`;
 
     // ========== Process ALL chunks in PARALLEL to avoid timeout ==========
     const chunkPromises = chunks.map(async (chunk) => {
