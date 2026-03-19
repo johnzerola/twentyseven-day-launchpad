@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { AudioMasteringPanel } from './AudioMasteringPanel';
 import type { SyncedScene, Character, VideoStyleOption } from './types';
 
 interface AudioProcessorProps {
