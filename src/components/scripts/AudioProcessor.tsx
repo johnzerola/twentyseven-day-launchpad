@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X } from 'lucide-react';
+import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AudioMasteringPanel } from './AudioMasteringPanel';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { SyncedScene, Character, VideoStyleOption } from './types';
 
 interface AudioProcessorProps {
@@ -49,6 +51,7 @@ export const AudioProcessor = ({
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [uploadingRefImage, setUploadingRefImage] = useState(false);
+  const [masteringOpen, setMasteringOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,9 +222,35 @@ export const AudioProcessor = ({
       )}
       </div>
 
-      {/* Audio Mastering */}
+      {/* Audio Mastering - Side Panel */}
       {audioFile && (
-        <AudioMasteringPanel audioFile={audioFile} />
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+            onClick={() => setMasteringOpen(true)}
+          >
+            <Headphones className="w-4 h-4" />
+            🎛️ Masterização de Áudio (Studio Grade)
+          </Button>
+          <Sheet open={masteringOpen} onOpenChange={setMasteringOpen}>
+            <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+              <SheetHeader className="p-6 pb-2">
+                <SheetTitle className="flex items-center gap-2 text-base">
+                  <Headphones className="w-5 h-5 text-amber-400" />
+                  Masterização de Áudio
+                </SheetTitle>
+                <SheetDescription className="text-xs">
+                  Pipeline profissional para transformar seu áudio em padrão estúdio.
+                </SheetDescription>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-120px)] px-6 pb-6">
+                <AudioMasteringPanel audioFile={audioFile} />
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+        </>
       )}
 
       {/* Reference Images */}
