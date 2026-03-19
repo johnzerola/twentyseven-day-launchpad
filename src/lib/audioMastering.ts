@@ -1,24 +1,22 @@
 /**
- * Studio-Grade Audio Mastering Engine v2
+ * Studio-Grade Audio Mastering Engine v3 — YouTube Professional
  * 
- * Professional voiceover processing pipeline using Web Audio API:
- * 1. Noise Gate + Spectral Denoise (artifact removal)
- * 2. Silence Removal (dynamic pause trimming)
- * 3. EQ: HPF 80Hz, Body boost 120-150Hz, Box cut 400Hz, Air shelf 10kHz+
- * 4. Compression (4:1 ratio, voice-optimized)
- * 5. De-essing (6-8kHz sibilance control)
- * 6. Low Pass Filter (cut harsh frequencies above 15kHz)
- * 7. Limiter (-3dB True Peak, targeting -14 LUFS)
+ * Pipeline:
+ * 1. Noise Gate (aggressive expander, floor 0.01)
+ * 2. Spectral Denoise (noise profile subtraction)
+ * 3. Silence Removal (dynamic pause trimming + crossfades)
+ * 4. EQ: HPF 80Hz, Body +3.5dB@130Hz, Box cut -3dB@400Hz, Presence +2.5dB@2.8kHz, Air +1dB@10kHz, LPF 12kHz
+ * 5. Compression (4:1, knee 3, -20dB threshold)
+ * 6. Triple De-essing (5.5kHz, 7kHz, 8.5kHz)
+ * 7. Limiter (-2dB True Peak, targeting -14 LUFS)
  */
 
 export interface MasteringSettings {
-  // Noise & Silence
   silenceThresholdDb: number;
   minSilenceMs: number;
   maxSilenceMs: number;
-  noiseGateThresholdDb: number;  // Noise gate threshold (default: -40)
+  noiseGateThresholdDb: number;
   
-  // EQ
   hpfFrequency: number;
   bodyFrequency: number;
   bodyGainDb: number;
@@ -28,53 +26,50 @@ export interface MasteringSettings {
   airGainDb: number;
   presenceFrequency: number;
   presenceGainDb: number;
-  lpfFrequency: number;         // Low pass filter cutoff (default: 15000)
+  lpfFrequency: number;
   
-  // Dynamics
   compressorThreshold: number;
   compressorRatio: number;
   compressorAttack: number;
   compressorRelease: number;
   compressorKnee: number;
   
-  // De-esser
   deEsserFrequency: number;
   deEsserThreshold: number;
   deEsserRatio: number;
   
-  // Limiter / Output
   limiterThreshold: number;
   targetLufs: number;
 }
 
 export const DEFAULT_MASTERING: MasteringSettings = {
-  silenceThresholdDb: -45,
-  minSilenceMs: 300,
-  maxSilenceMs: 150,
-  noiseGateThresholdDb: -40,
+  silenceThresholdDb: -42,
+  minSilenceMs: 280,
+  maxSilenceMs: 140,
+  noiseGateThresholdDb: -36,
   
   hpfFrequency: 80,
-  bodyFrequency: 135,
-  bodyGainDb: 2.5,
+  bodyFrequency: 130,
+  bodyGainDb: 3.5,
   boxCutFrequency: 400,
   boxCutGainDb: -3,
   airFrequency: 10000,
-  airGainDb: 2,        // Reduced from 3 to avoid hiss amplification
-  presenceFrequency: 3000,
-  presenceGainDb: 1.5,
-  lpfFrequency: 15000,  // Cut harsh frequencies above 15kHz
+  airGainDb: 1.0,
+  presenceFrequency: 2800,
+  presenceGainDb: 2.5,
+  lpfFrequency: 12000,
   
-  compressorThreshold: -18,
+  compressorThreshold: -20,
   compressorRatio: 4,
   compressorAttack: 0.003,
   compressorRelease: 0.15,
-  compressorKnee: 6,
+  compressorKnee: 3,
   
   deEsserFrequency: 7000,
   deEsserThreshold: -25,
   deEsserRatio: 8,
   
-  limiterThreshold: -3,
+  limiterThreshold: -2,
   targetLufs: -14,
 };
 
@@ -105,18 +100,14 @@ export const MASTERING_PHASE_LABELS: Record<MasteringPhase, string> = {
   done: '✅ Masterização completa!',
 };
 
-// ─── Noise Gate / Spectral Denoise ─────────────────────────────────
+// ─── Noise Gate (Aggressive Expander) ──────────────────────────────
 
-function applyNoiseGate(
-  buffer: AudioBuffer,
-  thresholdDb: number,
-): AudioBuffer {
+function applyNoiseGate(buffer: AudioBuffer, thresholdDb: number): AudioBuffer {
   const { numberOfChannels, length, sampleRate } = buffer;
   const ctx = new OfflineAudioContext(numberOfChannels, length, sampleRate);
   const newBuffer = ctx.createBuffer(numberOfChannels, length, sampleRate);
   const baseThreshold = Math.pow(10, thresholdDb / 20);
 
-  // Estimate floor from quieter windows (more robust than assuming first 0.5s is silence)
   const reference = buffer.getChannelData(0);
   const analysisBlock = 512;
   const rmsWindows: number[] = [];
@@ -130,12 +121,12 @@ function applyNoiseGate(
 
   const sorted = [...rmsWindows].sort((a, b) => a - b);
   const p20 = sorted[Math.floor(sorted.length * 0.2)] ?? baseThreshold;
-  const effectiveThreshold = Math.max(baseThreshold, p20 * 2.2);
+  const effectiveThreshold = Math.max(baseThreshold, p20 * 3.0);
 
-  // Gentle expander envelope to avoid chatter/metallic artifacts
-  const floorGain = 0.08;
+  // Near-total silence in gated sections
+  const floorGain = 0.01;
   const attackSamples = Math.max(1, Math.floor(sampleRate * 0.008));
-  const releaseSamples = Math.max(1, Math.floor(sampleRate * 0.11));
+  const releaseSamples = Math.max(1, Math.floor(sampleRate * 0.15));
   const attackStep = 1 / attackSamples;
   const releaseStep = 1 / releaseSamples;
 
@@ -160,9 +151,68 @@ function applyNoiseGate(
   for (let ch = 0; ch < numberOfChannels; ch++) {
     const src = buffer.getChannelData(ch);
     const dst = newBuffer.getChannelData(ch);
-
     for (let i = 0; i < length; i++) {
       dst[i] = src[i] * gainCurve[i];
+    }
+  }
+
+  return newBuffer;
+}
+
+// ─── Spectral Denoise (Noise Profile Subtraction) ──────────────────
+
+function applySpectralDenoise(buffer: AudioBuffer): AudioBuffer {
+  const { numberOfChannels, length, sampleRate } = buffer;
+  const ctx = new OfflineAudioContext(numberOfChannels, length, sampleRate);
+  const newBuffer = ctx.createBuffer(numberOfChannels, length, sampleRate);
+
+  // Estimate noise profile from the quietest 10% of blocks
+  const blockSize = 1024;
+  const reference = buffer.getChannelData(0);
+  
+  const blockEnergies: { index: number; energy: number }[] = [];
+  for (let i = 0; i < length; i += blockSize) {
+    const end = Math.min(i + blockSize, length);
+    let energy = 0;
+    for (let j = i; j < end; j++) energy += reference[j] * reference[j];
+    blockEnergies.push({ index: i, energy: energy / (end - i) });
+  }
+  
+  blockEnergies.sort((a, b) => a.energy - b.energy);
+  const noiseBlockCount = Math.max(1, Math.floor(blockEnergies.length * 0.1));
+  
+  // Calculate per-channel noise RMS from quietest blocks
+  const noiseFloor = new Float32Array(numberOfChannels);
+  for (let ch = 0; ch < numberOfChannels; ch++) {
+    const chData = buffer.getChannelData(ch);
+    let sum = 0;
+    let count = 0;
+    for (let b = 0; b < noiseBlockCount; b++) {
+      const start = blockEnergies[b].index;
+      const end = Math.min(start + blockSize, length);
+      for (let j = start; j < end; j++) {
+        sum += chData[j] * chData[j];
+        count++;
+      }
+    }
+    noiseFloor[ch] = Math.sqrt(sum / Math.max(1, count));
+  }
+
+  // Subtract noise: for each sample, reduce amplitude when close to noise floor
+  for (let ch = 0; ch < numberOfChannels; ch++) {
+    const src = buffer.getChannelData(ch);
+    const dst = newBuffer.getChannelData(ch);
+    const floor = noiseFloor[ch] * 1.8; // Slightly above measured floor
+
+    for (let i = 0; i < length; i++) {
+      const abs = Math.abs(src[i]);
+      if (abs < floor) {
+        // Soft reduction: scale down samples near noise floor
+        const ratio = abs / floor;
+        dst[i] = src[i] * ratio * ratio; // Quadratic reduction
+      } else {
+        dst[i] = src[i];
+      }
     }
   }
 
@@ -194,17 +244,14 @@ function removeSilence(
   for (let i = 0; i < length; i += blockSize) {
     const end = Math.min(i + blockSize, length);
     let rms = 0;
-    for (let j = i; j < end; j++) {
-      rms += data[j] * data[j];
-    }
+    for (let j = i; j < end; j++) rms += data[j] * data[j];
     rms = Math.sqrt(rms / (end - i));
     
     if (rms < threshold) {
       if (silenceStart === -1) silenceStart = i;
     } else {
       if (silenceStart !== -1) {
-        const silenceLen = i - silenceStart;
-        if (silenceLen > minSilenceSamples) {
+        if (i - silenceStart > minSilenceSamples) {
           silenceRegions.push({ start: silenceStart, end: i });
         }
         silenceStart = -1;
@@ -252,14 +299,12 @@ function removeSilence(
         if (segmentFade > 0 && segIndex > 0 && i < segmentFade) {
           sample *= i / segmentFade;
         }
-
         if (segmentFade > 0 && segIndex < segments.length - 1 && i >= len - segmentFade) {
           sample *= (len - i - 1) / segmentFade;
         }
 
         dstData[offset + i] = sample;
       }
-
       offset += len;
     });
   }
@@ -267,7 +312,7 @@ function removeSilence(
   return newBuffer;
 }
 
-// ─── Offline Processing Chain ──────────────────────────────────────
+// ─── Offline EQ + Dynamics Chain ───────────────────────────────────
 
 async function applyEQAndDynamics(
   buffer: AudioBuffer,
@@ -279,48 +324,46 @@ async function applyEQAndDynamics(
   const source = ctx.createBufferSource();
   source.buffer = buffer;
 
-  // === EQ Chain ===
-  
-  // 1. High Pass Filter (80Hz) — remove sub-bass rumble
+  // HPF 80Hz
   const hpf = ctx.createBiquadFilter();
   hpf.type = 'highpass';
   hpf.frequency.value = settings.hpfFrequency;
   hpf.Q.value = 0.7071;
 
-  // 2. Body boost (120-150Hz) — warmth and authority
+  // Body boost
   const bodyBoost = ctx.createBiquadFilter();
   bodyBoost.type = 'peaking';
   bodyBoost.frequency.value = settings.bodyFrequency;
   bodyBoost.gain.value = settings.bodyGainDb;
   bodyBoost.Q.value = 1.5;
 
-  // 3. Box cut (400Hz) — remove muddiness
+  // Box cut
   const boxCut = ctx.createBiquadFilter();
   boxCut.type = 'peaking';
   boxCut.frequency.value = settings.boxCutFrequency;
   boxCut.gain.value = settings.boxCutGainDb;
   boxCut.Q.value = 2.0;
 
-  // 4. Presence boost (3kHz) — clarity and intelligibility
+  // Presence boost
   const presenceBoost = ctx.createBiquadFilter();
   presenceBoost.type = 'peaking';
   presenceBoost.frequency.value = settings.presenceFrequency;
   presenceBoost.gain.value = settings.presenceGainDb;
   presenceBoost.Q.value = 1.2;
 
-  // 5. Air shelf (10kHz+) — condenser mic brilliance
+  // Air shelf (conservative)
   const airShelf = ctx.createBiquadFilter();
   airShelf.type = 'highshelf';
   airShelf.frequency.value = settings.airFrequency;
   airShelf.gain.value = settings.airGainDb;
 
-  // 6. Low Pass Filter — cut harsh frequencies & hiss above 15kHz
+  // LPF at 12kHz — aggressive hiss removal
   const lpf = ctx.createBiquadFilter();
   lpf.type = 'lowpass';
   lpf.frequency.value = settings.lpfFrequency;
   lpf.Q.value = 0.7071;
 
-  // === Compressor (voice dynamics) ===
+  // Compressor
   const compressor = ctx.createDynamicsCompressor();
   compressor.threshold.value = settings.compressorThreshold;
   compressor.ratio.value = settings.compressorRatio;
@@ -328,20 +371,26 @@ async function applyEQAndDynamics(
   compressor.release.value = settings.compressorRelease;
   compressor.knee.value = settings.compressorKnee;
 
-  // === De-Esser (sibilance control) ===
-  const deEsser = ctx.createBiquadFilter();
-  deEsser.type = 'peaking';
-  deEsser.frequency.value = settings.deEsserFrequency;
-  deEsser.gain.value = -4;
-  deEsser.Q.value = 3.0;
+  // Triple De-Esser
+  const deEsser1 = ctx.createBiquadFilter();
+  deEsser1.type = 'peaking';
+  deEsser1.frequency.value = 5500;
+  deEsser1.gain.value = -4;
+  deEsser1.Q.value = 4.0;
 
   const deEsser2 = ctx.createBiquadFilter();
   deEsser2.type = 'peaking';
-  deEsser2.frequency.value = 5500;
-  deEsser2.gain.value = -2;
-  deEsser2.Q.value = 4.0;
+  deEsser2.frequency.value = settings.deEsserFrequency;
+  deEsser2.gain.value = -6;
+  deEsser2.Q.value = 3.0;
 
-  // === Limiter (brick-wall) ===
+  const deEsser3 = ctx.createBiquadFilter();
+  deEsser3.type = 'peaking';
+  deEsser3.frequency.value = 8500;
+  deEsser3.gain.value = -3;
+  deEsser3.Q.value = 3.5;
+
+  // Limiter
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = settings.limiterThreshold;
   limiter.ratio.value = 20;
@@ -349,7 +398,7 @@ async function applyEQAndDynamics(
   limiter.release.value = 0.05;
   limiter.knee.value = 0;
 
-  // === Chain: source → HPF → body → boxCut → presence → air → LPF → comp → deEss → deEss2 → limiter → dest
+  // Chain
   source.connect(hpf);
   hpf.connect(bodyBoost);
   bodyBoost.connect(boxCut);
@@ -357,38 +406,33 @@ async function applyEQAndDynamics(
   presenceBoost.connect(airShelf);
   airShelf.connect(lpf);
   lpf.connect(compressor);
-  compressor.connect(deEsser);
-  deEsser.connect(deEsser2);
-  deEsser2.connect(limiter);
+  compressor.connect(deEsser1);
+  deEsser1.connect(deEsser2);
+  deEsser2.connect(deEsser3);
+  deEsser3.connect(limiter);
   limiter.connect(ctx.destination);
 
   source.start(0);
   return await ctx.startRendering();
 }
 
-// ─── LUFS Normalization ────────────────────────────────────────────
+// ─── LUFS Measurement & Normalization ──────────────────────────────
 
 function measureLUFS(buffer: AudioBuffer): number {
   const channels = buffer.numberOfChannels;
   const length = buffer.length;
-  
   let sumSquared = 0;
   for (let ch = 0; ch < channels; ch++) {
     const data = buffer.getChannelData(ch);
-    for (let i = 0; i < length; i++) {
-      sumSquared += data[i] * data[i];
-    }
+    for (let i = 0; i < length; i++) sumSquared += data[i] * data[i];
   }
-  
   const meanSquared = sumSquared / (length * channels);
   if (meanSquared === 0) return -Infinity;
-  
   return -0.691 + 10 * Math.log10(meanSquared);
 }
 
 function getPeakAmplitude(buffer: AudioBuffer): number {
   let peak = 0;
-
   for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
     const data = buffer.getChannelData(ch);
     for (let i = 0; i < data.length; i++) {
@@ -396,11 +440,21 @@ function getPeakAmplitude(buffer: AudioBuffer): number {
       if (abs > peak) peak = abs;
     }
   }
-
   return peak;
 }
 
-function normalizeLUFS(buffer: AudioBuffer, targetLufs: number, peakCeilingDb = -3): AudioBuffer {
+// Soft-clip function: gentle saturation instead of hard clipping
+function softClip(sample: number): number {
+  if (sample > 0.95) {
+    return 0.95 + (sample - 0.95) / (1 + ((sample - 0.95) / 0.05) ** 2) * 0.05;
+  }
+  if (sample < -0.95) {
+    return -0.95 + (sample + 0.95) / (1 + ((sample + 0.95) / 0.05) ** 2) * 0.05;
+  }
+  return sample;
+}
+
+function normalizeLUFS(buffer: AudioBuffer, targetLufs: number, peakCeilingDb = -2): AudioBuffer {
   const currentLufs = measureLUFS(buffer);
   if (!isFinite(currentLufs)) return buffer;
 
@@ -409,9 +463,9 @@ function normalizeLUFS(buffer: AudioBuffer, targetLufs: number, peakCeilingDb = 
   const peak = getPeakAmplitude(buffer);
   const peakCeilingLinear = Math.pow(10, peakCeilingDb / 20);
 
-  // Keep loudness target, but never force clipping/distortion to reach it
+  // Conservative: max 3x gain, never exceed peak ceiling
   const peakLimitedGain = peak > 0 ? peakCeilingLinear / peak : desiredGainLinear;
-  const appliedGain = Math.max(0.1, Math.min(desiredGainLinear, peakLimitedGain, 6));
+  const appliedGain = Math.max(0.1, Math.min(desiredGainLinear, peakLimitedGain, 3));
 
   const { numberOfChannels, length, sampleRate } = buffer;
   const ctx = new OfflineAudioContext(numberOfChannels, length, sampleRate);
@@ -421,8 +475,7 @@ function normalizeLUFS(buffer: AudioBuffer, targetLufs: number, peakCeilingDb = 
     const src = buffer.getChannelData(ch);
     const dst = newBuffer.getChannelData(ch);
     for (let i = 0; i < length; i++) {
-      const sample = src[i] * appliedGain;
-      dst[i] = Math.max(-1, Math.min(1, sample));
+      dst[i] = softClip(src[i] * appliedGain);
     }
   }
 
@@ -490,13 +543,18 @@ export async function masterAudio(
   const originalDuration = originalBuffer.duration;
   const originalLufs = measureLUFS(originalBuffer);
 
-  // 2. Noise Gate / Denoise — remove background hiss and artifacts
-  report('denoise', 12);
-  const denoisedBuffer = applyNoiseGate(originalBuffer, settings.noiseGateThresholdDb);
-  await delay(30);
+  // 2. Noise Gate
+  report('denoise', 10);
+  const gatedBuffer = applyNoiseGate(originalBuffer, settings.noiseGateThresholdDb);
+  await delay(20);
 
-  // 3. Silence Removal
-  report('silence-removal', 20);
+  // 3. Spectral Denoise
+  report('denoise', 18);
+  const denoisedBuffer = applySpectralDenoise(gatedBuffer);
+  await delay(20);
+
+  // 4. Silence Removal
+  report('silence-removal', 25);
   const trimmedBuffer = removeSilence(
     denoisedBuffer,
     settings.silenceThresholdDb,
@@ -505,25 +563,22 @@ export async function masterAudio(
   );
   const silenceRemovedMs = Math.round((originalDuration - trimmedBuffer.duration) * 1000);
 
-  // 4. EQ + Compression + De-essing + LPF + Limiting
-  report('eq', 30);
-  await delay(30);
-  
+  // 5. EQ + Compression + De-essing + LPF + Limiting
+  report('eq', 35);
+  await delay(20);
   report('compression', 45);
-  await delay(30);
-  
+  await delay(20);
   report('de-essing', 55);
-  await delay(30);
-  
+  await delay(20);
   report('limiting', 65);
   const processedBuffer = await applyEQAndDynamics(trimmedBuffer, settings);
 
-  // 5. LUFS Normalization
+  // 6. LUFS Normalization with soft-clip
   report('normalizing', 80);
-  const normalizedBuffer = normalizeLUFS(processedBuffer, settings.targetLufs);
+  const normalizedBuffer = normalizeLUFS(processedBuffer, settings.targetLufs, settings.limiterThreshold);
   const finalLufs = measureLUFS(normalizedBuffer);
 
-  // 6. Encode to WAV
+  // 7. Encode to WAV
   report('encoding', 92);
   const wavData = encodeWAV(normalizedBuffer);
   const blob = new Blob([wavData], { type: 'audio/wav' });
