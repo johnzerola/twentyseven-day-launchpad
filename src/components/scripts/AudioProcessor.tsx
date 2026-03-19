@@ -53,7 +53,6 @@ export const AudioProcessor = ({
   const [uploadingRefImage, setUploadingRefImage] = useState(false);
   const [masteringOpen, setMasteringOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
