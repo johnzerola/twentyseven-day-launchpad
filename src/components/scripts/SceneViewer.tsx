@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import type { SyncedScene, SceneCharacter } from './types';
+import type { SyncedScene, SceneCharacter, SceneEnvironment } from './types';
 
 interface SceneViewerProps {
   scenes: SyncedScene[];

@@ -40,6 +40,26 @@ export interface SceneCharacter {
   expression?: string;
 }
 
+export interface SceneEnvironment {
+  locationName: string;
+  locationType: string;
+  timeOfDay: string;
+  weather: string;
+  lightSource: string;
+  shadowDirection: string;
+  shadowIntensity: string;
+  colorTemperature: string;
+  dominantColors: string[];
+  atmosphericElements: string;
+  surfaceTextures: string;
+  depthLayers: string;
+  framingComposition: string;
+  architecturalDetails?: string;
+  natureLandscape?: string;
+  propsDressing?: string;
+  continuityNotes?: string;
+}
+
 export interface SyncedScene {
   sceneIndex: number;
   sceneDurationSeconds?: number;
@@ -60,6 +80,7 @@ export interface SyncedScene {
   negativePrompt?: string;
   charactersInScene?: (string | SceneCharacter)[];
   environmentDetails?: string;
+  environment?: SceneEnvironment;
   transitionNote?: string;
   dopamineTrigger?: string;
 }
