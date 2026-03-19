@@ -198,6 +198,31 @@ serve(async (req) => {
                   emotionalBeat: { type: "string" },
                   charactersInScene: { type: "array", items: { type: "string" } },
                   transitionNote: { type: "string" },
+                  environment: {
+                    type: "object",
+                    description: "ENVIRONMENT IDENTITY SHEET for visual consistency",
+                    properties: {
+                      locationName: { type: "string" },
+                      locationType: { type: "string" },
+                      timeOfDay: { type: "string" },
+                      weather: { type: "string" },
+                      lightSource: { type: "string" },
+                      shadowDirection: { type: "string" },
+                      shadowIntensity: { type: "string" },
+                      colorTemperature: { type: "string" },
+                      dominantColors: { type: "array", items: { type: "string" } },
+                      atmosphericElements: { type: "string" },
+                      surfaceTextures: { type: "string" },
+                      depthLayers: { type: "string" },
+                      framingComposition: { type: "string" },
+                      architecturalDetails: { type: "string" },
+                      natureLandscape: { type: "string" },
+                      propsDressing: { type: "string" },
+                      continuityNotes: { type: "string" },
+                    },
+                    required: ["locationName", "locationType", "timeOfDay", "weather", "lightSource", "shadowDirection", "shadowIntensity", "colorTemperature", "dominantColors", "atmosphericElements", "surfaceTextures", "depthLayers", "framingComposition"],
+                    additionalProperties: false,
+                  },
                 },
                 required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "narrativeSummary", "visualPrompt", "negativePrompt", "cameraAngle", "lensSpec", "lightingSetup", "mood", "emotionalBeat"],
                 additionalProperties: false,
@@ -251,7 +276,25 @@ ${characterBlock}
 KNOWLEDGE: ${knowledgeBlock}
 
 PROMPT FORMULA: [Cinematography] + [Subject matching narration] + [Action] + [Environment] + [Style] + anti-text block
-Quality: masterpiece, award-winning, 8K UHD, photorealistic`;
+Quality: masterpiece, award-winning, 8K UHD, photorealistic
+
+═══ ENVIRONMENT IDENTITY SHEET — MANDATORY FOR EVERY SCENE ═══
+Generate a complete "environment" object for EACH scene with:
+- locationName: SPECIFIC place (not generic), e.g. "dimly lit medieval dungeon with iron chains"
+- locationType: interior/exterior/underwater/aerial/underground/space
+- timeOfDay: PRECISE ("golden hour 6:30pm", "midnight", "overcast noon")
+- weather: atmospheric conditions ("light rain with mist", "dense fog", "clear starry sky")
+- lightSource: primary light with direction ("low sun from west", "single candle from below")
+- shadowDirection & shadowIntensity: where/how shadows fall
+- colorTemperature: Kelvin + feeling ("2700K warm amber", "7500K cold blue")
+- dominantColors: 3-5 colors defining the palette
+- atmosphericElements: particles/effects ("dust motes in beams", "embers floating")
+- surfaceTextures: key textures ("wet cobblestone", "mossy stone walls")
+- depthLayers: Z-depth ("FG: blur | MID: sharp subject | BG: haze")
+- framingComposition: composition rule ("rule of thirds left", "centered symmetry")
+- continuityNotes: how this connects to adjacent scenes visually
+
+⚠️ CONTINUITY: Same location across scenes = IDENTICAL environment fields. Track time/shadow/light changes progressively.`;
 
     // ========== Process ALL chunks in PARALLEL to avoid timeout ==========
     const chunkPromises = chunks.map(async (chunk) => {

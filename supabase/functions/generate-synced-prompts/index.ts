@@ -206,6 +206,31 @@ OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'snea
                       mood: { type: "string" },
                       charactersInScene: { type: "array", items: { type: "string" } },
                       transitionNote: { type: "string" },
+                      environment: {
+                        type: "object",
+                        description: "ENVIRONMENT IDENTITY SHEET — Detailed scene/location description for absolute visual consistency across scenes",
+                        properties: {
+                          locationName: { type: "string", description: "Specific location name: 'Ancient Egyptian tomb chamber', 'Tokyo neon-lit alley', 'Deep ocean trench at 3000m'" },
+                          locationType: { type: "string", description: "Category: interior, exterior, underwater, aerial, underground, space, microscopic" },
+                          timeOfDay: { type: "string", description: "Precise time: 'golden hour (6:45pm)', 'blue hour pre-dawn', 'midnight', 'harsh noon', 'overcast afternoon', 'twilight'" },
+                          weather: { type: "string", description: "Atmospheric conditions: 'light rain with mist', 'dense fog', 'clear starry sky', 'storm approaching', 'snow flurries', 'humid tropical heat haze'" },
+                          lightSource: { type: "string", description: "Primary light: 'low sun from west at 15°', 'single tungsten bulb overhead', 'bioluminescent organisms', 'firelight from left', 'neon signs RGB'" },
+                          shadowDirection: { type: "string", description: "Shadow cast direction: 'long shadows from camera-left at 30°', 'directly below (noon)', 'dramatic diagonal right-to-left'" },
+                          shadowIntensity: { type: "string", description: "Shadow quality: 'deep noir blacks', 'soft diffused', 'harsh crisp edges', 'dappled through leaves', 'volumetric through blinds'" },
+                          colorTemperature: { type: "string", description: "Kelvin + feel: '2700K warm amber', '5600K neutral daylight', '7500K cold blue', '3200K tungsten warm', 'mixed warm/cool contrast'" },
+                          dominantColors: { type: "array", items: { type: "string" }, description: "3-5 dominant colors: ['deep teal', 'burnt sienna', 'ash gray', 'gold accents']" },
+                          atmosphericElements: { type: "string", description: "Particles/effects: 'dust motes in light beams', 'volcanic ash', 'fireflies', 'rain droplets on lens', 'embers floating upward', 'underwater caustics'" },
+                          surfaceTextures: { type: "string", description: "Key textures: 'wet cobblestone reflections', 'rough sandstone walls', 'polished marble floor', 'rusted metal panels', 'mossy ancient stone'" },
+                          depthLayers: { type: "string", description: "Z-depth composition: 'FG: grass blades out of focus | MID: subject sharp | BG: mountains in atmospheric haze'" },
+                          framingComposition: { type: "string", description: "Composition rule: 'rule of thirds, subject left-third', 'centered symmetry', 'golden ratio spiral', 'leading lines from bottom-left', 'frame within frame through doorway'" },
+                          architecturalDetails: { type: "string", description: "Built environment: 'Gothic arches with flying buttresses', 'minimalist concrete brutalism', 'ornate Baroque gilding'" },
+                          natureLandscape: { type: "string", description: "Natural setting: 'dense tropical canopy', 'arid desert dunes', 'volcanic terrain with lava flows', 'coral reef with schools of fish'" },
+                          propsDressing: { type: "string", description: "Set dressing: 'scattered ancient scrolls, candles melting', 'modern tech screens glowing', 'war-torn debris, smoke'" },
+                          continuityNotes: { type: "string", description: "Scene-to-scene consistency: 'SAME location as Scene 3 but camera moved 90° right', 'Time progressed 2 hours — shadows now longer', 'Same room, lights now off — only moonlight'" },
+                        },
+                        required: ["locationName", "locationType", "timeOfDay", "weather", "lightSource", "shadowDirection", "shadowIntensity", "colorTemperature", "dominantColors", "atmosphericElements", "surfaceTextures", "depthLayers", "framingComposition"],
+                        additionalProperties: false,
+                      },
                     },
                     required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "visualPrompt", "negativePrompt", "cameraAngle", "lensSpec", "lightingSetup", "mood"],
                     additionalProperties: false
@@ -313,6 +338,30 @@ YOUR COMMANDMENTS:
 9. AUDIO DIRECTION: Specify ambient sounds, foley SFX, and music mood per scene. NEVER describe on-screen text.
 
 10. ALL PROMPTS IN ENGLISH.
+
+11. ═══ ENVIRONMENT IDENTITY SHEET — NETFLIX-GRADE SET DESIGN ═══
+    For EVERY scene, generate a COMPLETE "environment" object with:
+    - locationName: SPECIFIC place ("crumbling Roman colosseum at dusk", not "building")
+    - locationType: interior/exterior/underwater/aerial/underground/space
+    - timeOfDay: PRECISE ("golden hour 6:30pm", "3am moonlight", "overcast noon")
+    - weather: atmospheric conditions with sensory detail
+    - lightSource: PRIMARY light source with angle/direction ("low sun from west at 15°")
+    - shadowDirection: WHERE shadows fall ("long shadows camera-left at 30°")
+    - shadowIntensity: shadow CHARACTER ("deep noir blacks", "soft diffused", "harsh crisp edges")
+    - colorTemperature: Kelvin value + feeling ("2700K warm amber", "7500K cold blue")
+    - dominantColors: 3-5 specific colors that define the palette
+    - atmosphericElements: particles, effects ("dust motes in light beams", "underwater caustics")
+    - surfaceTextures: key surface details ("wet cobblestone reflections", "rusted metal panels")
+    - depthLayers: Z-depth composition ("FG: grass out of focus | MID: subject sharp | BG: mountains in haze")
+    - framingComposition: composition rule ("rule of thirds subject left", "golden ratio spiral")
+    - continuityNotes: HOW this scene connects visually to adjacent scenes
+
+    ⚠️ CONTINUITY RULES:
+    - If consecutive scenes share the SAME location, use IDENTICAL locationName/locationType/surfaceTextures
+    - Track time progression: shadows get longer, light temperature shifts
+    - If a character moves rooms, the NEW room must be described from scratch
+    - Weather changes must be GRADUAL (not sunny→storm in one cut)
+    - Color palette should evolve smoothly — no jarring shifts unless narratively motivated
 
 ═══ AUTOFLOW FORMAT RULES ═══
 The output will be used in the AutoFlow extension (Frame-to-Video). The visualPrompt becomes the IMAGE prompt (left side of |||) and cameraAngle+lensSpec+lightingSetup+mood become the VIDEO prompt (right side of |||).
