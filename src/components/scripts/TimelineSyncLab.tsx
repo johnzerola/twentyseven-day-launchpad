@@ -263,7 +263,36 @@ export const TimelineSyncLab = ({ scenes, onUpdateScene }: TimelineSyncLabProps)
               <p className="text-xs text-destructive/70">{scenes[selectedScene].negativePrompt}</p>
             </div>
           )}
-          {scenes[selectedScene].environmentDetails && (
+          {/* Environment Identity Sheet */}
+          {scenes[selectedScene].environment && (
+            <div className="border border-chart-2/20 rounded-lg p-3 bg-chart-2/5 space-y-2">
+              <span className="text-[10px] font-semibold text-foreground">🏔️ Cenário / Ambiente (Identity Sheet)</span>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div><span className="text-muted-foreground">📍 Local:</span> {scenes[selectedScene].environment!.locationName} ({scenes[selectedScene].environment!.locationType})</div>
+                <div><span className="text-muted-foreground">🕐 Horário:</span> {scenes[selectedScene].environment!.timeOfDay}</div>
+                <div><span className="text-muted-foreground">🌤️ Clima:</span> {scenes[selectedScene].environment!.weather}</div>
+                <div><span className="text-muted-foreground">💡 Luz:</span> {scenes[selectedScene].environment!.lightSource}</div>
+                <div><span className="text-muted-foreground">🌑 Sombras:</span> {scenes[selectedScene].environment!.shadowDirection} ({scenes[selectedScene].environment!.shadowIntensity})</div>
+                <div><span className="text-muted-foreground">🌡️ Temp:</span> {scenes[selectedScene].environment!.colorTemperature}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">🌫️ Atmosfera:</span> {scenes[selectedScene].environment!.atmosphericElements}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">🧱 Texturas:</span> {scenes[selectedScene].environment!.surfaceTextures}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">📐 Composição:</span> {scenes[selectedScene].environment!.framingComposition}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">🔭 Camadas:</span> {scenes[selectedScene].environment!.depthLayers}</div>
+              </div>
+              {scenes[selectedScene].environment!.dominantColors?.length > 0 && (
+                <div className="flex gap-1 flex-wrap">
+                  <span className="text-[10px] text-muted-foreground">🎨</span>
+                  {scenes[selectedScene].environment!.dominantColors.map((c, ci) => (
+                    <Badge key={ci} variant="outline" className="text-[8px]">{c}</Badge>
+                  ))}
+                </div>
+              )}
+              {scenes[selectedScene].environment!.continuityNotes && (
+                <p className="text-[10px] text-accent italic">🔗 {scenes[selectedScene].environment!.continuityNotes}</p>
+              )}
+            </div>
+          )}
+          {!scenes[selectedScene].environment && scenes[selectedScene].environmentDetails && (
             <div>
               <span className="text-[10px] text-muted-foreground">🏔️ Ambiente</span>
               <p className="text-xs">{scenes[selectedScene].environmentDetails}</p>

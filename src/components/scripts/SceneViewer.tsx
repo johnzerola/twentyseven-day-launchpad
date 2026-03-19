@@ -111,8 +111,47 @@ export const SceneViewer = ({ scenes }: SceneViewerProps) => {
             </div>
           )}
 
-          {/* Environment */}
-          {scene.environmentDetails && (
+          {/* Environment Identity Sheet */}
+          {scene.environment && (
+            <div className="border border-chart-2/20 rounded-lg p-2.5 space-y-1.5 bg-chart-2/5">
+              <p className="text-[10px] font-semibold text-foreground">🏔️ Ambiente / Cenário:</p>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                <p className="text-[9px]"><span className="text-muted-foreground">📍 Local:</span> {scene.environment.locationName} ({scene.environment.locationType})</p>
+                <p className="text-[9px]"><span className="text-muted-foreground">🕐 Horário:</span> {scene.environment.timeOfDay}</p>
+                <p className="text-[9px]"><span className="text-muted-foreground">🌤️ Clima:</span> {scene.environment.weather}</p>
+                <p className="text-[9px]"><span className="text-muted-foreground">💡 Fonte de luz:</span> {scene.environment.lightSource}</p>
+                <p className="text-[9px]"><span className="text-muted-foreground">🌑 Sombras:</span> {scene.environment.shadowDirection} ({scene.environment.shadowIntensity})</p>
+                <p className="text-[9px]"><span className="text-muted-foreground">🌡️ Temp. cor:</span> {scene.environment.colorTemperature}</p>
+              </div>
+              {scene.environment.dominantColors?.length > 0 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[9px] text-muted-foreground">🎨 Paleta:</span>
+                  {scene.environment.dominantColors.map((c, ci) => (
+                    <Badge key={ci} variant="outline" className="text-[8px] px-1.5">{c}</Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-[9px]"><span className="text-muted-foreground">🌫️ Atmosfera:</span> {scene.environment.atmosphericElements}</p>
+              <p className="text-[9px]"><span className="text-muted-foreground">🧱 Texturas:</span> {scene.environment.surfaceTextures}</p>
+              <p className="text-[9px]"><span className="text-muted-foreground">📐 Enquadramento:</span> {scene.environment.framingComposition}</p>
+              <p className="text-[9px]"><span className="text-muted-foreground">🔭 Profundidade:</span> {scene.environment.depthLayers}</p>
+              {scene.environment.architecturalDetails && (
+                <p className="text-[9px]"><span className="text-muted-foreground">🏛️ Arquitetura:</span> {scene.environment.architecturalDetails}</p>
+              )}
+              {scene.environment.natureLandscape && (
+                <p className="text-[9px]"><span className="text-muted-foreground">🌿 Paisagem:</span> {scene.environment.natureLandscape}</p>
+              )}
+              {scene.environment.propsDressing && (
+                <p className="text-[9px]"><span className="text-muted-foreground">🪑 Props:</span> {scene.environment.propsDressing}</p>
+              )}
+              {scene.environment.continuityNotes && (
+                <p className="text-[9px] text-accent italic">🔗 Continuidade: {scene.environment.continuityNotes}</p>
+              )}
+            </div>
+          )}
+
+          {/* Legacy environment details fallback */}
+          {!scene.environment && scene.environmentDetails && (
             <p className="text-[9px] text-muted-foreground mt-2">🏔️ {scene.environmentDetails}</p>
           )}
 
