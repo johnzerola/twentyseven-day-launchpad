@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X } from 'lucide-react';
+import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AudioMasteringPanel } from './AudioMasteringPanel';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { SyncedScene, Character, VideoStyleOption } from './types';
 
 interface AudioProcessorProps {
