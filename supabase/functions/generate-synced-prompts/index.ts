@@ -339,6 +339,30 @@ YOUR COMMANDMENTS:
 
 10. ALL PROMPTS IN ENGLISH.
 
+11. ═══ ENVIRONMENT IDENTITY SHEET — NETFLIX-GRADE SET DESIGN ═══
+    For EVERY scene, generate a COMPLETE "environment" object with:
+    - locationName: SPECIFIC place ("crumbling Roman colosseum at dusk", not "building")
+    - locationType: interior/exterior/underwater/aerial/underground/space
+    - timeOfDay: PRECISE ("golden hour 6:30pm", "3am moonlight", "overcast noon")
+    - weather: atmospheric conditions with sensory detail
+    - lightSource: PRIMARY light source with angle/direction ("low sun from west at 15°")
+    - shadowDirection: WHERE shadows fall ("long shadows camera-left at 30°")
+    - shadowIntensity: shadow CHARACTER ("deep noir blacks", "soft diffused", "harsh crisp edges")
+    - colorTemperature: Kelvin value + feeling ("2700K warm amber", "7500K cold blue")
+    - dominantColors: 3-5 specific colors that define the palette
+    - atmosphericElements: particles, effects ("dust motes in light beams", "underwater caustics")
+    - surfaceTextures: key surface details ("wet cobblestone reflections", "rusted metal panels")
+    - depthLayers: Z-depth composition ("FG: grass out of focus | MID: subject sharp | BG: mountains in haze")
+    - framingComposition: composition rule ("rule of thirds subject left", "golden ratio spiral")
+    - continuityNotes: HOW this scene connects visually to adjacent scenes
+
+    ⚠️ CONTINUITY RULES:
+    - If consecutive scenes share the SAME location, use IDENTICAL locationName/locationType/surfaceTextures
+    - Track time progression: shadows get longer, light temperature shifts
+    - If a character moves rooms, the NEW room must be described from scratch
+    - Weather changes must be GRADUAL (not sunny→storm in one cut)
+    - Color palette should evolve smoothly — no jarring shifts unless narratively motivated
+
 ═══ AUTOFLOW FORMAT RULES ═══
 The output will be used in the AutoFlow extension (Frame-to-Video). The visualPrompt becomes the IMAGE prompt (left side of |||) and cameraAngle+lensSpec+lightingSetup+mood become the VIDEO prompt (right side of |||).
 
