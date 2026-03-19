@@ -114,55 +114,58 @@ function applyNoiseGate(
   const { numberOfChannels, length, sampleRate } = buffer;
   const ctx = new OfflineAudioContext(numberOfChannels, length, sampleRate);
   const newBuffer = ctx.createBuffer(numberOfChannels, length, sampleRate);
-  const threshold = Math.pow(10, thresholdDb / 20);
-  
-  // Analyze noise floor from first 0.5s (assumed to be mostly noise/silence)
-  const noiseAnalysisSamples = Math.min(Math.floor(sampleRate * 0.5), length);
-  const refData = buffer.getChannelData(0);
-  let noiseFloorRms = 0;
-  for (let i = 0; i < noiseAnalysisSamples; i++) {
-    noiseFloorRms += refData[i] * refData[i];
+  const baseThreshold = Math.pow(10, thresholdDb / 20);
+
+  // Estimate floor from quieter windows (more robust than assuming first 0.5s is silence)
+  const reference = buffer.getChannelData(0);
+  const analysisBlock = 512;
+  const rmsWindows: number[] = [];
+
+  for (let i = 0; i < length; i += analysisBlock) {
+    const end = Math.min(i + analysisBlock, length);
+    let rms = 0;
+    for (let j = i; j < end; j++) rms += reference[j] * reference[j];
+    rmsWindows.push(Math.sqrt(rms / (end - i)));
   }
-  noiseFloorRms = Math.sqrt(noiseFloorRms / noiseAnalysisSamples);
-  
-  // Use the higher of: measured noise floor * 1.5, or threshold
-  const effectiveThreshold = Math.max(noiseFloorRms * 1.5, threshold);
-  
-  const blockSize = 256;
-  const attackBlocks = 2;  // ~12ms attack
-  const releaseBlocks = 8; // ~46ms release
-  
+
+  const sorted = [...rmsWindows].sort((a, b) => a - b);
+  const p20 = sorted[Math.floor(sorted.length * 0.2)] ?? baseThreshold;
+  const effectiveThreshold = Math.max(baseThreshold, p20 * 2.2);
+
+  // Gentle expander envelope to avoid chatter/metallic artifacts
+  const floorGain = 0.08;
+  const attackSamples = Math.max(1, Math.floor(sampleRate * 0.008));
+  const releaseSamples = Math.max(1, Math.floor(sampleRate * 0.11));
+  const attackStep = 1 / attackSamples;
+  const releaseStep = 1 / releaseSamples;
+
+  const gainCurve = new Float32Array(length);
+  let gain = 1;
+
+  for (let i = 0; i < length; i += analysisBlock) {
+    const end = Math.min(i + analysisBlock, length);
+    let rms = 0;
+    for (let j = i; j < end; j++) rms += reference[j] * reference[j];
+    rms = Math.sqrt(rms / (end - i));
+
+    const targetGain = rms >= effectiveThreshold ? 1 : floorGain;
+    const step = targetGain > gain ? attackStep : releaseStep;
+
+    for (let j = i; j < end; j++) {
+      gain += (targetGain - gain) * step;
+      gainCurve[j] = gain;
+    }
+  }
+
   for (let ch = 0; ch < numberOfChannels; ch++) {
     const src = buffer.getChannelData(ch);
     const dst = newBuffer.getChannelData(ch);
-    let gateGain = 1.0;
-    
-    for (let i = 0; i < length; i += blockSize) {
-      const end = Math.min(i + blockSize, length);
-      
-      // Measure RMS of block
-      let rms = 0;
-      for (let j = i; j < end; j++) {
-        rms += src[j] * src[j];
-      }
-      rms = Math.sqrt(rms / (end - i));
-      
-      // Gate decision
-      const targetGain = rms > effectiveThreshold ? 1.0 : 0.02; // -34dB reduction for noise
-      
-      // Smooth transition
-      const smoothing = targetGain > gateGain 
-        ? 1.0 / attackBlocks 
-        : 1.0 / releaseBlocks;
-      gateGain += (targetGain - gateGain) * smoothing;
-      
-      // Apply
-      for (let j = i; j < end; j++) {
-        dst[j] = src[j] * gateGain;
-      }
+
+    for (let i = 0; i < length; i++) {
+      dst[i] = src[i] * gainCurve[i];
     }
   }
-  
+
   return newBuffer;
 }
 
@@ -232,16 +235,33 @@ function removeSilence(
   const totalSamples = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
   const ctx = new OfflineAudioContext(channels, totalSamples, sampleRate);
   const newBuffer = ctx.createBuffer(channels, totalSamples, sampleRate);
+  const fadeSamples = Math.max(16, Math.floor(sampleRate * 0.004));
   
   for (let ch = 0; ch < channels; ch++) {
     const srcData = buffer.getChannelData(ch);
     const dstData = newBuffer.getChannelData(ch);
     let offset = 0;
-    for (const seg of segments) {
+
+    segments.forEach((seg, segIndex) => {
       const len = seg.end - seg.start;
-      dstData.set(srcData.subarray(seg.start, seg.end), offset);
+      const segmentFade = Math.min(fadeSamples, Math.floor(len / 2));
+
+      for (let i = 0; i < len; i++) {
+        let sample = srcData[seg.start + i];
+
+        if (segmentFade > 0 && segIndex > 0 && i < segmentFade) {
+          sample *= i / segmentFade;
+        }
+
+        if (segmentFade > 0 && segIndex < segments.length - 1 && i >= len - segmentFade) {
+          sample *= (len - i - 1) / segmentFade;
+        }
+
+        dstData[offset + i] = sample;
+      }
+
       offset += len;
-    }
+    });
   }
   
   return newBuffer;
@@ -366,26 +386,46 @@ function measureLUFS(buffer: AudioBuffer): number {
   return -0.691 + 10 * Math.log10(meanSquared);
 }
 
-function normalizeLUFS(buffer: AudioBuffer, targetLufs: number): AudioBuffer {
+function getPeakAmplitude(buffer: AudioBuffer): number {
+  let peak = 0;
+
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      const abs = Math.abs(data[i]);
+      if (abs > peak) peak = abs;
+    }
+  }
+
+  return peak;
+}
+
+function normalizeLUFS(buffer: AudioBuffer, targetLufs: number, peakCeilingDb = -3): AudioBuffer {
   const currentLufs = measureLUFS(buffer);
   if (!isFinite(currentLufs)) return buffer;
-  
-  const gainDb = targetLufs - currentLufs;
-  const gainLinear = Math.pow(10, gainDb / 20);
-  const clampedGain = Math.min(gainLinear, 10);
-  
+
+  const desiredGainDb = targetLufs - currentLufs;
+  const desiredGainLinear = Math.pow(10, desiredGainDb / 20);
+  const peak = getPeakAmplitude(buffer);
+  const peakCeilingLinear = Math.pow(10, peakCeilingDb / 20);
+
+  // Keep loudness target, but never force clipping/distortion to reach it
+  const peakLimitedGain = peak > 0 ? peakCeilingLinear / peak : desiredGainLinear;
+  const appliedGain = Math.max(0.1, Math.min(desiredGainLinear, peakLimitedGain, 6));
+
   const { numberOfChannels, length, sampleRate } = buffer;
   const ctx = new OfflineAudioContext(numberOfChannels, length, sampleRate);
   const newBuffer = ctx.createBuffer(numberOfChannels, length, sampleRate);
-  
+
   for (let ch = 0; ch < numberOfChannels; ch++) {
     const src = buffer.getChannelData(ch);
     const dst = newBuffer.getChannelData(ch);
     for (let i = 0; i < length; i++) {
-      dst[i] = Math.max(-1, Math.min(1, src[i] * clampedGain));
+      const sample = src[i] * appliedGain;
+      dst[i] = Math.max(-1, Math.min(1, sample));
     }
   }
-  
+
   return newBuffer;
 }
 
