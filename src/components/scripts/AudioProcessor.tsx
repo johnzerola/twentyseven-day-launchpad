@@ -222,9 +222,35 @@ export const AudioProcessor = ({
       )}
       </div>
 
-      {/* Audio Mastering */}
+      {/* Audio Mastering - Side Panel */}
       {audioFile && (
-        <AudioMasteringPanel audioFile={audioFile} />
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+            onClick={() => setMasteringOpen(true)}
+          >
+            <Headphones className="w-4 h-4" />
+            🎛️ Masterização de Áudio (Studio Grade)
+          </Button>
+          <Sheet open={masteringOpen} onOpenChange={setMasteringOpen}>
+            <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+              <SheetHeader className="p-6 pb-2">
+                <SheetTitle className="flex items-center gap-2 text-base">
+                  <Headphones className="w-5 h-5 text-amber-400" />
+                  Masterização de Áudio
+                </SheetTitle>
+                <SheetDescription className="text-xs">
+                  Pipeline profissional para transformar seu áudio em padrão estúdio.
+                </SheetDescription>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-120px)] px-6 pb-6">
+                <AudioMasteringPanel audioFile={audioFile} />
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+        </>
       )}
 
       {/* Reference Images */}
