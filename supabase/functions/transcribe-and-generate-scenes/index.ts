@@ -20,12 +20,35 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
 
     const body = await req.json();
-    const { audioBase64, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = body;
+    const { audioBase64, audioUrl, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = body;
 
-    if (!audioBase64) throw new Error("Áudio obrigatório.");
+    if (!audioBase64 && !audioUrl) throw new Error("Áudio obrigatório.");
     const cleanScript = (script || "").slice(0, 30000);
 
     console.log("transcribe-and-generate-scenes: starting pipeline");
+
+    // ========== PHASE 0: Resolve audio data ==========
+    // If audioUrl provided, download and convert to base64 in chunks to save memory
+    let resolvedBase64 = audioBase64 || "";
+    const resolvedMime = audioMimeType || "audio/mp3";
+
+    if (audioUrl && !audioBase64) {
+      console.log("Downloading audio from storage URL...");
+      const audioResp = await fetch(audioUrl);
+      if (!audioResp.ok) throw new Error(`Erro ao baixar áudio: ${audioResp.status}`);
+      const audioBuffer = new Uint8Array(await audioResp.arrayBuffer());
+      console.log(`Audio downloaded: ${(audioBuffer.length / 1024 / 1024).toFixed(1)}MB`);
+      
+      // Convert to base64 in chunks to avoid stack overflow
+      const chunkSize = 0x8000;
+      let binary = '';
+      for (let i = 0; i < audioBuffer.length; i += chunkSize) {
+        binary += String.fromCharCode(...audioBuffer.subarray(i, i + chunkSize));
+      }
+      resolvedBase64 = btoa(binary);
+      // Free the buffer immediately
+      binary = '';
+    }
 
     // ========== PHASE 1: Transcribe with Gemini Flash ==========
     console.log("Phase 1: Transcribing audio...");
@@ -41,7 +64,6 @@ serve(async (req) => {
         console.warn(`Retry ${i+1}/${maxRetries}: ${resp.status} ${t.slice(0,200)}`);
         if (i < maxRetries) await new Promise(r => setTimeout(r, 2000 * (i + 1)));
         if (i === maxRetries) {
-          // Return a failed response-like object
           return new Response(t, { status: resp.status });
         }
       }
@@ -50,9 +72,9 @@ serve(async (req) => {
 
     let transcribeData: any = null;
 
-    // Strategy A: Use Google AI native API (handles audio better, larger payloads)
-    if (GOOGLE_AI_KEY) {
-      console.log("Using Google AI native API for transcription...");
+    // Strategy A: Use Google AI native API with fileUri if URL available (no base64 needed!)
+    if (GOOGLE_AI_KEY && audioUrl) {
+      console.log("Using Google AI with audio URL (memory-efficient)...");
       try {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
         const geminiResp = await retryFetch(geminiUrl, {
@@ -75,7 +97,7 @@ RULES:
 - Each entry should be one complete sentence or natural phrase
 - Start times should be sequential and non-overlapping
 - Return ONLY the JSON array, no other text` },
-                { inlineData: { mimeType: audioMimeType || "audio/mp3", data: audioBase64 } }
+                { fileData: { mimeType: resolvedMime, fileUri: audioUrl } }
               ]
             }],
             generationConfig: { temperature: 0.1 },
@@ -85,17 +107,67 @@ RULES:
           const gData = await geminiResp.json();
           const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
           transcribeData = { choices: [{ message: { content: text } }] };
-          console.log("Google AI transcription OK, length:", text.length);
+          console.log("Google AI URL transcription OK, length:", text.length);
+          // Free base64 since transcription succeeded without it
+          resolvedBase64 = '';
         } else {
           const errText = await geminiResp.text();
-          console.warn("Google AI failed:", geminiResp.status, errText.slice(0, 300));
+          console.warn("Google AI URL failed, will try inlineData:", geminiResp.status, errText.slice(0, 200));
         }
       } catch (e: any) {
-        console.warn("Google AI error:", e.message);
+        console.warn("Google AI URL error:", e.message);
       }
     }
 
-    // Strategy B: Fallback to Lovable Gateway
+    // Strategy A2: Google AI with inlineData (base64)
+    if (!transcribeData && GOOGLE_AI_KEY && resolvedBase64) {
+      console.log("Using Google AI native API with inlineData...");
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+        const geminiResp = await retryFetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+
+OUTPUT FORMAT (strict JSON array):
+[
+  {"start": 0.0, "end": 3.5, "text": "First sentence here."},
+  {"start": 3.6, "end": 7.2, "text": "Second sentence here."}
+]
+
+RULES:
+- Transcribe EVERY spoken word
+- Estimate timestamps as accurately as possible per sentence
+- Each entry should be one complete sentence or natural phrase
+- Start times should be sequential and non-overlapping
+- Return ONLY the JSON array, no other text` },
+                { inlineData: { mimeType: resolvedMime, data: resolvedBase64 } }
+              ]
+            }],
+            generationConfig: { temperature: 0.1 },
+          }),
+        });
+        if (geminiResp.ok) {
+          const gData = await geminiResp.json();
+          const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          transcribeData = { choices: [{ message: { content: text } }] };
+          console.log("Google AI inlineData transcription OK, length:", text.length);
+        } else {
+          const errText = await geminiResp.text();
+          console.warn("Google AI inlineData failed:", geminiResp.status, errText.slice(0, 300));
+        }
+      } catch (e: any) {
+        console.warn("Google AI inlineData error:", e.message);
+      }
+    }
+
+    // Free base64 after transcription phase to reclaim memory
+    resolvedBase64 = '';
+
+    // Strategy B: Fallback to Lovable Gateway (only works with URL)
     if (!transcribeData) {
       console.log("Falling back to Lovable Gateway for transcription...");
       const transcribeResponse = await retryFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -128,7 +200,10 @@ RULES:
               role: "user",
               content: [
                 { type: "text", text: "Transcribe this audio with timestamps per sentence. Return ONLY a JSON array." },
-                { type: "image_url", image_url: { url: `data:${audioMimeType};base64,${audioBase64}` } }
+                ...(audioUrl
+                  ? [{ type: "image_url", image_url: { url: audioUrl } }]
+                  : [{ type: "text", text: "No audio URL available. Please respond with an empty array []." }]
+                )
               ]
             }
           ],
