@@ -469,6 +469,8 @@ ${creativeWarning}
 ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
+${referenceBlock}
+${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
