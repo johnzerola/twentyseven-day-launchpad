@@ -125,6 +125,8 @@ export const ScriptGenerator = ({
   const [phaseLabel, setPhaseLabel] = useState('');
   const [dualScore, setDualScore] = useState<DualScore | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [referenceScript, setReferenceScript] = useState('');
+  const [showReferenceField, setShowReferenceField] = useState(false);
   const MAX_RETRIES = 2;
   const lastClickRef = useRef(0);
 
