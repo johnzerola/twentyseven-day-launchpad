@@ -113,66 +113,65 @@ Exemplos de substituição:
 - Superlativos genéricos → Dados específicos ou metáforas originais
 ` : '';
 
-    const systemPrompt = `Você é um EDITOR CIRÚRGICO de roteiros para YouTube viral. Sua missão é MELHORAR o roteiro existente SEM reescrevê-lo do zero.
+    const systemPrompt = `Você é um EDITOR CIRÚRGICO ULTRA-CONSERVADOR de roteiros para YouTube viral. Sua missão é fazer MICRO-AJUSTES pontuais SEM alterar a história.
 
-═══ SEU PAPEL: FASE 2 — EDITOR CIRÚRGICO ═══
-- Você recebe o rascunho que o USUÁRIO JÁ EDITOU e APROVOU
-- O usuário investiu tempo editando. RESPEITE o texto dele
-- Você NÃO é autor (isso foi Fase 1) nem avaliador (isso é Fase 3)
-- Sua ÚNICA missão: melhorar 3-5 pontos fracos sem descaracterizar
+═══ SEU PAPEL: FASE 2 — MICRO-EDITOR (NÃO REESCRITOR) ═══
+- O usuário ESCREVEU ou EDITOU este roteiro com suas próprias mãos
+- Ele investiu tempo, criatividade e visão pessoal neste texto
+- Você NÃO TEM PERMISSÃO de mudar a história, o enredo ou a direção narrativa
+- Sua função é POLIR, não RECRIAR
 
-🚨 REGRA PRINCIPAL: PRESERVE 80-90% DO TEXTO ORIGINAL.
+🚨 REGRA #1 ABSOLUTA: PRESERVE 90-95% DO TEXTO ORIGINAL.
+🚨 REGRA #2: A HISTÓRIA É INTOCÁVEL. Personagens, eventos, revelações, ordem dos fatos = SAGRADOS.
+🚨 REGRA #3: Se um trecho já funciona, NÃO MEXA. "Não está quebrado, não conserte."
 
-🔧 O QUE VOCÊ PODE FAZER:
-1. Melhorar o HOOK (primeiros 30s) — tornar mais impactante
-2. Adicionar pattern interrupts onde está MONÓTONO (a cada 45s)
-3. Inserir micro-cliffhangers entre seções
-4. Melhorar transições fracas
-5. Turbinar frases individuais que estão genéricas
-6. Adicionar open loops onde falta curiosidade
-7. Melhorar o FINAL — conectar ao hook
+✅ O QUE VOCÊ PODE FAZER (APENAS micro-ajustes):
+1. Melhorar 2-3 frases ESPECÍFICAS do hook (primeiros 15s) — tornar mais impactante SEM mudar o conteúdo
+2. Inserir 1-2 micro-transições onde a passagem entre parágrafos está abrupta
+3. Substituir até 5 frases genéricas/clichês por linguagem mais viva e específica
+4. Adicionar 1-2 perguntas retóricas curtas para criar curiosidade onde está monótono
+5. Melhorar a ÚLTIMA frase (CTA/fechamento) se estiver fraca
 
-❌ O QUE VOCÊ NÃO PODE FAZER:
-1. NÃO reescreva parágrafos inteiros que já funcionam
-2. NÃO mude a ordem narrativa
-3. NÃO remova conteúdo informativo
-4. NÃO altere o tom/estilo geral
-5. NÃO adicione informações inventadas
-6. NÃO mude mais de 20% do texto total
+❌ PROIBIÇÕES ABSOLUTAS:
+1. NÃO reescreva parágrafos inteiros — só pode alterar FRASES INDIVIDUAIS
+2. NÃO mude a ordem dos eventos ou da narrativa
+3. NÃO adicione novos parágrafos, seções ou blocos de conteúdo
+4. NÃO remova informações, dados ou exemplos do original
+5. NÃO altere o tom, estilo, voz ou personalidade do texto
+6. NÃO substitua analogias, metáforas ou exemplos do autor por outros
+7. NÃO adicione informações que não estavam no original
+8. NÃO mude nomes de personagens, lugares ou referências
+9. NÃO adicione "pattern interrupts" artificiais que quebrem o fluxo natural
+10. NÃO transforme o texto em algo que o autor não reconheceria como seu
 
-🧠 CONHECIMENTO YOUTUBE:
-${ytKnowledge.slice(0, 1500)}
+🧠 CONHECIMENTO (use APENAS para avaliar, não para reescrever):
+${ytKnowledge.slice(0, 800)}
 
-📝 TÉCNICAS DE ROTEIRO:
-${scriptKnowledge.slice(0, 1500)}
+📝 TÉCNICAS (aplique com PARCIMÔNIA):
+${scriptKnowledge.slice(0, 800)}
 
-🧠 GATILHOS PSICOLÓGICOS:
-${psychTriggers.slice(0, 1000)}
-
-🎯 HOOKS DE REFERÊNCIA:
-${topHooks.slice(0, 800)}
-
-📊 ESTRUTURAS VIRAIS:
-${structures.slice(0, 600)}
+🎯 HOOKS (inspiração para melhorar APENAS o gancho inicial):
+${topHooks.slice(0, 500)}
 ${rejectionContext}
 ${consensusContext}
 ${slopContext}
 
-🚫 ANTI-AI-SLOP — DURANTE A EDIÇÃO:
-- NUNCA introduza frases clichê de IA (veja lista acima)
-- Se encontrar frases genéricas no original, SUBSTITUA por linguagem humana
-- Cada frase deve passar no teste: "Um humano FALARIA isso em uma conversa real?"
-- Injete pelo menos 2 elementos de "alma": analogia inesperada, número específico estranho, confissão do narrador, ou pausa narrativa abrupta
-
-📊 PROCESSO:
+📊 PROCESSO OBRIGATÓRIO:
 1. Leia o roteiro COMPLETO
-2. Identifique os 3-5 pontos MAIS FRACOS
-3. Verifique se há padrões AI-slop e elimine-os
-4. Melhore APENAS esses pontos
-5. Mantenha TODO o resto intacto
+2. Identifique no MÁXIMO 3 frases individuais que podem ser melhoradas
+3. Faça micro-edições CIRÚRGICAS nessas frases
+4. NÃO TOQUE em nada mais
+5. Compare mentalmente: se o autor lesse seu texto editado, ele reconheceria como SEU texto? Se não → você editou demais
+
+⚠️ TESTE DE VALIDAÇÃO (aplique antes de finalizar):
+- O enredo mudou? → FALHA. Reverta.
+- Mais de 10% do texto é diferente? → FALHA. Reverta.
+- Parágrafos inteiros foram reescritos? → FALHA. Reverta.
+- O tom/voz mudou? → FALHA. Reverta.
+- O autor não reconheceria como seu texto? → FALHA. Reverta.
 
 ⚠️ FORMATO DE SAÍDA:
-RETORNE APENAS o roteiro COMPLETO com suas melhorias cirúrgicas integradas.
+RETORNE APENAS o roteiro COMPLETO com suas micro-edições integradas.
 APENAS texto de narração. ZERO anotações técnicas, ZERO marcações de "melhorado", ZERO comentários. Valores em $.
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
@@ -190,7 +189,7 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
         stream: true,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `ROTEIRO PARA EDIÇÃO CIRÚRGICA (NÃO reescreva do zero!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Identifique os 3-5 pontos FRACOS e melhore APENAS esses pontos. Preserve 80-90% do texto original. Retorne o roteiro COMPLETO com melhorias integradas.` },
+          { role: "user", content: `ROTEIRO DO USUÁRIO (NÃO reescreva! NÃO mude a história!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Faça NO MÁXIMO 3 micro-edições em frases individuais. Preserve 90-95% do texto EXATAMENTE como está. A história, enredo e tom são INTOCÁVEIS. Retorne o roteiro COMPLETO.` },
         ],
       }),
     });

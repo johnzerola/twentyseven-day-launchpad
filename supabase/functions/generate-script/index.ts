@@ -79,7 +79,7 @@ serve(async (req) => {
     }
     const currentUserId: string | null = claimsData.claims.sub || null;
 
-    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge } = await req.json();
+    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -275,6 +275,39 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
 ${channelKnowledge}
 INSTRUÇÃO: Use estas informações como contexto adicional sobre o canal. Adapte o roteiro para se alinhar com as preferências, temas e estilo que o usuário já explorou.\n` : '';
 
+    // Reference script / idea injection
+    let referenceBlock = '';
+    if (referenceScript?.trim()) {
+      const refWordCount = referenceScript.split(/\s+/).filter(Boolean).length;
+      if (refWordCount > 500) {
+        // It's a full script — use as base, improve without rewriting
+        referenceBlock = `\n📜 ROTEIRO DE REFERÊNCIA DO USUÁRIO (${refWordCount} palavras):
+O usuário forneceu um roteiro completo como referência. Sua missão:
+1. MANTENHA a essência, estrutura narrativa e enredo INTACTOS
+2. MELHORE: hooks, transições, ritmo e técnicas de retenção
+3. NÃO reescreva do zero — trabalhe SOBRE o material do usuário
+4. Adicione técnicas virais (open loops, pattern interrupts, cliffhangers) nos pontos fracos
+5. Preserve o tom e a voz original do autor
+
+ROTEIRO DE REFERÊNCIA:
+${referenceScript.slice(0, 15000)}
+\n`;
+      } else {
+        // It's an idea/synopsis — develop it into a full script
+        referenceBlock = `\n💡 IDEIA/SINOPSE DO USUÁRIO:
+O usuário forneceu uma ideia ou sinopse que DEVE ser a base do roteiro:
+${referenceScript.slice(0, 8000)}
+
+INSTRUÇÃO CRÍTICA:
+- Desenvolva ESTA história/ideia em um roteiro completo
+- O enredo, personagens e conceito do usuário são PRIORIDADE MÁXIMA
+- Expanda com técnicas virais, hooks e estrutura de retenção
+- NÃO ignore a ideia do usuário para criar algo diferente
+- O roteiro final deve ser reconhecível como a história que o usuário descreveu
+\n`;
+      }
+    }
+
     // Intelligence briefing
     let intelBlock = '';
     if (intelligenceBriefing) {
@@ -435,6 +468,8 @@ ${hookInjection}
 ${creativeWarning}
 ${voiceInjection}
 ${channelKnowledgeBlock}
+${backtestBlock}
+${referenceBlock}
 ${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}

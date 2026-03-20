@@ -125,6 +125,8 @@ export const ScriptGenerator = ({
   const [phaseLabel, setPhaseLabel] = useState('');
   const [dualScore, setDualScore] = useState<DualScore | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [referenceScript, setReferenceScript] = useState('');
+  const [showReferenceField, setShowReferenceField] = useState(false);
   const MAX_RETRIES = 2;
   const lastClickRef = useRef(0);
 
@@ -341,6 +343,7 @@ export const ScriptGenerator = ({
           videoType,
           phaseId: phaseIdRef.current,
           channelKnowledge: channelKnowledge || undefined,
+          referenceScript: referenceScript.trim() || undefined,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
@@ -812,6 +815,33 @@ export const ScriptGenerator = ({
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Tópico *</label>
               <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder={videoType === 'short' ? 'Ex: 3 fatos sobre buracos negros' : 'Ex: Como ganhar dinheiro online em 2026'} className="bg-muted/30" />
+            </div>
+
+            {/* ═══════ REFERENCE SCRIPT / IDEA (Optional) ═══════ */}
+            <div>
+              <button
+                onClick={() => setShowReferenceField(!showReferenceField)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-1"
+              >
+                <Lightbulb className="w-3.5 h-3.5" />
+                <span className="font-medium">Tem um roteiro de referência ou ideia de história? (opcional)</span>
+                {showReferenceField ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+              {showReferenceField && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <textarea
+                    value={referenceScript}
+                    onChange={e => setReferenceScript(e.target.value)}
+                    placeholder="Cole aqui um roteiro de inspiração, uma ideia de história, ou o desenrolar de um enredo que você quer que a IA desenvolva. A IA vai usar isso como BASE para construir o roteiro completo — respeitando sua visão e expandindo com técnicas virais."
+                    className="w-full min-h-[120px] max-h-[250px] bg-muted/20 border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed overflow-y-auto"
+                  />
+                  {referenceScript.trim() && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      📝 {referenceScript.split(/\s+/).filter(Boolean).length.toLocaleString()} palavras • A IA vai usar como base/inspiração
+                    </p>
+                  )}
+                </motion.div>
+              )}
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">{videoType === 'short' ? 'Duração (segundos)' : 'Duração (minutos)'}</label>
