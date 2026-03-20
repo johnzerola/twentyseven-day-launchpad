@@ -139,24 +139,25 @@ serve(async (req) => {
       'dark': `Dark cinematic noir. Crushed blacks, neon accent lighting (cyan, magenta, amber). Dense volumetric fog. Blade Runner 2049 meets Se7en. Noir shadow patterns, wet reflective surfaces, silhouettes.`,
       'whiteboard': 'Whiteboard explainer animation. Hand-drawn black ink on clean white surface. Strategic color highlights for emphasis. Educational clarity, smooth drawing reveal.',
       'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, rich saturated colors, dramatic perspective.',
+      'fotorrealista_documentario': 'Documentary photography style, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated color palette with emphasis on earth tones.',
     };
     const selectedStyleGuide = styleGuides[styleLC] || styleGuides['cinematográfico'];
 
-    // ========== Character identity block ==========
+    // ========== Character identity block (DarkPlanner format: 150-200 words, "waist up") ==========
     const characterBlock = characters?.length > 0
-      ? `\n\nCHARACTER IDENTITY SHEETS — COPY THIS TEXT VERBATIM INTO EVERY PROMPT WHERE CHARACTER APPEARS:\n${characters.map((c: any, i: number) => {
+      ? `\n\n═══ DARKPLANNER CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characters.map((c: any, i: number) => {
           const a = c.appearance || {};
           const f = c.facial_features || {};
           const cl = c.clothing || {};
           const refImg = c.imageUrl ? `\nREFERENCE IMAGE: ${c.imageUrl} — Match this exact appearance.` : '';
-          return `═══ CHARACTER ${i + 1}: "${c.name}" ═══
-Gender: ${c.gender || 'unknown'} | Age: ${c.age || 'unknown'}
-BODY: ${a.body_type || 'average'} build, ${a.height || 'average'} height, ${a.skin_color || 'medium'} skin with natural pores and micro-imperfections
-HAIR: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail
-EYES: ${a.eye_color || 'brown'} eyes, ${f.eyebrows || 'natural'} eyebrows
-FACE: ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture
-OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}`;
-        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULE: Include FULL character description block in EVERY prompt they appear in. Use IDENTICAL wording — never paraphrase.`
+          return `[${c.name}]: ${c.gender || 'person'} age ${c.age || 'unknown'}, ${a.body_type || 'average'} build, ${a.height || 'average height'}, ${a.skin_color || 'medium'} skin tone with natural pores and micro-imperfections, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, ${a.eye_color || 'brown'} eyes with ${f.eyebrows || 'natural'} eyebrows, ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture, wearing ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}, waist up`;
+        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULES (DarkPlanner):
+- Include FULL character description block in EVERY prompt they appear in
+- Use IDENTICAL wording — NEVER paraphrase, summarize, or vary
+- ❌ WRONG: "wearing yellow dress" then "in her yellow outfit"
+- ✅ RIGHT: Copy EXACT same wording every time
+- Maximum 2 characters per prompt — split into multiple if 3+ needed
+- Character descriptions ALWAYS end with "waist up"`
       : '';
 
     const sceneTexts = scenes.map(s => `Scene ${s.index + 1}: "${s.text}"`).join('\n\n');
