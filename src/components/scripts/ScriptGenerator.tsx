@@ -343,6 +343,7 @@ export const ScriptGenerator = ({
           videoType,
           phaseId: phaseIdRef.current,
           channelKnowledge: channelKnowledge || undefined,
+          referenceScript: referenceScript.trim() || undefined,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
