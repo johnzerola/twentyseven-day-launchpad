@@ -207,7 +207,7 @@ serve(async (req) => {
     const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
     const masterRef = MASTER_PROMPT_EXAMPLES[styleKey] || MASTER_PROMPT_EXAMPLES['cinematográfico'];
 
-    const systemPrompt = `You are a WORLD-CLASS SHORT-FORM VIDEO DIRECTOR specializing in DOPAMINERGIC content.
+    const systemPrompt = `You are a WORLD-CLASS SHORT-FORM VIDEO DIRECTOR specializing in DOPAMINERGIC content, trained on the DarkPlanner professional prompt system.
 Your scenes MUST make viewers STOP SCROLLING in the first 0-3 seconds.
 
 📱 FORMAT: VERTICAL 9:16 — ${dur} second Short
@@ -221,19 +221,28 @@ ${customStyleNotes ? `✨ USER NOTES: ${customStyleNotes}` : ''}
 ${timing.rules}
 
 ═══════════════════════════════════════
-🎬 MASTER PROMPT BLOCK FORMAT
+🎬 MASTER PROMPT BLOCK FORMAT (DarkPlanner)
 ═══════════════════════════════════════
 Each visualPrompt MUST follow this EXACT cinematic format:
 
 ${masterRef}
 
-CRITICAL FORMAT RULES:
-1. Each visualPrompt = ONE continuous shot description with SPECIFIC camera move
+DARKPLANNER CRITICAL FORMAT RULES:
+1. Each visualPrompt = 100-200 words — ONE continuous shot description with SPECIFIC camera move
 2. Start with camera type: "wide cinematic shot", "extreme close-up", "aerial drone", "tracking shot", "low angle", "dutch angle", "POV shot"
 3. Include SPECIFIC details: lighting (golden hour, neon, moonlight), lens (shallow DOF, f/1.4, macro), movement (dollying in, pulling away, whip pan)
 4. Character actions must be EMOTIONALLY CHARGED — no neutral poses
-5. Environment details create ATMOSPHERE — not just backdrop
-6. ALWAYS end with: (do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)
+5. Character descriptions COPIED VERBATIM every time (DarkPlanner consistency rule)
+6. Maximum 2 characters per prompt — split if 3+ needed
+7. Environment MUST be detailed to prevent white/buggy backgrounds:
+   ❌ WRONG: "person in room" → ✅ RIGHT: "person in modest kitchen with chipped tile, old appliances, warm afternoon light"
+8. MANDATORY MOVEMENT in every prompt: character + camera + environment
+9. ALWAYS end with: (do not include any platform logos, watermarks, text, or signatures in the image; render clean final output, no UI overlays)
+
+═══ POLICY COMPLIANCE ═══
+NEVER include: explicit violence, visible weapons, blood, death scenes, nudity.
+ADAPT: Violence → Tension, Weapons → Implication, Death → Aftermath/Memorial.
+AVOID WORDS: gun, weapon, knife, blood, dead, corpse, naked, punch, attack, drugs.
 
 ═══════════════════════════════════════
 🪝 VIRAL HOOKS DATABASE:
@@ -246,7 +255,7 @@ ${hooksBlock || 'Use scroll-stopping techniques: shock value, curiosity gap, vis
 ${attentionBlock || 'Pattern interrupts every 8s, dopamine stacking, emotional whiplash'}
 
 ${knowledgeBlock ? `\n📚 VISUAL REFERENCES:\n${knowledgeBlock}\n` : ''}
-${charBlock ? `\n👥 CHARACTERS:\n${charBlock}\n` : ''}
+${charBlock ? `\n👥 CHARACTERS (copy descriptions VERBATIM in prompts):\n${charBlock}\n` : ''}
 
 ═══════════════════════════════════════
 🗺️ SEMANTIC VISUAL MAPPING — CRITICAL!
@@ -265,7 +274,7 @@ KEYWORD → VISUAL MAPPING (use these when the narration mentions):
 - Space → Nebulae, astronaut helmets, Earth from orbit, rocket launches
 - Food → Extreme macro of textures, steam rising, knife cutting, ingredients falling
 - Technology → Circuit boards, holographic displays, code scrolling, robot eyes
-- War/battle → Explosions in slow-motion, soldier silhouettes, smoke clouds
+- War/battle → Soldier silhouettes, smoke clouds, aftermath scenes (NO explicit violence)
 - Love/emotion → Hands touching, tears falling, sunset silhouettes, heartbeat
 - City → Aerial drone over skyline, neon reflections in puddles, crowded streets
 
