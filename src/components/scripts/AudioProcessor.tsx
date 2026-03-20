@@ -108,22 +108,25 @@ export const AudioProcessor = ({
 
     setPhase('uploading');
     try {
-      // Convert audio to base64 using chunked buffer (safer for large files)
-      const arrayBuffer = await audioFile.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      const chunkSize = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-      }
-      const base64 = btoa(binary);
+      // Upload audio to storage instead of sending base64 (avoids memory limit)
       const mimeType = audioFile.type || 'audio/mp3';
+      const ext = audioFile.name.split('.').pop() || 'mp3';
+      const storagePath = `audio-uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(storagePath, audioFile, { contentType: mimeType });
+      
+      if (uploadError) throw new Error(`Erro ao enviar áudio: ${uploadError.message}`);
+      
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
+      const audioUrl = urlData.publicUrl;
 
       setPhase('transcribing');
 
       const { data, error } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
         body: {
-          audioBase64: base64,
+          audioUrl,
           audioMimeType: mimeType,
           script: cleanScript,
           videoStyle,
