@@ -32,7 +32,7 @@ export const PromptExporter = ({ scenes, characters, topic, videoStyle, language
       if (scene.transitionNote) videoParts.push(scene.transitionNote);
       const videoPrompt = videoParts.join(', ');
       return `${tag} ${imagePrompt} ||| ${tag} ${videoPrompt}`;
-    }).join('\n');
+    }).join('\n\n');
 
     navigator.clipboard.writeText(autoflowLines);
     toast.success(`📋 ${scenes.length} cenas copiadas! Cole na Prompt List do AutoFlow.`);
