@@ -180,18 +180,23 @@ function createTestWav(
   return buf;
 }
 
-function analyzeWavBlob(blob: Blob): Promise<{
+async function analyzeWavBlob(blob: Blob): Promise<{
   overallRms: number;
   peak: number;
   silentRegionRms: number;
   totalSamples: number;
 }> {
-  return blob.arrayBuffer().then((ab) => {
-    const view = new DataView(ab);
-    const channels = view.getUint16(22, true);
-    const totalSamples = (ab.byteLength - 44) / (2 * channels);
-    const samples: number[] = [];
-    let sumSq = 0, peak = 0;
+  // Use FileReader polyfill approach for jsdom compatibility
+  const ab = await new Promise<ArrayBuffer>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.readAsArrayBuffer(blob);
+  });
+  const view = new DataView(ab);
+  const channels = view.getUint16(22, true);
+  const totalSamples = (ab.byteLength - 44) / (2 * channels);
+  const samples: number[] = [];
+  let sumSq = 0, peak = 0;
 
     for (let i = 0; i < totalSamples; i++) {
       const s = view.getInt16(44 + i * 2 * channels, true) / 0x7fff;
