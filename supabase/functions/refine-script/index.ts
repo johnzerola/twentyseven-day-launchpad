@@ -189,7 +189,7 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
         stream: true,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `ROTEIRO PARA EDIÇÃO CIRÚRGICA (NÃO reescreva do zero!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Identifique os 3-5 pontos FRACOS e melhore APENAS esses pontos. Preserve 80-90% do texto original. Retorne o roteiro COMPLETO com melhorias integradas.` },
+          { role: "user", content: `ROTEIRO DO USUÁRIO (NÃO reescreva! NÃO mude a história!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Faça NO MÁXIMO 3 micro-edições em frases individuais. Preserve 90-95% do texto EXATAMENTE como está. A história, enredo e tom são INTOCÁVEIS. Retorne o roteiro COMPLETO.` },
         ],
       }),
     });
