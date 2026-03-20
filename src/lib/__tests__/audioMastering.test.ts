@@ -198,31 +198,30 @@ async function analyzeWavBlob(blob: Blob): Promise<{
   const samples: number[] = [];
   let sumSq = 0, peak = 0;
 
-    for (let i = 0; i < totalSamples; i++) {
-      const s = view.getInt16(44 + i * 2 * channels, true) / 0x7fff;
-      samples.push(s);
-      sumSq += s * s;
-      peak = Math.max(peak, Math.abs(s));
-    }
+  for (let i = 0; i < totalSamples; i++) {
+    const s = view.getInt16(44 + i * 2 * channels, true) / 0x7fff;
+    samples.push(s);
+    sumSq += s * s;
+    peak = Math.max(peak, Math.abs(s));
+  }
 
-    const blockSize = 512;
-    const blockRms: number[] = [];
-    for (let i = 0; i < samples.length; i += blockSize) {
-      const end = Math.min(i + blockSize, samples.length);
-      let r = 0;
-      for (let j = i; j < end; j++) r += samples[j] * samples[j];
-      blockRms.push(Math.sqrt(r / (end - i)));
-    }
-    blockRms.sort((a, b) => a - b);
-    const q10 = blockRms.slice(0, Math.max(1, Math.floor(blockRms.length * 0.1)));
+  const blockSize = 512;
+  const blockRms: number[] = [];
+  for (let i = 0; i < samples.length; i += blockSize) {
+    const end = Math.min(i + blockSize, samples.length);
+    let r = 0;
+    for (let j = i; j < end; j++) r += samples[j] * samples[j];
+    blockRms.push(Math.sqrt(r / (end - i)));
+  }
+  blockRms.sort((a, b) => a - b);
+  const q10 = blockRms.slice(0, Math.max(1, Math.floor(blockRms.length * 0.1)));
 
-    return {
-      overallRms: Math.sqrt(sumSq / totalSamples),
-      peak,
-      silentRegionRms: q10.reduce((a, b) => a + b, 0) / q10.length,
-      totalSamples,
-    };
-  });
+  return {
+    overallRms: Math.sqrt(sumSq / totalSamples),
+    peak,
+    silentRegionRms: q10.reduce((a, b) => a + b, 0) / q10.length,
+    totalSamples,
+  };
 }
 
 // ── Tests ───────────────────────────────────────────────────────────
