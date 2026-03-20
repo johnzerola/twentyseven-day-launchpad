@@ -5,17 +5,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ═══════════════════════════════════════════════════════════════
+// DARKPLANNER VISUAL PROMPTS — Upgraded with professional training
+// ═══════════════════════════════════════════════════════════════
+
 const styleGuides: Record<string, string> = {
-  'cinematográfico': 'Ultra-realistic cinematic. Camera angles like a movie. Dramatic lighting, shallow DOF, film grain.',
-  '2d': '2D flat animation, Kurzgesagt-style. Vibrant flat colors, clean vector shapes, parallax depth, NO 3D, NO photorealistic.',
+  'cinematográfico': 'Netflix/Disney cinematic. ARRI ALEXA, Kodak Vision3, film grain, dramatic lighting, shallow DOF f/1.4-2.8.',
+  '2d': '2D flat animation, Kurzgesagt-style. Vibrant flat colors, clean vector shapes, parallax depth layers, NO 3D, NO photorealistic.',
   '3d': 'Pixar/DreamWorks 3D render. Stylized characters, subsurface scattering, global illumination.',
   'anime': 'Anime/manga style. Ufotable/MAPPA quality, cel-shading, expressive faces, dynamic poses.',
   'wojak': 'Wojak/meme internet art style. Simple drawn faces with strong emotional expressions, flat colors, minimalist backgrounds.',
   'stickmen': 'Stick figure art. Minimalist black line drawings, simple backgrounds, humor through simplicity.',
-  'realista': 'Hyper-photorealistic. Natural lighting, 8K detail, lifelike.',
+  'realista': 'Hyper-photorealistic. Natural lighting, 8K detail, lifelike, Canon 5D/Sony A7R aesthetic.',
   'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accents, atmospheric fog, Blade Runner mood.',
   'whiteboard': 'Whiteboard animation. Hand-drawn sketches, black ink on white, educational.',
   'comic': 'Comic book / graphic novel. Bold ink outlines, halftone, dynamic panels, saturated colors.',
+  'fotorrealista_documentario': 'Documentary photography, natural soft lighting, shallow depth of field, desaturated earth tones.',
 };
 
 serve(async (req) => {
@@ -45,7 +50,7 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "set_visual_prompts",
-            description: "Set visual prompts for each script segment matching the chosen art style",
+            description: "Set visual prompts for each script segment matching the chosen art style (DarkPlanner format)",
             parameters: {
               type: "object",
               properties: {
@@ -55,7 +60,7 @@ serve(async (req) => {
                     type: "object",
                     properties: {
                       segmentIndex: { type: "number" },
-                      visualPrompt: { type: "string" }
+                      visualPrompt: { type: "string", description: "80-150 word visual prompt with mandatory movement (camera + environment). Detailed environment to prevent buggy backgrounds. End with style modifiers and anti-text block." }
                     },
                     required: ["segmentIndex", "visualPrompt"],
                     additionalProperties: false
@@ -71,27 +76,44 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a visual director creating prompts for AI image generation. You MUST follow the chosen art style EXACTLY.
+            content: `You are a visual director creating prompts for AI image generation, trained on the DarkPlanner professional system. You MUST follow the chosen art style EXACTLY.
 
 ═══════════════════════════════════════
 🎨 MANDATORY ART STYLE: ${selectedStyle}
 ${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
 ═══════════════════════════════════════
 
-RULES:
-- EVERY prompt MUST match the art style above — do NOT default to photorealistic/cinematic unless that's the chosen style
+🚫 NEVER include text, subtitles, captions, logos, watermarks in ANY prompt.
+
+DARKPLANNER RULES:
+- EVERY prompt MUST match the art style above — do NOT default to photorealistic unless chosen
 - For 2D styles: describe flat colors, clean lines, animation-style characters
 - For Wojak/meme: describe simple drawn faces, emotional expressions, internet meme look
 - For anime: describe anime aesthetic, cel-shading, expressive eyes
-- Describe composition, mood, and visual elements matching the narration
-- Make each scene visually distinct from the others
-- Keep each prompt to 1-3 sentences, max 80 words
-- Write prompts in English for best AI image generation results
-- Always START the prompt with the art style descriptor`
+- Each prompt: 80-150 words (more detailed than before for better AI generation)
+- Write in English for best AI image generation results
+- START every prompt with the art style descriptor
+
+═══ MANDATORY MOVEMENT ═══
+Every prompt MUST describe at least 1 type of movement:
+- Camera: slowly pushing in, pulling back, panning, tracking
+- Environment: wind, particles, water, smoke, light shifting
+
+═══ ENVIRONMENT DETAIL (prevent white/buggy backgrounds) ═══
+NEVER write vague descriptions. ALWAYS include:
+- Specific location with materials and textures
+- Lighting source and direction
+- Atmospheric elements (particles, fog, weather)
+❌ WRONG: "Person in a room"
+✅ RIGHT: "Person in modest kitchen with chipped tile counter, old appliances, warm afternoon light through small window, dust motes floating"
+
+═══ STYLE MODIFIERS ═══
+Every prompt MUST end with style modifiers matching the art style, then:
+(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)`
           },
           {
             role: "user",
-            content: `Generate visual prompts in "${styleKey}" style for these ${segments.length} narration segments:\n\n${segmentTexts}`
+            content: `Generate visual prompts in "${styleKey}" style for these ${segments.length} narration segments. Each prompt = 80-150 words with movement and detailed environment.\n\n${segmentTexts}`
           }
         ],
       }),
@@ -112,6 +134,13 @@ RULES:
     if (!toolCall) throw new Error("No tool call in response");
     
     const parsed = JSON.parse(toolCall.function.arguments);
+
+    // Post-process: ensure anti-text suffix
+    for (const p of parsed.prompts) {
+      if (p.visualPrompt && !p.visualPrompt.includes("no subtitles")) {
+        p.visualPrompt += " (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+      }
+    }
 
     return new Response(JSON.stringify({ prompts: parsed.prompts }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
