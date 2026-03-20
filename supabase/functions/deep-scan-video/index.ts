@@ -440,8 +440,25 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e extraia:
 
     const aiData = await aiRes.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No AI response");
-    const analysis = JSON.parse(toolCall.function.arguments);
+    
+    let analysis: any;
+    if (toolCall) {
+      analysis = JSON.parse(toolCall.function.arguments);
+    } else {
+      // Fallback: try to extract JSON from content (model may have responded as text)
+      const contentText = aiData.choices?.[0]?.message?.content || '';
+      console.warn("No tool_call returned, attempting content parse. finish_reason:", aiData.choices?.[0]?.finish_reason);
+      const jsonMatch = contentText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          analysis = JSON.parse(jsonMatch[0]);
+        } catch {
+          throw new Error("IA retornou resposta inválida. Tente novamente.");
+        }
+      } else {
+        throw new Error("IA não retornou dados estruturados. Tente novamente em alguns segundos.");
+      }
+    }
 
     // Force duration to match original
     if (analysis.cloneTemplate) {
