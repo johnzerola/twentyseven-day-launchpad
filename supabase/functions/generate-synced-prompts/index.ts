@@ -139,24 +139,25 @@ serve(async (req) => {
       'dark': `Dark cinematic noir. Crushed blacks, neon accent lighting (cyan, magenta, amber). Dense volumetric fog. Blade Runner 2049 meets Se7en. Noir shadow patterns, wet reflective surfaces, silhouettes.`,
       'whiteboard': 'Whiteboard explainer animation. Hand-drawn black ink on clean white surface. Strategic color highlights for emphasis. Educational clarity, smooth drawing reveal.',
       'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, rich saturated colors, dramatic perspective.',
+      'fotorrealista_documentario': 'Documentary photography style, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated color palette with emphasis on earth tones.',
     };
     const selectedStyleGuide = styleGuides[styleLC] || styleGuides['cinematográfico'];
 
-    // ========== Character identity block ==========
+    // ========== Character identity block (DarkPlanner format: 150-200 words, "waist up") ==========
     const characterBlock = characters?.length > 0
-      ? `\n\nCHARACTER IDENTITY SHEETS — COPY THIS TEXT VERBATIM INTO EVERY PROMPT WHERE CHARACTER APPEARS:\n${characters.map((c: any, i: number) => {
+      ? `\n\n═══ DARKPLANNER CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characters.map((c: any, i: number) => {
           const a = c.appearance || {};
           const f = c.facial_features || {};
           const cl = c.clothing || {};
           const refImg = c.imageUrl ? `\nREFERENCE IMAGE: ${c.imageUrl} — Match this exact appearance.` : '';
-          return `═══ CHARACTER ${i + 1}: "${c.name}" ═══
-Gender: ${c.gender || 'unknown'} | Age: ${c.age || 'unknown'}
-BODY: ${a.body_type || 'average'} build, ${a.height || 'average'} height, ${a.skin_color || 'medium'} skin with natural pores and micro-imperfections
-HAIR: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail
-EYES: ${a.eye_color || 'brown'} eyes, ${f.eyebrows || 'natural'} eyebrows
-FACE: ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture
-OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}`;
-        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULE: Include FULL character description block in EVERY prompt they appear in. Use IDENTICAL wording — never paraphrase.`
+          return `[${c.name}]: ${c.gender || 'person'} age ${c.age || 'unknown'}, ${a.body_type || 'average'} build, ${a.height || 'average height'}, ${a.skin_color || 'medium'} skin tone with natural pores and micro-imperfections, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, ${a.eye_color || 'brown'} eyes with ${f.eyebrows || 'natural'} eyebrows, ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture, wearing ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}, waist up`;
+        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULES (DarkPlanner):
+- Include FULL character description block in EVERY prompt they appear in
+- Use IDENTICAL wording — NEVER paraphrase, summarize, or vary
+- ❌ WRONG: "wearing yellow dress" then "in her yellow outfit"
+- ✅ RIGHT: Copy EXACT same wording every time
+- Maximum 2 characters per prompt — split into multiple if 3+ needed
+- Character descriptions ALWAYS end with "waist up"`
       : '';
 
     const sceneTexts = scenes.map(s => `Scene ${s.index + 1}: "${s.text}"`).join('\n\n');
@@ -246,7 +247,7 @@ OUTFIT: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'snea
         messages: [
           {
             role: "system",
-            content: `You are a WORLD-CLASS visual director creating prompts for Google Veo 3 video generation model. Your prompts produce Netflix/Disney/Marvel-grade cinematic video.
+            content: `You are a WORLD-CLASS visual director creating prompts for Google Veo 3 video generation model, trained on the DarkPlanner professional prompt system. Your prompts produce Netflix/Disney/Marvel-grade cinematic video.
 
 ═══════════════════════════════════════
 🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
@@ -260,10 +261,39 @@ NEVER include ANY of these in prompts:
 - EVERY negativePrompt MUST include: "subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements"
 ═══════════════════════════════════════
 
+═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION ═══
+NEVER include explicit violence, visible weapons, blood/gore, death scenes, nudity.
+TRIGGER WORDS TO AVOID: gun, weapon, knife, blood, wound, dead, corpse, naked, nude, punch, kick, attack, drugs.
+ADAPTATION RULES:
+- Violence → Tension: "aggressive body language, clenched fists, high tension, no physical contact shown"
+- Weapons → Implication: "defensive stance, hand at holster, no weapons visible"
+- Death → Aftermath: "covered shape on ground, grief visible, respectful framing"
+═══════════════════════════════════════
+
+═══ DARKPLANNER PROMPT MASTERY — CRITICAL RULES ═══
+
+1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Detailed prompts = better Veo3 output.
+
+2. CHARACTER CONSISTENCY (MOST IMPORTANT RULE):
+   - Clothing/appearance COPIED WORD-FOR-WORD from identity sheet
+   - ❌ NEVER paraphrase: "wearing yellow dress" → "in her yellow outfit" = WRONG
+   - ✅ ALWAYS: Copy EXACT same wording every time = CORRECT
+   - Max 2 characters per prompt (split into multiple if 3+ needed)
+
+3. MANDATORY MOVEMENT in EVERY prompt (at least 2 types):
+   CHARACTER: walking, turning, reaching, breathing heavily, trembling
+   CAMERA: pushing in, pulling back, panning, circling, tracking
+   ENVIRONMENT: wind blowing, particles floating, water flowing, flames flickering
+
+4. ENVIRONMENT DETAIL (prevent white/buggy backgrounds):
+   ALWAYS include: specific location + materials, visible surroundings, light source + direction, textures, small props
+   ❌ WRONG: "[Character] standing talking"
+   ✅ RIGHT: "[Character] standing in modest kitchen with chipped tile counter, old refrigerator visible, window showing houses outside"
+
 VEO 3 MASTER PROMPT FORMULA v2.0 (use for EVERY prompt):
 [SHOT_TYPE + CAMERA_MOTION], [LENS_SPEC] with [DOF_SETTING].
-[CHARACTER — FULL identity VERBATIM if applicable].
-[ACTION — cinematic description of what happens].
+[CHARACTER — FULL identity VERBATIM if applicable, ending "waist up"].
+[ACTION — cinematic description with movement verbs].
 [ENVIRONMENT — specific, sensory, atmospheric details].
 [LIGHTING_SETUP — exact type + modifiers].
 [ATMOSPHERIC_ELEMENTS — particles, fog, rain, dust, embers].
@@ -301,7 +331,7 @@ YOUR COMMANDMENTS:
    - DETAIL (micro-textures that prove quality) — pores, dust, water droplets
    Prefix with "HOOK SCENE —"
 
-3. PROMPT LENGTH: 100-200 words. Use EXACT professional film terminology that Veo3 understands best:
+3. PROMPT LENGTH: 150-250 words. Use EXACT professional film terminology that Veo3 understands best:
    Camera: dolly-in, tracking shot, crane shot, steadicam, slow pan, orbit shot, push-in, pull-out, rack focus, Dutch angle, POV, handheld
    Lens: 24mm wide, 35mm, 50mm, 85mm portrait, 135mm telephoto, anamorphic
    Lighting: golden hour, Rembrandt, butterfly, split, rim/edge, volumetric/god rays, chiaroscuro, practical lights, neon glow
