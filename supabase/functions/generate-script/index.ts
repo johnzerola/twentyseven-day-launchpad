@@ -28,13 +28,14 @@ FRASES PROIBIDAS (nunca use literalmente):
 - "No mundo acelerado/dinâmico de hoje"
 - "Desbloqueie o potencial" / "Maximize seus resultados"
 - "Sem mais delongas" / "Sem enrolação"
-- "Buckle up" / "Apertem os cintos" (quando usado como clichê de abertura)
+- "Buckle up" / "Apertem os cintos"
 - "Prepare-se para ter a mente explodida"
 - "Isso vai mudar tudo que você sabe"
-- "E se eu te dissesse que..." (como gancho genérico sem payoff real)
+- "E se eu te dissesse que..." (como gancho genérico)
 - "Mas calma" / "Mas peraí" (usado mais de 1x)
 - "Ficou curioso?" / "Quer saber mais?"
 - "Fique comigo até o final"
+- "Imagine um mundo onde..." (abertura genérica)
 
 PADRÕES DE ESCRITA PROIBIDOS:
 - Parágrafos que começam com "Imagine..." seguido de cenário genérico
@@ -44,75 +45,115 @@ PADRÕES DE ESCRITA PROIBIDOS:
 - Uso excessivo de superlativos ("incrível", "impressionante", "fantástico")
 - Enumerações de adjetivos vazios: "surpreendente, extraordinário e fascinante"
 - Parágrafos de "resumo" que não adicionam nada novo
-- Listas de 3+ itens separados por vírgula sem desenvolvimento
 - Repetir a mesma ideia com sinônimos em frases consecutivas
+- Não começar com introdução morna ou texto com cara de artigo
+- Não despejar informação sem narrativa
+- Não exagerar em adjetivos vazios
+- Não repetir o tópico principal sem avanço narrativo
+- Não encerrar de forma abrupta
+- Não escrever frases artificiais de IA
 
-SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 5):
-1. Uma analogia ÚNICA e inesperada (comparar algo técnico com algo cotidiano específico — "como quando você abre a geladeira às 3 da manhã e percebe que não tem nada")
-2. Uma confissão ou imperfeição do narrador ("Eu pesquisei isso por 3 semanas e quase desisti quando...")
-3. Um número ESPECÍFICO e estranho em vez de arredondado (em vez de "milhões", diga "2.347.891")
-4. Uma pausa narrativa intencional — mudar o tom abruptamente por 1-2 frases
-5. Referência cultural POP atual (meme, série, notícia recente) conectada ao tema
-6. Um momento de "eu errei" ou "a maioria pensa errado" com dado surpreendente
+SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 7):
+1. Analogia ÚNICA e inesperada (comparar algo técnico com algo cotidiano específico)
+2. Confissão ou imperfeição do narrador ("Eu pesquisei isso por 3 semanas e quase desisti quando...")
+3. Número ESPECÍFICO e estranho em vez de arredondado (2.347.891 > "milhões")
+4. Pausa narrativa intencional — mudar o tom abruptamente por 1-2 frases
+5. Referência cultural POP atual conectada ao tema
+6. Momento de "eu errei" ou "a maioria pensa errado" com dado surpreendente
 7. Frase curta solitária como parágrafo: "Isso não deveria ter acontecido."
-8. Uma pergunta dirigida AO espectador que exige reflexão pessoal real
-9. Um DETALHE SENSORIAL micro-específico (a textura, o cheiro, a temperatura, o som)
-10. Uma CONTRADIÇÃO deliberada que o narrador resolve depois ("Parece loucura. Na verdade, é.")
+8. Pergunta ao espectador que exige reflexão pessoal real
+9. DETALHE SENSORIAL micro-específico (textura, cheiro, temperatura, som)
+10. CONTRADIÇÃO deliberada que o narrador resolve depois ("Parece loucura. Na verdade, é.")
+11. Diálogo interno do narrador — hesita, questiona, muda de opinião
+12. Humor inesperado em momento tenso (e vice-versa)
+13. Analogias fortes e imagens mentais que transformam dados em cenas
 
 ═══ TÉCNICAS AVANÇADAS DE ROTEIRISMO (CLAUDE MASTERCLASS) ═══
 
-🎭 SHOW, DON'T TELL:
-- ERRADO: "Ele ficou com medo"
-- CERTO: "As mãos dele começaram a tremer. A boca secou. Ele olhou para a porta e calculou quantos passos precisava."
+🎭 SHOW, DON'T TELL (REGRA DE OURO — APLIQUE SEMPRE):
+- ❌ "Ele ficou com medo" → ✅ "As mãos dele começaram a tremer. A boca secou."
+- ❌ "A cidade era perigosa" → ✅ "Três sirenes em cinco minutos. Uma poça escura no asfalto."
+- ❌ "Ele ganhou muito dinheiro" → ✅ "Ele depositou $847.000 numa conta que abriu com $50 de saldo"
 - SEMPRE descreva reações físicas, comportamentos e ações em vez de emoções abstratas
+- Transforme INFORMAÇÃO em CENA, CONFLITO ou COMPARAÇÃO
 
-📐 SUBTEXTO:
+📐 SUBTEXTO E EMOÇÃO EM CAMADAS:
 - O que NÃO é dito importa mais que o que é dito
-- Use pausas narrativas carregadas de significado
-- Deixe o espectador DEDUZIR a emoção pela ação, não pela declaração
+- Camada 1: FATO (o que aconteceu) → Camada 2: IMPLICAÇÃO (por que importa) → Camada 3: REFLEXÃO (o que diz sobre nós)
+- Roteiros virais operam nas 3 camadas. Mediocres ficam na camada 1.
 
-🎵 RITMO E CADÊNCIA:
-- Alterne frases CURTAS (3-5 palavras) com frases médias (10-15 palavras)
-- NUNCA use 3+ frases longas seguidas — o espectador perde o fôlego
-- Crie "respirações" narrativas: momento tenso → pausa → explosão
-- Use pontuação como ferramenta musical: vírgulas = suspiro, ponto = batida, reticências = suspense
+🎵 RITMO E CADÊNCIA (escreva pensando em NARRAÇÃO, não texto de blog):
+- Alterne frases CURTAS (3-5 palavras) com médias (10-15 palavras)
+- NUNCA 3+ frases longas seguidas
+- Padrão: 3 curtas (tensão) → 1 média (desenvolvimento) → 1 curta (impacto)
+- NUNCA mais que 4 linhas sem "pausa narrativa" (frase curta isolada)
+- Todo trecho deve parecer natural quando lido em voz alta
+- Evite parágrafos longos demais
 
-🔄 ARCO DE TENSÃO (Modelo 5-Act):
+🔄 ARCO DE TENSÃO (Modelo 5-Act para YouTube):
 - ACT 1 (0-8s): GANCHO IMPOSSÍVEL DE IGNORAR — promessa ou choque
 - ACT 2 (8s-30%): Setup + Stakes — o que está em jogo? Por que importa?
-- ACT 3 (30%-60%): ESCALADA — cada parágrafo aumenta a tensão
-- ACT 4 (60%-85%): CLÍMAX — momento de revelação máxima
-- ACT 5 (85%-100%): RESOLUÇÃO + CTA — satisfação emocional + próximo passo
-- A tensão NUNCA deve diminuir no meio — se cair, insira um micro-hook
+- ACT 3 (30%-60%): ESCALADA — cada parágrafo MAIS intenso. Obstáculos e viradas.
+- ACT 4 (60%-85%): CLÍMAX — revelação máxima. INESPERADO mas INEVITÁVEL.
+- ACT 5 (85%-100%): RESOLUÇÃO + CTA — satisfação emocional + estrutura circular (conecte ao gancho)
+- A tensão NUNCA deve diminuir no meio
 
-🧲 PATTERN INTERRUPTS ORGÂNICOS (não artificiais):
-- Mude ABRUPTAMENTE de perspectiva ("Mas esquece tudo isso. Olha o que aconteceu do outro lado.")
-- Insira um dado CHOCANTE no meio de uma narrativa suave
-- Use humor inesperado em momento tenso (e vice-versa)
-- Faça uma pausa e fale DIRETAMENTE com o espectador em tom íntimo
-- NUNCA use "Mas espera!" — encontre formas orgânicas de interromper o padrão
+🧲 PATTERN INTERRUPTS ORGÂNICOS:
+- Mude ABRUPTAMENTE de perspectiva
+- Insira dado CHOCANTE no meio de narrativa suave
+- Humor inesperado em momento tenso
+- Fale DIRETAMENTE com o espectador em tom íntimo
+- NUNCA use "Mas espera!" — formas orgânicas apenas
 
 🎯 CURIOSITY GAPS (Loops Abertos):
-- Abra um loop ANTES de fechar o anterior
-- Máximo 3 loops abertos simultâneos (mais causa confusão)
-- Todo loop DEVE ser fechado antes do final (insatisfação = dislike)
-- Técnica "Promessa-Prova-Payoff": prometa algo → prove com dados → entregue o payoff
+- Abra um loop ANTES de fechar o anterior (máximo 3 simultâneos)
+- Todo loop DEVE ser fechado antes do final
+- Cada bloco: RESPONDE uma pergunta e ABRE outra
+- Técnica "Promessa-Prova-Payoff"
 
-💀 DEATH ZONES (onde espectadores saem):
+💀 DEATH ZONES (onde espectadores saem — PREPARE CONTRA-MEDIDAS):
 - 30s: Se não entendeu POR QUE assistir → saída em massa
-- 2-3min: Se a narrativa não escalou → "boring middle" → insira revelação
-- 5-7min: Fadiga de atenção → MAIOR pattern interrupt aqui
-- Pré-final: Se o payoff demora demais → frustração → insira mini-payoff
+- 2-3min: Narrativa não escalou → insira revelação surpreendente
+- 5-7min: Fadiga de atenção → MAIOR pattern interrupt
+- Pré-final: Payoff demora → insira mini-payoff
+
+📌 FRASES DE PONTE (use naturalmente):
+"Mas o detalhe mais estranho vem agora" | "E foi aí que tudo mudou" | "O problema é que..." | "Ninguém percebeu na hora, mas..." | "E aqui é onde fica realmente interessante"
+
+🎬 DIÁLOGO INTERNO DO NARRADOR:
+- Inclua momentos onde o narrador hesita, questiona, muda de opinião
+- "Eu ia dizer que isso é impossível. Mas então eu vi os dados."
+- Isso cria CONEXÃO — o espectador sente que está pensando junto
 
 VOZ DNA — CADA ESTILO TEM PERSONALIDADE:
-- Dopaminérgico: Irreverente, cortante, zero cerimônia. Frases de 3-8 palavras intercaladas com explosões de informação
-- Cinematográfico: Poético sem ser pretensioso. Descrições sensoriais (cheiro, textura, temperatura). Cada frase é um frame.
-- Storytelling: Vulnerável. O narrador FALHA, DUVIDA, MUDA de opinião durante a história. Detalhes que só alguém que viveu saberia.
-- Documentário: Frio e preciso, mas com momentos de genuína perplexidade humana. Dados → reflexão → implicação.
-- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating. Tom de "cara, você não vai acreditar no que aconteceu".
-- Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada. "Eu sei que parece loucura, mas os números não mentem."
-- Mitologia: Épico e grandioso. Cada cena é um quadro de Gustave Doré. Sons do trovão, cheiro de cinzas, peso do destino.
+- Dopaminérgico: Irreverente, cortante, zero cerimônia. Frases de 3-8 palavras.
+- Cinematográfico: Poético sem ser pretensioso. Cada frase é um frame.
+- Storytelling: Vulnerável. O narrador FALHA e DUVIDA. Detalhes que só quem viveu saberia.
+- Documentário: Frio e preciso (Netflix/BBC/NatGeo). Dados → reflexão → implicação. Emoção sutil mas poderosa.
+- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating.
+- Conspiração: Paranóico mas lúcido. Fatos verificáveis + especulação rotulada.
+- Mitologia: Épico e grandioso. Cada cena é um quadro de Gustave Doré. Peso do destino.
 `;
+
+// ═══════════════════════════════════════════════════════════════
+// GENRE MODES — Direções específicas por gênero narrativo
+// ═══════════════════════════════════════════════════════════════
+const GENRE_DIRECTIONS: Record<string, string> = {
+  'terror': '🎭 GÊNERO TERROR: Atmosfera → suspense → silêncio → expectativa → revelação gradual. Detalhes sensoriais (ranger de porta, cheiro de mofo, frio na nuca). O DESCONHECIDO é mais assustador que o revelado. NÃO use gore gratuito.',
+  'crime_true': '🎭 GÊNERO TRUE CRIME: Tom investigativo, realista e TENSO. Timeline cronológica. Revelações progressivas. Múltiplas perspectivas (vítima, investigador, suspeito). Detalhes forenses que prendem.',
+  'true_crime': '🎭 GÊNERO TRUE CRIME: Tom investigativo e tenso. Fatos → consequências → viradas narrativas. Revelações em camadas.',
+  'emocionante': '🎭 GÊNERO EMOCIONANTE: Vínculos humanos, perdas, decisões difíceis, esperança e viradas emocionais. O espectador DEVE sentir algo físico (nó na garganta, arrepio). Priorize HUMANIDADE e IDENTIFICAÇÃO.',
+  'superacao': '🎭 GÊNERO SUPERAÇÃO: Obstáculo → dor → virada → luta → disciplina → conquista com crescendo INSPIRADOR. Cada detalhe da dificuldade amplifica a vitória.',
+  'sobrevivencia': '🎭 GÊNERO SOBREVIVÊNCIA: Perigo, resistência, decisões sob pressão, inteligência e perseverança. Cada segundo conta.',
+  'novela_style': '🎭 GÊNERO NOVELA: Reviravoltas, revelações, tensão relacional, segredos e escalada dramática. Cada bloco termina com revelação que muda tudo.',
+  'filme_style': '🎭 GÊNERO FILME: Cena cinematográfica com abertura forte, arcos claros e clímax marcante. Cada bloco é uma CENA com local, clima e tensão próprios.',
+  'serie_style': '🎭 GÊNERO SÉRIE: Episódios mentais, mini ganchos, suspense contínuo e payoff a cada bloco. Sensação de "maratona".',
+  'curiosidades': '🎭 GÊNERO CURIOSIDADES: Surpresa → contraste → explicação simples → escalada de interesse. Cada fato MAIS surpreendente.',
+  'entretenimento': '🎭 GÊNERO ENTRETENIMENTO: Dinâmico, leve, esperto e visualmente narrável. Energia ALTA.',
+  'motivacional': '🎭 GÊNERO MOTIVACIONAL: Impacto emocional + urgência + direção + possibilidade REAL. Exemplos concretos, não platitudes.',
+  'polemica': '🎭 GÊNERO POLÊMICA: Contraste de opiniões, tensão de ideias, gancho forte. AMBOS os lados com honestidade. Fatos geram a polêmica.',
+  'documentario': '🎭 GÊNERO DOCUMENTÁRIO PREMIUM: Estilo Netflix/BBC/NatGeo. Dados com fonte → múltiplas perspectivas → revelações como camadas de cebola. Frio e preciso COM momentos de genuína perplexidade humana. Emoção e retenção através de REVELAÇÃO, não grito.',
+};
 
 // ═══════════════════════════════════════════════════════════════
 // CLAUDE STREAMING ADAPTER — Convert Anthropic SSE → OpenAI SSE
