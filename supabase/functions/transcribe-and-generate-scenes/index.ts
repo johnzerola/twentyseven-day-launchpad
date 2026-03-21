@@ -164,17 +164,14 @@ RULES:
       }
     }
 
-    // Strategy B: Fallback to Lovable Gateway using audio as data URL
+    // Strategy B: Fallback — generate timestamps from script text using Lovable Gateway
+    // The gateway doesn't support audio input via image_url, so we use the script text
+    // to estimate timestamps based on word count and natural pacing
     if (!transcribeData) {
-      console.log("Falling back to Lovable Gateway for transcription...");
+      console.log("Falling back to Lovable Gateway for script-based timestamp estimation...");
       
-      // Build a data URL from base64 so the gateway can process audio properly
-      const audioDataUrl = resolvedBase64
-        ? `data:${resolvedMime};base64,${resolvedBase64}`
-        : null;
-      
-      if (!audioDataUrl) {
-        throw new Error("Não foi possível processar o áudio. Tente novamente.");
+      if (!cleanScript.trim()) {
+        throw new Error("Transcrição falhou e nenhum roteiro disponível para fallback.");
       }
 
       const transcribeResponse = await retryFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -188,7 +185,7 @@ RULES:
           messages: [
             {
               role: "system",
-              content: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+              content: `You are a professional script-to-timestamp converter. Given a narration script, estimate realistic timestamps for each sentence as if being narrated at a natural pace (~150 words per minute in ${language || 'Portuguese'}).
 
 OUTPUT FORMAT (strict JSON array):
 [
@@ -197,18 +194,16 @@ OUTPUT FORMAT (strict JSON array):
 ]
 
 RULES:
-- Transcribe EVERY spoken word
-- Estimate timestamps as accurately as possible per sentence
+- Break the script into natural sentences/phrases
+- Estimate timestamps based on word count and natural reading pace
 - Each entry should be one complete sentence or natural phrase
 - Start times should be sequential and non-overlapping
+- Account for natural pauses between paragraphs (0.5-1s)
 - Return ONLY the JSON array, no other text`
             },
             {
               role: "user",
-              content: [
-                { type: "text", text: "Transcribe this audio with timestamps per sentence. Return ONLY a JSON array." },
-                { type: "image_url", image_url: { url: audioDataUrl } }
-              ]
+              content: `Convert this narration script into timestamped blocks:\n\n${cleanScript}`
             }
           ],
         }),
@@ -216,13 +211,14 @@ RULES:
 
       if (!transcribeResponse.ok) {
         const t = await transcribeResponse.text();
-        console.error("Transcription error:", transcribeResponse.status, t.slice(0, 300));
+        console.error("Transcription fallback error:", transcribeResponse.status, t.slice(0, 300));
         if (transcribeResponse.status === 429) throw new Error("Rate limit. Tente novamente em alguns segundos.");
         if (transcribeResponse.status === 402) throw new Error("Créditos insuficientes. Adicione créditos ao workspace.");
         throw new Error(`Erro na transcrição: ${transcribeResponse.status}`);
       }
 
       transcribeData = await transcribeResponse.json();
+      console.log("Script-based timestamp estimation completed via Lovable Gateway");
     }
 
     // Free base64 after all transcription strategies
