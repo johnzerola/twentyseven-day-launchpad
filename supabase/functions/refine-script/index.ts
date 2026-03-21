@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback only
 
 // ═══════════════════════════════════════════════════════════════
 // ANTI-AI-SLOP DETECTOR — Run BEFORE refinement to flag problems
@@ -18,6 +19,7 @@ const SLOP_PATTERNS = [
   /prepare-se para ter a mente/gi, /isso vai mudar tudo/gi,
   /buckle up/gi, /let's dive in/gi, /without further ado/gi,
   /imagine (um mundo|uma realidade|que)/gi,
+  /mas calma/gi, /ficou curios/gi, /quer saber mais/gi, /fique comigo/gi,
 ];
 
 function countSlopScore(text: string): { score: number; matches: string[] } {
@@ -26,11 +28,54 @@ function countSlopScore(text: string): { score: number; matches: string[] } {
     const m = text.match(p);
     if (m) matches.push(...m.map(s => s.trim()));
   }
-  // Check for excessive superlatives
   const superlatives = (text.match(/(incrível|impressionante|fantástic[oa]|extraordinári[oa]|surpreendente)/gi) || []);
   if (superlatives.length > 3) matches.push(`${superlatives.length}x superlativos genéricos`);
-  
   return { score: matches.length, matches };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLAUDE STREAMING ADAPTER — Convert Anthropic SSE → OpenAI SSE
+// ═══════════════════════════════════════════════════════════════
+function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = claudeBody.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = '';
+
+  return new ReadableStream({
+    async pull(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+          try {
+            const event = JSON.parse(jsonStr);
+            if (event.type === 'content_block_delta' && event.delta?.text) {
+              const chunk = { choices: [{ delta: { content: event.delta.text }, index: 0, finish_reason: null }] };
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            }
+            if (event.type === 'message_stop') {
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
+              reader.cancel();
+              return;
+            }
+          } catch { /* skip */ }
+        }
+      }
+    },
+    cancel() { reader.cancel(); },
+  });
 }
 
 serve(async (req) => {
@@ -38,20 +83,15 @@ serve(async (req) => {
 
   try {
     const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
+    
+    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    
+    if (!CLAUDE_API_KEY && !LOVABLE_API_KEY) throw new Error("No AI API key configured");
     if (!draft_script) throw new Error("draft_script is required");
 
-    // ═══ ORCHESTRATION CONTRACT ═══
-    // This function is PHASE 2 (Surgical Refinement). It receives:
-    //   - draft_script: The EXACT text the user approved from Phase 1
-    //   - rejection_feedback: Optional feedback from Phase 3 (score-script)
-    //   - consensus_improvements: Optional specific improvements both AIs agreed on
-    // It outputs: SSE stream of the IMPROVED script (80-90% preserved)
-    // It does NOT score the script (Phase 3's job)
-    // It does NOT generate from scratch (Phase 1's job)
     const runId = phaseId || crypto.randomUUID();
-    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars`);
+    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars ENGINE=${CLAUDE_API_KEY ? 'CLAUDE' : 'GEMINI_FALLBACK'}`);
 
     // Pre-flight: detect AI slop in the draft
     const slopCheck = countSlopScore(draft_script);
@@ -59,13 +99,14 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Fetch knowledge for review context
-    const [ytRes, scriptRes, triggersRes, hookRes, structRes] = await Promise.all([
+    // Fetch knowledge + past rejection learnings in parallel
+    const [ytRes, scriptRes, triggersRes, hookRes, structRes, rejectionsRes] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(5),
       sb.from("script_knowledge").select("category,title,content").order("effectiveness_score", { ascending: false }).limit(8),
       sb.from("viral_content_library").select("content_json,effectiveness_score,category").in("category", ["psychology_triggers", "retention_technique"]).order("effectiveness_score", { ascending: false }).limit(8),
       sb.from("hook_library").select("hook_text,hook_type,retention_score").order("retention_score", { ascending: false }).limit(5),
       sb.from("script_structures").select("structure_name,intro_pattern,middle_pattern,cliffhanger_pattern,ending_pattern,avg_retention").order("effectiveness_score", { ascending: false }).limit(3),
+      sb.from("ai_learning").select("insight").eq("source", "dual_score_rejection").order("created_at", { ascending: false }).limit(5),
     ]);
 
     const ytKnowledge = (ytRes.data || []).map((r: any) => `${r.title}: ${r.content}`).join("\n");
@@ -76,6 +117,27 @@ serve(async (req) => {
     }).join("\n");
     const topHooks = (hookRes.data || []).map((r: any) => `• [${r.hook_type}] "${r.hook_text}" (score: ${r.retention_score})`).join("\n");
     const structures = (structRes.data || []).map((r: any) => `• ${r.structure_name}: Intro=${r.intro_pattern?.slice(0,80)} | Cliff=${r.cliffhanger_pattern?.slice(0,80)}`).join("\n");
+
+    // ═══ FEEDBACK ABSORPTION: Learn from past rejections ═══
+    let pastRejectionBlock = '';
+    const rejData = rejectionsRes.data || [];
+    if (rejData.length > 0) {
+      const allWeaknesses: string[] = [];
+      const allImprovements: string[] = [];
+      for (const r of rejData) {
+        try {
+          const d = JSON.parse(r.insight);
+          for (const w of (d.weaknesses || [])) if (!allWeaknesses.includes(w)) allWeaknesses.push(w);
+          for (const i of (d.improvements || [])) if (!allImprovements.includes(i)) allImprovements.push(i);
+        } catch { /* skip */ }
+      }
+      if (allWeaknesses.length > 0 || allImprovements.length > 0) {
+        pastRejectionBlock = `\n🧠 LIÇÕES DE ROTEIROS ANTERIORES REJEITADOS (${rejData.length} rejeições recentes):
+${allWeaknesses.length > 0 ? `Fraquezas recorrentes: ${allWeaknesses.slice(0, 5).join('; ')}` : ''}
+${allImprovements.length > 0 ? `Melhorias exigidas: ${allImprovements.slice(0, 5).join('; ')}` : ''}
+SE qualquer uma dessas fraquezas existir no texto atual, CORRIJA cirurgicamente.\n`;
+      }
+    }
 
     const tw = target_words || 2000;
 
@@ -91,7 +153,6 @@ Score Gemini anterior: ${rejection_feedback.gemini_score}/10
 VOCÊ DEVE corrigir ESPECIFICAMENTE esses pontos fracos. Não repita os mesmos erros.
 ` : '';
 
-    // Build consensus improvements context
     const consensusContext = consensus_improvements?.length > 0 ? `
 🎯 CONSENSO DAS IAs — MELHORIAS OBRIGATÓRIAS:
 Ambas as IAs (GPT e Gemini) concordaram que esses pontos DEVEM ser melhorados:
@@ -100,7 +161,6 @@ ${consensus_improvements.map((imp: string, i: number) => `${i+1}. ${imp}`).join(
 APLIQUE TODAS essas melhorias de forma cirúrgica. Elas são a PRIORIDADE MÁXIMA.
 ` : '';
 
-    // Build anti-slop remediation context
     const slopContext = slopCheck.score > 0 ? `
 🚫 ALERTA ANTI-AI-SLOP — ${slopCheck.score} PADRÕES GENÉRICOS DETECTADOS:
 Padrões encontrados no texto: ${slopCheck.matches.join(', ')}
@@ -109,11 +169,12 @@ SUBSTITUA cada ocorrência por linguagem HUMANA, ESPECÍFICA e IMPREVISÍVEL.
 Exemplos de substituição:
 - "Neste vasto universo" → Frase específica sobre o tema
 - "Jornada fascinante" → Detalhe concreto do que acontece
-- "É importante notar" → Eliminir. Vá direto ao ponto
+- "É importante notar" → Elimine. Vá direto ao ponto
 - Superlativos genéricos → Dados específicos ou metáforas originais
 ` : '';
 
-    const systemPrompt = `Você é um EDITOR CIRÚRGICO ULTRA-CONSERVADOR de roteiros para YouTube viral. Sua missão é fazer MICRO-AJUSTES pontuais SEM alterar a história.
+    const systemPrompt = `Você é um EDITOR CIRÚRGICO ULTRA-CONSERVADOR de roteiros para YouTube viral.
+Você é Claude — use sua capacidade natural de entender nuance, tom e voz autoral para PRESERVAR a alma do texto.
 
 ═══ SEU PAPEL: FASE 2 — MICRO-EDITOR (NÃO REESCRITOR) ═══
 - O usuário ESCREVEU ou EDITOU este roteiro com suas próprias mãos
@@ -131,6 +192,8 @@ Exemplos de substituição:
 3. Substituir até 5 frases genéricas/clichês por linguagem mais viva e específica
 4. Adicionar 1-2 perguntas retóricas curtas para criar curiosidade onde está monótono
 5. Melhorar a ÚLTIMA frase (CTA/fechamento) se estiver fraca
+6. Aplicar "Show Don't Tell" em até 3 frases que DESCREVEM emoções em vez de mostrá-las
+7. Corrigir ritmo: se há 3+ frases longas seguidas, quebrar 1-2 em frases curtas
 
 ❌ PROIBIÇÕES ABSOLUTAS:
 1. NÃO reescreva parágrafos inteiros — só pode alterar FRASES INDIVIDUAIS
@@ -155,11 +218,12 @@ ${topHooks.slice(0, 500)}
 ${rejectionContext}
 ${consensusContext}
 ${slopContext}
+${pastRejectionBlock}
 
 📊 PROCESSO OBRIGATÓRIO:
 1. Leia o roteiro COMPLETO
-2. Identifique no MÁXIMO 3 frases individuais que podem ser melhoradas
-3. Faça micro-edições CIRÚRGICAS nessas frases
+2. Identifique no MÁXIMO 5 pontos que podem ser melhorados (priorizando fraquezas dos avaliadores se houver)
+3. Faça micro-edições CIRÚRGICAS nesses pontos
 4. NÃO TOQUE em nada mais
 5. Compare mentalmente: se o autor lesse seu texto editado, ele reconheceria como SEU texto? Se não → você editou demais
 
@@ -176,8 +240,50 @@ APENAS texto de narração. ZERO anotações técnicas, ZERO marcações de "mel
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
-    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from Gemini Pro...`);
+    const userMessage = `ROTEIRO DO USUÁRIO (NÃO reescreva! NÃO mude a história!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Faça NO MÁXIMO 5 micro-edições em frases individuais. Preserve 90-95% do texto EXATAMENTE como está. A história, enredo e tom são INTOCÁVEIS. Retorne o roteiro COMPLETO.`;
 
+    // ═══ PRIMARY: Claude Sonnet 4 (same engine as generation for voice consistency)
+    if (CLAUDE_API_KEY) {
+      console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from CLAUDE SONNET 4...`);
+      
+      const maxTokens = Math.max(8000, Math.round(tw * 1.5) + 2000);
+      
+      const refineRes = await fetch(CLAUDE_API_URL, {
+        method: "POST",
+        headers: {
+          "x-api-key": CLAUDE_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+          stream: true,
+        }),
+      });
+
+      if (!refineRes.ok) {
+        const errText = await refineRes.text();
+        console.error(`[PHASE-2 REFINE] runId=${runId} Claude error:`, refineRes.status, errText);
+        if (refineRes.status === 429) return errResp("Rate limit Claude. Aguarde.", 429);
+        if (refineRes.status === 529) return errResp("Claude sobrecarregado. Tente novamente.", 529);
+        // Fall through to Gemini fallback below
+        console.warn(`[PHASE-2 REFINE] runId=${runId} Claude failed, trying Gemini fallback...`);
+      } else {
+        const transformedStream = claudeStreamToOpenAIStream(refineRes.body!);
+        return new Response(transformedStream, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+    }
+
+    // ═══ FALLBACK: Gemini via Lovable AI Gateway
+    if (!LOVABLE_API_KEY) throw new Error("No fallback API key available");
+    
+    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from Gemini (fallback)...`);
+    
     const refineRes = await fetch(AI_URL, {
       method: "POST",
       headers: {
@@ -189,20 +295,19 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
         stream: true,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `ROTEIRO DO USUÁRIO (NÃO reescreva! NÃO mude a história!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Faça NO MÁXIMO 3 micro-edições em frases individuais. Preserve 90-95% do texto EXATAMENTE como está. A história, enredo e tom são INTOCÁVEIS. Retorne o roteiro COMPLETO.` },
+          { role: "user", content: userMessage },
         ],
       }),
     });
 
     if (!refineRes.ok) {
       const errText = await refineRes.text();
-      console.error(`[PHASE-2 REFINE] runId=${runId} Error:`, refineRes.status, errText);
+      console.error(`[PHASE-2 REFINE] runId=${runId} Gemini error:`, refineRes.status, errText);
       if (refineRes.status === 429) return errResp("Rate limit. Aguarde.", 429);
       if (refineRes.status === 402) return errResp("Créditos insuficientes.", 402);
       throw new Error(`AI Gateway error: ${refineRes.status}`);
     }
 
-    // Pass through SSE stream directly
     return new Response(refineRes.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });

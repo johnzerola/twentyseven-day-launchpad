@@ -32,6 +32,9 @@ FRASES PROIBIDAS (nunca use literalmente):
 - "Prepare-se para ter a mente explodida"
 - "Isso vai mudar tudo que você sabe"
 - "E se eu te dissesse que..." (como gancho genérico sem payoff real)
+- "Mas calma" / "Mas peraí" (usado mais de 1x)
+- "Ficou curioso?" / "Quer saber mais?"
+- "Fique comigo até o final"
 
 PADRÕES DE ESCRITA PROIBIDOS:
 - Parágrafos que começam com "Imagine..." seguido de cenário genérico
@@ -40,8 +43,11 @@ PADRÕES DE ESCRITA PROIBIDOS:
 - Conclusões que repetem a intro quase literalmente
 - Uso excessivo de superlativos ("incrível", "impressionante", "fantástico")
 - Enumerações de adjetivos vazios: "surpreendente, extraordinário e fascinante"
+- Parágrafos de "resumo" que não adicionam nada novo
+- Listas de 3+ itens separados por vírgula sem desenvolvimento
+- Repetir a mesma ideia com sinônimos em frases consecutivas
 
-SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 4):
+SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 5):
 1. Uma analogia ÚNICA e inesperada (comparar algo técnico com algo cotidiano específico — "como quando você abre a geladeira às 3 da manhã e percebe que não tem nada")
 2. Uma confissão ou imperfeição do narrador ("Eu pesquisei isso por 3 semanas e quase desisti quando...")
 3. Um número ESPECÍFICO e estranho em vez de arredondado (em vez de "milhões", diga "2.347.891")
@@ -50,14 +56,62 @@ SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 4):
 6. Um momento de "eu errei" ou "a maioria pensa errado" com dado surpreendente
 7. Frase curta solitária como parágrafo: "Isso não deveria ter acontecido."
 8. Uma pergunta dirigida AO espectador que exige reflexão pessoal real
+9. Um DETALHE SENSORIAL micro-específico (a textura, o cheiro, a temperatura, o som)
+10. Uma CONTRADIÇÃO deliberada que o narrador resolve depois ("Parece loucura. Na verdade, é.")
+
+═══ TÉCNICAS AVANÇADAS DE ROTEIRISMO (CLAUDE MASTERCLASS) ═══
+
+🎭 SHOW, DON'T TELL:
+- ERRADO: "Ele ficou com medo"
+- CERTO: "As mãos dele começaram a tremer. A boca secou. Ele olhou para a porta e calculou quantos passos precisava."
+- SEMPRE descreva reações físicas, comportamentos e ações em vez de emoções abstratas
+
+📐 SUBTEXTO:
+- O que NÃO é dito importa mais que o que é dito
+- Use pausas narrativas carregadas de significado
+- Deixe o espectador DEDUZIR a emoção pela ação, não pela declaração
+
+🎵 RITMO E CADÊNCIA:
+- Alterne frases CURTAS (3-5 palavras) com frases médias (10-15 palavras)
+- NUNCA use 3+ frases longas seguidas — o espectador perde o fôlego
+- Crie "respirações" narrativas: momento tenso → pausa → explosão
+- Use pontuação como ferramenta musical: vírgulas = suspiro, ponto = batida, reticências = suspense
+
+🔄 ARCO DE TENSÃO (Modelo 5-Act):
+- ACT 1 (0-8s): GANCHO IMPOSSÍVEL DE IGNORAR — promessa ou choque
+- ACT 2 (8s-30%): Setup + Stakes — o que está em jogo? Por que importa?
+- ACT 3 (30%-60%): ESCALADA — cada parágrafo aumenta a tensão
+- ACT 4 (60%-85%): CLÍMAX — momento de revelação máxima
+- ACT 5 (85%-100%): RESOLUÇÃO + CTA — satisfação emocional + próximo passo
+- A tensão NUNCA deve diminuir no meio — se cair, insira um micro-hook
+
+🧲 PATTERN INTERRUPTS ORGÂNICOS (não artificiais):
+- Mude ABRUPTAMENTE de perspectiva ("Mas esquece tudo isso. Olha o que aconteceu do outro lado.")
+- Insira um dado CHOCANTE no meio de uma narrativa suave
+- Use humor inesperado em momento tenso (e vice-versa)
+- Faça uma pausa e fale DIRETAMENTE com o espectador em tom íntimo
+- NUNCA use "Mas espera!" — encontre formas orgânicas de interromper o padrão
+
+🎯 CURIOSITY GAPS (Loops Abertos):
+- Abra um loop ANTES de fechar o anterior
+- Máximo 3 loops abertos simultâneos (mais causa confusão)
+- Todo loop DEVE ser fechado antes do final (insatisfação = dislike)
+- Técnica "Promessa-Prova-Payoff": prometa algo → prove com dados → entregue o payoff
+
+💀 DEATH ZONES (onde espectadores saem):
+- 30s: Se não entendeu POR QUE assistir → saída em massa
+- 2-3min: Se a narrativa não escalou → "boring middle" → insira revelação
+- 5-7min: Fadiga de atenção → MAIOR pattern interrupt aqui
+- Pré-final: Se o payoff demora demais → frustração → insira mini-payoff
 
 VOZ DNA — CADA ESTILO TEM PERSONALIDADE:
 - Dopaminérgico: Irreverente, cortante, zero cerimônia. Frases de 3-8 palavras intercaladas com explosões de informação
-- Cinematográfico: Poético sem ser pretensioso. Descrições sensoriais (cheiro, textura, temperatura)
-- Storytelling: Vulnerável. O narrador FALHA, DUVIDA, MUDA de opinião durante a história
-- Documentário: Frio e preciso, mas com momentos de genuína perplexidade humana
-- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating
-- Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada
+- Cinematográfico: Poético sem ser pretensioso. Descrições sensoriais (cheiro, textura, temperatura). Cada frase é um frame.
+- Storytelling: Vulnerável. O narrador FALHA, DUVIDA, MUDA de opinião durante a história. Detalhes que só alguém que viveu saberia.
+- Documentário: Frio e preciso, mas com momentos de genuína perplexidade humana. Dados → reflexão → implicação.
+- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating. Tom de "cara, você não vai acreditar no que aconteceu".
+- Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada. "Eu sei que parece loucura, mas os números não mentem."
+- Mitologia: Épico e grandioso. Cada cena é um quadro de Gustave Doré. Sons do trovão, cheiro de cinzas, peso do destino.
 `;
 
 // ═══════════════════════════════════════════════════════════════
@@ -320,6 +374,58 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
       }
     }
 
+    // ========== FEEDBACK ABSORPTION: Learn from past score-script rejections ==========
+    let rejectionLearningsBlock = '';
+    try {
+      const { data: rejections } = await sb.from("ai_learning")
+        .select("insight")
+        .eq("source", "dual_score_rejection")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      
+      if (rejections && rejections.length > 0) {
+        const patterns: Record<string, number> = {};
+        const weaknessList: string[] = [];
+        const improvementList: string[] = [];
+        
+        for (const r of rejections) {
+          try {
+            const data = JSON.parse(r.insight);
+            // Aggregate weakness patterns
+            for (const w of (data.weaknesses || [])) {
+              const key = w.slice(0, 60);
+              patterns[key] = (patterns[key] || 0) + 1;
+              if (!weaknessList.includes(w)) weaknessList.push(w);
+            }
+            for (const imp of (data.improvements || [])) {
+              if (!improvementList.includes(imp)) improvementList.push(imp);
+            }
+          } catch { /* skip */ }
+        }
+        
+        // Find recurring issues (appeared 2+ times)
+        const recurring = Object.entries(patterns)
+          .filter(([_, count]) => count >= 2)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+        
+        if (recurring.length > 0 || weaknessList.length > 0) {
+          rejectionLearningsBlock = `\n🧠 AUTO-APRENDIZADO — ERROS RECORRENTES DOS ÚLTIMOS ROTEIROS (${rejections.length} avaliações):
+${recurring.length > 0 ? `\n⚠️ PROBLEMAS RECORRENTES (apareceram ${recurring.map(([p, c]) => `${c}x`).join(', ')}):
+${recurring.map(([p, c]) => `• [${c}x] ${p}`).join('\n')}` : ''}
+${weaknessList.length > 0 ? `\n❌ FRAQUEZAS IDENTIFICADAS PELOS AVALIADORES:
+${weaknessList.slice(0, 8).map(w => `• ${w}`).join('\n')}` : ''}
+${improvementList.length > 0 ? `\n✅ MELHORIAS EXIGIDAS PELOS AVALIADORES:
+${improvementList.slice(0, 6).map(i => `• ${i}`).join('\n')}` : ''}
+
+INSTRUÇÃO CRÍTICA: Você DEVE evitar TODOS esses problemas no roteiro que vai escrever.
+Cada fraqueza listada acima é um erro REAL detectado pelos avaliadores GPT e Gemini.
+Se você repetir qualquer um deles, o roteiro será REJEITADO novamente.\n`;
+          console.log(`[PHASE-1 DRAFT] runId=${runId} Absorbed ${rejections.length} rejection learnings, ${recurring.length} recurring patterns`);
+        }
+      }
+    } catch (e) { console.warn("Rejection learning fetch error:", e); }
+
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
@@ -537,12 +643,58 @@ Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do rot
 - FOQUE em criar narrativa com ALMA e estrutura sólida
 - O usuário vai editar seu texto antes de passar para a próxima fase
 
-═══ VANTAGENS CLAUDE PARA ROTEIROS ═══
-1. PROFUNDIDADE EMOCIONAL: Cada parágrafo deve carregar PESO emocional. Não descreva emoções — faça o leitor SENTIR.
-2. NUANCE HUMANA: Contradições, hesitações, mudanças de opinião são BEM-VINDAS. Humanos são complexos.
-3. VOZ AUTÊNTICA: Evite patterns de IA a todo custo. Escreva como alguém que VIVEU o que está narrando.
-4. ESTRUTURA NARRATIVA: Use arcos dramáticos reais (setup → conflito → escalada → clímax → resolução inesperada).
-5. DETALHES SENSORIAIS: Cheiro de café queimado, barulho de chuva no telhado, a textura áspera de papel velho.
+═══ MASTERCLASS CLAUDE — ROTEIROS QUE PRENDEM ═══
+
+🧬 DNA DE UM ROTEIRO VIRAL (anatomia):
+1. GANCHO MAGNÉTICO (0-8s): Uma frase que faz o cérebro dizer "preciso saber mais"
+   - Técnica "Cold Open": Comece no CLÍMAX e volte ("3 horas antes, ele ainda não sabia que...")
+   - Técnica "Dato Impossível": Um número/fato que desafia a intuição
+   - Técnica "Conflito Imediato": Duas forças opostas na primeira frase
+   
+2. PROMESSA IMPLÍCITA (8-30s): O espectador precisa saber O QUE vai ganhar ficando
+   - NÃO diga "neste vídeo vou falar sobre" — MOSTRE o valor com uma mini-revelação
+   
+3. ESCALADA CONSTANTE (30s-80%): Cada novo parágrafo MAIS intenso que o anterior
+   - Teste: "O que acabei de ler é mais interessante que o parágrafo anterior?" Se não → reescreva
+   - Micro-hooks a cada 45-60s: mini-revelações que recompensam quem ficou
+   
+4. CLÍMAX (80-90%): O momento que justifica todo o vídeo ter existido
+   - Deve ser INESPERADO mas INEVITÁVEL (quando chega, o espectador pensa "claro!")
+   
+5. RESOLUÇÃO + ECO (90-100%): Satisfação + pergunta que fica na cabeça
+   - Conecte o final ao gancho inicial (estrutura circular)
+   - CTA natural que emerge da narrativa, não que interrompe
+
+🎭 PRINCÍPIOS DE ESCRITA (nível profissional):
+
+SHOW DON'T TELL SEMPRE:
+- ❌ "A cidade era perigosa"
+- ✅ "Três sirenes em cinco minutos. Uma poça escura no asfalto que ninguém olhava duas vezes."
+
+ESPECIFICIDADE > GENERALIDADE:
+- ❌ "Ele ganhou muito dinheiro"
+- ✅ "Ele depositou $847.000 numa conta que abriu com $50 de saldo"
+
+TRANSIÇÕES INVISÍVEIS:
+- ❌ "Agora vamos falar sobre..." / "O próximo ponto é..."
+- ✅ Use a última ideia do parágrafo anterior como ponte para o próximo
+- Técnica "Gancho-Ponte": termine com pergunta → responda no parágrafo seguinte
+
+RITMO RESPIRATÓRIO:
+- 3 frases curtas (tensão) → 1 frase média (desenvolvimento) → 1 frase curta (impacto)
+- NUNCA mais que 4 linhas sem uma "pausa narrativa" (frase curta isolada)
+- Exemplo: "E foi aí que ele percebeu. \\n\\n Não tinha volta."
+
+EMOÇÃO EM CAMADAS:
+- Camada 1: FATO (o que aconteceu)
+- Camada 2: IMPLICAÇÃO (por que isso importa)
+- Camada 3: REFLEXÃO (o que isso diz sobre nós)
+- Roteiros virais operam nas 3 camadas. Roteiros mediocres ficam na camada 1.
+
+DIÁLOGO INTERNO DO NARRADOR:
+- Inclua momentos onde o narrador hesita, questiona, muda de opinião
+- "Eu ia dizer que isso é impossível. Mas então eu vi os dados."
+- Isso cria CONEXÃO — o espectador sente que está pensando junto
 
 🧠 CONHECIMENTO YOUTUBE (algoritmo):
 ${ytKnowledge.slice(0, 2500)}
@@ -586,6 +738,7 @@ ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
 ${referenceBlock}
+${rejectionLearningsBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
@@ -626,12 +779,19 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 ⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.
 `}
 
-═══ LEMBRETE FINAL: ALMA DO ROTEIRO ═══
-O YouTube detecta e penaliza conteúdo genérico com baixo "Valued Watch Time".
-Seu roteiro deve fazer o espectador SENTIR algo — raiva, espanto, riso, medo, curiosidade genuína.
-Se ao ler seu texto você sente que "qualquer IA escreveria isso", REESCREVA.
-O teste é simples: uma pessoa real pausaria o que está fazendo para ouvir isso?
-Você é Claude. Mostre que a escrita criativa de verdade tem ALMA.`;
+═══ CHECKLIST FINAL ANTES DE ENVIAR ═══
+☐ O gancho faz o cérebro PRECISAR saber mais? (não apenas "querer")
+☐ Cada parágrafo é mais intenso que o anterior?
+☐ Tem pelo menos 5 "Sinais de Alma"?
+☐ Zero frases proibidas da lista anti-slop?
+☐ Show don't tell em TODAS as emoções?
+☐ Transições invisíveis (sem "agora vamos falar sobre")?
+☐ O final conecta ao gancho? (estrutura circular)
+☐ Uma pessoa REAL pausaria o que está fazendo para ouvir isso?
+
+Você é Claude. Sua escrita tem PROFUNDIDADE que outras IAs não alcançam.
+Cada frase deve carregar PESO — emocional, informativo ou narrativo.
+Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     const userMessage = isShort
       ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
