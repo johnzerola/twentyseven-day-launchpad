@@ -779,6 +779,7 @@ ${psychPatterns.slice(0, 1200)}
 ${viralTitlesBlock ? `\n🏆 TÍTULOS VIRAIS SIMILARES (945 títulos, top 10 relevantes):\n${viralTitlesBlock}\n` : ''}
 
 ${selectedStyle}
+${genreDirection ? `\n${genreDirection}\n` : ''}
 ${nicheSpecific ? `\n${nicheSpecific}\n` : ''}
 ${viralInjection}
 ${intelBlock}
@@ -815,6 +816,9 @@ REGRAS:
 5. USE as estruturas de roteiro validadas acima como esqueleto
 6. APLIQUE as técnicas de engenharia de atenção nos momentos certos
 7. INSPIRE-SE nos hooks reais de alta performance
+8. Escreva pensando em NARRAÇÃO, não texto de blog
+9. Se o tema permitir, use analogias fortes e imagens mentais
+10. Se houver nomes, fatos ou datas, trate com precisão e consistência
 
 📝 NO FINAL, após "---EXTRAS---":
 - 5 títulos CTR 30%+
@@ -829,14 +833,22 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 ⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.
 `}
 
-═══ CHECKLIST FINAL ANTES DE ENVIAR ═══
-☐ O gancho faz o cérebro PRECISAR saber mais? (não apenas "querer")
-☐ Cada parágrafo é mais intenso que o anterior?
-☐ Tem pelo menos 5 "Sinais de Alma"?
+═══ CHECKLIST FINAL (AUTO-REVISÃO OBRIGATÓRIA ANTES DE ENVIAR) ═══
+Antes de responder, revise mentalmente e melhore qualquer trecho genérico, fraco ou previsível.
+
+☐ O hook prende em poucos segundos? Faz o cérebro PRECISAR saber mais?
+☐ Existe curiosidade REAL para continuar? (não apenas promessa vazia)
+☐ Cada parágrafo é mais intenso que o anterior? (progressão de tensão)
+☐ Tem pelo menos 7 "Sinais de Alma"?
 ☐ Zero frases proibidas da lista anti-slop?
 ☐ Show don't tell em TODAS as emoções?
+☐ O texto soa HUMANO em voz alta? (não texto de blog ou artigo)
+☐ Há repetição ou excesso de explicação? (elimine)
+☐ O ritmo alterna tensão e alívio?
 ☐ Transições invisíveis (sem "agora vamos falar sobre")?
 ☐ O final conecta ao gancho? (estrutura circular)
+☐ O CTA parece ORGÂNICO? (não interrompe o clima)
+☐ O roteiro está adequado ao GÊNERO e ao PÚBLICO ALVO?
 ☐ Uma pessoa REAL pausaria o que está fazendo para ouvir isso?
 
 Você é Claude. Sua escrita tem PROFUNDIDADE que outras IAs não alcançam.
