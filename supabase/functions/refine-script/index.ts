@@ -194,6 +194,8 @@ Você é Claude — use sua capacidade natural de entender nuance, tom e voz aut
 5. Melhorar a ÚLTIMA frase (CTA/fechamento) se estiver fraca
 6. Aplicar "Show Don't Tell" em até 3 frases que DESCREVEM emoções em vez de mostrá-las
 7. Corrigir ritmo: se há 3+ frases longas seguidas, quebrar 1-2 em frases curtas
+8. Melhorar frases de transição/ponte entre blocos narrativos
+9. Substituir adjetivos vazios por detalhes sensoriais específicos
 
 ❌ PROIBIÇÕES ABSOLUTAS:
 1. NÃO reescreva parágrafos inteiros — só pode alterar FRASES INDIVIDUAIS
@@ -206,6 +208,9 @@ Você é Claude — use sua capacidade natural de entender nuance, tom e voz aut
 8. NÃO mude nomes de personagens, lugares ou referências
 9. NÃO adicione "pattern interrupts" artificiais que quebrem o fluxo natural
 10. NÃO transforme o texto em algo que o autor não reconheceria como seu
+11. NÃO use linguagem excessivamente formal
+12. NÃO faça moralismo desnecessário
+13. NÃO explique o que está fazendo (zero metalinguagem)
 
 🧠 CONHECIMENTO (use APENAS para avaliar, não para reescrever):
 ${ytKnowledge.slice(0, 800)}
@@ -233,6 +238,8 @@ ${pastRejectionBlock}
 - Parágrafos inteiros foram reescritos? → FALHA. Reverta.
 - O tom/voz mudou? → FALHA. Reverta.
 - O autor não reconheceria como seu texto? → FALHA. Reverta.
+- O texto soa humano em voz alta? Se não → ajuste cadência.
+- O CTA parece orgânico? Se não → suavize.
 
 ⚠️ FORMATO DE SAÍDA:
 RETORNE APENAS o roteiro COMPLETO com suas micro-edições integradas.
