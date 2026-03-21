@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback only
 
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
@@ -59,6 +60,102 @@ VOZ DNA — CADA ESTILO TEM PERSONALIDADE:
 - Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada
 `;
 
+// ═══════════════════════════════════════════════════════════════
+// CLAUDE STREAMING ADAPTER — Convert Anthropic SSE → OpenAI SSE
+// So the frontend doesn't need any changes
+// ═══════════════════════════════════════════════════════════════
+function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = claudeBody.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = '';
+
+  return new ReadableStream({
+    async pull(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          // Send [DONE] marker like OpenAI
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          try {
+            const event = JSON.parse(jsonStr);
+
+            // Claude content_block_delta → OpenAI chunk format
+            if (event.type === 'content_block_delta' && event.delta?.text) {
+              const openAIChunk = {
+                choices: [{
+                  delta: { content: event.delta.text },
+                  index: 0,
+                  finish_reason: null,
+                }],
+              };
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(openAIChunk)}\n\n`));
+            }
+
+            // Claude message_stop → signal done
+            if (event.type === 'message_stop') {
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
+              reader.cancel();
+              return;
+            }
+          } catch {
+            // skip malformed JSON
+          }
+        }
+      }
+    },
+    cancel() {
+      reader.cancel();
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLAUDE API HELPERS
+// ═══════════════════════════════════════════════════════════════
+async function callClaude(apiKey: string, system: string, userMessage: string, stream: boolean, maxTokens = 16000) {
+  return fetch(CLAUDE_API_URL, {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: "user", content: userMessage }],
+      stream,
+    }),
+  });
+}
+
+async function callClaudeNonStreaming(apiKey: string, system: string, userMessage: string, maxTokens = 4000): Promise<string> {
+  const res = await callClaude(apiKey, system, userMessage, false, maxTokens);
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("[CLAUDE] Non-streaming error:", res.status, t);
+    throw new Error(`Claude API error: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -81,16 +178,21 @@ serve(async (req) => {
 
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
+
+    // ═══ CLAUDE API KEY (primary) ═══
+    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
+    if (!CLAUDE_API_KEY) throw new Error("CLAUDE_API_KEY not configured — required for script generation");
+
+    // Lovable AI key for fallback hook generation only
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const runId = phaseId || crypto.randomUUID();
-    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min`);
+    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min ENGINE=CLAUDE`);
 
-    const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
 
+    // ═══ FETCH ALL KNOWLEDGE IN PARALLEL ═══
     const [
       ytRes, scriptRes, channelRes, triggersRes, formatsRes, psychPatternsRes,
       hookRes, structRes, attEngRes, attLibRes, viralTitlesRes, voiceRes, backtestRes
@@ -116,12 +218,10 @@ serve(async (req) => {
         .order("attention_score", { ascending: false }).limit(10),
       sb.from("viral_titles_db" as any).select("title,views,why_viral,title_pattern,niche")
         .order("views", { ascending: false }).limit(20),
-      // Channel Voice Profile (if user has one)
       currentUserId
         ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers")
             .eq("user_id", currentUserId).order("last_analyzed_at", { ascending: false }).limit(1).maybeSingle()
         : Promise.resolve({ data: null }),
-      // Backtesting corrections (most recent lessons)
       sb.from("ai_learning").select("insight")
         .eq("source", "backtest-scores")
         .order("created_at", { ascending: false }).limit(5),
@@ -170,12 +270,12 @@ serve(async (req) => {
     const scoredTitles = (viralTitlesRes.data || []).map((t: any) => {
       let score = 0;
       const titleLC = (t.title || '').toLowerCase();
-      const nicheLC = (t.niche || '').toLowerCase();
+      const nicheLC2 = (t.niche || '').toLowerCase();
       for (const w of topicWords) {
         if (titleLC.includes(w)) score += 10;
-        if (nicheLC.includes(w)) score += 5;
+        if (nicheLC2.includes(w)) score += 5;
       }
-      if (niche && nicheLC.includes(niche.toLowerCase())) score += 15;
+      if (niche && nicheLC2.includes(niche.toLowerCase())) score += 15;
       if (styleLC && (t.title_pattern || '').toLowerCase().includes(styleLC)) score += 5;
       return { ...t, matchScore: score };
     }).sort((a: any, b: any) => b.matchScore - a.matchScore);
@@ -280,7 +380,6 @@ INSTRUÇÃO: Use estas informações como contexto adicional sobre o canal. Adap
     if (referenceScript?.trim()) {
       const refWordCount = referenceScript.split(/\s+/).filter(Boolean).length;
       if (refWordCount > 500) {
-        // It's a full script — use as base, improve without rewriting
         referenceBlock = `\n📜 ROTEIRO DE REFERÊNCIA DO USUÁRIO (${refWordCount} palavras):
 O usuário forneceu um roteiro completo como referência. Sua missão:
 1. MANTENHA a essência, estrutura narrativa e enredo INTACTOS
@@ -293,7 +392,6 @@ ROTEIRO DE REFERÊNCIA:
 ${referenceScript.slice(0, 15000)}
 \n`;
       } else {
-        // It's an idea/synopsis — develop it into a full script
         referenceBlock = `\n💡 IDEIA/SINOPSE DO USUÁRIO:
 O usuário forneceu uma ideia ou sinopse que DEVE ser a base do roteiro:
 ${referenceScript.slice(0, 8000)}
@@ -341,7 +439,6 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
 
     // ═══════════════════════════════════════════════════════
     // PHASE CACHE: Check if a previous run was interrupted
-    // If Phase 0 hook was already generated, reuse it
     // ═══════════════════════════════════════════════════════
     const phaseCache: Record<string, string> = {};
     try {
@@ -357,17 +454,15 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     } catch { /* no cache — fresh run */ }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 0: Hook Generation (non-streaming, fast model)
-    // CONTRACT: Receives topic+style+language → Returns 60s hook text
-    // OUTPUT: Pure narration text, no metadata, no instructions
+    // PHASE 0: Hook Generation (Claude non-streaming, fast)
     // ═══════════════════════════════════════════════════════
-    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation...`);
+    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via CLAUDE...`);
     let hookText = phaseCache['phase0'] || '';
     if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
     } else {
-    try {
-      const hookSystemPrompt = `Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR para YouTube. Idioma: ${language}. Estilo: ${style}.
+      try {
+        const hookSystemPrompt = `Você é um roteirista ELITE de YouTube. Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR. Idioma: ${language}. Estilo: ${style}.
 
 🎯 HOOKS DE REFERÊNCIA REAIS (use como inspiração, NÃO copie):
 ${hookLibrary.slice(0, 1500)}
@@ -380,53 +475,74 @@ ${viralInjection}${intelBlock}${creativeWarning}
 ${ANTI_SLOP_DIRECTIVE}
 
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
-Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
+Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.
+IMPORTANTE: Você é Claude — use sua força natural de escrita criativa, nuance emocional e voz humana autêntica.`;
 
-      const hookRes2 = await fetch(AI_URL, {
-        method: "POST", headers: aiHeaders,
-        body: JSON.stringify({
-          model: "openai/gpt-5-mini",
-          messages: [
-            { role: "system", content: hookSystemPrompt },
-            { role: "user", content: `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.` }
-          ],
-          stream: false,
-        }),
-      });
-      if (hookRes2.ok) {
-        const d = await hookRes2.json();
-        hookText = d.choices?.[0]?.message?.content || '';
-        console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars`);
-        // Cache the hook for retry/recovery
+        hookText = await callClaudeNonStreaming(
+          CLAUDE_API_KEY,
+          hookSystemPrompt,
+          `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
+          2000
+        );
+        console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via CLAUDE`);
+
+        // Cache the hook
         await sb.from("research_cache").upsert({
           cache_key: `script_phase0:${runId}`,
           source: "generate-script",
           result_json: { hook: hookText },
-          expires_at: new Date(Date.now() + 2 * 3600000).toISOString(), // 2h TTL
+          expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
           query: `phase0:${topic?.slice(0, 50)}`,
         }, { onConflict: "cache_key" }).catch(() => {});
+      } catch (e) {
+        console.warn(`[PHASE-0 HOOK] runId=${runId} Claude error, trying fallback:`, e);
+        // Fallback to Lovable AI if Claude fails for hook
+        if (LOVABLE_API_KEY) {
+          try {
+            const fallbackRes = await fetch(AI_URL, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "openai/gpt-5-mini",
+                messages: [
+                  { role: "system", content: `Crie hook de 60s para YouTube. Idioma: ${language}. Estilo: ${style}. APENAS texto falado.` },
+                  { role: "user", content: `Hook para: "${topic}"` }
+                ],
+                stream: false,
+              }),
+            });
+            if (fallbackRes.ok) {
+              const d = await fallbackRes.json();
+              hookText = d.choices?.[0]?.message?.content || '';
+              console.log(`[PHASE-0 HOOK] runId=${runId} Fallback OK: ${hookText.length} chars`);
+            }
+          } catch (fe) { console.warn("[PHASE-0 HOOK] Fallback also failed:", fe); }
+        }
       }
-    } catch (e) { console.warn(`[PHASE-0 HOOK] runId=${runId} Error:`, e); }
-    } // end of hookText cache else block
+    }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 1: Full Draft Generation (streaming, Gemini Flash)
-    // CONTRACT: Receives all knowledge + Phase 0 hook → Streams full script
-    // INPUT: Phase 0 hook is INJECTED as opening, not as instruction
-    // OUTPUT: Pure narration + ---EXTRAS--- + ---SCENE_BLUEPRINT---
-    // The draft is RAW and will be refined in Phase 2 (refine-script)
-    // This function does NOT call Phase 2 or Phase 3.
+    // PHASE 1: Full Draft via CLAUDE (streaming)
+    // Claude Sonnet 4 — superior creative writing & nuance
     // ═══════════════════════════════════════════════════════
     const hookInjection = hookText ? `\n🎯 HOOK PRÉ-GERADO (USE COMO BASE dos primeiros 60s — você pode melhorar mas NÃO descarte):\n${hookText}\n` : '';
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
+Você é Claude — sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.
 
 ═══ SEU PAPEL NESTA FASE ═══
 Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do roteiro.
-- NÃO avalie o roteiro (isso é trabalho do FASE 3)
+- NÃO avalie o roteiro (isso é trabalho do FASE 3 — GPT e Gemini avaliam)
 - NÃO refine cirurgicamente (isso é trabalho do FASE 2)
 - FOQUE em criar narrativa com ALMA e estrutura sólida
 - O usuário vai editar seu texto antes de passar para a próxima fase
+
+═══ VANTAGENS CLAUDE PARA ROTEIROS ═══
+1. PROFUNDIDADE EMOCIONAL: Cada parágrafo deve carregar PESO emocional. Não descreva emoções — faça o leitor SENTIR.
+2. NUANCE HUMANA: Contradições, hesitações, mudanças de opinião são BEM-VINDAS. Humanos são complexos.
+3. VOZ AUTÊNTICA: Evite patterns de IA a todo custo. Escreva como alguém que VIVEU o que está narrando.
+4. ESTRUTURA NARRATIVA: Use arcos dramáticos reais (setup → conflito → escalada → clímax → resolução inesperada).
+5. DETALHES SENSORIAIS: Cheiro de café queimado, barulho de chuva no telhado, a textura áspera de papel velho.
 
 🧠 CONHECIMENTO YOUTUBE (algoritmo):
 ${ytKnowledge.slice(0, 2500)}
@@ -470,7 +586,6 @@ ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
 ${referenceBlock}
-${backtestBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
@@ -515,34 +630,33 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 O YouTube detecta e penaliza conteúdo genérico com baixo "Valued Watch Time".
 Seu roteiro deve fazer o espectador SENTIR algo — raiva, espanto, riso, medo, curiosidade genuína.
 Se ao ler seu texto você sente que "qualquer IA escreveria isso", REESCREVA.
-O teste é simples: uma pessoa real pausaria o que está fazendo para ouvir isso?`;
+O teste é simples: uma pessoa real pausaria o que está fazendo para ouvir isso?
+Você é Claude. Mostre que a escrita criativa de verdade tem ALMA.`;
 
-    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from Gemini Flash with FULL knowledge...`);
-    const phase1Res = await fetch(AI_URL, {
-      method: "POST", headers: aiHeaders,
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: isShort
-            ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
-            : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!`
-          }
-        ],
-        stream: true,
-      }),
-    });
+    const userMessage = isShort
+      ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
+      : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!`;
+
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from CLAUDE SONNET 4...`);
+
+    // Calculate max_tokens based on target words (roughly 1.3 tokens per word for PT-BR)
+    const maxTokens = Math.max(8000, Math.round(targetWords * 1.5) + 2000);
+
+    const phase1Res = await callClaude(CLAUDE_API_KEY, systemPrompt, userMessage, true, maxTokens);
 
     if (!phase1Res.ok) {
-      if (phase1Res.status === 429) return errResp("Rate limit. Tente novamente.", 429);
-      if (phase1Res.status === 402) return errResp("Créditos insuficientes.", 402);
-      const t = await phase1Res.text();
-      console.error(`[PHASE-1 DRAFT] runId=${runId} Error:`, phase1Res.status, t);
-      throw new Error("Script generation failed");
+      const errText = await phase1Res.text();
+      console.error(`[PHASE-1 DRAFT] runId=${runId} Claude error:`, phase1Res.status, errText);
+      if (phase1Res.status === 429) return errResp("Rate limit Claude. Tente novamente em alguns segundos.", 429);
+      if (phase1Res.status === 529) return errResp("Claude sobrecarregado. Tente novamente.", 529);
+      throw new Error(`Claude API error: ${phase1Res.status}`);
     }
 
-    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client...`);
-    return new Response(phase1Res.body, {
+    // Convert Claude's SSE stream to OpenAI-compatible format (frontend expects OpenAI format)
+    const transformedStream = claudeStreamToOpenAIStream(phase1Res.body!);
+
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client (Claude → OpenAI format)...`);
+    return new Response(transformedStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
 
