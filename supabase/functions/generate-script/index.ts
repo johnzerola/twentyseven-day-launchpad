@@ -374,6 +374,58 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
       }
     }
 
+    // ========== FEEDBACK ABSORPTION: Learn from past score-script rejections ==========
+    let rejectionLearningsBlock = '';
+    try {
+      const { data: rejections } = await sb.from("ai_learning")
+        .select("insight")
+        .eq("source", "dual_score_rejection")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      
+      if (rejections && rejections.length > 0) {
+        const patterns: Record<string, number> = {};
+        const weaknessList: string[] = [];
+        const improvementList: string[] = [];
+        
+        for (const r of rejections) {
+          try {
+            const data = JSON.parse(r.insight);
+            // Aggregate weakness patterns
+            for (const w of (data.weaknesses || [])) {
+              const key = w.slice(0, 60);
+              patterns[key] = (patterns[key] || 0) + 1;
+              if (!weaknessList.includes(w)) weaknessList.push(w);
+            }
+            for (const imp of (data.improvements || [])) {
+              if (!improvementList.includes(imp)) improvementList.push(imp);
+            }
+          } catch { /* skip */ }
+        }
+        
+        // Find recurring issues (appeared 2+ times)
+        const recurring = Object.entries(patterns)
+          .filter(([_, count]) => count >= 2)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+        
+        if (recurring.length > 0 || weaknessList.length > 0) {
+          rejectionLearningsBlock = `\n🧠 AUTO-APRENDIZADO — ERROS RECORRENTES DOS ÚLTIMOS ROTEIROS (${rejections.length} avaliações):
+${recurring.length > 0 ? `\n⚠️ PROBLEMAS RECORRENTES (apareceram ${recurring.map(([p, c]) => `${c}x`).join(', ')}):
+${recurring.map(([p, c]) => `• [${c}x] ${p}`).join('\n')}` : ''}
+${weaknessList.length > 0 ? `\n❌ FRAQUEZAS IDENTIFICADAS PELOS AVALIADORES:
+${weaknessList.slice(0, 8).map(w => `• ${w}`).join('\n')}` : ''}
+${improvementList.length > 0 ? `\n✅ MELHORIAS EXIGIDAS PELOS AVALIADORES:
+${improvementList.slice(0, 6).map(i => `• ${i}`).join('\n')}` : ''}
+
+INSTRUÇÃO CRÍTICA: Você DEVE evitar TODOS esses problemas no roteiro que vai escrever.
+Cada fraqueza listada acima é um erro REAL detectado pelos avaliadores GPT e Gemini.
+Se você repetir qualquer um deles, o roteiro será REJEITADO novamente.\n`;
+          console.log(`[PHASE-1 DRAFT] runId=${runId} Absorbed ${rejections.length} rejection learnings, ${recurring.length} recurring patterns`);
+        }
+      }
+    } catch (e) { console.warn("Rejection learning fetch error:", e); }
+
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
