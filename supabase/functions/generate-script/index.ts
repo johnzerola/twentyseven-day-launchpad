@@ -32,6 +32,9 @@ FRASES PROIBIDAS (nunca use literalmente):
 - "Prepare-se para ter a mente explodida"
 - "Isso vai mudar tudo que você sabe"
 - "E se eu te dissesse que..." (como gancho genérico sem payoff real)
+- "Mas calma" / "Mas peraí" (usado mais de 1x)
+- "Ficou curioso?" / "Quer saber mais?"
+- "Fique comigo até o final"
 
 PADRÕES DE ESCRITA PROIBIDOS:
 - Parágrafos que começam com "Imagine..." seguido de cenário genérico
@@ -40,8 +43,11 @@ PADRÕES DE ESCRITA PROIBIDOS:
 - Conclusões que repetem a intro quase literalmente
 - Uso excessivo de superlativos ("incrível", "impressionante", "fantástico")
 - Enumerações de adjetivos vazios: "surpreendente, extraordinário e fascinante"
+- Parágrafos de "resumo" que não adicionam nada novo
+- Listas de 3+ itens separados por vírgula sem desenvolvimento
+- Repetir a mesma ideia com sinônimos em frases consecutivas
 
-SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 4):
+SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 5):
 1. Uma analogia ÚNICA e inesperada (comparar algo técnico com algo cotidiano específico — "como quando você abre a geladeira às 3 da manhã e percebe que não tem nada")
 2. Uma confissão ou imperfeição do narrador ("Eu pesquisei isso por 3 semanas e quase desisti quando...")
 3. Um número ESPECÍFICO e estranho em vez de arredondado (em vez de "milhões", diga "2.347.891")
@@ -50,14 +56,62 @@ SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 4):
 6. Um momento de "eu errei" ou "a maioria pensa errado" com dado surpreendente
 7. Frase curta solitária como parágrafo: "Isso não deveria ter acontecido."
 8. Uma pergunta dirigida AO espectador que exige reflexão pessoal real
+9. Um DETALHE SENSORIAL micro-específico (a textura, o cheiro, a temperatura, o som)
+10. Uma CONTRADIÇÃO deliberada que o narrador resolve depois ("Parece loucura. Na verdade, é.")
+
+═══ TÉCNICAS AVANÇADAS DE ROTEIRISMO (CLAUDE MASTERCLASS) ═══
+
+🎭 SHOW, DON'T TELL:
+- ERRADO: "Ele ficou com medo"
+- CERTO: "As mãos dele começaram a tremer. A boca secou. Ele olhou para a porta e calculou quantos passos precisava."
+- SEMPRE descreva reações físicas, comportamentos e ações em vez de emoções abstratas
+
+📐 SUBTEXTO:
+- O que NÃO é dito importa mais que o que é dito
+- Use pausas narrativas carregadas de significado
+- Deixe o espectador DEDUZIR a emoção pela ação, não pela declaração
+
+🎵 RITMO E CADÊNCIA:
+- Alterne frases CURTAS (3-5 palavras) com frases médias (10-15 palavras)
+- NUNCA use 3+ frases longas seguidas — o espectador perde o fôlego
+- Crie "respirações" narrativas: momento tenso → pausa → explosão
+- Use pontuação como ferramenta musical: vírgulas = suspiro, ponto = batida, reticências = suspense
+
+🔄 ARCO DE TENSÃO (Modelo 5-Act):
+- ACT 1 (0-8s): GANCHO IMPOSSÍVEL DE IGNORAR — promessa ou choque
+- ACT 2 (8s-30%): Setup + Stakes — o que está em jogo? Por que importa?
+- ACT 3 (30%-60%): ESCALADA — cada parágrafo aumenta a tensão
+- ACT 4 (60%-85%): CLÍMAX — momento de revelação máxima
+- ACT 5 (85%-100%): RESOLUÇÃO + CTA — satisfação emocional + próximo passo
+- A tensão NUNCA deve diminuir no meio — se cair, insira um micro-hook
+
+🧲 PATTERN INTERRUPTS ORGÂNICOS (não artificiais):
+- Mude ABRUPTAMENTE de perspectiva ("Mas esquece tudo isso. Olha o que aconteceu do outro lado.")
+- Insira um dado CHOCANTE no meio de uma narrativa suave
+- Use humor inesperado em momento tenso (e vice-versa)
+- Faça uma pausa e fale DIRETAMENTE com o espectador em tom íntimo
+- NUNCA use "Mas espera!" — encontre formas orgânicas de interromper o padrão
+
+🎯 CURIOSITY GAPS (Loops Abertos):
+- Abra um loop ANTES de fechar o anterior
+- Máximo 3 loops abertos simultâneos (mais causa confusão)
+- Todo loop DEVE ser fechado antes do final (insatisfação = dislike)
+- Técnica "Promessa-Prova-Payoff": prometa algo → prove com dados → entregue o payoff
+
+💀 DEATH ZONES (onde espectadores saem):
+- 30s: Se não entendeu POR QUE assistir → saída em massa
+- 2-3min: Se a narrativa não escalou → "boring middle" → insira revelação
+- 5-7min: Fadiga de atenção → MAIOR pattern interrupt aqui
+- Pré-final: Se o payoff demora demais → frustração → insira mini-payoff
 
 VOZ DNA — CADA ESTILO TEM PERSONALIDADE:
 - Dopaminérgico: Irreverente, cortante, zero cerimônia. Frases de 3-8 palavras intercaladas com explosões de informação
-- Cinematográfico: Poético sem ser pretensioso. Descrições sensoriais (cheiro, textura, temperatura)
-- Storytelling: Vulnerável. O narrador FALHA, DUVIDA, MUDA de opinião durante a história
-- Documentário: Frio e preciso, mas com momentos de genuína perplexidade humana
-- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating
-- Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada
+- Cinematográfico: Poético sem ser pretensioso. Descrições sensoriais (cheiro, textura, temperatura). Cada frase é um frame.
+- Storytelling: Vulnerável. O narrador FALHA, DUVIDA, MUDA de opinião durante a história. Detalhes que só alguém que viveu saberia.
+- Documentário: Frio e preciso, mas com momentos de genuína perplexidade humana. Dados → reflexão → implicação.
+- Reddit: Caótico, digressões que voltam ao ponto, humor self-deprecating. Tom de "cara, você não vai acreditar no que aconteceu".
+- Conspiração: Paranóico mas lúcido. Alterna fatos verificáveis com especulação rotulada. "Eu sei que parece loucura, mas os números não mentem."
+- Mitologia: Épico e grandioso. Cada cena é um quadro de Gustave Doré. Sons do trovão, cheiro de cinzas, peso do destino.
 `;
 
 // ═══════════════════════════════════════════════════════════════
