@@ -164,12 +164,19 @@ RULES:
       }
     }
 
-    // Free base64 after transcription phase to reclaim memory
-    resolvedBase64 = '';
-
-    // Strategy B: Fallback to Lovable Gateway (only works with URL)
+    // Strategy B: Fallback to Lovable Gateway using audio as data URL
     if (!transcribeData) {
       console.log("Falling back to Lovable Gateway for transcription...");
+      
+      // Build a data URL from base64 so the gateway can process audio properly
+      const audioDataUrl = resolvedBase64
+        ? `data:${resolvedMime};base64,${resolvedBase64}`
+        : null;
+      
+      if (!audioDataUrl) {
+        throw new Error("Não foi possível processar o áudio. Tente novamente.");
+      }
+
       const transcribeResponse = await retryFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -200,10 +207,7 @@ RULES:
               role: "user",
               content: [
                 { type: "text", text: "Transcribe this audio with timestamps per sentence. Return ONLY a JSON array." },
-                ...(audioUrl
-                  ? [{ type: "image_url", image_url: { url: audioUrl } }]
-                  : [{ type: "text", text: "No audio URL available. Please respond with an empty array []." }]
-                )
+                { type: "image_url", image_url: { url: audioDataUrl } }
               ]
             }
           ],
@@ -220,6 +224,9 @@ RULES:
 
       transcribeData = await transcribeResponse.json();
     }
+
+    // Free base64 after all transcription strategies
+    resolvedBase64 = '';
     let transcriptText = transcribeData.choices?.[0]?.message?.content || "";
     console.log("Raw transcription (first 500):", transcriptText.slice(0, 500));
 
