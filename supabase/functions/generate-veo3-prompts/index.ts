@@ -28,57 +28,7 @@ const styleGuides: Record<string, string> = {
   'aquarela': 'Watercolor painting style. Soft translucent washes, visible paper grain texture, bleeding color edges, delicate brushwork, organic imperfections. Pastel and earth tone palette.',
 };
 
-// ═══ TRIGGER WORDS — Auto-replacement map ═══
-const TRIGGER_REPLACEMENTS: Record<string, string> = {
-  'gun': 'defensive stance',
-  'weapon': 'tactical equipment',
-  'pistol': 'holstered sidearm implied',
-  'rifle': 'long equipment case',
-  'knife': 'sharp tool',
-  'blade': 'metallic edge',
-  'sword': 'ceremonial object',
-  'blood': 'dark stain',
-  'bleeding': 'distressed expression',
-  'wound': 'bandaged area',
-  'injury': 'visible pain expression',
-  'gore': 'aftermath scene',
-  'visceral': 'intense emotional',
-  'dead': 'covered shape on ground',
-  'corpse': 'white sheet covering form',
-  'cadaver': 'memorial scene',
-  'dying': 'fading consciousness',
-  'naked': 'draped in fabric',
-  'nude': 'artistically covered',
-  'punch': 'aggressive forward motion',
-  'kick': 'defensive movement',
-  'hit': 'forceful gesture',
-  'attack': 'confrontational stance',
-  'assault': 'tense confrontation',
-  'beat': 'rhythmic motion',
-  'drugs': 'mysterious substance',
-  'cocaine': 'white powder implied',
-  'heroin': 'controlled substance implied',
-  'needle': 'medical instrument',
-  'injection': 'medical procedure',
-};
-
-const TRIGGER_WORDS = Object.keys(TRIGGER_REPLACEMENTS);
-
-function scanAndFixTriggerWords(prompt: string): { fixed: string; warnings: string[] } {
-  const warnings: string[] = [];
-  let fixed = prompt;
-  const lower = prompt.toLowerCase();
-  for (const tw of TRIGGER_WORDS) {
-    if (lower.includes(tw)) {
-      const regex = new RegExp(`\\b${tw}\\b`, 'gi');
-      fixed = fixed.replace(regex, TRIGGER_REPLACEMENTS[tw]);
-      warnings.push(`Replaced "${tw}" → "${TRIGGER_REPLACEMENTS[tw]}"`);
-    }
-  }
-  return { fixed, warnings };
-}
-
-const ANTI_TEXT_SUFFIX = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+// Trigger words and anti-text imported from shared filter
 
 // ═══ DarkPlanner v3 Prompt Density Formula — Veo3 = 8s clips ═══
 // CRITICAL: Each Veo3 video clip is ONLY 8 seconds. So for an 80s audio → minimum 10 prompts.
