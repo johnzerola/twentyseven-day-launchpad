@@ -265,35 +265,19 @@ NEVER include ANY of these in prompts:
 - NO subtitles, NO text, NO titles, NO captions
 - NO logos, NO watermarks, NO signatures  
 - NO on-screen graphics, NO lower thirds, NO burned-in text, NO UI elements
-- NO letters, NO words, NO writing of ANY kind
-- EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+- EVERY prompt MUST end with: "${ANTI_TEXT_SUFFIX}"
 - EVERY negativePrompt MUST include: "subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements"
 ═══════════════════════════════════════
+
+${VEO3_POLICY_PROMPT}
 
 ═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION (DarkPlanner v3) ═══
 NEVER include explicit violence, visible weapons, blood/gore, death scenes, nudity.
 
-🚫 TRIGGER WORDS — NEVER USE IN ANY PROMPT:
-gun, weapon, pistol, rifle, knife, blade, sword, blood, bleeding, wound, injury, gore, visceral,
-dead, corpse, body, cadaver, dying, naked, nude, sex, sexual, breast, genitals,
-punch, kick, hit, attack, assault, beat, drugs, cocaine, heroin, needle, injection
-
 ADAPTATION TECHNIQUES (use these instead):
-• VIOLENCE → TENSION/CONSEQUENCE:
-  ❌ "punching victim, blood spattering"
-  ✅ "aggressive body language, clenched fists at sides, high tension atmosphere, no physical contact shown, aftermath implied by expressions"
-• WEAPONS → IMPLICATION:
-  ❌ "pointing gun at suspect"
-  ✅ "defensive stance, hand at holster, intense focused expression, no weapons visible in frame"
-• DEATH → MEMORIAL/AFTERMATH:
-  ❌ "dead body lying on ground"
-  ✅ "white sheet covering shape on ground, police tape cordoning area, grief visible, respectful framing showing aftermath"
-• ACCIDENTS → EMERGENCY RESPONSE:
-  ❌ "car crash with injured people"
-  ✅ "damaged vehicle with shattered glass, emergency lights flashing, paramedics arriving, no injuries visible"
-• RITUAL/SACRIFICE → CULTURAL RESPECT:
-  ❌ "cutting animal's throat"
-  ✅ "holding animal respectfully in ceremonial gesture, cultural ritual documented respectfully, focus on spiritual moment"
+• VIOLENCE → TENSION/CONSEQUENCE: "aggressive body language, clenched fists, no physical contact shown"
+• WEAPONS → IMPLICATION: "defensive stance, hand at holster, no weapons visible"
+• DEATH → MEMORIAL/AFTERMATH: "white sheet covering shape, grief visible, respectful framing"
 ═══════════════════════════════════════
 
 ═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
