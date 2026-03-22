@@ -82,34 +82,27 @@ serve(async (req) => {
 🎨 MANDATORY ART STYLE: ${selectedStyle}
 ${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
 
-🚫 ZERO TOLERANCE: NEVER include text/subtitles/logos. End EVERY prompt with: "${ANTI_TEXT}"
+🚫 ZERO TOLERANCE: NEVER include text/subtitles/logos. End EVERY prompt with: "${ANTI_TEXT_SUFFIX}"
 
-═══ TRIGGER WORDS — NEVER USE: gun, weapon, knife, blood, dead, corpse, naked, punch, kick, attack, drugs, needle
-Use adaptation techniques instead (tension/implication/aftermath).
+${VEO3_POLICY_PROMPT}
 
 ═══ DARKPLANNER v3 RULES ═══
 
 1. PROMPT LENGTH: 150-250 words (MINIMUM 150). Detailed = better generation.
-
 2. STYLE FIDELITY: START every prompt with the art style descriptor. Match exactly.
-
 3. MANDATORY MOVEMENT TRIO — Every prompt:
    🎭 CHARACTER: walking, turning, reaching, trembling, breathing heavily
    🎥 CAMERA: pushing in, pulling back, panning, circling, tracking, crane
    🌿 ENVIRONMENT: wind blowing, leaves falling, water flowing, smoke rising, dust floating
-
 4. ENVIRONMENT DETAIL — PREVENT WHITE BACKGROUNDS:
    - Specific location with MATERIALS/TEXTURES
    - VISIBLE SURROUNDINGS
    - LIGHT SOURCE + DIRECTION
    - ATMOSPHERIC ELEMENTS
    - SMALL PROPS for realism
-   ❌ "Person in a room"
-   ✅ "Person in modest kitchen with chipped tile counter, old appliances, warm afternoon light through curtained window, dust motes floating"
-
 5. Style modifiers + anti-text at END of every prompt.
 6. ALL PROMPTS IN ENGLISH.
-7. FORMAT: NO numbering, NO scene titles, NO "CENA 1:". Just raw prompt text.`
+7. FORMAT: NO numbering, NO scene titles. Just raw prompt text.`
           },
           {
             role: "user",
