@@ -30,7 +30,7 @@ function extractTranscript(xml: string): string {
   return textMatches
     .map(m => m.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'))
     .join(' ')
-    .slice(0, 8000);
+    .slice(0, 4000);
 }
 
 function extractTimedTranscript(xml: string): { text: string; start: number; dur: number }[] {
@@ -102,16 +102,11 @@ serve(async (req) => {
     const durationMinutes = Math.round(durationSeconds / 60);
 
     // ═══ CAPTURE VIDEO FRAMES ═══
-    // YouTube auto-generates 3 thumbnail captures at ~25%, 50%, 75% of the video
+    // Limit to 2 frames to reduce payload size and prevent timeouts
     const thumbnailUrl = video.snippet.thumbnails?.maxres?.url || video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.medium?.url || '';
-    const frameUrls = [
-      thumbnailUrl, // Main thumbnail (custom or auto)
-      `https://i.ytimg.com/vi/${videoId}/hq1.jpg`, // ~25% of video
-      `https://i.ytimg.com/vi/${videoId}/hq2.jpg`, // ~50% of video  
-      `https://i.ytimg.com/vi/${videoId}/hq3.jpg`, // ~75% of video
-    ].filter(Boolean);
+    // Use only thumbnail to minimize payload and prevent timeouts
+    const frameUrls = [thumbnailUrl].filter(Boolean);
 
-    // Validate which frames are actually accessible
     const frameChecks = await Promise.allSettled(
       frameUrls.map(async (url) => {
         const res = await fetch(url, { method: 'HEAD' });
@@ -122,26 +117,25 @@ serve(async (req) => {
       .map(r => r.status === 'fulfilled' ? r.value : null)
       .filter(Boolean) as string[];
     
-    console.log(`Captured ${validFrames.length} video frames for visual analysis`);
+    console.log(`Captured ${validFrames.length} frames for analysis`);
 
-    // ═══ BUILD TIMED TRANSCRIPT BLOCKS for scene mapping ═══
-    // CRITICAL: Veo3 clips = 8 seconds. Scene blocks must match that density.
-    const sceneDuration = 8; // 8s per Veo3 clip — full coverage
-    const expectedScenes = Math.max(6, Math.ceil(durationSeconds / sceneDuration));
+    // ═══ BUILD TIMED TRANSCRIPT BLOCKS ═══
+    // Use 20s blocks for analysis (detailed 8s scenes are generated later in script pipeline)
+    const analysisSceneDuration = 20;
+    const expectedScenes = Math.max(4, Math.min(30, Math.ceil(durationSeconds / analysisSceneDuration)));
     
     let timedBlocks = '';
     if (timedTranscript.length > 0) {
-      // Group transcript by scene blocks
       const blocks: { startTime: number; endTime: number; text: string }[] = [];
       for (let i = 0; i < expectedScenes; i++) {
-        const blockStart = i * sceneDuration;
-        const blockEnd = Math.min((i + 1) * sceneDuration, durationSeconds);
+        const blockStart = i * analysisSceneDuration;
+        const blockEnd = Math.min((i + 1) * analysisSceneDuration, durationSeconds);
         const wordsInBlock = timedTranscript
           .filter(w => w.start >= blockStart && w.start < blockEnd)
           .map(w => w.text)
           .join(' ');
         if (wordsInBlock.trim()) {
-          blocks.push({ startTime: blockStart, endTime: blockEnd, text: wordsInBlock.slice(0, 300) });
+          blocks.push({ startTime: blockStart, endTime: blockEnd, text: wordsInBlock.slice(0, 200) });
         }
       }
       timedBlocks = blocks
@@ -149,54 +143,28 @@ serve(async (req) => {
         .join('\n');
     }
 
-    // 3. Build multimodal messages with ALL captured frames
-    const imageContent: any[] = validFrames.map((url, i) => ({
+    const imageContent: any[] = validFrames.map((url) => ({
       type: "image_url",
       image_url: { url },
     }));
 
-    const frameDescriptions = validFrames.map((_, i) => {
-      if (i === 0) return "Thumbnail principal";
-      const pct = i * 25;
-      const time = formatTimestamp(Math.round(durationSeconds * pct / 100));
-      return `Frame ~${pct}% (${time})`;
-    }).join(', ');
+    const frameDescriptions = validFrames.map((_, i) => 
+      i === 0 ? "Thumbnail" : "Frame ~50%"
+    ).join(', ');
 
     const messages: any[] = [
       {
         role: "system",
-        content: `Você é o maior especialista em YouTube do mundo — CEO com 25 anos, 1000+ canais monetizados.
-Faça uma ENGENHARIA REVERSA COMPLETA para CLONAR este vídeo usando o protocolo DarkPlanner v3.
+        content: `Você é especialista em YouTube com 25 anos de experiência. Faça engenharia reversa completa para clonar este vídeo.
 
-MISSÃO CRÍTICA: O vídeo original tem ${durationMinutes} minutos (${durationSeconds} segundos).
-O clone DEVE ter a MESMA duração. 
+Vídeo: ${durationMinutes}min (${durationSeconds}s). Gere ${expectedScenes} blocos de cena.
+Cada visual_prompt: 80-120 palavras, termine com "(no subtitles, no text, no logos, no watermarks)".
 
-═══ REGRA VEO3 — CADA CLIP = 8 SEGUNDOS ═══
-Para ${durationSeconds}s de vídeo → gere EXATAMENTE ${expectedScenes} cenas de 8s cada.
-Cada cena DEVE:
-1. Ter visual_prompt de 150-200 palavras (DarkPlanner v3 standard)
-2. CORRESPONDER ao conteúdo narrado naquele timestamp exato
-3. Incluir: câmera + iluminação + ambiente detalhado + movimento
-4. Terminar com: "(no subtitles, no text, no titles, no captions, no logos, no watermarks)"
-
-═══ TÉCNICAS DARKPLANNER v3 ═══
-• CHARACTER CONSISTENCY: Descrição VERBATIM de personagens em TODA cena
-• MOVEMENT TRIO: Personagem + Câmera + Ambiente em movimento em CADA cena
-• ANTI-WHITE BACKGROUND: Sempre detalhar texturas, materiais, iluminação
-• HOOK MAGNÉTICO: Cena 1 = mais espetacular (mistério + escala + movimento)
-• POLICY COMPLIANCE: Adaptar conteúdo sensível (tensão em vez de violência)
-
-${VEO3_POLICY_PROMPT}
-
-═══ NARRATION-VISUAL SYNC ═══
-Cada cena DEVE ilustrar o que está sendo dito na narração naquele momento:
-- Objeto mencionado → MOSTRAR literalmente
-- Conceito abstrato → Metáfora visual
-- Emoção → Temperatura de cor correspondente
-- NUNCA usar visuais genéricos desconectados da narração
-
-Você está recebendo ${validFrames.length} FRAMES do vídeo (${frameDescriptions}).
-ANALISE cada frame para extrair o DNA visual completo.
+REGRAS CRÍTICAS para visual_prompt:
+- NUNCA use nomes de personagens protegidos (Simpsons, Mickey, Goku etc.) — descreva pela APARÊNCIA FÍSICA
+- NUNCA use nomes de celebridades/políticos — descreva pela aparência
+- NUNCA use nomes de marcas — descreva genericamente
+- Inclua movimento de câmera + ambiente detalhado + iluminação
 
 Responda em português BR.`
       },
@@ -205,38 +173,32 @@ Responda em português BR.`
         content: [
           {
             type: "text",
-            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3 + DarkPlanner
+            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3
 
-DADOS DO VÍDEO:
-- Título: "${video.snippet.title}"
-- Canal: "${video.snippet.channelTitle}" (${formatNumber(channelSubs)} subs)
-- Views: ${formatNumber(views)} | Likes: ${formatNumber(likes)} | Comentários: ${formatNumber(comments)}
-- Outlier Score: ${outlierScore}x
-- Publicado: ${video.snippet.publishedAt}
-- DURAÇÃO EXATA: ${durationMinutes} minutos (${durationSeconds} segundos)
-- Tags: ${(video.snippet.tags || []).slice(0, 20).join(', ')}
-- Descrição: ${video.snippet.description?.slice(0, 600)}
-${transcript ? `\nTRANSCRIÇÃO:\n${transcript}` : '\n(Transcrição não disponível)'}
-${timedBlocks ? `\nTRANSCRIÇÃO COM TIMESTAMPS:\n${timedBlocks}` : ''}
+VÍDEO: "${video.snippet.title}"
+Canal: "${video.snippet.channelTitle}" (${formatNumber(channelSubs)} subs)
+Views: ${formatNumber(views)} | Likes: ${formatNumber(likes)} | Comentários: ${formatNumber(comments)}
+Outlier: ${outlierScore}x | Duração: ${durationMinutes}min (${durationSeconds}s)
+Tags: ${(video.snippet.tags || []).slice(0, 15).join(', ')}
+Descrição: ${video.snippet.description?.slice(0, 400)}
+${transcript ? `\nTRANSCRIÇÃO:\n${transcript.slice(0, 5000)}` : ''}
+${timedBlocks ? `\nTIMESTAMPS:\n${timedBlocks}` : ''}
 
-ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
-1. HOOK (5-30s): tipo, texto, psicologia, score
-2. RETENÇÃO: estrutura por fases com timestamps EXATOS
-3. DNA: formato, tom emocional, gatilhos, persona, nicho
-4. TÍTULO & THUMBNAIL: CTR score, power words, análise visual
-5. ESTILO VISUAL COMPLETO: com base nos frames
-6. TIMELINE DE CENAS: EXATAMENTE ${expectedScenes} cenas de 8s cobrindo os ${durationMinutes} minutos COMPLETOS
-   - Cada cena com visual_prompt de 150-200 palavras (DarkPlanner v3)
-   - Visual prompt DEVE corresponder ao que é NARRADO naquele timestamp
-   - Incluir câmera, iluminação, ambiente, movimento, anti-text
-7. CLONAGEM: template + roteiro da MESMA duração (${durationMinutes}min, ~${durationMinutes * 150} palavras)
-   - scriptOutline DEVE ser um roteiro COMPLETO com todas as seções
-   - hookScript com Chekhov's Gun e Inner Monologue techniques`
+GERE:
+1. HOOK: tipo, texto, psicologia, score
+2. RETENÇÃO: fases com timestamps
+3. DNA: formato, tom, gatilhos, persona, nicho
+4. TÍTULO & THUMBNAIL: CTR score, power words
+5. ESTILO VISUAL: baseado nos frames
+6. ${expectedScenes} CENAS cobrindo ${durationMinutes}min completos
+7. TEMPLATE DE CLONAGEM: roteiro de ${durationMinutes}min (~${durationMinutes * 150} palavras)`
           },
           ...imageContent,
         ]
       }
     ];
+
+
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -347,87 +309,48 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
                 },
                 visualDNA: {
                   type: "object",
-                  description: "Extracted from analyzing actual video frames",
                   properties: {
-                    colorPalette: { type: "array", items: { type: "string" }, description: "Exact colors seen in frames (hex or descriptive)" },
+                    colorPalette: { type: "array", items: { type: "string" } },
                     lightingStyle: { type: "string" },
                     cameraPatterns: { type: "array", items: { type: "string" } },
-                    textOnScreenStyle: { type: "string", description: "Font style, size, position of text overlays" },
-                    imageTypes: { type: "array", items: { type: "string" }, description: "Types of images used: photos, illustrations, maps, diagrams, etc." },
-                    backgroundStyle: { type: "string" },
-                    overallAesthetic: { type: "string", description: "One-paragraph description of the complete visual identity" },
-                    referenceStylePrompt: { type: "string", description: "A MASTER PROMPT that captures the entire visual style — use this as prefix for all scene prompts to maintain consistency" },
-                    frameAnalysis: {
-                      type: "array",
-                      description: "Analysis of each captured frame",
-                      items: {
-                        type: "object",
-                        properties: {
-                          framePosition: { type: "string" },
-                          description: { type: "string" },
-                          keyElements: { type: "array", items: { type: "string" } },
-                          mood: { type: "string" },
-                        },
-                        required: ["framePosition", "description", "keyElements", "mood"],
-                        additionalProperties: false,
-                      }
-                    },
+                    imageTypes: { type: "array", items: { type: "string" } },
+                    overallAesthetic: { type: "string" },
+                    referenceStylePrompt: { type: "string", description: "Master style prompt to prefix all scene prompts for consistency" },
                   },
-                  required: ["colorPalette", "lightingStyle", "cameraPatterns", "imageTypes", "overallAesthetic", "referenceStylePrompt", "frameAnalysis"],
+                  required: ["colorPalette", "lightingStyle", "cameraPatterns", "imageTypes", "overallAesthetic", "referenceStylePrompt"],
                   additionalProperties: false,
                 },
                 sceneTimeline: {
                   type: "array",
-                  description: `EXACTLY ${expectedScenes} scenes covering full ${durationMinutes} minutes (${durationSeconds}s)`,
+                  description: `${expectedScenes} scene blocks covering ${durationMinutes} minutes`,
                   items: {
                     type: "object",
                     properties: {
                       sceneIndex: { type: "number" },
-                      startTime: { type: "string", description: "MM:SS format" },
-                      endTime: { type: "string", description: "MM:SS format" },
-                      durationSeconds: { type: "number" },
+                      startTime: { type: "string" },
+                      endTime: { type: "string" },
                       narrationSummary: { type: "string" },
-                      visualDescription: { type: "string", description: "What is SHOWN on screen at this moment" },
-                      visualPrompt: { type: "string", description: "AI image generation prompt to recreate this exact visual. Include style, colors, composition, lighting from the frames." },
-                      cameraAngle: { type: "string" },
+                      visualPrompt: { type: "string", description: "80-120 word prompt: style + subject + action + environment + lighting. End with (no subtitles, no text, no logos, no watermarks)" },
                       mood: { type: "string" },
                       energyLevel: { type: "string", enum: ["low", "medium", "high", "explosive"] },
-                      retentionTechnique: { type: "string" },
-                      textOnScreen: { type: "string" },
-                      transitionToNext: { type: "string" },
                     },
-                    required: ["sceneIndex", "startTime", "endTime", "durationSeconds", "narrationSummary", "visualDescription", "visualPrompt", "mood", "energyLevel"],
+                    required: ["sceneIndex", "startTime", "endTime", "narrationSummary", "visualPrompt", "mood", "energyLevel"],
                     additionalProperties: false,
                   }
-                },
-                rewatchSegments: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      timeRange: { type: "string" },
-                      reason: { type: "string" },
-                      rewatchScore: { type: "number" },
-                      contentSummary: { type: "string" },
-                    },
-                    required: ["timeRange", "reason", "rewatchScore", "contentSummary"],
-                    additionalProperties: false,
-                  },
                 },
                 cloneTemplate: {
                   type: "object",
                   properties: {
                     templateStructure: { type: "string" },
                     titleVariations: { type: "array", items: { type: "string" } },
-                    scriptOutline: { type: "string", description: `COMPLETE script outline for a ${durationMinutes}-minute video. Must have enough content for the FULL duration.` },
+                    scriptOutline: { type: "string", description: `Script outline for ${durationMinutes}-minute video` },
                     estimatedViewsSmallChannel: { type: "string" },
-                    suggestedDuration: { type: "string", description: `MUST be "${durationMinutes} minutos" to match original` },
+                    suggestedDuration: { type: "string" },
                     thumbnailRecipe: { type: "string" },
                     hookScript: { type: "string" },
                     ctaScript: { type: "string" },
-                    wordCountTarget: { type: "number", description: "Words needed at 150wpm for exact duration" },
                   },
-                  required: ["templateStructure", "titleVariations", "scriptOutline", "estimatedViewsSmallChannel", "suggestedDuration", "thumbnailRecipe", "hookScript", "ctaScript"],
+                  required: ["templateStructure", "titleVariations", "scriptOutline", "suggestedDuration", "hookScript"],
                   additionalProperties: false,
                 },
                 scores: {
@@ -442,7 +365,7 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
                   additionalProperties: false,
                 },
               },
-              required: ["hookAnalysis", "retentionMap", "contentDNA", "titleAnalysis", "thumbnailAnalysis", "visualStyle", "visualDNA", "sceneTimeline", "rewatchSegments", "cloneTemplate", "scores"],
+              required: ["hookAnalysis", "retentionMap", "contentDNA", "titleAnalysis", "visualStyle", "visualDNA", "sceneTimeline", "cloneTemplate", "scores"],
               additionalProperties: false,
             },
           },
@@ -503,13 +426,21 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
 
     console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, policy fixes: ${policyFixes.length}`);
 
-    // ═══ AUTO-LEARN ═══
+    // ═══ AUTO-LEARN (fire-and-forget, non-blocking) ═══
     try {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const learnPromises: Promise<any>[] = [];
+      
+      const safeInsert = async (table: string, data: any, opts?: any) => {
+        try {
+          if (opts) await sb.from(table).upsert(data, opts);
+          else await sb.from(table).insert(data);
+        } catch { /* ignore */ }
+      };
+
+      const learnPromises: Promise<void>[] = [];
 
       if (analysis.hookAnalysis?.powerScore >= 7) {
-        learnPromises.push(sb.from("script_knowledge").insert({
+        learnPromises.push(safeInsert("script_knowledge", {
           category: "hook",
           title: `Hook: ${analysis.hookAnalysis.hookType} — "${video.snippet.title}"`,
           content: `${analysis.hookAnalysis.hookText}\n\nPor que funciona: ${analysis.hookAnalysis.whyItWorks}`,
@@ -520,25 +451,22 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
 
       if (analysis.retentionMap?.structure?.length) {
         for (const phase of analysis.retentionMap.structure.filter((p: any) => p.retentionEstimate >= 70).slice(0, 3)) {
-          learnPromises.push(sb.from("script_knowledge").insert({
+          learnPromises.push(safeInsert("script_knowledge", {
             category: "retention_technique",
             title: `${phase.phase} — ${phase.technique}`,
-            content: `Técnica "${phase.technique}" na fase "${phase.phase}" (${phase.timeRange}). Retenção: ${phase.retentionEstimate}%. Vídeo: "${video.snippet.title}".`,
+            content: `Técnica "${phase.technique}" na fase "${phase.phase}" (${phase.timeRange}). Retenção: ${phase.retentionEstimate}%.`,
             effectiveness_score: Math.round(phase.retentionEstimate / 10),
-            examples: JSON.stringify([`${video.snippet.title} (${phase.timeRange})`]),
           }));
         }
       }
 
       if (analysis.contentDNA?.psychTriggers?.length) {
-        learnPromises.push(sb.from("viral_content_library").insert({
+        learnPromises.push(safeInsert("viral_content_library", {
           category: "psychology_triggers",
           content_json: {
             triggers: analysis.contentDNA.psychTriggers,
             source_video: video.snippet.title,
-            source_channel: video.snippet.channelTitle,
             format: analysis.contentDNA.format,
-            emotional_tone: analysis.contentDNA.emotionalTone,
             niche: analysis.contentDNA.nicheCategory,
           },
           language: "en",
@@ -548,60 +476,52 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
       }
 
       if (analysis.visualStyle?.replicabilityAsFaceless >= 60) {
-        learnPromises.push(sb.from("scene_prompt_knowledge").insert({
+        learnPromises.push(safeInsert("scene_prompt_knowledge", {
           category: analysis.visualStyle.primaryStyle.toLowerCase().replace(/\s+/g, '_'),
           title: `Visual: ${analysis.visualStyle.primaryStyle} — "${video.snippet.title}"`,
-          prompt_template: analysis.visualDNA?.referenceStylePrompt || 
-            `Style: ${analysis.visualStyle.primaryStyle}. Colors: ${(analysis.visualDNA?.colorPalette || []).join(', ')}. Lighting: ${analysis.visualDNA?.lightingStyle || ''}. ${analysis.visualDNA?.overallAesthetic || ''}`,
+          prompt_template: analysis.visualDNA?.referenceStylePrompt || `Style: ${analysis.visualStyle.primaryStyle}`,
           viral_score: Math.round(analysis.scores?.virality / 10) || 7,
-          tags: JSON.stringify([analysis.visualStyle.primaryStyle, ...analysis.visualStyle.secondaryStyles || []]),
+          tags: JSON.stringify([analysis.visualStyle.primaryStyle]),
         }));
       }
 
       if (views >= 350000) {
-        learnPromises.push(sb.from("viral_titles_db").insert({
+        learnPromises.push(safeInsert("viral_titles_db", {
           title: video.snippet.title,
           channel_name: video.snippet.channelTitle,
           channel_id: video.snippet.channelId,
           views, likes,
           niche: analysis.contentDNA?.nicheCategory || 'unknown',
           why_viral: analysis.hookAnalysis?.whyItWorks || null,
-          title_pattern: analysis.titleAnalysis?.copywritingTechnique || null,
           emotional_triggers: analysis.contentDNA?.psychTriggers || [],
           seo_score: analysis.titleAnalysis?.ctrScore ? Math.round(analysis.titleAnalysis.ctrScore) : 0,
           published_at: video.snippet.publishedAt,
           duration_seconds: durationSeconds,
-        }).catch(() => {}));
+        }));
       }
 
-      learnPromises.push(sb.from("video_blueprints").upsert({
+      learnPromises.push(safeInsert("video_blueprints", {
         video_id: videoId,
         video_title: video.snippet.title,
         channel_name: video.snippet.channelTitle,
         channel_id: video.snippet.channelId,
         views, likes,
         niche: analysis.contentDNA?.nicheCategory || 'unknown',
-        story_structure: {
-          format: analysis.contentDNA?.format,
-          emotionalTone: analysis.contentDNA?.emotionalTone,
-          targetPersona: analysis.contentDNA?.targetPersona,
-        },
+        story_structure: { format: analysis.contentDNA?.format, emotionalTone: analysis.contentDNA?.emotionalTone },
         hook_type: analysis.hookAnalysis?.hookType || null,
         hook_text: analysis.hookAnalysis?.hookText || null,
         psychological_triggers: analysis.contentDNA?.psychTriggers || [],
         narrative_style: analysis.contentDNA?.format || null,
-        pacing_type: analysis.visualStyle?.editingPace || null,
         visual_style: analysis.visualStyle?.primaryStyle || null,
         scene_structure: analysis.sceneTimeline || [],
         retention_map: analysis.retentionMap || {},
         clone_template: analysis.cloneTemplate || {},
         scores: analysis.scores || {},
-        thumbnail_analysis: analysis.thumbnailAnalysis || {},
         source: 'deep-scan-v3',
-      }, { onConflict: "video_id" }).catch(() => {}));
+      }, { onConflict: "video_id" }));
 
       await Promise.allSettled(learnPromises);
-      console.log(`Auto-learn: saved ${learnPromises.length} insights from "${video.snippet.title}"`);
+      console.log(`Auto-learn: saved ${learnPromises.length} insights`);
     } catch (learnErr) {
       console.error("Auto-learn error (non-fatal):", learnErr);
     }
