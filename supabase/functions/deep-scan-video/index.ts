@@ -521,7 +521,7 @@ GERE:
         scores: analysis.scores || {},
         thumbnail_analysis: analysis.thumbnailAnalysis || {},
         source: 'deep-scan-v3',
-      }, { onConflict: "video_id" }).catch(() => {}));
+      }, { onConflict: "video_id" }).then(() => {}).catch(() => {}));
 
       await Promise.allSettled(learnPromises);
       console.log(`Auto-learn: saved ${learnPromises.length} insights from "${video.snippet.title}"`);
