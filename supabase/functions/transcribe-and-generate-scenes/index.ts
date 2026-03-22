@@ -742,24 +742,70 @@ Do NOT use generic/disconnected visuals. The scene must illustrate the specific 
 
     for (const s of sanitizedScenes) {
       const start = Number(s.startTime) || 0;
-      const end = Number(s.endTime) || start + 6;
+      const end = Number(s.endTime) || start + 8;
       const dur = Math.max(5, Math.min(10, Math.round(Math.max(0.1, end - start))));
       s.startTime = start;
-      s.endTime = end > start ? end : start + 6;
+      s.endTime = end > start ? end : start + 8;
       s.sceneDurationSeconds = dur;
     }
     sanitizedScenes.forEach((s: any, i: number) => {
       s.sceneIndex = i + 1;
     });
 
-    if (sanitizedScenes.length === 0) {
-      throw new Error("Nenhuma cena gerada. Tente novamente.");
+    // ═══ SCENE VALIDATION — Ensure full coverage & minimum density ═══
+    const minimumRequiredScenes = Math.ceil(audioDuration / 8);
+    const validationWarnings: string[] = [];
+
+    // Check: enough scenes to cover full duration?
+    if (sanitizedScenes.length < minimumRequiredScenes) {
+      validationWarnings.push(`⚠️ Only ${sanitizedScenes.length} scenes for ${audioDuration.toFixed(0)}s audio (minimum ${minimumRequiredScenes} needed for 8s Veo3 clips)`);
+      
+      // Fill gaps: generate fallback scenes for uncovered time ranges
+      const lastEnd = sanitizedScenes.length > 0 ? sanitizedScenes[sanitizedScenes.length - 1].endTime : 0;
+      if (lastEnd < audioDuration - 2) {
+        const gapDuration = audioDuration - lastEnd;
+        const gapScenes = Math.ceil(gapDuration / 8);
+        for (let g = 0; g < gapScenes; g++) {
+          const gStart = lastEnd + g * 8;
+          const gEnd = Math.min(lastEnd + (g + 1) * 8, audioDuration);
+          const overlapping = transcriptBlocks.filter(b => b.start < gEnd && b.end > gStart);
+          const gapText = overlapping.map(b => b.text).join(' ').trim() || 'Continuação da narração.';
+          sanitizedScenes.push({
+            sceneIndex: sanitizedScenes.length + 1,
+            sceneDurationSeconds: 8,
+            startTime: +gStart.toFixed(1),
+            endTime: +gEnd.toFixed(1),
+            narrativeText: gapText,
+            narrativeSummary: gapText.split(/\s+/).slice(0, 15).join(' '),
+            visualPrompt: `Cinematic wide shot illustrating: ${gapText.slice(0, 200)}. ${selectedStyleGuide.split('.')[0]}. ${ANTI_TEXT}`,
+            negativePrompt: "no subtitles, no text, no logos, no watermarks",
+            cameraAngle: "wide establishing shot",
+            mood: "cinematográfico",
+            charactersInScene: fallbackCharacters,
+            environmentDetails: "Ambiente coerente com a narração",
+            __gapFill: true,
+          });
+        }
+        validationWarnings.push(`✅ Added ${gapScenes} gap-fill scenes to cover ${gapDuration.toFixed(0)}s uncovered`);
+      }
     }
 
-    const MAX_BLOCKS_IN_RESPONSE = 300;
-    const responseBlocks = transcriptBlocks.length > MAX_BLOCKS_IN_RESPONSE
-      ? transcriptBlocks.slice(0, MAX_BLOCKS_IN_RESPONSE)
-      : transcriptBlocks;
+    // Check: scenes match narration content?
+    let narrativeMismatchCount = 0;
+    for (const scene of sanitizedScenes) {
+      if (scene.narrativeText && scene.visualPrompt) {
+        // Simple check: does the visual prompt contain ANY keywords from the narration?
+        const narrativeWords = (scene.narrativeText as string).toLowerCase().split(/\s+/).filter((w: string) => w.length > 4);
+        const promptLower = (scene.visualPrompt as string).toLowerCase();
+        const hasOverlap = narrativeWords.some((w: string) => promptLower.includes(w));
+        if (!hasOverlap && narrativeWords.length > 3) {
+          narrativeMismatchCount++;
+        }
+      }
+    }
+    if (narrativeMismatchCount > sanitizedScenes.length * 0.3) {
+      validationWarnings.push(`⚠️ ${narrativeMismatchCount}/${sanitizedScenes.length} scenes may not match narration content`);
+    }
 
     console.log(`DONE: ${sanitizedScenes.length} scenes, ${audioDuration.toFixed(1)}s audio`);
 

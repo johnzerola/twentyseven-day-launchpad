@@ -124,7 +124,8 @@ serve(async (req) => {
     console.log(`Captured ${validFrames.length} video frames for visual analysis`);
 
     // ═══ BUILD TIMED TRANSCRIPT BLOCKS for scene mapping ═══
-    const sceneDuration = 30; // seconds per scene block
+    // CRITICAL: Veo3 clips = 8 seconds. Scene blocks must match that density.
+    const sceneDuration = 8; // 8s per Veo3 clip — full coverage
     const expectedScenes = Math.max(6, Math.ceil(durationSeconds / sceneDuration));
     
     let timedBlocks = '';
