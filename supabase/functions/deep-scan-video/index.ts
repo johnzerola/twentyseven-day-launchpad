@@ -155,25 +155,17 @@ serve(async (req) => {
     const messages: any[] = [
       {
         role: "system",
-        content: `Você é o maior especialista em YouTube do mundo — CEO com 25 anos, 1000+ canais monetizados.
-Faça uma ENGENHARIA REVERSA COMPLETA para CLONAR este vídeo usando o protocolo DarkPlanner v3.
+        content: `Você é especialista em YouTube com 25 anos de experiência. Faça engenharia reversa completa para clonar este vídeo.
 
-MISSÃO CRÍTICA: O vídeo original tem ${durationMinutes} minutos (${durationSeconds} segundos).
-O clone DEVE ter a MESMA duração. 
+Vídeo: ${durationMinutes}min (${durationSeconds}s). Gere ${expectedScenes} blocos de cena.
+Cada visual_prompt: 80-120 palavras, termine com "(no subtitles, no text, no logos, no watermarks)".
 
-═══ ANÁLISE DE CENAS ═══
-Gere ${expectedScenes} blocos de cena cobrindo o vídeo completo (${durationMinutes} min).
-Cada bloco com visual_prompt de 80-120 palavras e descrição do que acontece.
-Termine cada visual_prompt com: "(no subtitles, no text, no logos, no watermarks)"
+REGRAS CRÍTICAS para visual_prompt:
+- NUNCA use nomes de personagens protegidos (Simpsons, Mickey, Goku etc.) — descreva pela APARÊNCIA FÍSICA
+- NUNCA use nomes de celebridades/políticos — descreva pela aparência
+- NUNCA use nomes de marcas — descreva genericamente
+- Inclua movimento de câmera + ambiente detalhado + iluminação
 
-${VEO3_POLICY_PROMPT}
-
-═══ TÉCNICAS DARKPLANNER v3 ═══
-• MOVEMENT TRIO em cada cena
-• ANTI-WHITE BACKGROUND: detalhar texturas, materiais, iluminação
-• POLICY COMPLIANCE: tensão em vez de violência
-
-Você está recebendo ${validFrames.length} FRAMES (${frameDescriptions}).
 Responda em português BR.`
       },
       {
