@@ -532,10 +532,10 @@ Analise com profundidade: CTR estimado (5-30%), gatilhos emocionais, SEO score (
               const results = data.web?.results || [];
               if (results.length) {
                 seoTrends = `\n\n🔍 PESQUISA WEB PARA SEO (keywords reais encontradas):\n${results.slice(0, 5).map((r: any) => `• "${r.title}" — ${r.description?.slice(0, 100) || ''}`).join('\n')}\n\nExtraia keywords destes resultados para a descrição SEO.`;
-                await sb.from("research_cache").upsert({
+                try { await sb.from("research_cache").upsert({
                   cache_key: cacheKey, source: "brave", result_json: seoTrends,
                   expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                }, { onConflict: "cache_key,source" }).catch(() => {});
+                }, { onConflict: "cache_key,source" }); } catch { /* non-blocking */ }
               }
             }
           }
