@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,52 +7,24 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// DARKPLANNER v3 — Visual Prompts Engine (Full Training Applied)
+// DARKPLANNER v3 — Visual Prompts Engine (Full Training + Veo3 Policy)
 // ═══════════════════════════════════════════════════════════════
 
 const styleGuides: Record<string, string> = {
-  'cinematográfico': 'Netflix/Disney cinematic. ARRI ALEXA 65, Cooke Anamorphic lenses, Kodak Vision3 500T film emulation, ACES color science. Dramatic lighting, shallow DOF f/1.4-2.8, creamy bokeh. Lifted blacks, subtle halation. Volumetric god rays, atmospheric haze. Reference: Roger Deakins, Bradford Young.',
+  'cinematográfico': 'Netflix/Disney cinematic. ARRI ALEXA 65, Cooke Anamorphic lenses, Kodak Vision3 500T film emulation, ACES color science. Dramatic lighting, shallow DOF f/1.4-2.8, creamy bokeh. Lifted blacks, subtle halation. Volumetric god rays, atmospheric haze.',
   '2d': '2D flat animation, Kurzgesagt-style. Vibrant flat colors, clean vector shapes, bold outlines, parallax depth layers, smooth 24fps feel. NO 3D, NO photorealistic.',
-  '3d': 'Pixar/DreamWorks 3D render. Stylized characters, subsurface scattering, PBR materials, global illumination, strand-based hair, 8K textures.',
-  'anime': 'Anime/manga style. Ufotable/MAPPA/WIT Studio quality, dynamic sakuga poses, Makoto Shinkai backgrounds, cel-shading, rim lighting, volumetric particles, dramatic speed lines.',
+  '3d': '3D render. Stylized characters, subsurface scattering, PBR materials, global illumination, strand-based hair, 8K textures.',
+  'anime': 'Anime/manga style. Dynamic sakuga poses, beautiful backgrounds, cel-shading, rim lighting, volumetric particles, dramatic speed lines.',
   'wojak': 'Wojak/meme internet art style. Simple drawn faces with strong emotional expressions, flat colors, minimalist backgrounds, internet culture aesthetic.',
   'stickmen': 'Stick figure art. Minimalist black line drawings, simple backgrounds, humor through simplicity and timing.',
   'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM lens, 8K resolution, natural available light, pore-level skin detail, strand-level hair. Zero AI artifacts. Documentary-grade realism.',
-  'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accents (cyan, magenta, amber). Dense volumetric fog. Blade Runner 2049 meets Se7en. Noir shadow patterns, wet reflective surfaces.',
+  'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accents (cyan, magenta, amber). Dense volumetric fog. Noir shadow patterns, wet reflective surfaces.',
   'whiteboard': 'Whiteboard animation. Hand-drawn black ink on white surface, strategic color highlights, educational clarity, smooth drawing reveal.',
   'comic': 'Comic book / graphic novel. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, saturated colors, dramatic perspective.',
   'fotorrealista_documentario': 'Documentary photography, natural soft lighting, shallow depth of field, desaturated earth tones, Canon 5D aesthetic.',
   'ilustracao_artistica': 'Fine art illustration. Painterly brushstrokes, rich color palettes, gallery-quality compositions. Classical oil painting meets modern digital art.',
   'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain, bleeding color edges, delicate brushwork, organic imperfections.',
 };
-
-// ═══ TRIGGER WORDS — Auto-replacement ═══
-const TRIGGER_REPLACEMENTS: Record<string, string> = {
-  'gun': 'defensive stance', 'weapon': 'tactical equipment', 'pistol': 'holstered sidearm implied',
-  'rifle': 'long equipment case', 'knife': 'sharp tool', 'blade': 'metallic edge',
-  'sword': 'ceremonial object', 'blood': 'dark stain', 'bleeding': 'distressed expression',
-  'wound': 'bandaged area', 'injury': 'visible pain expression', 'gore': 'aftermath scene',
-  'dead': 'covered shape on ground', 'corpse': 'white sheet covering form', 'dying': 'fading consciousness',
-  'naked': 'draped in fabric', 'nude': 'artistically covered',
-  'punch': 'aggressive forward motion', 'kick': 'defensive movement', 'hit': 'forceful gesture',
-  'attack': 'confrontational stance', 'assault': 'tense confrontation',
-  'drugs': 'mysterious substance', 'needle': 'medical instrument',
-};
-
-function scanAndFixTriggerWords(prompt: string): { fixed: string; warnings: string[] } {
-  const warnings: string[] = [];
-  let fixed = prompt;
-  for (const [tw, replacement] of Object.entries(TRIGGER_REPLACEMENTS)) {
-    const regex = new RegExp(`\\b${tw}\\b`, 'gi');
-    if (regex.test(fixed)) {
-      fixed = fixed.replace(regex, replacement);
-      warnings.push(`"${tw}" → "${replacement}"`);
-    }
-  }
-  return { fixed, warnings };
-}
-
-const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
