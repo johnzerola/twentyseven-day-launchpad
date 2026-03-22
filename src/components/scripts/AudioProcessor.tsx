@@ -347,3 +347,84 @@ export const AudioProcessor = ({
     </div>
   );
 };
+
+// ═══ DarkPlanner v3: Script Pre-Analysis Component (Etapa 1) ═══
+function ScriptPreAnalysis({ script, characters, videoStyle, videoStyles }: {
+  script: string;
+  characters: Character[];
+  videoStyle: string;
+  videoStyles: VideoStyleOption[];
+}) {
+  const analysis = useMemo(() => {
+    if (!script || script.length < 50) return null;
+    const words = script.split(/\s+/).length;
+    const estDurationMin = Math.round(words / 150); // ~150 words/min narration
+    const estDurationSec = estDurationMin * 60;
+
+    // Detect content type
+    const lower = script.toLowerCase();
+    const isDoc = /documentário|documentary|história real|true story|investigação/i.test(lower);
+    const isAction = /perseguição|explosão|corrida|luta|chase|action|fight|escape/i.test(lower);
+    const contentType = isDoc ? 'Documentário' : isAction ? 'Ação' : /ficção|fiction|história|story|conto/i.test(lower) ? 'Ficção' : 'Híbrido';
+
+    // Prompt density
+    const base = estDurationSec / 40;
+    const prompts = isDoc ? Math.round(estDurationSec / 60) : isAction ? Math.round(base * 1.2) : Math.round(base);
+    const clampedPrompts = Math.max(10, Math.min(200, prompts));
+
+    // Sensitive content scan
+    const triggerWords = ['gun', 'arma', 'faca', 'sangue', 'blood', 'morte', 'dead', 'matar', 'kill', 'droga', 'drug', 'violência', 'violence'];
+    const foundTriggers = triggerWords.filter(tw => lower.includes(tw));
+
+    return { words, estDurationMin, contentType, clampedPrompts, foundTriggers, isDoc, charCount: characters.length };
+  }, [script, characters]);
+
+  if (!analysis) return null;
+
+  return (
+    <div className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2">
+      <div className="flex items-center gap-2">
+        <Zap className="w-4 h-4 text-primary" />
+        <span className="text-xs font-bold text-foreground">DarkPlanner v3 — Análise do Roteiro</span>
+        <Badge className="bg-primary/20 text-primary text-[9px]">Auto</Badge>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="bg-background/50 rounded-lg p-2 text-center">
+          <FileText className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-0.5" />
+          <p className="text-[10px] text-muted-foreground">Tipo</p>
+          <p className="text-xs font-bold text-foreground">{analysis.contentType}</p>
+        </div>
+        <div className="bg-background/50 rounded-lg p-2 text-center">
+          <Clock className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-0.5" />
+          <p className="text-[10px] text-muted-foreground">Duração Est.</p>
+          <p className="text-xs font-bold text-foreground">~{analysis.estDurationMin} min</p>
+        </div>
+        <div className="bg-background/50 rounded-lg p-2 text-center">
+          <Sparkles className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-0.5" />
+          <p className="text-[10px] text-muted-foreground">Prompts Est.</p>
+          <p className="text-xs font-bold text-foreground">~{analysis.clampedPrompts}</p>
+        </div>
+        <div className="bg-background/50 rounded-lg p-2 text-center">
+          <Users className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-0.5" />
+          <p className="text-[10px] text-muted-foreground">Personagens</p>
+          <p className="text-xs font-bold text-foreground">{analysis.charCount}</p>
+        </div>
+      </div>
+      {analysis.charCount > 5 && (
+        <div className="flex items-center gap-2 bg-amber-500/10 rounded-lg p-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <p className="text-[10px] text-amber-500">⚠️ Mais de 5 personagens pode reduzir consistência visual. Recomendado: máx 5.</p>
+        </div>
+      )}
+      {analysis.foundTriggers.length > 0 && (
+        <div className="flex items-center gap-2 bg-amber-500/10 rounded-lg p-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <p className="text-[10px] text-amber-500">Conteúdo sensível detectado ({analysis.foundTriggers.join(', ')}). Auto-adaptação será aplicada.</p>
+        </div>
+      )}
+      {analysis.isDoc && (
+        <p className="text-[9px] text-muted-foreground">📹 Modo Documentário: foco em locações e atmosfera, densidade reduzida (~1 prompt/min).</p>
+      )}
+    </div>
+  );
+}

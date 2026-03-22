@@ -695,10 +695,30 @@ Visual content MUST match what is narrated at each timestamp.`,
 
     if (criticalError) throw criticalError;
 
-    // ========== PHASE 5: Merge and validate ==========
+    // ========== PHASE 5: Merge, validate, DarkPlanner v3 post-processing ==========
+    const TRIGGER_FIX: Record<string, string> = {
+      'gun': 'defensive stance', 'weapon': 'tactical equipment', 'knife': 'sharp tool',
+      'blood': 'dark stain', 'dead': 'covered shape', 'corpse': 'white sheet form',
+      'naked': 'draped in fabric', 'punch': 'aggressive motion', 'attack': 'confrontation',
+    };
+    const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+
     const sanitizedScenes = allScenes
       .filter((s: any) => typeof s?.visualPrompt === "string" && s.visualPrompt.trim().length > 0)
-      .map(({ __fallback, ...scene }: any) => scene);
+      .map(({ __fallback, ...scene }: any) => {
+        // DarkPlanner v3: trigger word auto-fix
+        if (typeof scene.visualPrompt === 'string') {
+          for (const [tw, repl] of Object.entries(TRIGGER_FIX)) {
+            const re = new RegExp(`\\b${tw}\\b`, 'gi');
+            scene.visualPrompt = scene.visualPrompt.replace(re, repl);
+          }
+          if (!scene.visualPrompt.includes("no subtitles")) {
+            scene.visualPrompt += ` ${ANTI_TEXT}`;
+          }
+          scene.visualPrompt = scene.visualPrompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '');
+        }
+        return scene;
+      });
 
     sanitizedScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
 

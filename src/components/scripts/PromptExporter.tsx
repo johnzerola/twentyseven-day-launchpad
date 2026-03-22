@@ -1,4 +1,4 @@
-import { Copy } from 'lucide-react';
+import { Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -38,17 +38,44 @@ export const PromptExporter = ({ scenes, characters, topic, videoStyle, language
     toast.success(`📋 ${scenes.length} cenas copiadas! Cole na Prompt List do AutoFlow.`);
   };
 
+  const exportDarkPlannerFormat = () => {
+    // DarkPlanner v3: Character sheets + prompts separated, no numbering
+    const charSheets = characters.length > 0
+      ? `═══ CHARACTER IDENTITY SHEETS ═══\n\n${characters.map(c => {
+          const a = c.appearance || {};
+          const f = c.facial_features || {};
+          const cl = c.clothing || {};
+          return `[${c.name}]: ${c.gender} approximately ${c.age} years old, ${a.body_type} build. Skin: ${a.skin_color} tone with natural pores. Hair: ${a.hair_color} ${a.hair_style}. Eyes: ${a.eye_color} with ${f.eyebrows} eyebrows. Face: ${f.face_shape}, ${f.nose} nose. Clothing: ${cl.shirt}, ${cl.pants}, ${cl.shoes}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}. Always framed waist up.`;
+        }).join('\n\n')}\n\n${'═'.repeat(40)}\n\n`
+      : '';
+
+    const promptsText = scenes.map(scene => scene.visualPrompt).join('\n\n');
+    const fullText = charSheets + promptsText;
+
+    navigator.clipboard.writeText(fullText);
+    toast.success(`📋 DarkPlanner v3: ${characters.length} personagens + ${scenes.length} prompts copiados!`);
+  };
+
   return (
     <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-foreground">🚀 Exportar para AutoFlow</span>
+        <span className="text-sm font-semibold text-foreground">🚀 Exportar Prompts</span>
         <Badge className="bg-primary/20 text-primary text-[10px]">{scenes.length} cenas</Badge>
+        <Badge className="bg-accent/20 text-accent text-[10px]">DarkPlanner v3</Badge>
       </div>
-      <p className="text-[10px] text-muted-foreground">Copia prompts sincronizados no formato AutoFlow. Cole na Prompt List e clique Add to Queue.</p>
-      <Button className="w-full gap-2 h-11 text-sm gradient-hero border-0" onClick={exportToAutoflow}>
-        <Copy className="w-4 h-4" /> 📋 Copiar Cenas ({scenes.length})
-      </Button>
-      <p className="text-[9px] text-muted-foreground text-center">Formato: [V1-S#] image prompt ||| [V1-S#] video prompt</p>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button className="gap-2 h-10 text-xs gradient-hero border-0" onClick={exportToAutoflow}>
+          <Copy className="w-3.5 h-3.5" /> AutoFlow ({scenes.length})
+        </Button>
+        <Button variant="outline" className="gap-2 h-10 text-xs border-primary/30 text-primary hover:bg-primary/10" onClick={exportDarkPlannerFormat}>
+          <Download className="w-3.5 h-3.5" /> DarkPlanner v3
+        </Button>
+      </div>
+
+      <p className="text-[9px] text-muted-foreground text-center">
+        AutoFlow: [V1-S#] image ||| video • DarkPlanner: personagens + prompts separados
+      </p>
     </div>
   );
 };
