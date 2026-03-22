@@ -318,7 +318,10 @@ RULES:
       'wojak': 'Wojak/meme internet art style. Simple drawn faces with exaggerated emotional expressions, flat colors, minimalist backgrounds, internet meme aesthetic.',
       'stickmen': 'Stick figure animation. Minimalist black line drawings, simple backgrounds, hand-drawn feel.',
       'whiteboard': 'Whiteboard animation. Hand-drawn sketches on white. Black ink, educational, clean lines.',
-      'animal_chase': 'HYPER-REALISTIC WILDLIFE SURVIVAL. Shot like National Geographic meets Hollywood thriller. ARRI ALEXA Mini LF, 8K, 120fps slow-motion for chase sequences. Photorealistic animals with visible fur/feather detail, sweat, mud splashes. Dramatic volumetric lighting, golden hour or stormy skies. Handheld camera energy for chase POVs. Extreme close-ups on animal eyes showing fear/determination. Wide epic landscape shots showing the danger. Dust particles, water splashes, debris flying. Color grading: desaturated with punchy warm highlights.',
+      'animal_chase': 'HYPER-REALISTIC WILDLIFE SURVIVAL. National Geographic meets Hollywood thriller. ARRI ALEXA Mini LF, 8K, 120fps slow-motion. Photorealistic animals.',
+      'fotorrealista_documentario': 'Documentary photography, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated earth tones.',
+      'ilustracao_artistica': 'Fine art illustration. Painterly brushstrokes, rich color palettes, gallery-quality compositions.',
+      'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain, bleeding color edges, delicate brushwork.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
     const extraStyle = customStyleNotes ? `\nUSER STYLE INSTRUCTIONS: ${customStyleNotes}` : '';
@@ -692,10 +695,30 @@ Visual content MUST match what is narrated at each timestamp.`,
 
     if (criticalError) throw criticalError;
 
-    // ========== PHASE 5: Merge and validate ==========
+    // ========== PHASE 5: Merge, validate, DarkPlanner v3 post-processing ==========
+    const TRIGGER_FIX: Record<string, string> = {
+      'gun': 'defensive stance', 'weapon': 'tactical equipment', 'knife': 'sharp tool',
+      'blood': 'dark stain', 'dead': 'covered shape', 'corpse': 'white sheet form',
+      'naked': 'draped in fabric', 'punch': 'aggressive motion', 'attack': 'confrontation',
+    };
+    const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+
     const sanitizedScenes = allScenes
       .filter((s: any) => typeof s?.visualPrompt === "string" && s.visualPrompt.trim().length > 0)
-      .map(({ __fallback, ...scene }: any) => scene);
+      .map(({ __fallback, ...scene }: any) => {
+        // DarkPlanner v3: trigger word auto-fix
+        if (typeof scene.visualPrompt === 'string') {
+          for (const [tw, repl] of Object.entries(TRIGGER_FIX)) {
+            const re = new RegExp(`\\b${tw}\\b`, 'gi');
+            scene.visualPrompt = scene.visualPrompt.replace(re, repl);
+          }
+          if (!scene.visualPrompt.includes("no subtitles")) {
+            scene.visualPrompt += ` ${ANTI_TEXT}`;
+          }
+          scene.visualPrompt = scene.visualPrompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '');
+        }
+        return scene;
+      });
 
     sanitizedScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
 

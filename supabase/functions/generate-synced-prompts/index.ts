@@ -140,24 +140,30 @@ serve(async (req) => {
       'whiteboard': 'Whiteboard explainer animation. Hand-drawn black ink on clean white surface. Strategic color highlights for emphasis. Educational clarity, smooth drawing reveal.',
       'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, rich saturated colors, dramatic perspective.',
       'fotorrealista_documentario': 'Documentary photography style, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated color palette with emphasis on earth tones.',
+      'ilustracao_artistica': 'Fine art illustration. Painterly brushstrokes, rich color palettes, gallery-quality compositions. Classical oil painting meets modern digital art.',
+      'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain, bleeding color edges, delicate brushwork, organic imperfections.',
     };
     const selectedStyleGuide = styleGuides[styleLC] || styleGuides['cinematográfico'];
 
-    // ========== Character identity block (DarkPlanner format: 150-200 words, "waist up") ==========
-    const characterBlock = characters?.length > 0
-      ? `\n\n═══ DARKPLANNER CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characters.map((c: any, i: number) => {
+    // ═══ DarkPlanner v3: Detect content type for prompt density ═══
+    const allScriptText = script.toLowerCase();
+    const isDocumentary = /documentário|documentary|história real|true story/i.test(allScriptText);
+    const isAction = /perseguição|explosão|corrida|luta|chase|action|fight|escape/i.test(allScriptText);
+    const contentType = isDocumentary ? 'documentary' : isAction ? 'action' : 'standard';
+
+    // ═══ Character Identity Sheets — DarkPlanner v3 (150-200 words, "waist up") ═══
+    const characterBlock = (!isDocumentary && characters?.length > 0)
+      ? `\n\n═══ DARKPLANNER v3 CHARACTER IDENTITY SHEETS — COPY VERBATIM ═══\n${characters.slice(0, 5).map((c: any) => {
           const a = c.appearance || {};
           const f = c.facial_features || {};
           const cl = c.clothing || {};
           const refImg = c.imageUrl ? `\nREFERENCE IMAGE: ${c.imageUrl} — Match this exact appearance.` : '';
-          return `[${c.name}]: ${c.gender || 'person'} age ${c.age || 'unknown'}, ${a.body_type || 'average'} build, ${a.height || 'average height'}, ${a.skin_color || 'medium'} skin tone with natural pores and micro-imperfections, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, ${a.eye_color || 'brown'} eyes with ${f.eyebrows || 'natural'} eyebrows, ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture, wearing ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}, waist up`;
-        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULES (DarkPlanner):
-- Include FULL character description block in EVERY prompt they appear in
-- Use IDENTICAL wording — NEVER paraphrase, summarize, or vary
-- ❌ WRONG: "wearing yellow dress" then "in her yellow outfit"
-- ✅ RIGHT: Copy EXACT same wording every time
-- Maximum 2 characters per prompt — split into multiple if 3+ needed
-- Character descriptions ALWAYS end with "waist up"`
+          return `[${c.name}]: ${c.gender || 'person'} approximately ${c.age || 'adult'} years old, ${a.body_type || 'average'} build with ${a.height || 'average'} height. Skin: ${a.skin_color || 'medium'} tone with natural pores, micro-imperfections, and subtle texture visible under directional lighting. Hair: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, natural highlights catching light. Eyes: ${a.eye_color || 'brown'} with ${f.eyebrows || 'natural'} eyebrows framing expressive gaze. Face: ${f.face_shape || 'oval'} face shape, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} lips. Clothing: ${cl.shirt || 'casual fitted top'} with visible fabric weave and natural wrinkles, ${cl.pants || 'well-fitted jeans'} with authentic wear patterns, ${cl.shoes || 'clean sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, accessories: ${cl.accessories}` : ''}. Hands show natural calluses and nail detail.${refImg} Always framed waist up.`;
+        }).join('\n\n')}\n\n⚠️ DARKPLANNER v3 ABSOLUTE RULES:
+- COPY FULL character description VERBATIM in EVERY prompt they appear in
+- NEVER paraphrase: "wearing yellow dress" → "in her yellow outfit" = VIOLATION
+- Maximum 2 characters per prompt — split if 3+ needed
+- Always end character with "waist up"`
       : '';
 
     const sceneTexts = scenes.map(s => `Scene ${s.index + 1}: "${s.text}"`).join('\n\n');
@@ -287,10 +293,10 @@ ADAPTATION TECHNIQUES (use these instead):
   ✅ "holding animal respectfully in ceremonial gesture, cultural ritual documented respectfully, focus on spiritual moment"
 ═══════════════════════════════════════
 
-═══ DARKPLANNER PROMPT MASTERY — CRITICAL RULES ═══
+═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
 
 1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Detailed prompts = better Veo3 output.
-
+${isDocumentary ? '\n   DOCUMENTARY MODE ACTIVE: Focus on locations/atmosphere. 1 prompt per ~60s. No character identity sheets needed.\n' : ''}
 2. CHARACTER CONSISTENCY (MOST IMPORTANT RULE):
    - Clothing/appearance COPIED WORD-FOR-WORD from identity sheet
    - ❌ NEVER paraphrase: "wearing yellow dress" → "in her yellow outfit" = WRONG
@@ -458,16 +464,58 @@ SCENES:\n\n${sceneTexts}`
     if (!toolCall) throw new Error("No tool call in response");
     const parsed = JSON.parse(toolCall.function.arguments);
 
+    // ═══ DarkPlanner v3 Post-Processing: Trigger Word Scanner + Auto-Validation ═══
+    const TRIGGER_WORDS_MAP: Record<string, string> = {
+      'gun': 'defensive stance', 'weapon': 'tactical equipment', 'knife': 'sharp tool',
+      'blood': 'dark stain', 'dead': 'covered shape on ground', 'corpse': 'white sheet covering form',
+      'naked': 'draped in fabric', 'punch': 'aggressive forward motion', 'kick': 'defensive movement',
+      'attack': 'confrontational stance', 'drugs': 'mysterious substance',
+    };
+    const validationWarnings: string[] = [];
+    const autoFixes: string[] = [];
+    const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+
+    for (const scene of parsed.scenes) {
+      if (typeof scene.visualPrompt === 'string') {
+        // Trigger word auto-fix
+        for (const [tw, replacement] of Object.entries(TRIGGER_WORDS_MAP)) {
+          const regex = new RegExp(`\\b${tw}\\b`, 'gi');
+          if (regex.test(scene.visualPrompt)) {
+            scene.visualPrompt = scene.visualPrompt.replace(regex, replacement);
+            autoFixes.push(`Scene ${scene.sceneIndex}: "${tw}" → "${replacement}"`);
+          }
+        }
+        // Anti-text suffix
+        if (!scene.visualPrompt.includes("no subtitles")) {
+          scene.visualPrompt += ` ${ANTI_TEXT}`;
+        }
+        // Word count check
+        const wc = scene.visualPrompt.split(/\s+/).length;
+        if (wc < 100) validationWarnings.push(`Scene ${scene.sceneIndex}: ${wc} words (150+ recommended)`);
+        // Max 2 characters check
+        if (scene.charactersInScene?.length > 2) {
+          validationWarnings.push(`Scene ${scene.sceneIndex}: ${scene.charactersInScene.length} characters (max 2)`);
+        }
+        // Remove leaked numbering
+        scene.visualPrompt = scene.visualPrompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '');
+      }
+    }
+
     return new Response(JSON.stringify({
       scenes: parsed.scenes,
       metadata: {
+        system: "DarkPlanner v3",
         totalScenes: scenes.length,
         totalDuration: totalDuration || parsed.scenes.reduce((s: number, sc: any) => s + (sc.sceneDurationSeconds || defaultSceneLen), 0),
         videoStyle: videoStyle || 'cinematográfico',
+        contentType,
         charactersCount: characters?.length || 0,
         knowledgeRecordsUsed: topKnowledge.length,
         retentionTechniquesUsed: scriptKnowledge?.length || 0,
-        viralPatternsUsed: viralPatternsBlock ? true : false,
+        viralPatternsUsed: !!viralPatternsBlock,
+        isDocumentary,
+        validationWarnings,
+        autoFixes,
         dynamicTiming: true,
         veo3Optimized: true,
         antiTextEnforced: true,
