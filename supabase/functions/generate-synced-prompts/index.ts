@@ -293,10 +293,10 @@ ADAPTATION TECHNIQUES (use these instead):
   ✅ "holding animal respectfully in ceremonial gesture, cultural ritual documented respectfully, focus on spiritual moment"
 ═══════════════════════════════════════
 
-═══ DARKPLANNER PROMPT MASTERY — CRITICAL RULES ═══
+═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
 
 1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Detailed prompts = better Veo3 output.
-
+${isDocumentary ? '\n   DOCUMENTARY MODE ACTIVE: Focus on locations/atmosphere. 1 prompt per ~60s. No character identity sheets needed.\n' : ''}
 2. CHARACTER CONSISTENCY (MOST IMPORTANT RULE):
    - Clothing/appearance COPIED WORD-FOR-WORD from identity sheet
    - ❌ NEVER paraphrase: "wearing yellow dress" → "in her yellow outfit" = WRONG

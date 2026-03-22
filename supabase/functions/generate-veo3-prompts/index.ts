@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// DARKPLANNER TRAINING v2 — Professional Video Prompt Engine
-// Based on expert system for DarkPlanner Tools + Veo 3
+// DARKPLANNER v3 — Professional Video Prompt Engine (Full Training)
+// 11-Step Pipeline | Prompt Density Formula | Auto-Validation
 // ═══════════════════════════════════════════════════════════════
 
 const styleGuides: Record<string, string> = {
@@ -21,66 +21,86 @@ const styleGuides: Record<string, string> = {
   'dark': 'Dark noir/cyberpunk. Crushed blacks, neon accent lighting (cyan, magenta, amber). Dense volumetric fog. Blade Runner 2049 meets Se7en. Wet reflective surfaces.',
   'whiteboard': 'Whiteboard animation. Black ink sketches on white, hand-drawn, strategic color highlights. Educational clarity.',
   'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, saturated colors.',
-  'animal_chase': 'HYPER-REALISTIC WILDLIFE SURVIVAL. National Geographic meets Hollywood thriller. ARRI ALEXA Mini LF, 8K, 120fps slow-motion for chase sequences. Photorealistic animals with visible fur/feather detail. Dramatic volumetric lighting, golden hour or stormy skies. Handheld camera energy for chase POVs.',
-  'fotorrealista_documentario': 'Documentary photography style, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated color palette with emphasis on earth tones.',
+  'animal_chase': 'HYPER-REALISTIC WILDLIFE SURVIVAL. National Geographic meets Hollywood thriller. ARRI ALEXA Mini LF, 8K, 120fps slow-motion. Photorealistic animals with visible fur/feather detail. Dramatic volumetric lighting.',
+  'fotorrealista_documentario': 'Documentary photography style, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated earth tones.',
+  'ilustracao_artistica': 'Fine art illustration. Painterly brushstrokes, rich color palettes, visible texture, gallery-quality compositions. Inspired by classical oil painting meets modern digital art.',
+  'aquarela': 'Watercolor painting style. Soft translucent washes, visible paper grain texture, bleeding color edges, delicate brushwork, organic imperfections. Pastel and earth tone palette.',
 };
 
-// ═══ POLICY COMPLIANCE — Content Adaptation Rules ═══
-const POLICY_COMPLIANCE_BLOCK = `
-═══ POLICY COMPLIANCE — ZERO TOLERANCE ═══
-NEVER include in any prompt:
-- Explicit violence (punches, kicks, injuries shown)
-- Visible weapons (guns, knives, rifles, blades)
-- Blood/gore (visible blood, open wounds)
-- Graphic death (bodies, corpses, death scenes)
-- Nudity/sexual content
-- Drug use being shown
-- Child abuse of any kind
+// ═══ TRIGGER WORDS — Auto-replacement map ═══
+const TRIGGER_REPLACEMENTS: Record<string, string> = {
+  'gun': 'defensive stance',
+  'weapon': 'tactical equipment',
+  'pistol': 'holstered sidearm implied',
+  'rifle': 'long equipment case',
+  'knife': 'sharp tool',
+  'blade': 'metallic edge',
+  'sword': 'ceremonial object',
+  'blood': 'dark stain',
+  'bleeding': 'distressed expression',
+  'wound': 'bandaged area',
+  'injury': 'visible pain expression',
+  'gore': 'aftermath scene',
+  'visceral': 'intense emotional',
+  'dead': 'covered shape on ground',
+  'corpse': 'white sheet covering form',
+  'cadaver': 'memorial scene',
+  'dying': 'fading consciousness',
+  'naked': 'draped in fabric',
+  'nude': 'artistically covered',
+  'punch': 'aggressive forward motion',
+  'kick': 'defensive movement',
+  'hit': 'forceful gesture',
+  'attack': 'confrontational stance',
+  'assault': 'tense confrontation',
+  'beat': 'rhythmic motion',
+  'drugs': 'mysterious substance',
+  'cocaine': 'white powder implied',
+  'heroin': 'controlled substance implied',
+  'needle': 'medical instrument',
+  'injection': 'medical procedure',
+};
 
-TRIGGER WORDS TO AVOID: gun, weapon, pistol, rifle, knife, blade, sword, blood, bleeding, wound, injury, gore, dead, corpse, body, cadaver, dying, naked, nude, sex, sexual, punch, kick, hit, attack, assault, beat, drugs, cocaine, heroin, needle, injection, child abuse, minor, inappropriate
+const TRIGGER_WORDS = Object.keys(TRIGGER_REPLACEMENTS);
 
-HOW TO ADAPT SENSITIVE CONTENT:
-- Violence → Show TENSION/CONSEQUENCE: "aggressive body language, clenched fists at sides, high tension atmosphere, no physical contact shown"
-- Weapons → Show IMPLICATION: "defensive stance, hand at holster, intense focused expression, no weapons visible in frame"
-- Death → Show AFTERMATH/MEMORIAL: "white sheet covering shape on ground, police tape, grief visible on face, respectful framing"
-- Accidents → Show RESPONSE: "damaged vehicle, emergency lights flashing, paramedics arriving, no injuries visible"
-`;
+function scanAndFixTriggerWords(prompt: string): { fixed: string; warnings: string[] } {
+  const warnings: string[] = [];
+  let fixed = prompt;
+  const lower = prompt.toLowerCase();
+  for (const tw of TRIGGER_WORDS) {
+    if (lower.includes(tw)) {
+      const regex = new RegExp(`\\b${tw}\\b`, 'gi');
+      fixed = fixed.replace(regex, TRIGGER_REPLACEMENTS[tw]);
+      warnings.push(`Replaced "${tw}" → "${TRIGGER_REPLACEMENTS[tw]}"`);
+    }
+  }
+  return { fixed, warnings };
+}
 
-// ═══ MOVEMENT RULES ═══
-const MOVEMENT_RULES = `
-═══ MANDATORY MOVEMENT IN EVERY PROMPT ═══
-Every prompt MUST describe at least 2 types of movement:
+const ANTI_TEXT_SUFFIX = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
 
-CHARACTER MOVEMENT (when character present):
-- walking, running, sitting down, standing up, turning head
-- raising arms, reaching for, breathing heavily, trembling, crying
-- hands moving methodically, shoulders slumping, leaning on surface
+// ═══ DarkPlanner v3 Prompt Density Formula ═══
+function calculatePromptCount(totalDurationSec: number, contentType: string): number {
+  const base = totalDurationSec / 40;
+  let adjusted: number;
+  switch (contentType) {
+    case 'action': adjusted = base * 1.2; break;
+    case 'dialogue': adjusted = base * 0.8; break;
+    case 'documentary': adjusted = totalDurationSec / 60; break;
+    case 'contemplative': adjusted = base * 0.85; break;
+    default: adjusted = base;
+  }
+  return Math.max(10, Math.min(200, Math.round(adjusted)));
+}
 
-CAMERA MOVEMENT (always required):
-- camera slowly pushing in, camera pulling back revealing
-- camera circling around, camera panning left/right
-- static camera with subject moving, tracking shot following
-- crane shot ascending, dolly shot approaching, orbit shot
-
-ENVIRONMENT MOVEMENT (add atmosphere):
-- wind blowing curtains/hair, leaves falling, water flowing
-- smoke rising, dust particles floating, flames flickering
-- rain drops, light shifting, shadows moving
-`;
-
-// ═══ ENVIRONMENT DETAIL RULES ═══
-const ENVIRONMENT_RULES = `
-═══ ENVIRONMENT DETAIL — PREVENT WHITE/BUGGY BACKGROUNDS ═══
-NEVER write vague environment descriptions. ALWAYS include:
-1. Specific location with materials (e.g., "modest kitchen with chipped tile counter and old appliances")
-2. What's visible through windows/doors
-3. Lighting source and direction
-4. Textures and surfaces
-5. Small props/details that make it feel REAL
-
-❌ WRONG: "[Character] standing talking on phone"
-✅ RIGHT: "[Character] standing in modest kitchen with chipped tile counter, old refrigerator visible, window showing houses outside, talking on phone, late afternoon light through window"
-`;
+function detectContentType(segments: any[]): string {
+  const allText = segments.map((s: any) => s.text || '').join(' ').toLowerCase();
+  if (/perseguição|explosão|corrida|luta|chase|action|fight|run|escape/i.test(allText)) return 'action';
+  if (/diálogo|conversa|entrevista|dialog|interview|conversation/i.test(allText)) return 'dialogue';
+  if (/documentário|documentary|história real|true story|investigação/i.test(allText)) return 'documentary';
+  if (/meditação|contempla|silêncio|natureza|meditation|nature|peaceful/i.test(allText)) return 'contemplative';
+  return 'standard';
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -90,29 +110,31 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // ═══ Build Character Identity Sheets (DarkPlanner format) ═══
+    // ═══ Step 1: Script Analysis (DarkPlanner Etapa 1) ═══
+    const contentType = detectContentType(segments || []);
+    const estimatedDuration = (segments?.length || 10) * 40;
+    const recommendedPrompts = calculatePromptCount(estimatedDuration, contentType);
+    const isDocumentary = contentType === 'documentary';
+
+    // ═══ Step 2: Build Character Identity Sheets (150-200 words, DarkPlanner format) ═══
     let characterBlock = '';
-    if (characters?.length > 0) {
-      characterBlock = characters.map((c: any, i: number) => {
+    if (!isDocumentary && characters?.length > 0) {
+      characterBlock = characters.slice(0, 5).map((c: any) => {
         const a = c.appearance || {};
         const f = c.facial_features || {};
         const cl = c.clothing || {};
-        // DarkPlanner format: 150-200 words, ALWAYS end with "waist up"
-        return `[${c.name}]: ${c.gender || 'person'} age ${c.age || 'unknown'}, ${a.body_type || 'average'} build, ${a.skin_color || 'medium'} skin tone with natural pores and micro-imperfections, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, ${a.eye_color || 'brown'} eyes showing ${f.eyebrows || 'natural'} expression, ${f.face_shape || 'oval'} face with ${f.nose || 'straight'} nose, wearing ${cl.shirt || 'casual top'} and ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}, natural skin texture with visible pores${c.imageUrl ? `, reference: ${c.imageUrl}` : ''}, waist up`;
+        // DarkPlanner v3: 150-200 word identity sheet, waist up mandatory
+        return `[${c.name}]: ${c.gender || 'person'} approximately ${c.age || 'adult'} years old, ${a.body_type || 'average'} build with ${a.height || 'average'} height. Skin: ${a.skin_color || 'medium'} tone with natural pores, micro-imperfections, and subtle skin texture visible under directional lighting. Hair: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, natural highlights catching light. Eyes: ${a.eye_color || 'brown'} with ${f.eyebrows || 'natural'} eyebrows framing expressive gaze. Face: ${f.face_shape || 'oval'} face shape, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} lips. ${f.ears ? `Ears: ${f.ears}.` : ''} Clothing: ${cl.shirt || 'casual fitted top'} with visible fabric weave and natural wrinkles, ${cl.pants || 'well-fitted jeans'} with authentic wear patterns, ${cl.shoes || 'clean sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, accessories: ${cl.accessories}` : ''}. Hands show natural calluses and nail detail.${c.imageUrl ? ` Reference image: ${c.imageUrl} — match this exact appearance.` : ''} Always framed waist up.`;
       }).join('\n\n');
-    } else if (characterDescription) {
-      characterBlock = `[MainCharacter]: ${characterDescription}, waist up`;
+    } else if (!isDocumentary && characterDescription) {
+      characterBlock = `[MainCharacter]: ${characterDescription}. Natural skin pores visible, fabric wrinkles on clothing, individual hair strands catching light. Always framed waist up.`;
     }
 
     const effectiveStyle = (videoStyle || 'cinematográfico').toLowerCase();
     const selectedStyleGuide = styleGuides[effectiveStyle] || styleGuides['cinematográfico'];
+    const segmentTexts = (segments || []).map((s: any, i: number) => `[${i}] "${s.text}"`).join('\n');
 
-    const segmentTexts = segments.map((s: any, i: number) => `[${i}] "${s.text}"`).join('\n');
-
-    // Calculate recommended prompt count based on DarkPlanner formula
-    const estimatedDuration = segments.length * 40; // rough estimate
-    const promptNote = `Generating ${segments.length} prompts for approximately ${Math.round(estimatedDuration / 60)} minutes of content.`;
-
+    // ═══ Step 3-9: AI Generation with full DarkPlanner v3 system prompt ═══
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -124,64 +146,89 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a WORLD-CLASS visual director creating prompts for Google Veo 3 video generation, trained on the DarkPlanner professional prompt system.
+            content: `You are a WORLD-CLASS visual director trained on the DarkPlanner Professional System v3 (complete 11-step pipeline).
 
 ═══════════════════════════════════════
 🎨 MANDATORY ART STYLE: ${selectedStyleGuide}
 ═══════════════════════════════════════
 
-🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE 🚫
+🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE:
 - NEVER include text, subtitles, captions, titles, logos, watermarks, writing of ANY kind
-- EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+- EVERY prompt MUST end with: "${ANTI_TEXT_SUFFIX}"
 
-${POLICY_COMPLIANCE_BLOCK}
+═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION ═══
+NEVER USE these trigger words: ${TRIGGER_WORDS.join(', ')}
 
-${MOVEMENT_RULES}
+ADAPTATION TECHNIQUES:
+• Violence → TENSION/CONSEQUENCE: "aggressive body language, clenched fists, high tension atmosphere, no physical contact shown"
+• Weapons → IMPLICATION: "defensive stance, hand at holster, intense expression, no weapons visible"
+• Death → AFTERMATH/MEMORIAL: "white sheet covering shape, police tape, grief on faces, respectful framing"
+• Accidents → RESPONSE: "damaged vehicle, emergency lights, paramedics arriving, no injuries visible"
 
-${ENVIRONMENT_RULES}
+═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
 
-═══ DARKPLANNER PROMPT MASTERY RULES ═══
+1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Short prompts = bad generation.
 
-1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Long, detailed prompts produce better Veo3 results.
-
-2. CHARACTER CONSISTENCY PROTOCOL (MOST IMPORTANT RULE):
-   - Character descriptions MUST be COPIED WORD-FOR-WORD from the identity sheet below
+2. ${isDocumentary ? `DOCUMENTARY MODE: Focus on LOCATIONS and ATMOSPHERE. No character identity sheets needed. 1 prompt per ~60 seconds. Rich environmental storytelling — landscapes, architecture, textures, weather, light.` : `CHARACTER CONSISTENCY PROTOCOL (MOST IMPORTANT RULE):
+   - Character descriptions MUST be COPIED WORD-FOR-WORD from identity sheets below
    - NEVER paraphrase, summarize, or vary the description
-   - ❌ WRONG: "wearing yellow dress" → ❌ "in her yellow outfit" → ❌ "dressed in blue"
+   - ❌ WRONG: "wearing yellow dress" → "in her yellow outfit" → "dressed in blue"
    - ✅ RIGHT: Copy the EXACT same wording every single time
-   - This ensures Veo3 generates the SAME person across all prompts
+   - This ensures consistent visual identity across all prompts`}
 
 3. MAXIMUM 2 CHARACTERS PER PROMPT:
-   - Using >2 [Names] causes inconsistency and quality drop
-   - If scene needs 3+ characters: split into multiple prompts
-   - Option A: [Person1] speaking, others blurred in background
+   - >2 characters causes quality degradation and inconsistency
+   - If 3+ needed: split into multiple prompts
+   - Option A: Focus on 2 characters, others blurred in background
    - Option B: Shot-reverse-shot between pairs
-   - Option C: Wide group shot WITHOUT [Names], describe by position
+   - Option C: Wide group shot WITHOUT identity sheets, describe by position
 
-4. PROMPT STRUCTURE (DarkPlanner Template):
-   WITH CHARACTER: [Name] [specific action with movement verbs], [detailed body movement], [facial expression/emotion], [interaction with environment/objects], [clothing — COPY EXACTLY from definition], camera [movement: zoom in/out, pan, push, pull, circle, static], [visible environment elements], [specific lighting], [atmosphere/mood], [style modifiers]
-   WITHOUT CHARACTER: [Specific location/object], [detailed visual elements], [lighting conditions], [time of day], [weather/atmosphere], camera [movement], [perspective/angle], [texture and details], [dominant colors], [mood/feeling], [style modifiers]
+4. MANDATORY MOVEMENT TRIO — Every prompt MUST describe ALL THREE:
+   🎭 CHARACTER: walking, turning, reaching, breathing heavily, trembling, sitting, raising arms
+   🎥 CAMERA: slowly pushing in, pulling back, panning, circling, tracking, crane rising, dolly
+   🌿 ENVIRONMENT: wind blowing curtains/hair, leaves falling, water flowing, smoke rising, dust motes
 
-5. SEGMENT 0 = HOOK — Most visually spectacular shot. Must combine MYSTERY + SCALE + MOTION + DETAIL.
+5. ENVIRONMENT DETAIL — PREVENT WHITE/BUGGY BACKGROUNDS:
+   ALWAYS include ALL of:
+   - Specific location with MATERIALS and TEXTURES (chipped tile, worn wood, rusted metal)
+   - VISIBLE SURROUNDINGS (what's behind, beside, above)
+   - LIGHT SOURCE and DIRECTION (afternoon sun through window, fluorescent overhead)
+   - ATMOSPHERIC ELEMENTS (dust particles, fog, steam, floating embers)
+   - SMALL PROPS (potted plants, stacked papers, peeling paint, water stains)
+   ❌ WRONG: "Person in a room"
+   ✅ RIGHT: "Person in modest kitchen with chipped tile counter, old appliances, worn wooden table with fruit bowl, warm afternoon light streaming through small curtained window, dust motes floating in light beam"
 
-6. CAMERA VARIETY: Never repeat camera angles in consecutive segments. Mandatory rotation.
+6. SEGMENT 0 = HOOK — Most visually spectacular shot combining MYSTERY + SCALE + MOTION + DETAIL.
 
-7. DOPAMINERGIC: First 3s of each scene must trigger curiosity.
+7. CAMERA VARIETY: Never repeat camera angles in consecutive segments. Mandatory rotation.
 
-8. ALL PROMPTS IN ENGLISH.
+8. STYLE MODIFIERS matching art style MUST appear at END of every prompt, BEFORE anti-text block.
 
-9. Style modifiers from the art style MUST appear at the END of EVERY prompt, before the anti-text block.
+9. ALL PROMPTS IN ENGLISH.
 
-${characterBlock ? `\n═══ CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characterBlock}\n\n⚠️ ABSOLUTE RULE: Include FULL character description block in EVERY prompt they appear in. Use IDENTICAL wording — never paraphrase. Always end character description with "waist up".` : ''}`
+10. FORMAT — DARKPLANNER DELIVERY FORMAT:
+    - NO numbering, NO "Scene 1:", NO "CENA 1:" headers
+    - Just the raw prompt text per segment
+    - Clean, professional, ready for direct Veo3 input
+
+${characterBlock ? `\n═══ CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characterBlock}\n\n⚠️ ABSOLUTE RULE: Include FULL character description in EVERY prompt they appear in. Use IDENTICAL wording. Always end with "waist up".` : ''}`
           },
           {
             role: "user",
-            content: `Generate Veo3 prompts for each narration segment. ${promptNote}
-Segment 0 = HOOK (most stunning).
-ZERO text/subtitles in any prompt.
-Each prompt = 150-250 words with mandatory movement (character + camera + environment).
-Character descriptions COPIED EXACTLY from identity sheets.
-Max 2 characters per prompt.
+            content: `Generate Veo3 prompts for ${(segments || []).length} narration segments.
+Content type detected: ${contentType}
+Recommended prompt density: ${recommendedPrompts} prompts for ~${Math.round(estimatedDuration / 60)} minutes
+${isDocumentary ? 'MODE: DOCUMENTARY — focus on locations/atmosphere, no character sheets.' : ''}
+
+RULES:
+- Each prompt = 150-250 words (MINIMUM 150)
+- Movement trio in EVERY prompt (character + camera + environment)
+- Detailed environment with textures/materials/lighting
+- Policy-compliant (use adaptation techniques for sensitive content)
+- Style modifiers + anti-text block at end
+- NO numbering, NO scene titles — raw prompt text only
+- Segment 0 = HOOK (most stunning)
+- Max 2 characters per prompt
 
 Segments:\n${segmentTexts}`
           },
@@ -190,7 +237,7 @@ Segments:\n${segmentTexts}`
           type: "function",
           function: {
             name: "return_veo3_prompts",
-            description: "Return Veo3-optimized prompts following DarkPlanner professional system",
+            description: "Return Veo3-optimized prompts following DarkPlanner v3 professional system",
             parameters: {
               type: "object",
               properties: {
@@ -200,15 +247,15 @@ Segments:\n${segmentTexts}`
                     type: "object",
                     properties: {
                       segmentIndex: { type: "number" },
-                      veo3Prompt: { type: "string", description: "150-250 word prompt using DarkPlanner template. Include mandatory movement (character + camera + environment). Character descriptions COPIED VERBATIM. MUST end with anti-text block and style modifiers." },
-                      negativePrompt: { type: "string", description: "Always include ALL: subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements, blurry, distorted, deformed hands, extra fingers, six fingers, fused fingers, melted hands, mutated body parts, bad anatomy, disfigured, poorly drawn face, amateur, low quality, jpeg artifacts, oversaturated, underexposed" },
-                      shotType: { type: "string", description: "ECU, CU, MCU, MS, MLS, FS, LS, ELS, OTS, bird's eye, worm's eye" },
-                      cameraMovement: { type: "string", description: "dolly, tracking, crane, steadicam, slow pan, orbit, push-in, pull-out, rack focus" },
-                      lensSpec: { type: "string", description: "24mm, 35mm, 50mm, 85mm, 135mm, anamorphic" },
-                      lightingSetup: { type: "string", description: "golden hour, Rembrandt, butterfly, rim, volumetric, chiaroscuro" },
-                      audioDirection: { type: "string", description: "Ambient sounds, foley, music mood" },
-                      charactersInPrompt: { type: "array", items: { type: "string" }, description: "Names of characters in this prompt (max 2)" },
-                      movementDescription: { type: "string", description: "Summary of all movement types: character action + camera move + environment motion" },
+                      veo3Prompt: { type: "string", description: "150-250 word prompt. DarkPlanner v3 format: movement trio + environment detail + style modifiers + anti-text. NO numbering/titles." },
+                      negativePrompt: { type: "string" },
+                      shotType: { type: "string" },
+                      cameraMovement: { type: "string" },
+                      lensSpec: { type: "string" },
+                      lightingSetup: { type: "string" },
+                      audioDirection: { type: "string" },
+                      charactersInPrompt: { type: "array", items: { type: "string" }, description: "Max 2 character names" },
+                      movementDescription: { type: "string", description: "Summary: character action + camera move + environment motion" },
                     },
                     required: ["segmentIndex", "veo3Prompt", "negativePrompt", "shotType", "cameraMovement", "lensSpec", "lightingSetup"],
                     additionalProperties: false,
@@ -235,28 +282,51 @@ Segments:\n${segmentTexts}`
     if (!toolCall) throw new Error("No tool call response");
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    // ═══ Post-Processing Validation (DarkPlanner Auto-Validation) ═══
+    // ═══ Step 10: DarkPlanner v3 Auto-Validation & Post-Processing ═══
     const validationWarnings: string[] = [];
+    const autoFixes: string[] = [];
+
     for (const prompt of parsed.prompts) {
-      // Check prompt length
+      // 1. Trigger word scanner + auto-fix
+      const { fixed, warnings: twWarnings } = scanAndFixTriggerWords(prompt.veo3Prompt);
+      if (twWarnings.length > 0) {
+        prompt.veo3Prompt = fixed;
+        autoFixes.push(...twWarnings.map(w => `Prompt ${prompt.segmentIndex}: ${w}`));
+      }
+
+      // 2. Ensure anti-text suffix
+      if (!prompt.veo3Prompt.includes("no subtitles")) {
+        prompt.veo3Prompt += ` ${ANTI_TEXT_SUFFIX}`;
+      }
+
+      // 3. Validate word count (minimum 150)
       const wordCount = prompt.veo3Prompt.split(/\s+/).length;
       if (wordCount < 100) {
         validationWarnings.push(`Prompt ${prompt.segmentIndex}: Only ${wordCount} words (minimum 150 recommended)`);
       }
-      // Ensure anti-text suffix
-      if (!prompt.veo3Prompt.includes("no subtitles")) {
-        prompt.veo3Prompt += " (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+
+      // 4. Max 2 characters enforcement
+      if (prompt.charactersInPrompt && prompt.charactersInPrompt.length > 2) {
+        validationWarnings.push(`Prompt ${prompt.segmentIndex}: ${prompt.charactersInPrompt.length} characters (max 2 recommended)`);
       }
+
+      // 5. Remove any numbering/titles that leaked through
+      prompt.veo3Prompt = prompt.veo3Prompt.replace(/^(Scene|Cena|Prompt|Segmento)\s*\d+\s*[:—-]\s*/i, '');
     }
 
     return new Response(JSON.stringify({
       ...parsed,
       metadata: {
-        system: "DarkPlanner Training v2",
+        system: "DarkPlanner v3",
         style: effectiveStyle,
+        contentType,
         totalPrompts: parsed.prompts.length,
+        recommendedPrompts,
         charactersUsed: characters?.length || 0,
+        isDocumentary,
         validationWarnings,
+        autoFixes,
+        promptDensityFormula: `${estimatedDuration}s ÷ 40 = ${(estimatedDuration / 40).toFixed(1)} base, adjusted for ${contentType}`,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

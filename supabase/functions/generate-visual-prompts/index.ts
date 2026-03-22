@@ -6,8 +6,7 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// DARKPLANNER VISUAL PROMPTS v3 — Full DarkPlanner Training Applied
-// Prompt length: 150-250 words | Movement trio | Policy compliance
+// DARKPLANNER v3 — Visual Prompts Engine (Full Training Applied)
 // ═══════════════════════════════════════════════════════════════
 
 const styleGuides: Record<string, string> = {
@@ -22,39 +21,37 @@ const styleGuides: Record<string, string> = {
   'whiteboard': 'Whiteboard animation. Hand-drawn black ink on white surface, strategic color highlights, educational clarity, smooth drawing reveal.',
   'comic': 'Comic book / graphic novel. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, saturated colors, dramatic perspective.',
   'fotorrealista_documentario': 'Documentary photography, natural soft lighting, shallow depth of field, desaturated earth tones, Canon 5D aesthetic.',
+  'ilustracao_artistica': 'Fine art illustration. Painterly brushstrokes, rich color palettes, gallery-quality compositions. Classical oil painting meets modern digital art.',
+  'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain, bleeding color edges, delicate brushwork, organic imperfections.',
 };
 
-// ═══ POLICY COMPLIANCE — TRIGGER WORDS & ADAPTATIONS ═══
-const POLICY_RULES = `
-═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION (MANDATORY) ═══
+// ═══ TRIGGER WORDS — Auto-replacement ═══
+const TRIGGER_REPLACEMENTS: Record<string, string> = {
+  'gun': 'defensive stance', 'weapon': 'tactical equipment', 'pistol': 'holstered sidearm implied',
+  'rifle': 'long equipment case', 'knife': 'sharp tool', 'blade': 'metallic edge',
+  'sword': 'ceremonial object', 'blood': 'dark stain', 'bleeding': 'distressed expression',
+  'wound': 'bandaged area', 'injury': 'visible pain expression', 'gore': 'aftermath scene',
+  'dead': 'covered shape on ground', 'corpse': 'white sheet covering form', 'dying': 'fading consciousness',
+  'naked': 'draped in fabric', 'nude': 'artistically covered',
+  'punch': 'aggressive forward motion', 'kick': 'defensive movement', 'hit': 'forceful gesture',
+  'attack': 'confrontational stance', 'assault': 'tense confrontation',
+  'drugs': 'mysterious substance', 'needle': 'medical instrument',
+};
 
-🚫 TRIGGER WORDS — NEVER USE IN ANY PROMPT:
-gun, weapon, pistol, rifle, knife, blade, sword, blood, bleeding, wound, injury, gore, visceral,
-dead, corpse, body, cadaver, dying, naked, nude, sex, sexual, breast, genitals,
-punch, kick, hit, attack, assault, beat, drugs, cocaine, heroin, needle, injection,
-child abuse, minor, inappropriate
+function scanAndFixTriggerWords(prompt: string): { fixed: string; warnings: string[] } {
+  const warnings: string[] = [];
+  let fixed = prompt;
+  for (const [tw, replacement] of Object.entries(TRIGGER_REPLACEMENTS)) {
+    const regex = new RegExp(`\\b${tw}\\b`, 'gi');
+    if (regex.test(fixed)) {
+      fixed = fixed.replace(regex, replacement);
+      warnings.push(`"${tw}" → "${replacement}"`);
+    }
+  }
+  return { fixed, warnings };
+}
 
-ADAPTATION TECHNIQUES (use these instead):
-• VIOLENCE → TENSION/CONSEQUENCE:
-  ❌ "punching victim, blood spattering"
-  ✅ "aggressive body language, clenched fists at sides, high tension atmosphere, no physical contact shown, aftermath implied by expressions"
-
-• WEAPONS → IMPLICATION:
-  ❌ "pointing gun at suspect"
-  ✅ "defensive stance, hand at holster, intense focused expression, no weapons visible in frame"
-
-• DEATH → MEMORIAL/AFTERMATH:
-  ❌ "dead body lying on ground"
-  ✅ "white sheet covering shape on ground, police tape cordoning area, grief visible on face, respectful framing showing aftermath"
-
-• ACCIDENTS → EMERGENCY RESPONSE:
-  ❌ "car crash with injured people bleeding"
-  ✅ "damaged vehicle with shattered glass on ground, emergency lights flashing, paramedics arriving, no injuries visible, focus on emergency response"
-
-• RITUAL/SACRIFICE → CULTURAL RESPECT:
-  ❌ "cutting animal's throat with knife"
-  ✅ "holding animal respectfully in ceremonial gesture, cultural ritual documented respectfully, focus on spiritual moment not graphic action"
-`;
+const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -63,12 +60,10 @@ serve(async (req) => {
     const { segments, videoStyle, customStyleNotes } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
     if (!segments?.length) throw new Error("Segments array required");
 
     const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
     const selectedStyle = styleGuides[styleKey] || styleGuides['cinematográfico'];
-
     const segmentTexts = segments.map((s: any, i: number) => `Segment ${i + 1}: "${s.text}"`).join("\n");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -83,7 +78,7 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "set_visual_prompts",
-            description: "Set visual prompts for each script segment matching the chosen art style (DarkPlanner v3 format)",
+            description: "Set visual prompts for each script segment (DarkPlanner v3 format)",
             parameters: {
               type: "object",
               properties: {
@@ -93,7 +88,7 @@ serve(async (req) => {
                     type: "object",
                     properties: {
                       segmentIndex: { type: "number" },
-                      visualPrompt: { type: "string", description: "150-250 word visual prompt following DarkPlanner v3 format. MANDATORY: movement trio (character+camera+environment), detailed environment with materials/textures, policy-compliant content, style modifiers, anti-text block at end." }
+                      visualPrompt: { type: "string", description: "150-250 word visual prompt. DarkPlanner v3: movement trio, environment detail, style modifiers, anti-text suffix. NO numbering/titles." }
                     },
                     required: ["segmentIndex", "visualPrompt"],
                     additionalProperties: false
@@ -109,63 +104,44 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a WORLD-CLASS visual director creating prompts for AI video generation, trained on the DarkPlanner Professional System v3.
+            content: `You are a WORLD-CLASS visual director trained on the DarkPlanner Professional System v3.
 
-═══════════════════════════════════════
 🎨 MANDATORY ART STYLE: ${selectedStyle}
 ${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
-═══════════════════════════════════════
 
-🚫 ABSOLUTE PROHIBITION — ZERO TOLERANCE:
-- NEVER include text, subtitles, captions, logos, watermarks in ANY prompt
-- EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+🚫 ZERO TOLERANCE: NEVER include text/subtitles/logos. End EVERY prompt with: "${ANTI_TEXT}"
 
-${POLICY_RULES}
+═══ TRIGGER WORDS — NEVER USE: gun, weapon, knife, blood, dead, corpse, naked, punch, kick, attack, drugs, needle
+Use adaptation techniques instead (tension/implication/aftermath).
 
-═══ DARKPLANNER v3 PROMPT RULES ═══
+═══ DARKPLANNER v3 RULES ═══
 
-1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150 words). 
-   Short prompts = bad/buggy generation. Detailed prompts = professional quality.
+1. PROMPT LENGTH: 150-250 words (MINIMUM 150). Detailed = better generation.
 
-2. STYLE FIDELITY — MATCH THE ART STYLE EXACTLY:
-   - For 2D styles: describe flat colors, clean lines, animation-style characters, vector art
-   - For Wojak/meme: describe simple drawn faces, emotional expressions, internet meme look
-   - For anime: describe anime aesthetic, cel-shading, expressive eyes, dynamic poses
-   - For photorealistic: describe skin pores, fabric textures, natural imperfections
-   - START every prompt with the art style descriptor
+2. STYLE FIDELITY: START every prompt with the art style descriptor. Match exactly.
 
-3. MANDATORY MOVEMENT TRIO — Every prompt MUST describe ALL THREE:
-   🎭 CHARACTER MOVEMENT: walking, turning, reaching, breathing heavily, trembling, sitting down, standing up, raising arms, crying, running
-   🎥 CAMERA MOVEMENT: slowly pushing in, pulling back, panning left/right, circling around, tracking shot, crane rising, dolly forward, static with subject moving
-   🌿 ENVIRONMENT MOVEMENT: wind blowing curtains/hair, leaves falling, water flowing, smoke rising, dust motes floating, flames flickering, rain falling, clouds moving
+3. MANDATORY MOVEMENT TRIO — Every prompt:
+   🎭 CHARACTER: walking, turning, reaching, trembling, breathing heavily
+   🎥 CAMERA: pushing in, pulling back, panning, circling, tracking, crane
+   🌿 ENVIRONMENT: wind blowing, leaves falling, water flowing, smoke rising, dust floating
 
-4. ENVIRONMENT DETAIL — PREVENT WHITE/BUGGY BACKGROUNDS (CRITICAL):
-   NEVER write vague descriptions. ALWAYS include ALL of:
-   - Specific location with MATERIALS and TEXTURES (chipped tile, worn wood, rusted metal)
-   - VISIBLE SURROUNDINGS (what's behind, beside, above the subject)
-   - LIGHT SOURCE and DIRECTION (afternoon sun through window, fluorescent overhead, moonlight from left)
-   - ATMOSPHERIC ELEMENTS (dust particles, fog, steam, heat haze, floating embers)
-   - SMALL PROPS that add realism (potted plants, stacked papers, peeling paint, water stains)
-   
-   ❌ WRONG: "Person in a room"
-   ❌ WRONG: "Man standing talking"
-   ✅ RIGHT: "Person in modest kitchen with chipped tile counter, old appliances, worn wooden table with fruit bowl, warm afternoon light streaming through small curtained window, dust motes floating in light beam, cracked linoleum floor, faded calendar on wall"
+4. ENVIRONMENT DETAIL — PREVENT WHITE BACKGROUNDS:
+   - Specific location with MATERIALS/TEXTURES
+   - VISIBLE SURROUNDINGS
+   - LIGHT SOURCE + DIRECTION
+   - ATMOSPHERIC ELEMENTS
+   - SMALL PROPS for realism
+   ❌ "Person in a room"
+   ✅ "Person in modest kitchen with chipped tile counter, old appliances, warm afternoon light through curtained window, dust motes floating"
 
-5. STYLE MODIFIERS — Every prompt MUST end with style modifiers matching the art style, THEN the anti-text block.
-
-6. ALL PROMPTS IN ENGLISH for best AI generation results.
-
-7. FORMAT: NO numbering, NO scene titles, NO "CENA 1:" headers. Just the prompt text.`
+5. Style modifiers + anti-text at END of every prompt.
+6. ALL PROMPTS IN ENGLISH.
+7. FORMAT: NO numbering, NO scene titles, NO "CENA 1:". Just raw prompt text.`
           },
           {
             role: "user",
-            content: `Generate visual prompts in "${styleKey}" style for these ${segments.length} narration segments.
-RULES:
-- Each prompt = 150-250 words (MINIMUM 150)
-- Movement trio in EVERY prompt (character + camera + environment)
-- Detailed environment with textures/materials/lighting
-- Policy-compliant (no violence/weapons/blood — use adaptation techniques)
-- Style modifiers + anti-text block at end
+            content: `Generate visual prompts in "${styleKey}" style for ${segments.length} segments.
+Each prompt = 150-250 words. Movement trio mandatory. No numbering/titles.
 
 SEGMENTS:\n\n${segmentTexts}`
           }
@@ -184,39 +160,45 @@ SEGMENTS:\n\n${segmentTexts}`
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    
     if (!toolCall) throw new Error("No tool call in response");
-    
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    // ═══ Post-Processing: DarkPlanner v3 Auto-Validation ═══
+    // ═══ DarkPlanner v3 Auto-Validation & Post-Processing ═══
     const warnings: string[] = [];
+    const autoFixes: string[] = [];
+
     for (const p of parsed.prompts) {
-      // Ensure anti-text suffix
-      if (p.visualPrompt && !p.visualPrompt.includes("no subtitles")) {
-        p.visualPrompt += " (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+      // 1. Trigger word scanner + auto-fix
+      const { fixed, warnings: twWarnings } = scanAndFixTriggerWords(p.visualPrompt || '');
+      if (twWarnings.length > 0) {
+        p.visualPrompt = fixed;
+        autoFixes.push(...twWarnings.map(w => `Seg ${p.segmentIndex}: ${w}`));
       }
-      // Validate word count
+
+      // 2. Ensure anti-text suffix
+      if (p.visualPrompt && !p.visualPrompt.includes("no subtitles")) {
+        p.visualPrompt += ` ${ANTI_TEXT}`;
+      }
+
+      // 3. Validate word count
       const wordCount = (p.visualPrompt || '').split(/\s+/).length;
       if (wordCount < 100) {
         warnings.push(`Segment ${p.segmentIndex}: Only ${wordCount} words (150-250 recommended)`);
       }
-      // Check for policy trigger words
-      const triggerWords = ['gun', 'weapon', 'pistol', 'knife', 'blood', 'wound', 'dead', 'corpse', 'naked', 'nude', 'punch', 'kick', 'attack'];
-      const promptLower = (p.visualPrompt || '').toLowerCase();
-      for (const tw of triggerWords) {
-        if (promptLower.includes(tw)) {
-          warnings.push(`Segment ${p.segmentIndex}: Policy trigger word "${tw}" detected — review needed`);
-        }
+
+      // 4. Remove leaked numbering/titles
+      if (p.visualPrompt) {
+        p.visualPrompt = p.visualPrompt.replace(/^(Scene|Cena|Prompt|Segmento)\s*\d+\s*[:—-]\s*/i, '');
       }
     }
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       prompts: parsed.prompts,
       metadata: {
         system: "DarkPlanner Visual Prompts v3",
         style: styleKey,
         validationWarnings: warnings,
+        autoFixes,
         promptCount: parsed.prompts.length,
       }
     }), {
