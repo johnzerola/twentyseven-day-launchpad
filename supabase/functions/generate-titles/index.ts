@@ -115,12 +115,12 @@ async function searchBraveTrending(topic: string, niche: string, language: strin
     const block = `\n\n🌐 TENDÊNCIAS WEB EM TEMPO REAL (Brave Search):\n${allSnippets.slice(0, 8).join('\n')}\n\nUse estas tendências para criar títulos que capturam o zeitgeist atual. Incorpore termos trending nos títulos.`;
 
     // Cache for 24h
-    await sb.from("research_cache").upsert({
+    try { await sb.from("research_cache").upsert({
       cache_key: cacheKey,
       source: "brave",
       result_json: block,
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    }, { onConflict: "cache_key,source" }).catch(() => {});
+    }, { onConflict: "cache_key,source" }); } catch { /* non-blocking */ }
 
     return block;
   } catch (e) {
@@ -382,7 +382,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
       const parsed = JSON.parse(toolCall.function.arguments);
 
       // Log execution for monitoring
-      await sb.from('execution_logs').insert({
+      try { await sb.from('execution_logs').insert({
         function_name: 'generate-titles',
         success: true,
         api_calls_made: (competitorBlock ? 3 : 1) + (braveBlock ? 2 : 0),
@@ -393,7 +393,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
           titles_count: parsed.titles?.length || 0,
           model: 'gemini-2.5-pro',
         },
-      }).catch(() => {});
+      }); } catch { /* non-blocking */ }
 
       return new Response(JSON.stringify({
         titles: parsed.titles,
@@ -532,10 +532,10 @@ Analise com profundidade: CTR estimado (5-30%), gatilhos emocionais, SEO score (
               const results = data.web?.results || [];
               if (results.length) {
                 seoTrends = `\n\n🔍 PESQUISA WEB PARA SEO (keywords reais encontradas):\n${results.slice(0, 5).map((r: any) => `• "${r.title}" — ${r.description?.slice(0, 100) || ''}`).join('\n')}\n\nExtraia keywords destes resultados para a descrição SEO.`;
-                await sb.from("research_cache").upsert({
+                try { await sb.from("research_cache").upsert({
                   cache_key: cacheKey, source: "brave", result_json: seoTrends,
                   expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                }, { onConflict: "cache_key,source" }).catch(() => {});
+                }, { onConflict: "cache_key,source" }); } catch { /* non-blocking */ }
               }
             }
           }
