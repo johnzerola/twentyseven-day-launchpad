@@ -111,60 +111,45 @@ serve(async (req) => {
 - NEVER include text, subtitles, captions, titles, logos, watermarks, writing of ANY kind
 - EVERY prompt MUST end with: "${ANTI_TEXT_SUFFIX}"
 
+${VEO3_POLICY_PROMPT}
+
 ═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION ═══
-NEVER USE these trigger words: ${TRIGGER_WORDS.join(', ')}
+NEVER USE these trigger words: ${Object.keys(TRIGGER_REPLACEMENTS).join(', ')}
 
 ADAPTATION TECHNIQUES:
 • Violence → TENSION/CONSEQUENCE: "aggressive body language, clenched fists, high tension atmosphere, no physical contact shown"
 • Weapons → IMPLICATION: "defensive stance, hand at holster, intense expression, no weapons visible"
 • Death → AFTERMATH/MEMORIAL: "white sheet covering shape, police tape, grief on faces, respectful framing"
-• Accidents → RESPONSE: "damaged vehicle, emergency lights, paramedics arriving, no injuries visible"
 
 ═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
 
 1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Short prompts = bad generation.
 
-2. ${isDocumentary ? `DOCUMENTARY MODE: Focus on LOCATIONS and ATMOSPHERE. No character identity sheets needed. 1 prompt per ~60 seconds. Rich environmental storytelling — landscapes, architecture, textures, weather, light.` : `CHARACTER CONSISTENCY PROTOCOL (MOST IMPORTANT RULE):
+2. ${isDocumentary ? `DOCUMENTARY MODE: Focus on LOCATIONS and ATMOSPHERE. No character identity sheets needed. 1 prompt per ~60 seconds. Rich environmental storytelling.` : `CHARACTER CONSISTENCY PROTOCOL (MOST IMPORTANT RULE):
    - Character descriptions MUST be COPIED WORD-FOR-WORD from identity sheets below
    - NEVER paraphrase, summarize, or vary the description
    - ❌ WRONG: "wearing yellow dress" → "in her yellow outfit" → "dressed in blue"
-   - ✅ RIGHT: Copy the EXACT same wording every single time
-   - This ensures consistent visual identity across all prompts`}
+   - ✅ RIGHT: Copy the EXACT same wording every single time`}
 
-3. MAXIMUM 2 CHARACTERS PER PROMPT:
-   - >2 characters causes quality degradation and inconsistency
-   - If 3+ needed: split into multiple prompts
-   - Option A: Focus on 2 characters, others blurred in background
-   - Option B: Shot-reverse-shot between pairs
-   - Option C: Wide group shot WITHOUT identity sheets, describe by position
+3. MAXIMUM 2 CHARACTERS PER PROMPT
 
 4. MANDATORY MOVEMENT TRIO — Every prompt MUST describe ALL THREE:
-   🎭 CHARACTER: walking, turning, reaching, breathing heavily, trembling, sitting, raising arms
-   🎥 CAMERA: slowly pushing in, pulling back, panning, circling, tracking, crane rising, dolly
-   🌿 ENVIRONMENT: wind blowing curtains/hair, leaves falling, water flowing, smoke rising, dust motes
+   🎭 CHARACTER: walking, turning, reaching, breathing heavily, trembling
+   🎥 CAMERA: slowly pushing in, pulling back, panning, circling, tracking
+   🌿 ENVIRONMENT: wind blowing curtains/hair, leaves falling, water flowing, smoke rising
 
 5. ENVIRONMENT DETAIL — PREVENT WHITE/BUGGY BACKGROUNDS:
-   ALWAYS include ALL of:
-   - Specific location with MATERIALS and TEXTURES (chipped tile, worn wood, rusted metal)
-   - VISIBLE SURROUNDINGS (what's behind, beside, above)
-   - LIGHT SOURCE and DIRECTION (afternoon sun through window, fluorescent overhead)
-   - ATMOSPHERIC ELEMENTS (dust particles, fog, steam, floating embers)
-   - SMALL PROPS (potted plants, stacked papers, peeling paint, water stains)
-   ❌ WRONG: "Person in a room"
-   ✅ RIGHT: "Person in modest kitchen with chipped tile counter, old appliances, worn wooden table with fruit bowl, warm afternoon light streaming through small curtained window, dust motes floating in light beam"
+   ALWAYS include: specific location + MATERIALS/TEXTURES, visible surroundings, light source + direction, atmospheric elements, small props
 
-6. SEGMENT 0 = HOOK — Most visually spectacular shot combining MYSTERY + SCALE + MOTION + DETAIL.
+6. SEGMENT 0 = HOOK — Most visually spectacular shot.
 
-7. CAMERA VARIETY: Never repeat camera angles in consecutive segments. Mandatory rotation.
+7. CAMERA VARIETY: Never repeat camera angles consecutively.
 
-8. STYLE MODIFIERS matching art style MUST appear at END of every prompt, BEFORE anti-text block.
+8. STYLE MODIFIERS + anti-text block at END of every prompt.
 
 9. ALL PROMPTS IN ENGLISH.
 
-10. FORMAT — DARKPLANNER DELIVERY FORMAT:
-    - NO numbering, NO "Scene 1:", NO "CENA 1:" headers
-    - Just the raw prompt text per segment
-    - Clean, professional, ready for direct Veo3 input
+10. FORMAT: NO numbering, NO "Scene 1:", NO headers. Just raw prompt text.
 
 ${characterBlock ? `\n═══ CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characterBlock}\n\n⚠️ ABSOLUTE RULE: Include FULL character description in EVERY prompt they appear in. Use IDENTICAL wording. Always end with "waist up".` : ''}`
           },
