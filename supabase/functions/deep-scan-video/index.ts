@@ -104,10 +104,8 @@ serve(async (req) => {
     // ═══ CAPTURE VIDEO FRAMES ═══
     // Limit to 2 frames to reduce payload size and prevent timeouts
     const thumbnailUrl = video.snippet.thumbnails?.maxres?.url || video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.medium?.url || '';
-    const frameUrls = [
-      thumbnailUrl,
-      `https://i.ytimg.com/vi/${videoId}/hq2.jpg`, // ~50% of video  
-    ].filter(Boolean);
+    // Use only thumbnail to minimize payload and prevent timeouts
+    const frameUrls = [thumbnailUrl].filter(Boolean);
 
     const frameChecks = await Promise.allSettled(
       frameUrls.map(async (url) => {
