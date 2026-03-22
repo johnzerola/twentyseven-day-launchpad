@@ -616,8 +616,12 @@ ${chunkTranscript}
 
 ${cleanScript ? `SCRIPT CONTEXT:\n${cleanScript.slice(0, 1200)}` : ''}
 
-Generate EXACTLY ${expectedScenes} scenes for this segment. Each scene 5-10s. Style: ${videoStyle}. Language: ${language}.
-Visual content MUST match what is narrated at each timestamp.`,
+CRITICAL: Each Veo3 clip = 8 seconds. This chunk is ${(chunk.endTime - chunk.startTime).toFixed(0)}s long.
+Generate EXACTLY ${expectedScenes} scenes (one per 8 seconds). Style: ${videoStyle}. Language: ${language}.
+
+ABSOLUTE RULE: Each scene's visual MUST match what is SPOKEN at that timestamp.
+Read the transcription text for each time window and create a visual prompt that REPRESENTS exactly what the narrator is saying.
+Do NOT use generic/disconnected visuals. The scene must illustrate the specific content being narrated.`,
                 },
               ],
             }),
