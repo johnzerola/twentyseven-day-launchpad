@@ -432,20 +432,21 @@ FORMAT: [V1-S#] {visualPrompt} ||| [V1-S#] {camera movement}, {lens}, {lighting}
           },
           {
             role: "user",
-            content: `Generate ${scenes.length} NETFLIX/DISNEY-GRADE Veo3 video prompts with DYNAMIC DURATION.
+            content: `Generate ${scenes.length} NETFLIX/DISNEY-GRADE Veo3 video prompts.
 Total audio: ${totalDuration > 0 ? `${totalDuration}s` : 'estimate from text'}
-Default scene: ~${defaultSceneLen}s (vary 5-8s based on content)
+CRITICAL: Each Veo3 clip = 8 seconds. Minimum scenes needed: ${Math.ceil((totalDuration || 80) / 8)}
 Style: ${videoStyle || 'cinematográfico'}
 Niche: ${niche || 'general'}
 Language context: ${language || 'português'}
 
-CRITICAL RULES:
+ABSOLUTE RULES:
 1. Scene 1 = HOOK — most visually stunning shot possible
 2. ZERO text/subtitles/captions in ANY prompt
 3. Every prompt ends with "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
-4. Use Veo3 formula: [Cinematography] + [Subject] + [Action] + [Context] + [Style]
-5. Apply RETENTION TECHNIQUES from knowledge base to visual storytelling
-6. Reference VIRAL PATTERNS from top channels in this niche
+4. EACH scene's visual MUST match what is being NARRATED in that text block
+5. Read the scene text and create a visual that REPRESENTS exactly what is being said
+6. Do NOT use generic/disconnected visuals — every scene must illustrate its narration
+7. Apply DarkPlanner v3: movement trio + environment detail + policy compliance
 
 SCENES:\n\n${sceneTexts}`
           }
