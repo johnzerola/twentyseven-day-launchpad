@@ -426,13 +426,21 @@ GERE:
 
     console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, policy fixes: ${policyFixes.length}`);
 
-    // ═══ AUTO-LEARN ═══
+    // ═══ AUTO-LEARN (fire-and-forget, non-blocking) ═══
     try {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const learnPromises: Promise<any>[] = [];
+      
+      const safeInsert = async (table: string, data: any, opts?: any) => {
+        try {
+          if (opts) await sb.from(table).upsert(data, opts);
+          else await sb.from(table).insert(data);
+        } catch { /* ignore */ }
+      };
+
+      const learnPromises: Promise<void>[] = [];
 
       if (analysis.hookAnalysis?.powerScore >= 7) {
-        learnPromises.push(sb.from("script_knowledge").insert({
+        learnPromises.push(safeInsert("script_knowledge", {
           category: "hook",
           title: `Hook: ${analysis.hookAnalysis.hookType} — "${video.snippet.title}"`,
           content: `${analysis.hookAnalysis.hookText}\n\nPor que funciona: ${analysis.hookAnalysis.whyItWorks}`,
@@ -443,25 +451,22 @@ GERE:
 
       if (analysis.retentionMap?.structure?.length) {
         for (const phase of analysis.retentionMap.structure.filter((p: any) => p.retentionEstimate >= 70).slice(0, 3)) {
-          learnPromises.push(sb.from("script_knowledge").insert({
+          learnPromises.push(safeInsert("script_knowledge", {
             category: "retention_technique",
             title: `${phase.phase} — ${phase.technique}`,
-            content: `Técnica "${phase.technique}" na fase "${phase.phase}" (${phase.timeRange}). Retenção: ${phase.retentionEstimate}%. Vídeo: "${video.snippet.title}".`,
+            content: `Técnica "${phase.technique}" na fase "${phase.phase}" (${phase.timeRange}). Retenção: ${phase.retentionEstimate}%.`,
             effectiveness_score: Math.round(phase.retentionEstimate / 10),
-            examples: JSON.stringify([`${video.snippet.title} (${phase.timeRange})`]),
           }));
         }
       }
 
       if (analysis.contentDNA?.psychTriggers?.length) {
-        learnPromises.push(sb.from("viral_content_library").insert({
+        learnPromises.push(safeInsert("viral_content_library", {
           category: "psychology_triggers",
           content_json: {
             triggers: analysis.contentDNA.psychTriggers,
             source_video: video.snippet.title,
-            source_channel: video.snippet.channelTitle,
             format: analysis.contentDNA.format,
-            emotional_tone: analysis.contentDNA.emotionalTone,
             niche: analysis.contentDNA.nicheCategory,
           },
           language: "en",
@@ -471,60 +476,52 @@ GERE:
       }
 
       if (analysis.visualStyle?.replicabilityAsFaceless >= 60) {
-        learnPromises.push(sb.from("scene_prompt_knowledge").insert({
+        learnPromises.push(safeInsert("scene_prompt_knowledge", {
           category: analysis.visualStyle.primaryStyle.toLowerCase().replace(/\s+/g, '_'),
           title: `Visual: ${analysis.visualStyle.primaryStyle} — "${video.snippet.title}"`,
-          prompt_template: analysis.visualDNA?.referenceStylePrompt || 
-            `Style: ${analysis.visualStyle.primaryStyle}. Colors: ${(analysis.visualDNA?.colorPalette || []).join(', ')}. Lighting: ${analysis.visualDNA?.lightingStyle || ''}. ${analysis.visualDNA?.overallAesthetic || ''}`,
+          prompt_template: analysis.visualDNA?.referenceStylePrompt || `Style: ${analysis.visualStyle.primaryStyle}`,
           viral_score: Math.round(analysis.scores?.virality / 10) || 7,
-          tags: JSON.stringify([analysis.visualStyle.primaryStyle, ...analysis.visualStyle.secondaryStyles || []]),
+          tags: JSON.stringify([analysis.visualStyle.primaryStyle]),
         }));
       }
 
       if (views >= 350000) {
-        learnPromises.push(sb.from("viral_titles_db").insert({
+        learnPromises.push(safeInsert("viral_titles_db", {
           title: video.snippet.title,
           channel_name: video.snippet.channelTitle,
           channel_id: video.snippet.channelId,
           views, likes,
           niche: analysis.contentDNA?.nicheCategory || 'unknown',
           why_viral: analysis.hookAnalysis?.whyItWorks || null,
-          title_pattern: analysis.titleAnalysis?.copywritingTechnique || null,
           emotional_triggers: analysis.contentDNA?.psychTriggers || [],
           seo_score: analysis.titleAnalysis?.ctrScore ? Math.round(analysis.titleAnalysis.ctrScore) : 0,
           published_at: video.snippet.publishedAt,
           duration_seconds: durationSeconds,
-        }).then(() => {}).catch(() => {}));
+        }));
       }
 
-      learnPromises.push(sb.from("video_blueprints").upsert({
+      learnPromises.push(safeInsert("video_blueprints", {
         video_id: videoId,
         video_title: video.snippet.title,
         channel_name: video.snippet.channelTitle,
         channel_id: video.snippet.channelId,
         views, likes,
         niche: analysis.contentDNA?.nicheCategory || 'unknown',
-        story_structure: {
-          format: analysis.contentDNA?.format,
-          emotionalTone: analysis.contentDNA?.emotionalTone,
-          targetPersona: analysis.contentDNA?.targetPersona,
-        },
+        story_structure: { format: analysis.contentDNA?.format, emotionalTone: analysis.contentDNA?.emotionalTone },
         hook_type: analysis.hookAnalysis?.hookType || null,
         hook_text: analysis.hookAnalysis?.hookText || null,
         psychological_triggers: analysis.contentDNA?.psychTriggers || [],
         narrative_style: analysis.contentDNA?.format || null,
-        pacing_type: analysis.visualStyle?.editingPace || null,
         visual_style: analysis.visualStyle?.primaryStyle || null,
         scene_structure: analysis.sceneTimeline || [],
         retention_map: analysis.retentionMap || {},
         clone_template: analysis.cloneTemplate || {},
         scores: analysis.scores || {},
-        thumbnail_analysis: analysis.thumbnailAnalysis || {},
         source: 'deep-scan-v3',
-      }, { onConflict: "video_id" }).then(() => {}).catch(() => {}));
+      }, { onConflict: "video_id" }));
 
       await Promise.allSettled(learnPromises);
-      console.log(`Auto-learn: saved ${learnPromises.length} insights from "${video.snippet.title}"`);
+      console.log(`Auto-learn: saved ${learnPromises.length} insights`);
     } catch (learnErr) {
       console.error("Auto-learn error (non-fatal):", learnErr);
     }
