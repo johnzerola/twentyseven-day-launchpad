@@ -317,6 +317,9 @@ export const AudioProcessor = ({
         />
       </div>
 
+      {/* DarkPlanner v3 — Script Pre-Analysis */}
+      <ScriptPreAnalysis script={script} characters={characters} videoStyle={videoStyle} videoStyles={videoStyles} />
+
       {/* Info summary */}
       <div className="bg-muted/30 rounded-lg p-2 text-[10px] text-muted-foreground">
         🎬 Estilo: <strong className="text-foreground">{videoStyles.find(v => v.value === videoStyle)?.label}</strong>
