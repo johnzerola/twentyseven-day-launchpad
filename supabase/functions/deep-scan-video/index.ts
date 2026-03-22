@@ -487,7 +487,21 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
       analysis.cloneTemplate.wordCountTarget = durationMinutes * 150;
     }
 
-    console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, visual DNA: ${analysis.visualDNA?.overallAesthetic?.slice(0, 100)}`);
+    // ═══ Veo3 Policy Filter on all scene visual prompts ═══
+    const policyFixes: string[] = [];
+    if (analysis.sceneTimeline?.length) {
+      for (const scene of analysis.sceneTimeline) {
+        if (scene.visualPrompt) {
+          const { cleaned, fixes } = applyVeo3PolicyFilter(scene.visualPrompt);
+          if (fixes.length > 0) {
+            scene.visualPrompt = cleaned;
+            policyFixes.push(...fixes.map(f => `Scene ${scene.sceneIndex}: ${f}`));
+          }
+        }
+      }
+    }
+
+    console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, policy fixes: ${policyFixes.length}`);
 
     // ═══ AUTO-LEARN ═══
     try {
