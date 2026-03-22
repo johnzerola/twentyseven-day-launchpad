@@ -163,33 +163,19 @@ Faça uma ENGENHARIA REVERSA COMPLETA para CLONAR este vídeo usando o protocolo
 MISSÃO CRÍTICA: O vídeo original tem ${durationMinutes} minutos (${durationSeconds} segundos).
 O clone DEVE ter a MESMA duração. 
 
-═══ REGRA VEO3 — CADA CLIP = 8 SEGUNDOS ═══
-Para ${durationSeconds}s de vídeo → gere EXATAMENTE ${expectedScenes} cenas de 8s cada.
-Cada cena DEVE:
-1. Ter visual_prompt de 150-200 palavras (DarkPlanner v3 standard)
-2. CORRESPONDER ao conteúdo narrado naquele timestamp exato
-3. Incluir: câmera + iluminação + ambiente detalhado + movimento
-4. Terminar com: "(no subtitles, no text, no titles, no captions, no logos, no watermarks)"
-
-═══ TÉCNICAS DARKPLANNER v3 ═══
-• CHARACTER CONSISTENCY: Descrição VERBATIM de personagens em TODA cena
-• MOVEMENT TRIO: Personagem + Câmera + Ambiente em movimento em CADA cena
-• ANTI-WHITE BACKGROUND: Sempre detalhar texturas, materiais, iluminação
-• HOOK MAGNÉTICO: Cena 1 = mais espetacular (mistério + escala + movimento)
-• POLICY COMPLIANCE: Adaptar conteúdo sensível (tensão em vez de violência)
+═══ ANÁLISE DE CENAS ═══
+Gere ${expectedScenes} blocos de cena cobrindo o vídeo completo (${durationMinutes} min).
+Cada bloco com visual_prompt de 80-120 palavras e descrição do que acontece.
+Termine cada visual_prompt com: "(no subtitles, no text, no logos, no watermarks)"
 
 ${VEO3_POLICY_PROMPT}
 
-═══ NARRATION-VISUAL SYNC ═══
-Cada cena DEVE ilustrar o que está sendo dito na narração naquele momento:
-- Objeto mencionado → MOSTRAR literalmente
-- Conceito abstrato → Metáfora visual
-- Emoção → Temperatura de cor correspondente
-- NUNCA usar visuais genéricos desconectados da narração
+═══ TÉCNICAS DARKPLANNER v3 ═══
+• MOVEMENT TRIO em cada cena
+• ANTI-WHITE BACKGROUND: detalhar texturas, materiais, iluminação
+• POLICY COMPLIANCE: tensão em vez de violência
 
-Você está recebendo ${validFrames.length} FRAMES do vídeo (${frameDescriptions}).
-ANALISE cada frame para extrair o DNA visual completo.
-
+Você está recebendo ${validFrames.length} FRAMES (${frameDescriptions}).
 Responda em português BR.`
       },
       {
@@ -197,33 +183,30 @@ Responda em português BR.`
         content: [
           {
             type: "text",
-            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3 + DarkPlanner
+            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3
 
-DADOS DO VÍDEO:
-- Título: "${video.snippet.title}"
-- Canal: "${video.snippet.channelTitle}" (${formatNumber(channelSubs)} subs)
-- Views: ${formatNumber(views)} | Likes: ${formatNumber(likes)} | Comentários: ${formatNumber(comments)}
-- Outlier Score: ${outlierScore}x
-- Publicado: ${video.snippet.publishedAt}
-- DURAÇÃO EXATA: ${durationMinutes} minutos (${durationSeconds} segundos)
-- Tags: ${(video.snippet.tags || []).slice(0, 20).join(', ')}
-- Descrição: ${video.snippet.description?.slice(0, 600)}
-${transcript ? `\nTRANSCRIÇÃO:\n${transcript}` : '\n(Transcrição não disponível)'}
-${timedBlocks ? `\nTRANSCRIÇÃO COM TIMESTAMPS:\n${timedBlocks}` : ''}
+VÍDEO: "${video.snippet.title}"
+Canal: "${video.snippet.channelTitle}" (${formatNumber(channelSubs)} subs)
+Views: ${formatNumber(views)} | Likes: ${formatNumber(likes)} | Comentários: ${formatNumber(comments)}
+Outlier: ${outlierScore}x | Duração: ${durationMinutes}min (${durationSeconds}s)
+Tags: ${(video.snippet.tags || []).slice(0, 15).join(', ')}
+Descrição: ${video.snippet.description?.slice(0, 400)}
+${transcript ? `\nTRANSCRIÇÃO:\n${transcript.slice(0, 5000)}` : ''}
+${timedBlocks ? `\nTIMESTAMPS:\n${timedBlocks}` : ''}
 
-ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
-1. HOOK (5-30s): tipo, texto, psicologia, score
-2. RETENÇÃO: estrutura por fases com timestamps EXATOS
-3. DNA: formato, tom emocional, gatilhos, persona, nicho
-4. TÍTULO & THUMBNAIL: CTR score, power words, análise visual
-5. ESTILO VISUAL COMPLETO: com base nos frames
-6. TIMELINE DE CENAS: EXATAMENTE ${expectedScenes} cenas de 8s cobrindo os ${durationMinutes} minutos COMPLETOS
-   - Cada cena com visual_prompt de 150-200 palavras (DarkPlanner v3)
-   - Visual prompt DEVE corresponder ao que é NARRADO naquele timestamp
-   - Incluir câmera, iluminação, ambiente, movimento, anti-text
-7. CLONAGEM: template + roteiro da MESMA duração (${durationMinutes}min, ~${durationMinutes * 150} palavras)
-   - scriptOutline DEVE ser um roteiro COMPLETO com todas as seções
-   - hookScript com Chekhov's Gun e Inner Monologue techniques`
+GERE:
+1. HOOK: tipo, texto, psicologia, score
+2. RETENÇÃO: fases com timestamps
+3. DNA: formato, tom, gatilhos, persona, nicho
+4. TÍTULO & THUMBNAIL: CTR score, power words
+5. ESTILO VISUAL: baseado nos frames
+6. ${expectedScenes} CENAS cobrindo ${durationMinutes}min completos
+7. TEMPLATE DE CLONAGEM: roteiro de ${durationMinutes}min (~${durationMinutes * 150} palavras)`
+          },
+          ...imageContent,
+        ]
+      }
+    ];
           },
           ...imageContent,
         ]
