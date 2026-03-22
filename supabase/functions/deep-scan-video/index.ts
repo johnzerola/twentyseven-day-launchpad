@@ -102,16 +102,13 @@ serve(async (req) => {
     const durationMinutes = Math.round(durationSeconds / 60);
 
     // ═══ CAPTURE VIDEO FRAMES ═══
-    // YouTube auto-generates 3 thumbnail captures at ~25%, 50%, 75% of the video
+    // Limit to 2 frames to reduce payload size and prevent timeouts
     const thumbnailUrl = video.snippet.thumbnails?.maxres?.url || video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.medium?.url || '';
     const frameUrls = [
-      thumbnailUrl, // Main thumbnail (custom or auto)
-      `https://i.ytimg.com/vi/${videoId}/hq1.jpg`, // ~25% of video
+      thumbnailUrl,
       `https://i.ytimg.com/vi/${videoId}/hq2.jpg`, // ~50% of video  
-      `https://i.ytimg.com/vi/${videoId}/hq3.jpg`, // ~75% of video
     ].filter(Boolean);
 
-    // Validate which frames are actually accessible
     const frameChecks = await Promise.allSettled(
       frameUrls.map(async (url) => {
         const res = await fetch(url, { method: 'HEAD' });
@@ -122,26 +119,25 @@ serve(async (req) => {
       .map(r => r.status === 'fulfilled' ? r.value : null)
       .filter(Boolean) as string[];
     
-    console.log(`Captured ${validFrames.length} video frames for visual analysis`);
+    console.log(`Captured ${validFrames.length} frames for analysis`);
 
-    // ═══ BUILD TIMED TRANSCRIPT BLOCKS for scene mapping ═══
-    // CRITICAL: Veo3 clips = 8 seconds. Scene blocks must match that density.
-    const sceneDuration = 8; // 8s per Veo3 clip — full coverage
-    const expectedScenes = Math.max(6, Math.ceil(durationSeconds / sceneDuration));
+    // ═══ BUILD TIMED TRANSCRIPT BLOCKS ═══
+    // Use 20s blocks for analysis (detailed 8s scenes are generated later in script pipeline)
+    const analysisSceneDuration = 20;
+    const expectedScenes = Math.max(4, Math.min(30, Math.ceil(durationSeconds / analysisSceneDuration)));
     
     let timedBlocks = '';
     if (timedTranscript.length > 0) {
-      // Group transcript by scene blocks
       const blocks: { startTime: number; endTime: number; text: string }[] = [];
       for (let i = 0; i < expectedScenes; i++) {
-        const blockStart = i * sceneDuration;
-        const blockEnd = Math.min((i + 1) * sceneDuration, durationSeconds);
+        const blockStart = i * analysisSceneDuration;
+        const blockEnd = Math.min((i + 1) * analysisSceneDuration, durationSeconds);
         const wordsInBlock = timedTranscript
           .filter(w => w.start >= blockStart && w.start < blockEnd)
           .map(w => w.text)
           .join(' ');
         if (wordsInBlock.trim()) {
-          blocks.push({ startTime: blockStart, endTime: blockEnd, text: wordsInBlock.slice(0, 300) });
+          blocks.push({ startTime: blockStart, endTime: blockEnd, text: wordsInBlock.slice(0, 200) });
         }
       }
       timedBlocks = blocks
@@ -149,18 +145,14 @@ serve(async (req) => {
         .join('\n');
     }
 
-    // 3. Build multimodal messages with ALL captured frames
-    const imageContent: any[] = validFrames.map((url, i) => ({
+    const imageContent: any[] = validFrames.map((url) => ({
       type: "image_url",
       image_url: { url },
     }));
 
-    const frameDescriptions = validFrames.map((_, i) => {
-      if (i === 0) return "Thumbnail principal";
-      const pct = i * 25;
-      const time = formatTimestamp(Math.round(durationSeconds * pct / 100));
-      return `Frame ~${pct}% (${time})`;
-    }).join(', ');
+    const frameDescriptions = validFrames.map((_, i) => 
+      i === 0 ? "Thumbnail" : "Frame ~50%"
+    ).join(', ');
 
     const messages: any[] = [
       {
