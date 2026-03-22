@@ -227,31 +227,23 @@ Segments:\n${segmentTexts}`
     const autoFixes: string[] = [];
 
     for (const prompt of parsed.prompts) {
-      // 1. Trigger word scanner + auto-fix
-      const { fixed, warnings: twWarnings } = scanAndFixTriggerWords(prompt.veo3Prompt);
-      if (twWarnings.length > 0) {
-        prompt.veo3Prompt = fixed;
-        autoFixes.push(...twWarnings.map(w => `Prompt ${prompt.segmentIndex}: ${w}`));
+      // FULL Veo3 policy filter (copyright + celebrity + brand + trigger words + anti-text)
+      const { cleaned, fixes } = applyVeo3PolicyFilter(prompt.veo3Prompt || '');
+      if (fixes.length > 0) {
+        prompt.veo3Prompt = cleaned;
+        autoFixes.push(...fixes.map(f => `Prompt ${prompt.segmentIndex}: ${f}`));
       }
 
-      // 2. Ensure anti-text suffix
-      if (!prompt.veo3Prompt.includes("no subtitles")) {
-        prompt.veo3Prompt += ` ${ANTI_TEXT_SUFFIX}`;
-      }
-
-      // 3. Validate word count (minimum 150)
-      const wordCount = prompt.veo3Prompt.split(/\s+/).length;
+      // Validate word count (minimum 150)
+      const wordCount = (prompt.veo3Prompt || '').split(/\s+/).length;
       if (wordCount < 100) {
         validationWarnings.push(`Prompt ${prompt.segmentIndex}: Only ${wordCount} words (minimum 150 recommended)`);
       }
 
-      // 4. Max 2 characters enforcement
+      // Max 2 characters enforcement
       if (prompt.charactersInPrompt && prompt.charactersInPrompt.length > 2) {
         validationWarnings.push(`Prompt ${prompt.segmentIndex}: ${prompt.charactersInPrompt.length} characters (max 2 recommended)`);
       }
-
-      // 5. Remove any numbering/titles that leaked through
-      prompt.veo3Prompt = prompt.veo3Prompt.replace(/^(Scene|Cena|Prompt|Segmento)\s*\d+\s*[:—-]\s*/i, '');
     }
 
     return new Response(JSON.stringify({
