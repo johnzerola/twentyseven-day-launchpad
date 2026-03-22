@@ -401,6 +401,9 @@ ${characters.slice(0, 5).map((c: any) => {
       },
     };
 
+    // Calculate minimum scenes for full coverage
+    const minimumScenes = Math.ceil(audioDuration / 8);
+    
     const systemPrompt = `You are a VISUAL DIRECTOR creating video scenes from narrated audio.
 You have a TRANSCRIPTION with timestamps. Create visual scenes that MATCH what is being said.
 
@@ -408,11 +411,13 @@ You have a TRANSCRIPTION with timestamps. Create visual scenes that MATCH what i
 ${selectedStyleGuide}
 ${extraStyle}${refImgContext}
 
-TIMING RULES:
-- Each scene: 5-10 seconds
-- HOOK scene (first): 8s
-- Cover the ENTIRE audio — NO GAPS
+⚠️ CRITICAL TIMING — Veo3 GENERATES 8-SECOND CLIPS:
+- Each scene MUST be exactly 8 seconds (Veo3 clip length)
+- For ${audioDuration.toFixed(0)}s audio → MINIMUM ${minimumScenes} scenes required
+- HOOK scene (first): 8s — most visually spectacular
+- Cover the ENTIRE audio — NO GAPS — every second must have a scene
 - startTime/endTime MUST align with transcript timestamps
+- Scene visuals MUST match what the narrator says at THAT EXACT timestamp
 
 PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [FULL CHARACTER DESCRIPTION — skin, hair, eyes, face, clothing]. [ACTION + EXPRESSION]. [ENVIRONMENT + PROPS]. [LIGHTING]. [COLOR GRADING]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 
