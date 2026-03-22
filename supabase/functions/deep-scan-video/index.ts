@@ -30,7 +30,7 @@ function extractTranscript(xml: string): string {
   return textMatches
     .map(m => m.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'))
     .join(' ')
-    .slice(0, 8000);
+    .slice(0, 4000);
 }
 
 function extractTimedTranscript(xml: string): { text: string; start: number; dur: number }[] {
