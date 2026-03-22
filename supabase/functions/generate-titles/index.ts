@@ -382,7 +382,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
       const parsed = JSON.parse(toolCall.function.arguments);
 
       // Log execution for monitoring
-      await sb.from('execution_logs').insert({
+      try { await sb.from('execution_logs').insert({
         function_name: 'generate-titles',
         success: true,
         api_calls_made: (competitorBlock ? 3 : 1) + (braveBlock ? 2 : 0),
@@ -393,7 +393,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
           titles_count: parsed.titles?.length || 0,
           model: 'gemini-2.5-pro',
         },
-      }).catch(() => {});
+      }); } catch { /* non-blocking */ }
 
       return new Response(JSON.stringify({
         titles: parsed.titles,
