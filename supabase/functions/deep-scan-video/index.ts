@@ -322,33 +322,15 @@ GERE:
                 },
                 visualDNA: {
                   type: "object",
-                  description: "Extracted from analyzing actual video frames",
                   properties: {
-                    colorPalette: { type: "array", items: { type: "string" }, description: "Exact colors seen in frames (hex or descriptive)" },
+                    colorPalette: { type: "array", items: { type: "string" } },
                     lightingStyle: { type: "string" },
                     cameraPatterns: { type: "array", items: { type: "string" } },
-                    textOnScreenStyle: { type: "string", description: "Font style, size, position of text overlays" },
-                    imageTypes: { type: "array", items: { type: "string" }, description: "Types of images used: photos, illustrations, maps, diagrams, etc." },
-                    backgroundStyle: { type: "string" },
-                    overallAesthetic: { type: "string", description: "One-paragraph description of the complete visual identity" },
-                    referenceStylePrompt: { type: "string", description: "A MASTER PROMPT that captures the entire visual style — use this as prefix for all scene prompts to maintain consistency" },
-                    frameAnalysis: {
-                      type: "array",
-                      description: "Analysis of each captured frame",
-                      items: {
-                        type: "object",
-                        properties: {
-                          framePosition: { type: "string" },
-                          description: { type: "string" },
-                          keyElements: { type: "array", items: { type: "string" } },
-                          mood: { type: "string" },
-                        },
-                        required: ["framePosition", "description", "keyElements", "mood"],
-                        additionalProperties: false,
-                      }
-                    },
+                    imageTypes: { type: "array", items: { type: "string" } },
+                    overallAesthetic: { type: "string" },
+                    referenceStylePrompt: { type: "string", description: "Master style prompt to prefix all scene prompts for consistency" },
                   },
-                  required: ["colorPalette", "lightingStyle", "cameraPatterns", "imageTypes", "overallAesthetic", "referenceStylePrompt", "frameAnalysis"],
+                  required: ["colorPalette", "lightingStyle", "cameraPatterns", "imageTypes", "overallAesthetic", "referenceStylePrompt"],
                   additionalProperties: false,
                 },
                 sceneTimeline: {
