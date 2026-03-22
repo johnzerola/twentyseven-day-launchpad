@@ -351,34 +351,19 @@ GERE:
                     additionalProperties: false,
                   }
                 },
-                rewatchSegments: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      timeRange: { type: "string" },
-                      reason: { type: "string" },
-                      rewatchScore: { type: "number" },
-                      contentSummary: { type: "string" },
-                    },
-                    required: ["timeRange", "reason", "rewatchScore", "contentSummary"],
-                    additionalProperties: false,
-                  },
-                },
                 cloneTemplate: {
                   type: "object",
                   properties: {
                     templateStructure: { type: "string" },
                     titleVariations: { type: "array", items: { type: "string" } },
-                    scriptOutline: { type: "string", description: `COMPLETE script outline for a ${durationMinutes}-minute video. Must have enough content for the FULL duration.` },
+                    scriptOutline: { type: "string", description: `Script outline for ${durationMinutes}-minute video` },
                     estimatedViewsSmallChannel: { type: "string" },
-                    suggestedDuration: { type: "string", description: `MUST be "${durationMinutes} minutos" to match original` },
+                    suggestedDuration: { type: "string" },
                     thumbnailRecipe: { type: "string" },
                     hookScript: { type: "string" },
                     ctaScript: { type: "string" },
-                    wordCountTarget: { type: "number", description: "Words needed at 150wpm for exact duration" },
                   },
-                  required: ["templateStructure", "titleVariations", "scriptOutline", "estimatedViewsSmallChannel", "suggestedDuration", "thumbnailRecipe", "hookScript", "ctaScript"],
+                  required: ["templateStructure", "titleVariations", "scriptOutline", "suggestedDuration", "hookScript"],
                   additionalProperties: false,
                 },
                 scores: {
@@ -393,7 +378,7 @@ GERE:
                   additionalProperties: false,
                 },
               },
-              required: ["hookAnalysis", "retentionMap", "contentDNA", "titleAnalysis", "thumbnailAnalysis", "visualStyle", "visualDNA", "sceneTimeline", "rewatchSegments", "cloneTemplate", "scores"],
+              required: ["hookAnalysis", "retentionMap", "contentDNA", "titleAnalysis", "visualStyle", "visualDNA", "sceneTimeline", "cloneTemplate", "scores"],
               additionalProperties: false,
             },
           },
