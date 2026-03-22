@@ -429,13 +429,20 @@ PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [FULL CHARACTER DESCRIPTION 
 - Clothing must stay consistent unless the narrative describes a change.
 ${characterBlock}
 
-SYNC RULES:
-- EVERY visual prompt MUST illustrate what the narrator says at THAT moment
-- Concrete → show them. Abstract → visual metaphors
-- NEVER show generic visuals disconnected from narration
+SYNC RULES — NARRATION-TO-VISUAL MATCHING (CRITICAL):
+- EVERY visual prompt MUST illustrate what the narrator says at THAT EXACT moment
+- Read the transcript text for each time window and create a visual that REPRESENTS it
+- Concrete objects/places mentioned → SHOW them directly
+- Abstract concepts → Visual metaphors (fear → growing shadows, power → rising crane shot)
+- Emotions mentioned → Color temperature (sad → cool blues, exciting → warm oranges)
+- NEVER show generic stock visuals disconnected from narration
+- If narrator describes a person → show that person with matching description
+- If narrator describes a place → show that exact environment
+- If narrator tells a story → illustrate the KEY MOMENT of what happened
 - CAMERA VARIETY: Never repeat angles consecutively
 
-PROMPT QUALITY: 70-120 words per prompt. Include lens, lighting, color grading, environment textures.
+PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.
+Each prompt must be semantically connected to the narration at that timestamp.
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 

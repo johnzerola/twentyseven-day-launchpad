@@ -105,9 +105,11 @@ serve(async (req) => {
     const sentences = script.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter((s: string) => s.trim());
     const totalChars = sentences.reduce((sum: number, s: string) => sum + s.length, 0);
 
+    // CRITICAL: Veo3 generates 8-second clips. For 80s audio → minimum 10 scenes.
+    // Formula: ceil(duration / 8) ensures full coverage with no gaps.
     const numScenes = totalDuration > 0
-      ? Math.max(1, Math.ceil(totalDuration / defaultSceneLen))
-      : Math.max(1, Math.ceil(sentences.length / 3));
+      ? Math.max(Math.ceil(totalDuration / 8), Math.ceil(totalDuration / defaultSceneLen))
+      : Math.max(1, Math.ceil(sentences.length / 2));
 
     const scenes: { index: number; text: string }[] = [];
     const charsPerScene = Math.ceil(totalChars / numScenes);
