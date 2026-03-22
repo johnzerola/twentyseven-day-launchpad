@@ -435,9 +435,11 @@ PROMPT QUALITY: 70-120 words per prompt. Include lens, lighting, color grading, 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
     // Split into chunks — adaptive sizing to keep requests fast enough
+    // CRITICAL: Veo3 clips = 8 seconds max. Scenes MUST be 8s to ensure full coverage.
+    // For 80s audio → 10 scenes minimum (80/8 = 10)
     const CHUNK_SECONDS = audioDuration > 600 ? 90 : 120;
-    const TARGET_SCENE_SECONDS = audioDuration > 600 ? 12 : 10;
-    const MAX_SCENES_PER_CHUNK = 14;
+    const TARGET_SCENE_SECONDS = 8; // Veo3 clip duration — always 8s
+    const MAX_SCENES_PER_CHUNK = Math.ceil(CHUNK_SECONDS / TARGET_SCENE_SECONDS) + 2; // ~17 scenes per chunk
 
     const chunks: { blocks: typeof transcriptBlocks; startTime: number; endTime: number }[] = [];
 
