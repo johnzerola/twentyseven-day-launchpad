@@ -207,11 +207,8 @@ GERE:
         ]
       }
     ];
-          },
-          ...imageContent,
-        ]
-      }
-    ];
+
+
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
