@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX, TRIGGER_REPLACEMENTS } from "../_shared/veo3-policy-filter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,57 +28,7 @@ const styleGuides: Record<string, string> = {
   'aquarela': 'Watercolor painting style. Soft translucent washes, visible paper grain texture, bleeding color edges, delicate brushwork, organic imperfections. Pastel and earth tone palette.',
 };
 
-// ═══ TRIGGER WORDS — Auto-replacement map ═══
-const TRIGGER_REPLACEMENTS: Record<string, string> = {
-  'gun': 'defensive stance',
-  'weapon': 'tactical equipment',
-  'pistol': 'holstered sidearm implied',
-  'rifle': 'long equipment case',
-  'knife': 'sharp tool',
-  'blade': 'metallic edge',
-  'sword': 'ceremonial object',
-  'blood': 'dark stain',
-  'bleeding': 'distressed expression',
-  'wound': 'bandaged area',
-  'injury': 'visible pain expression',
-  'gore': 'aftermath scene',
-  'visceral': 'intense emotional',
-  'dead': 'covered shape on ground',
-  'corpse': 'white sheet covering form',
-  'cadaver': 'memorial scene',
-  'dying': 'fading consciousness',
-  'naked': 'draped in fabric',
-  'nude': 'artistically covered',
-  'punch': 'aggressive forward motion',
-  'kick': 'defensive movement',
-  'hit': 'forceful gesture',
-  'attack': 'confrontational stance',
-  'assault': 'tense confrontation',
-  'beat': 'rhythmic motion',
-  'drugs': 'mysterious substance',
-  'cocaine': 'white powder implied',
-  'heroin': 'controlled substance implied',
-  'needle': 'medical instrument',
-  'injection': 'medical procedure',
-};
-
-const TRIGGER_WORDS = Object.keys(TRIGGER_REPLACEMENTS);
-
-function scanAndFixTriggerWords(prompt: string): { fixed: string; warnings: string[] } {
-  const warnings: string[] = [];
-  let fixed = prompt;
-  const lower = prompt.toLowerCase();
-  for (const tw of TRIGGER_WORDS) {
-    if (lower.includes(tw)) {
-      const regex = new RegExp(`\\b${tw}\\b`, 'gi');
-      fixed = fixed.replace(regex, TRIGGER_REPLACEMENTS[tw]);
-      warnings.push(`Replaced "${tw}" → "${TRIGGER_REPLACEMENTS[tw]}"`);
-    }
-  }
-  return { fixed, warnings };
-}
-
-const ANTI_TEXT_SUFFIX = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
+// Trigger words and anti-text imported from shared filter
 
 // ═══ DarkPlanner v3 Prompt Density Formula — Veo3 = 8s clips ═══
 // CRITICAL: Each Veo3 video clip is ONLY 8 seconds. So for an 80s audio → minimum 10 prompts.
@@ -160,60 +111,45 @@ serve(async (req) => {
 - NEVER include text, subtitles, captions, titles, logos, watermarks, writing of ANY kind
 - EVERY prompt MUST end with: "${ANTI_TEXT_SUFFIX}"
 
+${VEO3_POLICY_PROMPT}
+
 ═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION ═══
-NEVER USE these trigger words: ${TRIGGER_WORDS.join(', ')}
+NEVER USE these trigger words: ${Object.keys(TRIGGER_REPLACEMENTS).join(', ')}
 
 ADAPTATION TECHNIQUES:
 • Violence → TENSION/CONSEQUENCE: "aggressive body language, clenched fists, high tension atmosphere, no physical contact shown"
 • Weapons → IMPLICATION: "defensive stance, hand at holster, intense expression, no weapons visible"
 • Death → AFTERMATH/MEMORIAL: "white sheet covering shape, police tape, grief on faces, respectful framing"
-• Accidents → RESPONSE: "damaged vehicle, emergency lights, paramedics arriving, no injuries visible"
 
 ═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
 
 1. PROMPT LENGTH: 150-250 words per prompt (MINIMUM 150). Short prompts = bad generation.
 
-2. ${isDocumentary ? `DOCUMENTARY MODE: Focus on LOCATIONS and ATMOSPHERE. No character identity sheets needed. 1 prompt per ~60 seconds. Rich environmental storytelling — landscapes, architecture, textures, weather, light.` : `CHARACTER CONSISTENCY PROTOCOL (MOST IMPORTANT RULE):
+2. ${isDocumentary ? `DOCUMENTARY MODE: Focus on LOCATIONS and ATMOSPHERE. No character identity sheets needed. 1 prompt per ~60 seconds. Rich environmental storytelling.` : `CHARACTER CONSISTENCY PROTOCOL (MOST IMPORTANT RULE):
    - Character descriptions MUST be COPIED WORD-FOR-WORD from identity sheets below
    - NEVER paraphrase, summarize, or vary the description
    - ❌ WRONG: "wearing yellow dress" → "in her yellow outfit" → "dressed in blue"
-   - ✅ RIGHT: Copy the EXACT same wording every single time
-   - This ensures consistent visual identity across all prompts`}
+   - ✅ RIGHT: Copy the EXACT same wording every single time`}
 
-3. MAXIMUM 2 CHARACTERS PER PROMPT:
-   - >2 characters causes quality degradation and inconsistency
-   - If 3+ needed: split into multiple prompts
-   - Option A: Focus on 2 characters, others blurred in background
-   - Option B: Shot-reverse-shot between pairs
-   - Option C: Wide group shot WITHOUT identity sheets, describe by position
+3. MAXIMUM 2 CHARACTERS PER PROMPT
 
 4. MANDATORY MOVEMENT TRIO — Every prompt MUST describe ALL THREE:
-   🎭 CHARACTER: walking, turning, reaching, breathing heavily, trembling, sitting, raising arms
-   🎥 CAMERA: slowly pushing in, pulling back, panning, circling, tracking, crane rising, dolly
-   🌿 ENVIRONMENT: wind blowing curtains/hair, leaves falling, water flowing, smoke rising, dust motes
+   🎭 CHARACTER: walking, turning, reaching, breathing heavily, trembling
+   🎥 CAMERA: slowly pushing in, pulling back, panning, circling, tracking
+   🌿 ENVIRONMENT: wind blowing curtains/hair, leaves falling, water flowing, smoke rising
 
 5. ENVIRONMENT DETAIL — PREVENT WHITE/BUGGY BACKGROUNDS:
-   ALWAYS include ALL of:
-   - Specific location with MATERIALS and TEXTURES (chipped tile, worn wood, rusted metal)
-   - VISIBLE SURROUNDINGS (what's behind, beside, above)
-   - LIGHT SOURCE and DIRECTION (afternoon sun through window, fluorescent overhead)
-   - ATMOSPHERIC ELEMENTS (dust particles, fog, steam, floating embers)
-   - SMALL PROPS (potted plants, stacked papers, peeling paint, water stains)
-   ❌ WRONG: "Person in a room"
-   ✅ RIGHT: "Person in modest kitchen with chipped tile counter, old appliances, worn wooden table with fruit bowl, warm afternoon light streaming through small curtained window, dust motes floating in light beam"
+   ALWAYS include: specific location + MATERIALS/TEXTURES, visible surroundings, light source + direction, atmospheric elements, small props
 
-6. SEGMENT 0 = HOOK — Most visually spectacular shot combining MYSTERY + SCALE + MOTION + DETAIL.
+6. SEGMENT 0 = HOOK — Most visually spectacular shot.
 
-7. CAMERA VARIETY: Never repeat camera angles in consecutive segments. Mandatory rotation.
+7. CAMERA VARIETY: Never repeat camera angles consecutively.
 
-8. STYLE MODIFIERS matching art style MUST appear at END of every prompt, BEFORE anti-text block.
+8. STYLE MODIFIERS + anti-text block at END of every prompt.
 
 9. ALL PROMPTS IN ENGLISH.
 
-10. FORMAT — DARKPLANNER DELIVERY FORMAT:
-    - NO numbering, NO "Scene 1:", NO "CENA 1:" headers
-    - Just the raw prompt text per segment
-    - Clean, professional, ready for direct Veo3 input
+10. FORMAT: NO numbering, NO "Scene 1:", NO headers. Just raw prompt text.
 
 ${characterBlock ? `\n═══ CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characterBlock}\n\n⚠️ ABSOLUTE RULE: Include FULL character description in EVERY prompt they appear in. Use IDENTICAL wording. Always end with "waist up".` : ''}`
           },
@@ -291,31 +227,23 @@ Segments:\n${segmentTexts}`
     const autoFixes: string[] = [];
 
     for (const prompt of parsed.prompts) {
-      // 1. Trigger word scanner + auto-fix
-      const { fixed, warnings: twWarnings } = scanAndFixTriggerWords(prompt.veo3Prompt);
-      if (twWarnings.length > 0) {
-        prompt.veo3Prompt = fixed;
-        autoFixes.push(...twWarnings.map(w => `Prompt ${prompt.segmentIndex}: ${w}`));
+      // FULL Veo3 policy filter (copyright + celebrity + brand + trigger words + anti-text)
+      const { cleaned, fixes } = applyVeo3PolicyFilter(prompt.veo3Prompt || '');
+      if (fixes.length > 0) {
+        prompt.veo3Prompt = cleaned;
+        autoFixes.push(...fixes.map(f => `Prompt ${prompt.segmentIndex}: ${f}`));
       }
 
-      // 2. Ensure anti-text suffix
-      if (!prompt.veo3Prompt.includes("no subtitles")) {
-        prompt.veo3Prompt += ` ${ANTI_TEXT_SUFFIX}`;
-      }
-
-      // 3. Validate word count (minimum 150)
-      const wordCount = prompt.veo3Prompt.split(/\s+/).length;
+      // Validate word count (minimum 150)
+      const wordCount = (prompt.veo3Prompt || '').split(/\s+/).length;
       if (wordCount < 100) {
         validationWarnings.push(`Prompt ${prompt.segmentIndex}: Only ${wordCount} words (minimum 150 recommended)`);
       }
 
-      // 4. Max 2 characters enforcement
+      // Max 2 characters enforcement
       if (prompt.charactersInPrompt && prompt.charactersInPrompt.length > 2) {
         validationWarnings.push(`Prompt ${prompt.segmentIndex}: ${prompt.charactersInPrompt.length} characters (max 2 recommended)`);
       }
-
-      // 5. Remove any numbering/titles that leaked through
-      prompt.veo3Prompt = prompt.veo3Prompt.replace(/^(Scene|Cena|Prompt|Segmento)\s*\d+\s*[:—-]\s*/i, '');
     }
 
     return new Response(JSON.stringify({

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT } from "../_shared/veo3-policy-filter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -184,6 +185,8 @@ Cada cena DEVE:
 • ANTI-WHITE BACKGROUND: Sempre detalhar texturas, materiais, iluminação
 • HOOK MAGNÉTICO: Cena 1 = mais espetacular (mistério + escala + movimento)
 • POLICY COMPLIANCE: Adaptar conteúdo sensível (tensão em vez de violência)
+
+${VEO3_POLICY_PROMPT}
 
 ═══ NARRATION-VISUAL SYNC ═══
 Cada cena DEVE ilustrar o que está sendo dito na narração naquele momento:
@@ -484,7 +487,21 @@ ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
       analysis.cloneTemplate.wordCountTarget = durationMinutes * 150;
     }
 
-    console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, visual DNA: ${analysis.visualDNA?.overallAesthetic?.slice(0, 100)}`);
+    // ═══ Veo3 Policy Filter on all scene visual prompts ═══
+    const policyFixes: string[] = [];
+    if (analysis.sceneTimeline?.length) {
+      for (const scene of analysis.sceneTimeline) {
+        if (scene.visualPrompt) {
+          const { cleaned, fixes } = applyVeo3PolicyFilter(scene.visualPrompt);
+          if (fixes.length > 0) {
+            scene.visualPrompt = cleaned;
+            policyFixes.push(...fixes.map(f => `Scene ${scene.sceneIndex}: ${f}`));
+          }
+        }
+      }
+    }
+
+    console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, policy fixes: ${policyFixes.length}`);
 
     // ═══ AUTO-LEARN ═══
     try {

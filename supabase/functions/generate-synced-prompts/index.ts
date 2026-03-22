@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -264,35 +265,19 @@ NEVER include ANY of these in prompts:
 - NO subtitles, NO text, NO titles, NO captions
 - NO logos, NO watermarks, NO signatures  
 - NO on-screen graphics, NO lower thirds, NO burned-in text, NO UI elements
-- NO letters, NO words, NO writing of ANY kind
-- EVERY prompt MUST end with: "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
+- EVERY prompt MUST end with: "${ANTI_TEXT_SUFFIX}"
 - EVERY negativePrompt MUST include: "subtitles, text, titles, captions, logos, watermarks, writing, letters, words, lower thirds, on-screen graphics, burned-in text, UI elements"
 ═══════════════════════════════════════
+
+${VEO3_POLICY_PROMPT}
 
 ═══ POLICY COMPLIANCE — SENSITIVE CONTENT ADAPTATION (DarkPlanner v3) ═══
 NEVER include explicit violence, visible weapons, blood/gore, death scenes, nudity.
 
-🚫 TRIGGER WORDS — NEVER USE IN ANY PROMPT:
-gun, weapon, pistol, rifle, knife, blade, sword, blood, bleeding, wound, injury, gore, visceral,
-dead, corpse, body, cadaver, dying, naked, nude, sex, sexual, breast, genitals,
-punch, kick, hit, attack, assault, beat, drugs, cocaine, heroin, needle, injection
-
 ADAPTATION TECHNIQUES (use these instead):
-• VIOLENCE → TENSION/CONSEQUENCE:
-  ❌ "punching victim, blood spattering"
-  ✅ "aggressive body language, clenched fists at sides, high tension atmosphere, no physical contact shown, aftermath implied by expressions"
-• WEAPONS → IMPLICATION:
-  ❌ "pointing gun at suspect"
-  ✅ "defensive stance, hand at holster, intense focused expression, no weapons visible in frame"
-• DEATH → MEMORIAL/AFTERMATH:
-  ❌ "dead body lying on ground"
-  ✅ "white sheet covering shape on ground, police tape cordoning area, grief visible, respectful framing showing aftermath"
-• ACCIDENTS → EMERGENCY RESPONSE:
-  ❌ "car crash with injured people"
-  ✅ "damaged vehicle with shattered glass, emergency lights flashing, paramedics arriving, no injuries visible"
-• RITUAL/SACRIFICE → CULTURAL RESPECT:
-  ❌ "cutting animal's throat"
-  ✅ "holding animal respectfully in ceremonial gesture, cultural ritual documented respectfully, focus on spiritual moment"
+• VIOLENCE → TENSION/CONSEQUENCE: "aggressive body language, clenched fists, no physical contact shown"
+• WEAPONS → IMPLICATION: "defensive stance, hand at holster, no weapons visible"
+• DEATH → MEMORIAL/AFTERMATH: "white sheet covering shape, grief visible, respectful framing"
 ═══════════════════════════════════════
 
 ═══ DARKPLANNER v3 — COMPLETE PROMPT RULES ═══
@@ -467,30 +452,17 @@ SCENES:\n\n${sceneTexts}`
     if (!toolCall) throw new Error("No tool call in response");
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    // ═══ DarkPlanner v3 Post-Processing: Trigger Word Scanner + Auto-Validation ═══
-    const TRIGGER_WORDS_MAP: Record<string, string> = {
-      'gun': 'defensive stance', 'weapon': 'tactical equipment', 'knife': 'sharp tool',
-      'blood': 'dark stain', 'dead': 'covered shape on ground', 'corpse': 'white sheet covering form',
-      'naked': 'draped in fabric', 'punch': 'aggressive forward motion', 'kick': 'defensive movement',
-      'attack': 'confrontational stance', 'drugs': 'mysterious substance',
-    };
+    // ═══ DarkPlanner v3 Post-Processing: FULL Veo3 Policy Filter ═══
     const validationWarnings: string[] = [];
     const autoFixes: string[] = [];
-    const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
 
     for (const scene of parsed.scenes) {
       if (typeof scene.visualPrompt === 'string') {
-        // Trigger word auto-fix
-        for (const [tw, replacement] of Object.entries(TRIGGER_WORDS_MAP)) {
-          const regex = new RegExp(`\\b${tw}\\b`, 'gi');
-          if (regex.test(scene.visualPrompt)) {
-            scene.visualPrompt = scene.visualPrompt.replace(regex, replacement);
-            autoFixes.push(`Scene ${scene.sceneIndex}: "${tw}" → "${replacement}"`);
-          }
-        }
-        // Anti-text suffix
-        if (!scene.visualPrompt.includes("no subtitles")) {
-          scene.visualPrompt += ` ${ANTI_TEXT}`;
+        // FULL Veo3 policy filter (copyright + celebrity + brand + trigger words + anti-text)
+        const { cleaned, fixes } = applyVeo3PolicyFilter(scene.visualPrompt);
+        if (fixes.length > 0) {
+          scene.visualPrompt = cleaned;
+          autoFixes.push(...fixes.map(f => `Scene ${scene.sceneIndex}: ${f}`));
         }
         // Word count check
         const wc = scene.visualPrompt.split(/\s+/).length;
@@ -499,8 +471,6 @@ SCENES:\n\n${sceneTexts}`
         if (scene.charactersInScene?.length > 2) {
           validationWarnings.push(`Scene ${scene.sceneIndex}: ${scene.charactersInScene.length} characters (max 2)`);
         }
-        // Remove leaked numbering
-        scene.visualPrompt = scene.visualPrompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '');
       }
     }
 
