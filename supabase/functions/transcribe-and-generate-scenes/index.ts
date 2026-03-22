@@ -401,6 +401,9 @@ ${characters.slice(0, 5).map((c: any) => {
       },
     };
 
+    // Calculate minimum scenes for full coverage
+    const minimumScenes = Math.ceil(audioDuration / 8);
+    
     const systemPrompt = `You are a VISUAL DIRECTOR creating video scenes from narrated audio.
 You have a TRANSCRIPTION with timestamps. Create visual scenes that MATCH what is being said.
 
@@ -408,11 +411,13 @@ You have a TRANSCRIPTION with timestamps. Create visual scenes that MATCH what i
 ${selectedStyleGuide}
 ${extraStyle}${refImgContext}
 
-TIMING RULES:
-- Each scene: 5-10 seconds
-- HOOK scene (first): 8s
-- Cover the ENTIRE audio — NO GAPS
+⚠️ CRITICAL TIMING — Veo3 GENERATES 8-SECOND CLIPS:
+- Each scene MUST be exactly 8 seconds (Veo3 clip length)
+- For ${audioDuration.toFixed(0)}s audio → MINIMUM ${minimumScenes} scenes required
+- HOOK scene (first): 8s — most visually spectacular
+- Cover the ENTIRE audio — NO GAPS — every second must have a scene
 - startTime/endTime MUST align with transcript timestamps
+- Scene visuals MUST match what the narrator says at THAT EXACT timestamp
 
 PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [FULL CHARACTER DESCRIPTION — skin, hair, eyes, face, clothing]. [ACTION + EXPRESSION]. [ENVIRONMENT + PROPS]. [LIGHTING]. [COLOR GRADING]. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 
@@ -424,20 +429,29 @@ PROMPT FORMAT: [SHOT_TYPE + CAMERA_MOTION], [LENS]. [FULL CHARACTER DESCRIPTION 
 - Clothing must stay consistent unless the narrative describes a change.
 ${characterBlock}
 
-SYNC RULES:
-- EVERY visual prompt MUST illustrate what the narrator says at THAT moment
-- Concrete → show them. Abstract → visual metaphors
-- NEVER show generic visuals disconnected from narration
+SYNC RULES — NARRATION-TO-VISUAL MATCHING (CRITICAL):
+- EVERY visual prompt MUST illustrate what the narrator says at THAT EXACT moment
+- Read the transcript text for each time window and create a visual that REPRESENTS it
+- Concrete objects/places mentioned → SHOW them directly
+- Abstract concepts → Visual metaphors (fear → growing shadows, power → rising crane shot)
+- Emotions mentioned → Color temperature (sad → cool blues, exciting → warm oranges)
+- NEVER show generic stock visuals disconnected from narration
+- If narrator describes a person → show that person with matching description
+- If narrator describes a place → show that exact environment
+- If narrator tells a story → illustrate the KEY MOMENT of what happened
 - CAMERA VARIETY: Never repeat angles consecutively
 
-PROMPT QUALITY: 70-120 words per prompt. Include lens, lighting, color grading, environment textures.
+PROMPT QUALITY: 100-180 words per prompt. Include lens, lighting, color grading, environment textures.
+Each prompt must be semantically connected to the narration at that timestamp.
 
 ${sceneBlueprintFromScript?.length ? `SCRIPT BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
     // Split into chunks — adaptive sizing to keep requests fast enough
+    // CRITICAL: Veo3 clips = 8 seconds max. Scenes MUST be 8s to ensure full coverage.
+    // For 80s audio → 10 scenes minimum (80/8 = 10)
     const CHUNK_SECONDS = audioDuration > 600 ? 90 : 120;
-    const TARGET_SCENE_SECONDS = audioDuration > 600 ? 12 : 10;
-    const MAX_SCENES_PER_CHUNK = 14;
+    const TARGET_SCENE_SECONDS = 8; // Veo3 clip duration — always 8s
+    const MAX_SCENES_PER_CHUNK = Math.ceil(CHUNK_SECONDS / TARGET_SCENE_SECONDS) + 2; // ~17 scenes per chunk
 
     const chunks: { blocks: typeof transcriptBlocks; startTime: number; endTime: number }[] = [];
 
@@ -602,8 +616,12 @@ ${chunkTranscript}
 
 ${cleanScript ? `SCRIPT CONTEXT:\n${cleanScript.slice(0, 1200)}` : ''}
 
-Generate EXACTLY ${expectedScenes} scenes for this segment. Each scene 5-10s. Style: ${videoStyle}. Language: ${language}.
-Visual content MUST match what is narrated at each timestamp.`,
+CRITICAL: Each Veo3 clip = 8 seconds. This chunk is ${(chunk.endTime - chunk.startTime).toFixed(0)}s long.
+Generate EXACTLY ${expectedScenes} scenes (one per 8 seconds). Style: ${videoStyle}. Language: ${language}.
+
+ABSOLUTE RULE: Each scene's visual MUST match what is SPOKEN at that timestamp.
+Read the transcription text for each time window and create a visual prompt that REPRESENTS exactly what the narrator is saying.
+Do NOT use generic/disconnected visuals. The scene must illustrate the specific content being narrated.`,
                 },
               ],
             }),
@@ -724,15 +742,75 @@ Visual content MUST match what is narrated at each timestamp.`,
 
     for (const s of sanitizedScenes) {
       const start = Number(s.startTime) || 0;
-      const end = Number(s.endTime) || start + 6;
+      const end = Number(s.endTime) || start + 8;
       const dur = Math.max(5, Math.min(10, Math.round(Math.max(0.1, end - start))));
       s.startTime = start;
-      s.endTime = end > start ? end : start + 6;
+      s.endTime = end > start ? end : start + 8;
       s.sceneDurationSeconds = dur;
     }
     sanitizedScenes.forEach((s: any, i: number) => {
       s.sceneIndex = i + 1;
     });
+
+    // ═══ SCENE VALIDATION — Ensure full coverage & minimum density ═══
+    const minimumRequiredScenes = Math.ceil(audioDuration / 8);
+    const validationWarnings: string[] = [];
+
+    // Check: enough scenes to cover full duration?
+    if (sanitizedScenes.length < minimumRequiredScenes) {
+      validationWarnings.push(`⚠️ Only ${sanitizedScenes.length} scenes for ${audioDuration.toFixed(0)}s audio (minimum ${minimumRequiredScenes} needed for 8s Veo3 clips)`);
+      
+      // Fill gaps: generate fallback scenes for uncovered time ranges
+      const lastEnd = sanitizedScenes.length > 0 ? sanitizedScenes[sanitizedScenes.length - 1].endTime : 0;
+      if (lastEnd < audioDuration - 2) {
+        const gapDuration = audioDuration - lastEnd;
+        const gapScenes = Math.ceil(gapDuration / 8);
+        for (let g = 0; g < gapScenes; g++) {
+          const gStart = lastEnd + g * 8;
+          const gEnd = Math.min(lastEnd + (g + 1) * 8, audioDuration);
+          const overlapping = transcriptBlocks.filter(b => b.start < gEnd && b.end > gStart);
+          const gapText = overlapping.map(b => b.text).join(' ').trim() || 'Continuação da narração.';
+          sanitizedScenes.push({
+            sceneIndex: sanitizedScenes.length + 1,
+            sceneDurationSeconds: 8,
+            startTime: +gStart.toFixed(1),
+            endTime: +gEnd.toFixed(1),
+            narrativeText: gapText,
+            narrativeSummary: gapText.split(/\s+/).slice(0, 15).join(' '),
+            visualPrompt: `Cinematic wide shot illustrating: ${gapText.slice(0, 200)}. ${selectedStyleGuide.split('.')[0]}. ${ANTI_TEXT}`,
+            negativePrompt: "no subtitles, no text, no logos, no watermarks",
+            cameraAngle: "wide establishing shot",
+            mood: "cinematográfico",
+            charactersInScene: fallbackCharacters,
+            environmentDetails: "Ambiente coerente com a narração",
+            __gapFill: true,
+          });
+        }
+        validationWarnings.push(`✅ Added ${gapScenes} gap-fill scenes to cover ${gapDuration.toFixed(0)}s uncovered`);
+      }
+    }
+
+    // Check: scenes match narration content?
+    let narrativeMismatchCount = 0;
+    for (const scene of sanitizedScenes) {
+      if (scene.narrativeText && scene.visualPrompt) {
+        // Simple check: does the visual prompt contain ANY keywords from the narration?
+        const narrativeWords = (scene.narrativeText as string).toLowerCase().split(/\s+/).filter((w: string) => w.length > 4);
+        const promptLower = (scene.visualPrompt as string).toLowerCase();
+        const hasOverlap = narrativeWords.some((w: string) => promptLower.includes(w));
+        if (!hasOverlap && narrativeWords.length > 3) {
+          narrativeMismatchCount++;
+        }
+      }
+    }
+    if (narrativeMismatchCount > sanitizedScenes.length * 0.3) {
+      validationWarnings.push(`⚠️ ${narrativeMismatchCount}/${sanitizedScenes.length} scenes may not match narration content`);
+    }
+
+    // Remove gap-fill markers
+    for (const s of sanitizedScenes) {
+      delete (s as any).__gapFill;
+    }
 
     if (sanitizedScenes.length === 0) {
       throw new Error("Nenhuma cena gerada. Tente novamente.");
@@ -743,7 +821,7 @@ Visual content MUST match what is narrated at each timestamp.`,
       ? transcriptBlocks.slice(0, MAX_BLOCKS_IN_RESPONSE)
       : transcriptBlocks;
 
-    console.log(`DONE: ${sanitizedScenes.length} scenes, ${audioDuration.toFixed(1)}s audio`);
+    console.log(`DONE: ${sanitizedScenes.length} scenes (min required: ${minimumRequiredScenes}), ${audioDuration.toFixed(1)}s audio, ${validationWarnings.length} warnings`);
 
     return new Response(JSON.stringify({
       transcription: {
@@ -755,7 +833,9 @@ Visual content MUST match what is narrated at each timestamp.`,
       scenes: sanitizedScenes,
       metadata: {
         totalScenes: sanitizedScenes.length,
+        minimumRequiredScenes,
         totalDuration: audioDuration,
+        veo3ClipDuration: 8,
         videoStyle,
         customStyleNotes: !!customStyleNotes,
         charactersCount: characters?.length || 0,
@@ -764,7 +844,9 @@ Visual content MUST match what is narrated at each timestamp.`,
         fallbackChunks,
         transcriptBlocksTotal: transcriptBlocks.length,
         transcriptBlocksReturned: responseBlocks.length,
-        method: "gemini-flash-adaptive-parallel",
+        validationWarnings,
+        narrativeSyncValidated: true,
+        method: "gemini-flash-adaptive-parallel-v3",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -105,9 +105,11 @@ serve(async (req) => {
     const sentences = script.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter((s: string) => s.trim());
     const totalChars = sentences.reduce((sum: number, s: string) => sum + s.length, 0);
 
+    // CRITICAL: Veo3 generates 8-second clips. For 80s audio → minimum 10 scenes.
+    // Formula: ceil(duration / 8) ensures full coverage with no gaps.
     const numScenes = totalDuration > 0
-      ? Math.max(1, Math.ceil(totalDuration / defaultSceneLen))
-      : Math.max(1, Math.ceil(sentences.length / 3));
+      ? Math.max(Math.ceil(totalDuration / 8), Math.ceil(totalDuration / defaultSceneLen))
+      : Math.max(1, Math.ceil(sentences.length / 2));
 
     const scenes: { index: number; text: string }[] = [];
     const charsPerScene = Math.ceil(totalChars / numScenes);
@@ -340,12 +342,12 @@ ${blueprintBlock}
 
 YOUR COMMANDMENTS:
 
-1. DYNAMIC SCENE DURATION: Veo3 generates 4, 6, or 8 second clips:
+1. DYNAMIC SCENE DURATION: Veo3 generates ONLY 8-second clips:
+   - EVERY scene = 8 seconds (this is a Veo3 hard limit)
+   - For ${totalDuration > 0 ? `${totalDuration}s audio → MINIMUM ${Math.ceil((totalDuration || 80) / 8)} scenes` : 'estimate from text'}
    - HOOK SCENE (Scene 1): 8s — MOST spectacular, impossible-to-ignore opening shot
-   - Action/transition scenes: 6s — fast-paced, energetic
-   - Emotional/descriptive scenes: 8s — lingering, atmospheric
-   - Quick cuts/pattern interrupts: 4s — sharp visual change
-   - Calculate startTime/endTime cumulatively
+   - Calculate startTime/endTime cumulatively in 8-second increments
+   - FULL COVERAGE: every second of audio must have a corresponding visual scene
 
 2. SCENE 1 = HOOK (MAGNETIC HOOK FORMULA): Must combine:
    - MYSTERY (what is this?) — partial reveal, obscured subject
@@ -430,20 +432,21 @@ FORMAT: [V1-S#] {visualPrompt} ||| [V1-S#] {camera movement}, {lens}, {lighting}
           },
           {
             role: "user",
-            content: `Generate ${scenes.length} NETFLIX/DISNEY-GRADE Veo3 video prompts with DYNAMIC DURATION.
+            content: `Generate ${scenes.length} NETFLIX/DISNEY-GRADE Veo3 video prompts.
 Total audio: ${totalDuration > 0 ? `${totalDuration}s` : 'estimate from text'}
-Default scene: ~${defaultSceneLen}s (vary 5-8s based on content)
+CRITICAL: Each Veo3 clip = 8 seconds. Minimum scenes needed: ${Math.ceil((totalDuration || 80) / 8)}
 Style: ${videoStyle || 'cinematográfico'}
 Niche: ${niche || 'general'}
 Language context: ${language || 'português'}
 
-CRITICAL RULES:
+ABSOLUTE RULES:
 1. Scene 1 = HOOK — most visually stunning shot possible
 2. ZERO text/subtitles/captions in ANY prompt
 3. Every prompt ends with "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)"
-4. Use Veo3 formula: [Cinematography] + [Subject] + [Action] + [Context] + [Style]
-5. Apply RETENTION TECHNIQUES from knowledge base to visual storytelling
-6. Reference VIRAL PATTERNS from top channels in this niche
+4. EACH scene's visual MUST match what is being NARRATED in that text block
+5. Read the scene text and create a visual that REPRESENTS exactly what is being said
+6. Do NOT use generic/disconnected visuals — every scene must illustrate its narration
+7. Apply DarkPlanner v3: movement trio + environment detail + policy compliance
 
 SCENES:\n\n${sceneTexts}`
           }
