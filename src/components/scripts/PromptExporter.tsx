@@ -42,10 +42,10 @@ export const PromptExporter = ({ scenes, characters, topic, videoStyle, language
     // DarkPlanner v3: Character sheets + prompts separated, no numbering
     const charSheets = characters.length > 0
       ? `═══ CHARACTER IDENTITY SHEETS ═══\n\n${characters.map(c => {
-          const a = c.appearance || {};
-          const f = c.facial_features || {};
-          const cl = c.clothing || {};
-          return `[${c.name}]: ${c.gender} approximately ${c.age} years old, ${a.body_type} build. Skin: ${a.skin_color} tone with natural pores. Hair: ${a.hair_color} ${a.hair_style}. Eyes: ${a.eye_color} with ${f.eyebrows} eyebrows. Face: ${f.face_shape}, ${f.nose} nose. Clothing: ${cl.shirt}, ${cl.pants}, ${cl.shoes}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}. Always framed waist up.`;
+          const a: Record<string, string> = (c.appearance || {}) as any;
+          const f: Record<string, string> = (c.facial_features || {}) as any;
+          const cl: Record<string, string> = (c.clothing || {}) as any;
+          return `[${c.name}]: ${c.gender} approximately ${c.age} years old, ${a.body_type || 'average'} build. Skin: ${a.skin_color || 'medium'} tone with natural pores. Hair: ${a.hair_color || 'dark'} ${a.hair_style || 'short'}. Eyes: ${a.eye_color || 'brown'} with ${f.eyebrows || 'natural'} eyebrows. Face: ${f.face_shape || 'oval'}, ${f.nose || 'straight'} nose. Clothing: ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}. Always framed waist up.`;
         }).join('\n\n')}\n\n${'═'.repeat(40)}\n\n`
       : '';
 
