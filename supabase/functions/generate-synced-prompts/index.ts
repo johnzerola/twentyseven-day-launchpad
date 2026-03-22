@@ -452,30 +452,17 @@ SCENES:\n\n${sceneTexts}`
     if (!toolCall) throw new Error("No tool call in response");
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    // ═══ DarkPlanner v3 Post-Processing: Trigger Word Scanner + Auto-Validation ═══
-    const TRIGGER_WORDS_MAP: Record<string, string> = {
-      'gun': 'defensive stance', 'weapon': 'tactical equipment', 'knife': 'sharp tool',
-      'blood': 'dark stain', 'dead': 'covered shape on ground', 'corpse': 'white sheet covering form',
-      'naked': 'draped in fabric', 'punch': 'aggressive forward motion', 'kick': 'defensive movement',
-      'attack': 'confrontational stance', 'drugs': 'mysterious substance',
-    };
+    // ═══ DarkPlanner v3 Post-Processing: FULL Veo3 Policy Filter ═══
     const validationWarnings: string[] = [];
     const autoFixes: string[] = [];
-    const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)";
 
     for (const scene of parsed.scenes) {
       if (typeof scene.visualPrompt === 'string') {
-        // Trigger word auto-fix
-        for (const [tw, replacement] of Object.entries(TRIGGER_WORDS_MAP)) {
-          const regex = new RegExp(`\\b${tw}\\b`, 'gi');
-          if (regex.test(scene.visualPrompt)) {
-            scene.visualPrompt = scene.visualPrompt.replace(regex, replacement);
-            autoFixes.push(`Scene ${scene.sceneIndex}: "${tw}" → "${replacement}"`);
-          }
-        }
-        // Anti-text suffix
-        if (!scene.visualPrompt.includes("no subtitles")) {
-          scene.visualPrompt += ` ${ANTI_TEXT}`;
+        // FULL Veo3 policy filter (copyright + celebrity + brand + trigger words + anti-text)
+        const { cleaned, fixes } = applyVeo3PolicyFilter(scene.visualPrompt);
+        if (fixes.length > 0) {
+          scene.visualPrompt = cleaned;
+          autoFixes.push(...fixes.map(f => `Scene ${scene.sceneIndex}: ${f}`));
         }
         // Word count check
         const wc = scene.visualPrompt.split(/\s+/).length;
@@ -484,8 +471,6 @@ SCENES:\n\n${sceneTexts}`
         if (scene.charactersInScene?.length > 2) {
           validationWarnings.push(`Scene ${scene.sceneIndex}: ${scene.charactersInScene.length} characters (max 2)`);
         }
-        // Remove leaked numbering
-        scene.visualPrompt = scene.visualPrompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '');
       }
     }
 

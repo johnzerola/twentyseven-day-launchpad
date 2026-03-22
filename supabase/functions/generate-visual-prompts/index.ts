@@ -129,32 +129,22 @@ SEGMENTS:\n\n${segmentTexts}`
     if (!toolCall) throw new Error("No tool call in response");
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    // ═══ DarkPlanner v3 Auto-Validation & Post-Processing ═══
+    // ═══ DarkPlanner v3 Auto-Validation + Veo3 Policy Filter ═══
     const warnings: string[] = [];
     const autoFixes: string[] = [];
 
     for (const p of parsed.prompts) {
-      // 1. Trigger word scanner + auto-fix
-      const { fixed, warnings: twWarnings } = scanAndFixTriggerWords(p.visualPrompt || '');
-      if (twWarnings.length > 0) {
-        p.visualPrompt = fixed;
-        autoFixes.push(...twWarnings.map(w => `Seg ${p.segmentIndex}: ${w}`));
+      // FULL Veo3 policy filter (copyright + celebrity + brand + trigger words + anti-text)
+      const { cleaned, fixes } = applyVeo3PolicyFilter(p.visualPrompt || '');
+      if (fixes.length > 0) {
+        p.visualPrompt = cleaned;
+        autoFixes.push(...fixes.map(f => `Seg ${p.segmentIndex}: ${f}`));
       }
 
-      // 2. Ensure anti-text suffix
-      if (p.visualPrompt && !p.visualPrompt.includes("no subtitles")) {
-        p.visualPrompt += ` ${ANTI_TEXT}`;
-      }
-
-      // 3. Validate word count
+      // Validate word count
       const wordCount = (p.visualPrompt || '').split(/\s+/).length;
       if (wordCount < 100) {
         warnings.push(`Segment ${p.segmentIndex}: Only ${wordCount} words (150-250 recommended)`);
-      }
-
-      // 4. Remove leaked numbering/titles
-      if (p.visualPrompt) {
-        p.visualPrompt = p.visualPrompt.replace(/^(Scene|Cena|Prompt|Segmento)\s*\d+\s*[:—-]\s*/i, '');
       }
     }
 

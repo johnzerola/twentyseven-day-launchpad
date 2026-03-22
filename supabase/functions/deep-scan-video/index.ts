@@ -186,6 +186,8 @@ Cada cena DEVE:
 • HOOK MAGNÉTICO: Cena 1 = mais espetacular (mistério + escala + movimento)
 • POLICY COMPLIANCE: Adaptar conteúdo sensível (tensão em vez de violência)
 
+${VEO3_POLICY_PROMPT}
+
 ═══ NARRATION-VISUAL SYNC ═══
 Cada cena DEVE ilustrar o que está sendo dito na narração naquele momento:
 - Objeto mencionado → MOSTRAR literalmente
