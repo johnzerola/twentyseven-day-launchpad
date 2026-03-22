@@ -222,7 +222,16 @@ function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): Rea
 // ═══════════════════════════════════════════════════════════════
 // CLAUDE API HELPERS
 // ═══════════════════════════════════════════════════════════════
+// Sanitize strings to remove broken Unicode surrogate pairs that cause JSON.stringify to fail
+function sanitizeUnicode(text: string): string {
+  // Remove lone surrogates (unpaired high/low surrogates)
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
+             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+}
+
 async function callClaude(apiKey: string, system: string, userMessage: string, stream: boolean, maxTokens = 16000) {
+  const cleanSystem = sanitizeUnicode(system);
+  const cleanUser = sanitizeUnicode(userMessage);
   return fetch(CLAUDE_API_URL, {
     method: "POST",
     headers: {
@@ -233,8 +242,8 @@ async function callClaude(apiKey: string, system: string, userMessage: string, s
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
-      system,
-      messages: [{ role: "user", content: userMessage }],
+      system: cleanSystem,
+      messages: [{ role: "user", content: cleanUser }],
       stream,
     }),
   });
