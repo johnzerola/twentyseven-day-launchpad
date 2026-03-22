@@ -164,23 +164,36 @@ serve(async (req) => {
     const messages: any[] = [
       {
         role: "system",
-        content: `Você é o maior especialista em YouTube do mundo — CEO com 25 anos, 1000+ canais monetizados. 
-Faça uma ENGENHARIA REVERSA COMPLETA para CLONAR este vídeo.
+        content: `Você é o maior especialista em YouTube do mundo — CEO com 25 anos, 1000+ canais monetizados.
+Faça uma ENGENHARIA REVERSA COMPLETA para CLONAR este vídeo usando o protocolo DarkPlanner v3.
 
 MISSÃO CRÍTICA: O vídeo original tem ${durationMinutes} minutos (${durationSeconds} segundos).
-O clone DEVE ter a MESMA duração. Gere uma timeline de cenas cobrindo CADA SEGUNDO do vídeo.
+O clone DEVE ter a MESMA duração. 
+
+═══ REGRA VEO3 — CADA CLIP = 8 SEGUNDOS ═══
+Para ${durationSeconds}s de vídeo → gere EXATAMENTE ${expectedScenes} cenas de 8s cada.
+Cada cena DEVE:
+1. Ter visual_prompt de 150-200 palavras (DarkPlanner v3 standard)
+2. CORRESPONDER ao conteúdo narrado naquele timestamp exato
+3. Incluir: câmera + iluminação + ambiente detalhado + movimento
+4. Terminar com: "(no subtitles, no text, no titles, no captions, no logos, no watermarks)"
+
+═══ TÉCNICAS DARKPLANNER v3 ═══
+• CHARACTER CONSISTENCY: Descrição VERBATIM de personagens em TODA cena
+• MOVEMENT TRIO: Personagem + Câmera + Ambiente em movimento em CADA cena
+• ANTI-WHITE BACKGROUND: Sempre detalhar texturas, materiais, iluminação
+• HOOK MAGNÉTICO: Cena 1 = mais espetacular (mistério + escala + movimento)
+• POLICY COMPLIANCE: Adaptar conteúdo sensível (tensão em vez de violência)
+
+═══ NARRATION-VISUAL SYNC ═══
+Cada cena DEVE ilustrar o que está sendo dito na narração naquele momento:
+- Objeto mencionado → MOSTRAR literalmente
+- Conceito abstrato → Metáfora visual
+- Emoção → Temperatura de cor correspondente
+- NUNCA usar visuais genéricos desconectados da narração
 
 Você está recebendo ${validFrames.length} FRAMES do vídeo (${frameDescriptions}).
-ANALISE cada frame para extrair:
-- Paleta de cores EXATA
-- Estilo visual (2D, 3D, cinematográfico, etc.)
-- Tipos de imagens/B-roll usados
-- Composição e enquadramento
-- Se usa textos na tela, qual estilo
-- Transições visuais entre frames
-- Nível de produção
-
-Gere visual_prompts que, ao serem usados num gerador de imagens IA, produziriam imagens VISUALMENTE IDÊNTICAS ao vídeo original.
+ANALISE cada frame para extrair o DNA visual completo.
 
 Responda em português BR.`
       },
@@ -189,7 +202,7 @@ Responda em português BR.`
         content: [
           {
             type: "text",
-            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3
+            text: `ENGENHARIA REVERSA — VIDEO CLONE ENGINE v3 + DarkPlanner
 
 DADOS DO VÍDEO:
 - Título: "${video.snippet.title}"
@@ -203,15 +216,19 @@ DADOS DO VÍDEO:
 ${transcript ? `\nTRANSCRIÇÃO:\n${transcript}` : '\n(Transcrição não disponível)'}
 ${timedBlocks ? `\nTRANSCRIÇÃO COM TIMESTAMPS:\n${timedBlocks}` : ''}
 
-ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e extraia:
+ANALISE OS ${validFrames.length} FRAMES DO VÍDEO ACIMA e gere:
 1. HOOK (5-30s): tipo, texto, psicologia, score
 2. RETENÇÃO: estrutura por fases com timestamps EXATOS
 3. DNA: formato, tom emocional, gatilhos, persona, nicho
 4. TÍTULO & THUMBNAIL: CTR score, power words, análise visual
-5. ESTILO VISUAL COMPLETO: com base nos frames, extraia CADA detalhe visual
-6. TIMELINE DE CENAS: ${expectedScenes} cenas cobrindo os ${durationMinutes} minutos COMPLETOS
-   - Cada cena com visual_prompt detalhado baseado no estilo visto nos frames
-7. CLONAGEM: template + roteiro da MESMA duração (${durationMinutes}min)`
+5. ESTILO VISUAL COMPLETO: com base nos frames
+6. TIMELINE DE CENAS: EXATAMENTE ${expectedScenes} cenas de 8s cobrindo os ${durationMinutes} minutos COMPLETOS
+   - Cada cena com visual_prompt de 150-200 palavras (DarkPlanner v3)
+   - Visual prompt DEVE corresponder ao que é NARRADO naquele timestamp
+   - Incluir câmera, iluminação, ambiente, movimento, anti-text
+7. CLONAGEM: template + roteiro da MESMA duração (${durationMinutes}min, ~${durationMinutes * 150} palavras)
+   - scriptOutline DEVE ser um roteiro COMPLETO com todas as seções
+   - hookScript com Chekhov's Gun e Inner Monologue techniques`
           },
           ...imageContent,
         ]
