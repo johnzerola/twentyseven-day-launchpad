@@ -151,21 +151,19 @@ serve(async (req) => {
     const isAction = /perseguição|explosão|corrida|luta|chase|action|fight|escape/i.test(allScriptText);
     const contentType = isDocumentary ? 'documentary' : isAction ? 'action' : 'standard';
 
-    // ========== Character identity block (DarkPlanner format: 150-200 words, "waist up") ==========
-    const characterBlock = characters?.length > 0
-      ? `\n\n═══ DARKPLANNER CHARACTER IDENTITY SHEETS — COPY VERBATIM IN EVERY PROMPT ═══\n${characters.map((c: any, i: number) => {
+    // ═══ Character Identity Sheets — DarkPlanner v3 (150-200 words, "waist up") ═══
+    const characterBlock = (!isDocumentary && characters?.length > 0)
+      ? `\n\n═══ DARKPLANNER v3 CHARACTER IDENTITY SHEETS — COPY VERBATIM ═══\n${characters.slice(0, 5).map((c: any) => {
           const a = c.appearance || {};
           const f = c.facial_features || {};
           const cl = c.clothing || {};
           const refImg = c.imageUrl ? `\nREFERENCE IMAGE: ${c.imageUrl} — Match this exact appearance.` : '';
-          return `[${c.name}]: ${c.gender || 'person'} age ${c.age || 'unknown'}, ${a.body_type || 'average'} build, ${a.height || 'average height'}, ${a.skin_color || 'medium'} skin tone with natural pores and micro-imperfections, ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, ${a.eye_color || 'brown'} eyes with ${f.eyebrows || 'natural'} eyebrows, ${f.face_shape || 'oval'} face, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} mouth, natural skin texture, wearing ${cl.shirt || 'casual top'}, ${cl.pants || 'jeans'}, ${cl.shoes || 'sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, ${cl.accessories}` : ''}${refImg}, waist up`;
-        }).join('\n\n')}\n\n⚠️ ABSOLUTE RULES (DarkPlanner):
-- Include FULL character description block in EVERY prompt they appear in
-- Use IDENTICAL wording — NEVER paraphrase, summarize, or vary
-- ❌ WRONG: "wearing yellow dress" then "in her yellow outfit"
-- ✅ RIGHT: Copy EXACT same wording every time
-- Maximum 2 characters per prompt — split into multiple if 3+ needed
-- Character descriptions ALWAYS end with "waist up"`
+          return `[${c.name}]: ${c.gender || 'person'} approximately ${c.age || 'adult'} years old, ${a.body_type || 'average'} build with ${a.height || 'average'} height. Skin: ${a.skin_color || 'medium'} tone with natural pores, micro-imperfections, and subtle texture visible under directional lighting. Hair: ${a.hair_color || 'dark'} ${a.hair_style || 'short'} hair with individual strand detail, natural highlights catching light. Eyes: ${a.eye_color || 'brown'} with ${f.eyebrows || 'natural'} eyebrows framing expressive gaze. Face: ${f.face_shape || 'oval'} face shape, ${f.nose || 'straight'} nose, ${f.mouth || 'natural'} lips. Clothing: ${cl.shirt || 'casual fitted top'} with visible fabric weave and natural wrinkles, ${cl.pants || 'well-fitted jeans'} with authentic wear patterns, ${cl.shoes || 'clean sneakers'}${cl.accessories && cl.accessories !== 'none' ? `, accessories: ${cl.accessories}` : ''}. Hands show natural calluses and nail detail.${refImg} Always framed waist up.`;
+        }).join('\n\n')}\n\n⚠️ DARKPLANNER v3 ABSOLUTE RULES:
+- COPY FULL character description VERBATIM in EVERY prompt they appear in
+- NEVER paraphrase: "wearing yellow dress" → "in her yellow outfit" = VIOLATION
+- Maximum 2 characters per prompt — split if 3+ needed
+- Always end character with "waist up"`
       : '';
 
     const sceneTexts = scenes.map(s => `Scene ${s.index + 1}: "${s.text}"`).join('\n\n');
