@@ -222,7 +222,16 @@ function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): Rea
 // ═══════════════════════════════════════════════════════════════
 // CLAUDE API HELPERS
 // ═══════════════════════════════════════════════════════════════
+// Sanitize strings to remove broken Unicode surrogate pairs that cause JSON.stringify to fail
+function sanitizeUnicode(text: string): string {
+  // Remove lone surrogates (unpaired high/low surrogates)
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
+             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+}
+
 async function callClaude(apiKey: string, system: string, userMessage: string, stream: boolean, maxTokens = 16000) {
+  const cleanSystem = sanitizeUnicode(system);
+  const cleanUser = sanitizeUnicode(userMessage);
   return fetch(CLAUDE_API_URL, {
     method: "POST",
     headers: {
@@ -233,8 +242,8 @@ async function callClaude(apiKey: string, system: string, userMessage: string, s
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
-      system,
-      messages: [{ role: "user", content: userMessage }],
+      system: cleanSystem,
+      messages: [{ role: "user", content: cleanUser }],
       stream,
     }),
   });
@@ -643,13 +652,15 @@ IMPORTANTE: Você é Claude — use sua força natural de escrita criativa, nuan
         console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via CLAUDE`);
 
         // Cache the hook
-        await sb.from("research_cache").upsert({
-          cache_key: `script_phase0:${runId}`,
-          source: "generate-script",
-          result_json: { hook: hookText },
-          expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
-          query: `phase0:${topic?.slice(0, 50)}`,
-        }, { onConflict: "cache_key" }).catch(() => {});
+        try {
+          await sb.from("research_cache").upsert({
+            cache_key: `script_phase0:${runId}`,
+            source: "generate-script",
+            result_json: { hook: hookText },
+            expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
+            query: `phase0:${topic?.slice(0, 50)}`,
+          }, { onConflict: "cache_key" });
+        } catch { /* non-blocking cache */ }
       } catch (e) {
         console.warn(`[PHASE-0 HOOK] runId=${runId} Claude error, trying fallback:`, e);
         // Fallback to Lovable AI if Claude fails for hook
