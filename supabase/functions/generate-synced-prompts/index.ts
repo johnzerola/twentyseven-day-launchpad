@@ -140,8 +140,16 @@ serve(async (req) => {
       'whiteboard': 'Whiteboard explainer animation. Hand-drawn black ink on clean white surface. Strategic color highlights for emphasis. Educational clarity, smooth drawing reveal.',
       'comic': 'Premium graphic novel / Marvel comic art. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, rich saturated colors, dramatic perspective.',
       'fotorrealista_documentario': 'Documentary photography style, natural soft lighting, shallow depth of field, Canon 5D aesthetic, desaturated color palette with emphasis on earth tones.',
+      'ilustracao_artistica': 'Fine art illustration. Painterly brushstrokes, rich color palettes, gallery-quality compositions. Classical oil painting meets modern digital art.',
+      'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain, bleeding color edges, delicate brushwork, organic imperfections.',
     };
     const selectedStyleGuide = styleGuides[styleLC] || styleGuides['cinematográfico'];
+
+    // ═══ DarkPlanner v3: Detect content type for prompt density ═══
+    const allScriptText = script.toLowerCase();
+    const isDocumentary = /documentário|documentary|história real|true story/i.test(allScriptText);
+    const isAction = /perseguição|explosão|corrida|luta|chase|action|fight|escape/i.test(allScriptText);
+    const contentType = isDocumentary ? 'documentary' : isAction ? 'action' : 'standard';
 
     // ========== Character identity block (DarkPlanner format: 150-200 words, "waist up") ==========
     const characterBlock = characters?.length > 0
