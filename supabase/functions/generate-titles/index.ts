@@ -115,12 +115,12 @@ async function searchBraveTrending(topic: string, niche: string, language: strin
     const block = `\n\n🌐 TENDÊNCIAS WEB EM TEMPO REAL (Brave Search):\n${allSnippets.slice(0, 8).join('\n')}\n\nUse estas tendências para criar títulos que capturam o zeitgeist atual. Incorpore termos trending nos títulos.`;
 
     // Cache for 24h
-    await sb.from("research_cache").upsert({
+    try { await sb.from("research_cache").upsert({
       cache_key: cacheKey,
       source: "brave",
       result_json: block,
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    }, { onConflict: "cache_key,source" }).catch(() => {});
+    }, { onConflict: "cache_key,source" }); } catch { /* non-blocking */ }
 
     return block;
   } catch (e) {
