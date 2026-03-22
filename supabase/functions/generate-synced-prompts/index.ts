@@ -342,12 +342,12 @@ ${blueprintBlock}
 
 YOUR COMMANDMENTS:
 
-1. DYNAMIC SCENE DURATION: Veo3 generates 4, 6, or 8 second clips:
+1. DYNAMIC SCENE DURATION: Veo3 generates ONLY 8-second clips:
+   - EVERY scene = 8 seconds (this is a Veo3 hard limit)
+   - For ${totalDuration > 0 ? `${totalDuration}s audio → MINIMUM ${Math.ceil((totalDuration || 80) / 8)} scenes` : 'estimate from text'}
    - HOOK SCENE (Scene 1): 8s — MOST spectacular, impossible-to-ignore opening shot
-   - Action/transition scenes: 6s — fast-paced, energetic
-   - Emotional/descriptive scenes: 8s — lingering, atmospheric
-   - Quick cuts/pattern interrupts: 4s — sharp visual change
-   - Calculate startTime/endTime cumulatively
+   - Calculate startTime/endTime cumulatively in 8-second increments
+   - FULL COVERAGE: every second of audio must have a corresponding visual scene
 
 2. SCENE 1 = HOOK (MAGNETIC HOOK FORMULA): Must combine:
    - MYSTERY (what is this?) — partial reveal, obscured subject
