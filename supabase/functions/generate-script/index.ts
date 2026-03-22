@@ -652,13 +652,15 @@ IMPORTANTE: Você é Claude — use sua força natural de escrita criativa, nuan
         console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via CLAUDE`);
 
         // Cache the hook
-        await sb.from("research_cache").upsert({
-          cache_key: `script_phase0:${runId}`,
-          source: "generate-script",
-          result_json: { hook: hookText },
-          expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
-          query: `phase0:${topic?.slice(0, 50)}`,
-        }, { onConflict: "cache_key" }).catch(() => {});
+        try {
+          await sb.from("research_cache").upsert({
+            cache_key: `script_phase0:${runId}`,
+            source: "generate-script",
+            result_json: { hook: hookText },
+            expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
+            query: `phase0:${topic?.slice(0, 50)}`,
+          }, { onConflict: "cache_key" });
+        } catch { /* non-blocking cache */ }
       } catch (e) {
         console.warn(`[PHASE-0 HOOK] runId=${runId} Claude error, trying fallback:`, e);
         // Fallback to Lovable AI if Claude fails for hook
