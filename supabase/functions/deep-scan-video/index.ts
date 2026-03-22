@@ -494,7 +494,7 @@ GERE:
           seo_score: analysis.titleAnalysis?.ctrScore ? Math.round(analysis.titleAnalysis.ctrScore) : 0,
           published_at: video.snippet.publishedAt,
           duration_seconds: durationSeconds,
-        }).catch(() => {}));
+        }).then(() => {}).catch(() => {}));
       }
 
       learnPromises.push(sb.from("video_blueprints").upsert({
