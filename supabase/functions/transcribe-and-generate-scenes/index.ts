@@ -807,7 +807,21 @@ Do NOT use generic/disconnected visuals. The scene must illustrate the specific 
       validationWarnings.push(`⚠️ ${narrativeMismatchCount}/${sanitizedScenes.length} scenes may not match narration content`);
     }
 
-    console.log(`DONE: ${sanitizedScenes.length} scenes, ${audioDuration.toFixed(1)}s audio`);
+    // Remove gap-fill markers
+    for (const s of sanitizedScenes) {
+      delete (s as any).__gapFill;
+    }
+
+    if (sanitizedScenes.length === 0) {
+      throw new Error("Nenhuma cena gerada. Tente novamente.");
+    }
+
+    const MAX_BLOCKS_IN_RESPONSE = 300;
+    const responseBlocks = transcriptBlocks.length > MAX_BLOCKS_IN_RESPONSE
+      ? transcriptBlocks.slice(0, MAX_BLOCKS_IN_RESPONSE)
+      : transcriptBlocks;
+
+    console.log(`DONE: ${sanitizedScenes.length} scenes (min required: ${minimumRequiredScenes}), ${audioDuration.toFixed(1)}s audio, ${validationWarnings.length} warnings`);
 
     return new Response(JSON.stringify({
       transcription: {
@@ -819,7 +833,9 @@ Do NOT use generic/disconnected visuals. The scene must illustrate the specific 
       scenes: sanitizedScenes,
       metadata: {
         totalScenes: sanitizedScenes.length,
+        minimumRequiredScenes,
         totalDuration: audioDuration,
+        veo3ClipDuration: 8,
         videoStyle,
         customStyleNotes: !!customStyleNotes,
         charactersCount: characters?.length || 0,
@@ -828,7 +844,9 @@ Do NOT use generic/disconnected visuals. The scene must illustrate the specific 
         fallbackChunks,
         transcriptBlocksTotal: transcriptBlocks.length,
         transcriptBlocksReturned: responseBlocks.length,
-        method: "gemini-flash-adaptive-parallel",
+        validationWarnings,
+        narrativeSyncValidated: true,
+        method: "gemini-flash-adaptive-parallel-v3",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
