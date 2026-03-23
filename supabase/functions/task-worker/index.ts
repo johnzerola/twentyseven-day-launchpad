@@ -110,6 +110,12 @@ serve(async (req) => {
           case "viral_score_scan":
             result = await callFn("viral-score-worker", { action: "scan", ...(task.payload || {}) });
             break;
+          case "smart_knowledge":
+            result = await callFn("smart-knowledge-retrieval", task.payload);
+            break;
+          case "calibrate_knowledge":
+            result = await callFn("calibrate-knowledge", task.payload);
+            break;
           default:
             result = { warning: `Unknown task_type: ${task.task_type}` };
             break;
