@@ -471,7 +471,7 @@ GERE:
 
       if (analysis.retentionMap?.structure?.length) {
         for (const phase of analysis.retentionMap.structure.filter((p: any) => p.retentionEstimate >= 70).slice(0, 3)) {
-          learnPromises.push(safeInsert("script_knowledge", {
+          learnPromises.push(safeUpsert("script_knowledge", {
             category: "retention_technique",
             title: `${phase.phase} — ${phase.technique}`,
             content: `Técnica "${phase.technique}" na fase "${phase.phase}" (${phase.timeRange}). Retenção: ${phase.retentionEstimate}%.`,
@@ -481,7 +481,7 @@ GERE:
       }
 
       if (analysis.contentDNA?.psychTriggers?.length) {
-        learnPromises.push(safeInsert("viral_content_library", {
+        learnPromises.push(safeUpsert("viral_content_library", {
           category: "psychology_triggers",
           content_json: {
             triggers: analysis.contentDNA.psychTriggers,
@@ -496,7 +496,7 @@ GERE:
       }
 
       if (analysis.visualStyle?.replicabilityAsFaceless >= 60) {
-        learnPromises.push(safeInsert("scene_prompt_knowledge", {
+        learnPromises.push(safeUpsert("scene_prompt_knowledge", {
           category: analysis.visualStyle.primaryStyle.toLowerCase().replace(/\s+/g, '_'),
           title: `Visual: ${analysis.visualStyle.primaryStyle} — "${video.snippet.title}"`,
           prompt_template: analysis.visualDNA?.referenceStylePrompt || `Style: ${analysis.visualStyle.primaryStyle}`,
@@ -506,7 +506,7 @@ GERE:
       }
 
       if (views >= 350000) {
-        learnPromises.push(safeInsert("viral_titles_db", {
+        learnPromises.push(safeUpsert("viral_titles_db", {
           title: video.snippet.title,
           channel_name: video.snippet.channelTitle,
           channel_id: video.snippet.channelId,
