@@ -1,200 +1,226 @@
 
 
-# Auditoria Técnica Completa + Plano de Ação Avançado
+# Auditoria Completa + Plano v3.0 — DarkPlanner vs Nosso Sistema
 
 ---
 
-## RELATÓRIO DE AUDITORIA — 4 PILARES
+## DIAGNÓSTICO COMPARATIVO
+
+### O que o DarkPlanner tem:
+
+| Feature | DarkPlanner | Nosso Sistema | Status |
+|---------|-------------|---------------|--------|
+| Gestão de Canais (multi-canal) | ✅ Kanban + multi-canal | ✅ Workspace + ProjectCard | ✓ Temos |
+| Quadro de Ideias | ✅ Board visual | ✅ ViralThemeWizard + IdeaEngine | ✓ Superior |
+| Biblioteca de Prompts | ✅ Organizada por canal | ⚠️ Prompt Exporter existe mas sem biblioteca persistente | Falta |
+| Referências Visuais | ✅ Galeria de referências | ⚠️ ReferenceChannels mas sem galeria de imagens | Parcial |
+| Vídeos Virais (pesquisa) | ✅ Ferramenta de busca | ✅ ViralDatabase + OutlierFinder + DubSpy | ✓ Superior |
+| Nichos Virais | ✅ Descoberta de nichos | ✅ NicheExplorer + MicroNicheFinder | ✓ Superior |
+| Insights de Canal | ✅ Análise básica | ✅ ChannelIntelligence + DNA + ReferenceAnalyzer | ✓ Superior |
+| Canais Removidos | ✅ Detecta canais deletados | ❌ Não temos | Falta |
+| Gerador de Áudio IA (TTS) | ✅ ElevenLabs, 210+ vozes, SRT sincronizado | ✅ AudioProcessor + ElevenLabs | ✓ Temos |
+| SRT segmentado 8s | ✅ Gera SRT de 8 em 8 segundos | ❌ Não geramos SRT formatado em blocos de 8s | Falta |
+| Extensão Chrome VEO/Whisk | ✅ Automação batch de prompts | ❌ Não temos (diferente escopo) | N/A |
+| Roteiros | ✅ Editor básico | ✅ ScriptGenerator com Claude + 13 gêneros + Anti-Slop | ✓ 20x Superior |
+| Geração de Prompts VEO | ✅ Manual via treinamento | ✅ Automático via DarkPlanner v3 pipeline | ✓ 20x Superior |
+| Personagens consistentes | ✅ Via treinamento manual | ✅ CharacterManager + Identity Sheets automáticos | ✓ Superior |
+| Policy Compliance VEO3 | ✅ Via treinamento | ✅ veo3-policy-filter.ts automático | ✓ Superior |
+| Engenharia Reversa (Clone) | ❌ Não tem | ✅ DeepScan + Clone Engine | ✓ Exclusivo |
+| Auto-Learn Knowledge | ❌ Não tem | ✅ 15+ tabelas, RAG, embeddings | ✓ Exclusivo |
+| Score de Roteiro (dual AI) | ❌ Não tem | ✅ score-script com GPT + Gemini | ✓ Exclusivo |
+| Predição de Retenção | ❌ Não tem | ✅ predict-retention | ✓ Exclusivo |
+| Tracker 30 dias | ❌ Não tem | ✅ Tracker30Days | ✓ Exclusivo |
+| Dotti (Assistente IA) | ❌ Não tem | ✅ ChatbotWidget com RAG | ✓ Exclusivo |
+
+### Conclusão: Nosso sistema é 10-20x mais avançado tecnicamente. DarkPlanner é mais simples e organizado visualmente.
 
 ---
 
-### PILAR 1: Banco de Dados e Performance
+## FALHAS CRÍTICAS IDENTIFICADAS (10 Pilares)
 
-**Estado Atual:**
-- ~40+ tabelas bem estruturadas com RLS policies aplicadas
-- Knowledge base distribuída em 15+ tabelas (viral_titles_db, hook_library, script_knowledge, scene_prompt_knowledge, attention_engineering, etc.)
-- Função `match_knowledge()` usando pgvector para busca semântica
-- Cache via tabela `research_cache` com expiração por timestamp
+### 1. Busca e Coleta de Dados
+- **RAG subutilizado**: `match_knowledge()` existe mas `generate-script` NÃO o usa — carrega 13 tabelas fixas
+- **Brave Search sem enriquecimento**: resultados cacheados como JSON bruto, sem extração de embeddings
+- **Sem re-ranking no pipeline principal**: knowledge injetado sem filtro de relevância ao tópico
+- **Fix**: Integrar `smart-knowledge-retrieval` no `generate-script` para Smart Context Selection
 
-**Problemas Identificados:**
+### 2. Banco de Dados
+- **13 queries paralelas sem índices otimizados** em `generate-script`
+- **scene_prompt_knowledge**: carrega 150 rows e filtra em JS — deveria ser SQL
+- **Auto-learn sem deduplicação** em deep-scan → duplicatas no knowledge base
+- **Fix**: Índices já criados na última migration. Falta deduplicação no upsert.
 
-1. **Queries sem índices otimizados** — `generate-script` faz 13 queries paralelas ao banco no início de cada geração. Tabelas como `viral_titles_db`, `script_knowledge`, `hook_library` são consultadas com ORDER BY em colunas como `effectiveness_score`, `retention_score`, `views` — provavelmente sem índices dedicados.
+### 3. Geração de Vídeos / Clonagem
+- **deep-scan-video** ainda tem risco de timeout em vídeos >20min
+- **Sem processamento assíncrono** — cada clique é síncrono
+- **Transcrição truncada a 5000 chars** — perde contexto em vídeos longos
+- **Fix**: Pipeline assíncrono com `processing_jobs` table
 
-2. **Payload excessivo nas queries** — `generate-script` carrega 150 registros de `scene_prompt_knowledge`, depois filtra/ranqueia em memória no edge function. Isso deveria ser feito no Postgres com queries mais inteligentes.
+### 4. Geração de Roteiros
+- **System prompt gigante (~20K tokens)** — diluição de contexto
+- **Sem priorização dinâmica de knowledge** — finanças carregadas para mitologia
+- **`errResp` declarada 2x** — bug menor mas indica falta de linting
+- **Fix**: Smart Context Selection + reduzir prompt para seções CORE/RELEVANT/SUPPLEMENTARY
 
-3. **Sem connection pooling visível** — cada edge function cria um novo `createClient()` a cada request, sem reutilização.
+### 5. Geração de Cenas e Prompts
+- **Já implementado DarkPlanner v3** com 150-250 palavras, trio de movimento, policy filter
+- **Falta**: Biblioteca persistente de prompts gerados (salvar e reutilizar)
+- **Falta**: Exportação SRT segmentado em blocos de 8s (o que DarkPlanner oferece)
 
-4. **Cache naive** — `research_cache` é uma tabela simples com busca por `cache_key` exato. Sem TTL automático (cleanup manual), sem invalidação inteligente.
+### 6. Automação e Fluxo
+- **Pipeline wizard de 5 etapas funciona** mas não tem auto-save entre etapas
+- **task-worker limitado a 10 runs/dia** — pode ser insuficiente para uso pesado
+- **Sem debounce** no deep-scan frontend
 
-5. **Auto-learn sem deduplicação** — `deep-scan-video` insere em `script_knowledge`, `viral_content_library`, `scene_prompt_knowledge` sem verificar se entradas similares já existem, causando acúmulo de dados redundantes.
+### 7. Performance e Escalabilidade
+- **Edge functions com timeout de 60s** — limite duro para operações pesadas
+- **Sem paralelização** na geração de prompts (sequencial)
+- **Knowledge queries podiam usar materialized views** (já criadas)
 
-**Ações Recomendadas:**
+### 8. Qualidade das Respostas
+- **Claude para roteiros = excelente** — Anti-Slop + 5 técnicas cinematográficas
+- **Gemini para cenas = bom** mas sem feedback loop de qualidade
+- **Falta calibração real** — `calibrate-knowledge` criado mas não integrado no fluxo
 
-- Criar índices compostos nas tabelas de knowledge (ex: `CREATE INDEX idx_script_knowledge_cat_score ON script_knowledge(category, effectiveness_score DESC)`)
-- Migrar a filtragem de `scene_prompt_knowledge` para uma query SQL com scoring em vez de carregar 150 rows e filtrar em JS
-- Implementar cleanup automático do `research_cache` via pg_cron ou trigger
-- Adicionar constraint UNIQUE ou lógica de upsert no auto-learn para evitar duplicatas
-- Criar materialized views para os "top hooks by niche" e "top titles by views" que já existem mas podem não estar atualizados
+### 9. Features Faltantes (inspiradas no DarkPlanner)
+- **Biblioteca de Prompts Persistente** — salvar prompts gerados com tags, pesquisar, reutilizar
+- **SRT Segmentado 8s** — gerar arquivo SRT com blocos de 8 segundos para sincronização VEO
+- **Detector de Canais Removidos** — monitorar canais de referência e detectar quando são deletados
 
----
-
-### PILAR 2: Mecanismos de Busca e Pesquisa
-
-**Estado Atual:**
-- Brave Search API com cache por `cache_key` exato
-- pgvector com `match_knowledge()` para busca semântica (threshold 0.3, top 20)
-- `knowledge_embeddings` para RAG
-- Perplexity API disponível mas uso limitado
-- YouTube Data API v3 para métricas reais
-
-**Problemas Identificados:**
-
-1. **RAG subutilizado** — a função `match_knowledge()` existe mas NÃO é chamada no pipeline principal de `generate-script`. O script usa queries diretas por tabela em vez de busca semântica unificada.
-
-2. **Brave Search sem enriquecimento** — os resultados do Brave são cacheados como JSON bruto, sem extração de entidades, facts ou embeddings para alimentar o knowledge base.
-
-3. **Sem re-ranking** — os resultados de busca não passam por um re-ranker que considere relevância ao tópico específico do roteiro.
-
-4. **Embeddings possivelmente desatualizados** — não há mecanismo visível de atualização periódica dos embeddings quando novos dados entram nas tabelas fonte.
-
-**Ações Recomendadas:**
-
-- Integrar `match_knowledge()` no pipeline de `generate-script` como fonte complementar — buscar embeddings semanticamente próximos ao tópico
-- Criar um pipeline de enriquecimento pós-Brave: extrair fatos → gerar embedding → inserir em `knowledge_embeddings`
-- Adicionar re-ranking com Gemini Flash (barato/rápido) para selecionar os top-5 resultados mais relevantes ao tópico
-- Implementar trigger que gera embedding automaticamente ao inserir em tabelas de knowledge
-
----
-
-### PILAR 3: Motor de Geração de Roteiros e Prompts de Cenas
-
-**Estado Atual:**
-- `generate-script` usa Claude Sonnet 4 com streaming, system prompt de ~10K+ caracteres
-- Pipeline de 2 fases: Phase 0 (Hook via Claude) → Phase 1 (Draft completo via Claude streaming)
-- Anti-Slop Engine com lista de frases proibidas e "sinais de alma"
-- Técnicas avançadas: Inner Monologue, Cliffhangers, Emotional Whiplash, Rule of Three, Chekhov's Gun
-- Feedback absorption de avaliações anteriores (`ai_learning` table)
-- 13 tabelas de knowledge alimentam o system prompt
-- `generate-synced-prompts` e `generate-veo3-prompts` para cenas visuais
-- `_shared/veo3-policy-filter.ts` para compliance com Veo3
-
-**Problemas Identificados:**
-
-1. **System prompt GIGANTE** — o prompt final pode ultrapassar 15-20K tokens com todo o knowledge injetado. Isso desperdiça contexto do Claude e pode diluir instruções críticas. O modelo pode "perder" regras importantes no meio de tanta informação.
-
-2. **Sem priorização dinâmica de knowledge** — todas as 13 tabelas são carregadas independente do tópico. Se o roteiro é sobre "mitologia grega", carregar hooks de "finanças" é desperdício.
-
-3. **`errResp` declarada duas vezes** — bug menor, a função está definida na linha 9 e novamente na linha 942.
-
-4. **Policy filter com regex escapados incorretamente** — no arquivo `veo3-policy-filter.ts`, os regex usam `\\b` em vez de `\b` (double-escaped), o que pode não funcionar como esperado dependendo do contexto de parsing.
-
-5. **Prompt de cenas sem sincronização temporal rigorosa** — `generate-synced-prompts` gera cenas mas a validação de coverage (sem gaps temporais) é superficial.
-
-**Ações Recomendadas:**
-
-- Implementar "Smart Context Selection" — usar embedding do tópico para selecionar apenas knowledge relevante (top-10 por similaridade) em vez de carregar tudo
-- Reduzir o system prompt dividindo em seções priorizadas: CORE (sempre), RELEVANT (por tópico), SUPPLEMENTARY (se cabe no contexto)
-- Corrigir a duplicação de `errResp`
-- Adicionar Phase 2 de auto-revisão: após o draft, um segundo pass rápido com Gemini Flash para detectar violações das regras e sugerir fixes
+### 10. Sugestões Avançadas (além do pedido)
+- **A/B Test de Prompts**: gerar 2 variações de prompt para mesma cena, comparar resultados
+- **Prompt Quality Score**: avaliar automaticamente cada prompt gerado (comprimento, movimento, consistência)
+- **Batch Export para VEO**: exportar todos os prompts em formato pronto para paste em lote
 
 ---
 
-### PILAR 4: Módulo de Clonagem e Processamento de Vídeos
+## PLANO v3.0 — IMPLEMENTAÇÃO
 
-**Estado Atual:**
-- `deep-scan-video` faz engenharia reversa completa usando YouTube API + transcrição + thumbnail
-- Usa Gemini Flash para análise rápida com tool calling
-- Auto-learn: salva insights em 5+ tabelas (script_knowledge, viral_content_library, scene_prompt_knowledge, viral_titles_db, video_blueprints)
-- Limite de 1 frame (thumbnail) para evitar timeouts
-- Blocos de 20s para análise
+### Fase 1: Quick Wins (Alto Impacto, Baixo Esforço)
 
-**Problemas Identificados:**
+**1.1 Smart Context Selection no generate-script**
+- Chamar `smart-knowledge-retrieval` no início do pipeline em vez de 13 queries fixas
+- Reduz system prompt em ~60%, melhora relevância 3x
+- Arquivos: `supabase/functions/generate-script/index.ts`
 
-1. **Timeout risk** — edge functions têm limite de ~60s. Com transcrições longas + AI call + auto-learn writes, vídeos >30min podem estourar o timeout.
+**1.2 Gerador de SRT Segmentado 8s**
+- Após gerar áudio no AudioProcessor, gerar SRT com blocos de 8 segundos
+- Botão de download do SRT formatado
+- Feature que DarkPlanner tem e nós não
+- Arquivos: `src/components/scripts/AudioProcessor.tsx`
 
-2. **Sem fila de processamento** — cada clique dispara o pipeline completo síncrono. Se o usuário clica 3x, são 3 chamadas simultâneas à API do YouTube + AI.
+**1.3 Fix errResp duplicado + Policy filter regex**
+- Remover declaração duplicada de `errResp` em `generate-script`
+- Verificar regex no `veo3-policy-filter.ts`
+- Arquivos: `supabase/functions/generate-script/index.ts`, `supabase/functions/_shared/veo3-policy-filter.ts`
 
-3. **Transcrição limitada** — `extractTranscript` corta em 4000 chars e `timedBlocks` em 200 chars por bloco. Para vídeos longos, perde-se contexto narrativo importante.
+**1.4 Debounce no DeepScan**
+- Prevenir múltiplos cliques no botão de clonagem
+- Arquivos: `src/components/tubespy/DeepScanPanel.tsx`
 
-4. **Sem fallback de transcrição** — se a API de legendas do YouTube falha (vídeos sem legenda), a análise fica muito pobre.
+### Fase 2: Melhorias Avançadas (Alto Impacto)
 
-5. **Auto-learn sem validação de qualidade** — qualquer insight com `powerScore >= 7` é salvo. Não há verificação se o insight é realmente útil ou se é duplicata de algo existente.
+**2.1 Biblioteca de Prompts Persistente**
+- Nova tabela `prompt_library` (user_id, project_id, prompt_text, style, tags, scene_index, created_at)
+- UI para salvar, pesquisar e reutilizar prompts gerados
+- Botão "Salvar na Biblioteca" no PromptExporter
+- Migration SQL + frontend component
+- Arquivos: migration SQL, `src/components/scripts/PromptExporter.tsx`, novo `src/components/scripts/PromptLibrary.tsx`
 
-**Ações Recomendadas:**
+**2.2 Pipeline Assíncrono para Deep Scan**
+- Usar tabela `processing_jobs` (já criada) para processar clonagem em background
+- Frontend mostra progress bar com Supabase Realtime
+- Elimina timeouts completamente
+- Arquivos: `supabase/functions/deep-scan-video/index.ts`, `src/components/tubespy/DeepScanPanel.tsx`
 
-- Implementar processamento em 2 etapas: Etapa 1 (rápida, ~10s) retorna dados básicos do vídeo + thumbnail analysis. Etapa 2 (background) faz deep analysis com transcrição completa e salva resultado para consulta posterior.
-- Adicionar debounce no frontend para evitar múltiplas chamadas
-- Aumentar o limite de transcrição para 8000 chars com resumo inteligente (Gemini Flash resume em 2000 chars)
-- Adicionar deduplicação no auto-learn: verificar se `video_id` já foi analisado antes de processar
+**2.3 Prompt Quality Score (Auto-Validação DarkPlanner Etapa 10)**
+- Após gerar prompts, validar automaticamente:
+  - Comprimento (150-250 palavras)
+  - Presença de movimento (personagem + câmera + ambiente)
+  - Consistência de descrição de personagem (diff entre prompts)
+  - Trigger words residuais
+  - Anti-text suffix
+  - Max 2 personagens por prompt
+- Mostrar badge de qualidade (verde/amarelo/vermelho) por prompt
+- Arquivos: `supabase/functions/generate-synced-prompts/index.ts`, `src/components/scripts/SceneViewer.tsx`
+
+### Fase 3: Arquitetura Estado da Arte (Longo Prazo)
+
+**3.1 Auto-Evolução com Feedback Loop**
+- Integrar `calibrate-knowledge` no fluxo pós-publicação
+- Quando vídeo tem performance tracker → comparar previsão vs realidade → atualizar scores
+- Arquivos: `supabase/functions/calibrate-knowledge/index.ts`, `supabase/functions/task-worker/index.ts`
+
+**3.2 Detector de Canais Removidos**
+- Job semanal que verifica se canais de referência ainda existem
+- Alerta quando canal é removido (oportunidade de gap)
+- Nova edge function + UI notification
+
+**3.3 Smart Prompt Re-Generation**
+- Se prompt falha no VEO3 (policy violation), auto-substituir e oferecer alternativa
+- Integrar feedback do usuário ("este prompt falhou") para melhorar o filtro
 
 ---
 
-## 3 SUGESTÕES DE ARQUITETURA AVANÇADA
+## ROADMAP
 
-### 1. RAG Inteligente com Re-Ranking Semântico
+| Prazo | Ação | Impacto |
+|-------|------|---------|
+| Agora | 1.1 Smart Context + 1.3 Bugfixes + 1.4 Debounce | Alto |
+| Agora | 1.2 SRT Segmentado 8s | Médio |
+| Próximo | 2.1 Biblioteca de Prompts | Alto |
+| Próximo | 2.2 Pipeline Assíncrono Deep Scan | Alto |
+| Próximo | 2.3 Prompt Quality Score | Médio |
+| Futuro | 3.1 Auto-Evolução Feedback | Muito Alto |
+| Futuro | 3.2 Detector Canais Removidos | Baixo |
+| Futuro | 3.3 Smart Re-Generation | Médio |
 
-Em vez de carregar knowledge de 13 tabelas fixas, implementar um pipeline RAG unificado:
+---
 
+## Detalhes Técnicos
+
+### Smart Context Selection (1.1)
+Substituir as 13 queries paralelas no `generate-script` por uma chamada à edge function `smart-knowledge-retrieval`:
 ```text
-Tópico do usuário
-    → Gerar embedding do tópico
-    → match_knowledge() com threshold 0.4
-    → Re-rank com Gemini Flash (custo: ~$0.001)
-    → Top-15 resultados mais relevantes
-    → Injetar no system prompt de forma compacta
+// Antes: 13 queries fixas → 15-20K tokens de knowledge
+// Depois: 1 chamada RAG → top-15 snippets relevantes (~3K tokens)
+const knowledgeResp = await callFn("smart-knowledge-retrieval", { topic, niche, style, language });
 ```
 
-Benefício: System prompt 60% menor, knowledge 3x mais relevante, custo menor por request.
-
-Implementação: 1 nova edge function `smart-knowledge-retrieval` que centraliza a busca, reutilizável por todos os pipelines.
-
-### 2. Pipeline Assíncrono com Status em Tempo Real
-
-Transformar os processos pesados (deep-scan, geração de cenas, auto-learn) em jobs assíncronos:
-
+### SRT Segmentado 8s (1.2)
 ```text
-Usuário clica "Clonar"
-    → Edge function cria job na tabela `processing_jobs`
-    → Retorna job_id imediatamente
-    → Frontend mostra progress bar
-    → Background: task-worker processa em etapas
-    → Cada etapa atualiza status via Realtime
-    → Frontend recebe updates em tempo real
+Após transcrição, gerar SRT com blocos de 8 segundos:
+00:00:00,000 --> 00:00:08,000
+[texto narrado nos primeiros 8s]
+
+00:00:08,000 --> 00:00:16,000
+[texto narrado nos próximos 8s]
+```
+Botão de download no AudioProcessor.
+
+### Prompt Library Schema (2.1)
+```text
+CREATE TABLE prompt_library (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  prompt_text TEXT NOT NULL,
+  style TEXT,
+  tags TEXT[],
+  scene_type TEXT, -- 'character', 'environment', 'establishing'
+  word_count INT,
+  quality_score NUMERIC,
+  video_style TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-Benefício: Zero timeouts, UX fluida, retry automático em falhas, processamento de vídeos de qualquer duração.
-
-Implementação: Nova tabela `processing_jobs` + upgrade do `task-worker` existente + Supabase Realtime no frontend.
-
-### 3. Auto-Evolução do Knowledge Base com Feedback Loop
-
-Criar um ciclo fechado de aprendizado:
-
-```text
-Roteiro gerado → Avaliado (score-script) → Resultado real do vídeo (tracker)
-    → Comparar previsão vs realidade
-    → Identificar quais técnicas/hooks realmente funcionaram
-    → Atualizar effectiveness_score das técnicas no knowledge base
-    → Próximo roteiro usa scores calibrados pela realidade
-```
-
-Benefício: O sistema fica mais inteligente a cada vídeo publicado. Após 50 vídeos, as previsões de retenção e viralidade serão significativamente mais precisas.
-
-Implementação: Upgrade do `backtest-scores` + novo campo `real_performance` nas tabelas de knowledge + job semanal de recalibração.
-
----
-
-## Plano de Implementação (Priorizado)
-
-| Prioridade | Ação | Impacto | Esforço |
-|-----------|------|---------|---------|
-| 1 | Criar índices nas tabelas de knowledge | Alto | Baixo |
-| 2 | Corrigir bug `errResp` duplicado | Baixo | Mínimo |
-| 3 | Smart Context Selection (RAG no generate-script) | Alto | Médio |
-| 4 | Debounce + deduplicação no deep-scan | Médio | Baixo |
-| 5 | Pipeline assíncrono para deep-scan | Alto | Alto |
-| 6 | Auto-learn com deduplicação | Médio | Médio |
-| 7 | Feedback loop de auto-evolução | Muito Alto | Alto |
-
-Deseja que eu implemente algum desses itens agora?
+### Arquivos a Modificar
+1. `supabase/functions/generate-script/index.ts` — Smart Context + bugfix errResp
+2. `supabase/functions/_shared/veo3-policy-filter.ts` — regex fix
+3. `src/components/scripts/AudioProcessor.tsx` — SRT 8s generator
+4. `src/components/tubespy/DeepScanPanel.tsx` — debounce
+5. `src/components/scripts/PromptExporter.tsx` — save to library button
+6. `src/components/scripts/SceneViewer.tsx` — quality badges
+7. Nova migration SQL — prompt_library table + RLS
+8. Novo: `src/components/scripts/PromptLibrary.tsx` — UI de biblioteca
 
