@@ -608,11 +608,8 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
       try {
         const hookSystemPrompt = `Você é um roteirista ELITE de YouTube. Crie os primeiros 60 segundos de narração IMPOSSÍVEIS DE IGNORAR. Idioma: ${language}. Estilo: ${style}.
 
-🎯 HOOKS DE REFERÊNCIA REAIS (use como inspiração, NÃO copie):
-${hookLibrary.slice(0, 1500)}
-
-🧠 GATILHOS PSICOLÓGICOS:
-${psychTriggers.slice(0, 800)}
+🎯 KNOWLEDGE BASE (RAG relevante ao tópico):
+${(smartKnowledgeBlock || '').slice(0, 2000)}
 
 ${viralInjection}${intelBlock}${creativeWarning}
 
