@@ -1,5 +1,5 @@
-import { useState, useRef, useMemo } from 'react';
-import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones, AlertTriangle, FileText, Users, Clock, Zap } from 'lucide-react';
+import { useState, useRef, useMemo, useCallback } from 'react';
+import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones, AlertTriangle, FileText, Users, Clock, Zap, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
