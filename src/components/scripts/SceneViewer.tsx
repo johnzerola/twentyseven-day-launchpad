@@ -1,9 +1,44 @@
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import type { SyncedScene, SceneCharacter, SceneEnvironment } from './types';
 
 interface SceneViewerProps {
   scenes: SyncedScene[];
+}
+
+// ═══ Prompt Quality Score ═══
+function getPromptQuality(scene: SyncedScene): { score: number; label: string; color: string; issues: string[] } {
+  const issues: string[] = [];
+  let score = 0;
+  const words = scene.visualPrompt.split(/\s+/).length;
+  
+  // Word count (150-250 ideal for VEO3)
+  if (words >= 120 && words <= 280) score += 30;
+  else if (words >= 80 && words < 120) { score += 15; issues.push(`${words}w (ideal: 150-250)`); }
+  else if (words > 280) { score += 10; issues.push(`${words}w muito longo`); }
+  else { issues.push(`${words}w muito curto`); }
+
+  // Movement trio: character + camera + environment
+  const hasCharMove = scene.charactersInScene && scene.charactersInScene.length > 0;
+  const hasCamMove = !!scene.cameraAngle || !!scene.cameraMove;
+  const hasEnvDetail = !!scene.environment || !!scene.environmentDetails;
+  if (hasCharMove) score += 15; else issues.push('Sem personagem');
+  if (hasCamMove) score += 15; else issues.push('Sem câmera');
+  if (hasEnvDetail) score += 15; else issues.push('Sem ambiente');
+
+  // Technical details
+  if (scene.lightingSetup) score += 10;
+  if (scene.colorGrading) score += 5;
+  if (scene.lensSpec) score += 5;
+  if (scene.negativePrompt) score += 5;
+
+  score = Math.min(100, score);
+  const label = score >= 80 ? 'Excelente' : score >= 50 ? 'Bom' : 'Melhorar';
+  const color = score >= 80 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+    : score >= 50 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
+    : 'bg-destructive/20 text-destructive border-destructive/30';
+  return { score, label, color, issues };
 }
 
 const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
