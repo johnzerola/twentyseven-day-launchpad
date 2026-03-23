@@ -520,7 +520,7 @@ GERE:
         }));
       }
 
-      learnPromises.push(safeInsert("video_blueprints", {
+      learnPromises.push(safeUpsert("video_blueprints", {
         video_id: videoId,
         video_title: video.snippet.title,
         channel_name: video.snippet.channelTitle,
@@ -538,7 +538,7 @@ GERE:
         clone_template: analysis.cloneTemplate || {},
         scores: analysis.scores || {},
         source: 'deep-scan-v3',
-      }, { onConflict: "video_id" }));
+      }, "video_id"));
 
       await Promise.allSettled(learnPromises);
       console.log(`Auto-learn: saved ${learnPromises.length} insights`);
