@@ -1,5 +1,5 @@
-import { useState, useRef, useMemo } from 'react';
-import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones, AlertTriangle, FileText, Users, Clock, Zap } from 'lucide-react';
+import { useState, useRef, useMemo, useCallback } from 'react';
+import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones, AlertTriangle, FileText, Users, Clock, Zap, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -182,6 +182,51 @@ export const AudioProcessor = ({
     }
   };
 
+  // ═══ SRT Segmentado 8s ═══
+  const generateSRT8s = useCallback(() => {
+    if (syncedScenes.length === 0) { toast.error('Gere as cenas primeiro'); return; }
+    
+    const srtBlocks: string[] = [];
+    let blockIndex = 1;
+    
+    for (const scene of syncedScenes) {
+      const start = scene.startTime || 0;
+      const end = scene.endTime || start + 8;
+      const duration = end - start;
+      const segments = Math.ceil(duration / 8);
+      const narration = scene.narrativeText || scene.narrativeSummary || scene.visualPrompt.slice(0, 100);
+      const words = narration.split(/\s+/);
+      const wordsPerSeg = Math.ceil(words.length / segments);
+      
+      for (let s = 0; s < segments; s++) {
+        const segStart = start + s * 8;
+        const segEnd = Math.min(start + (s + 1) * 8, end);
+        const segWords = words.slice(s * wordsPerSeg, (s + 1) * wordsPerSeg).join(' ');
+        
+        const fmtSrt = (sec: number) => {
+          const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+          const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+          const sVal = String(Math.floor(sec % 60)).padStart(2, '0');
+          const ms = String(Math.round((sec % 1) * 1000)).padStart(3, '0');
+          return `${h}:${m}:${sVal},${ms}`;
+        };
+        
+        srtBlocks.push(`${blockIndex}\n${fmtSrt(segStart)} --> ${fmtSrt(segEnd)}\n${segWords}\n`);
+        blockIndex++;
+      }
+    }
+    
+    const srtContent = srtBlocks.join('\n');
+    const blob = new Blob([srtContent], { type: 'text/srt' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cenas_8s_${Date.now()}.srt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`📄 SRT com ${blockIndex - 1} blocos de 8s exportado!`);
+  }, [syncedScenes]);
+
   const isProcessing = phase !== 'idle' && phase !== 'done';
   const currentRefs = referenceImageUrls || [];
 
@@ -337,13 +382,20 @@ export const AudioProcessor = ({
         </div>
       )}
 
-      {/* Generate Button */}
-      <Button onClick={generateSyncedScenes} disabled={isProcessing || !audioFile}
-        className="w-full gap-2 h-11 text-sm gradient-hero border-0">
-        {isProcessing
-          ? <><Loader2 className="w-4 h-4 animate-spin" /> {PHASE_LABELS[phase]}</>
-          : <><Sparkles className="w-4 h-4" /> 🧠 Gerar Cenas Sincronizadas do Áudio</>}
-      </Button>
+      {/* Generate + SRT Buttons */}
+      <div className="flex gap-2">
+        <Button onClick={generateSyncedScenes} disabled={isProcessing || !audioFile}
+          className="flex-1 gap-2 h-11 text-sm gradient-hero border-0">
+          {isProcessing
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> {PHASE_LABELS[phase]}</>
+            : <><Sparkles className="w-4 h-4" /> 🧠 Gerar Cenas Sincronizadas</>}
+        </Button>
+        {syncedScenes.length > 0 && (
+          <Button variant="outline" onClick={generateSRT8s} className="gap-2 h-11 text-xs border-accent/30 text-accent hover:bg-accent/10">
+            <Download className="w-4 h-4" /> SRT 8s
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
