@@ -1,7 +1,9 @@
-import { Copy, Download } from 'lucide-react';
+import { useState } from 'react';
+import { Copy, Download, BookmarkPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { SyncedScene, Character } from './types';
 
 interface PromptExporterProps {
@@ -15,7 +17,49 @@ interface PromptExporterProps {
 const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export const PromptExporter = ({ scenes, characters, topic, videoStyle, language }: PromptExporterProps) => {
+  const [saving, setSaving] = useState(false);
+
   if (scenes.length === 0) return null;
+
+  const saveToLibrary = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Faça login para salvar'); return; }
+
+      const rows = scenes.map(scene => {
+        const words = scene.visualPrompt.split(/\s+/).length;
+        // Quality score: word count (150-250 ideal), has camera move, has mood
+        let quality = 0;
+        if (words >= 120 && words <= 280) quality += 40;
+        else if (words >= 80) quality += 20;
+        if (scene.cameraAngle || scene.cameraMove) quality += 20;
+        if (scene.mood) quality += 15;
+        if (scene.lightingSetup) quality += 15;
+        if (scene.negativePrompt) quality += 10;
+        quality = Math.min(100, quality);
+
+        return {
+          user_id: user.id,
+          prompt_text: scene.visualPrompt,
+          style: scene.mood || null,
+          tags: [videoStyle, topic.slice(0, 50)].filter(Boolean),
+          scene_type: scene.charactersInScene?.length ? 'character' : 'environment',
+          word_count: words,
+          quality_score: quality,
+          video_style: videoStyle,
+        };
+      });
+
+      const { error } = await supabase.from('prompt_library').insert(rows as any);
+      if (error) throw error;
+      toast.success(`📚 ${rows.length} prompts salvos na biblioteca!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const exportToAutoflow = () => {
     const autoflowLines = scenes.map((scene) => {
