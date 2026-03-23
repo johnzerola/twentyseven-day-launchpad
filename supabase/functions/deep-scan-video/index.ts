@@ -426,21 +426,41 @@ GERE:
 
     console.log(`Deep scan complete: ${(analysis.sceneTimeline || []).length} scenes, ${validFrames.length} frames analyzed, policy fixes: ${policyFixes.length}`);
 
-    // ═══ AUTO-LEARN (fire-and-forget, non-blocking) ═══
+    // ═══ AUTO-LEARN WITH DEDUPLICATION (fire-and-forget, non-blocking) ═══
     try {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       
-      const safeInsert = async (table: string, data: any, opts?: any) => {
+      // Check if this video was already analyzed (dedup)
+      const { data: existingBlueprint } = await sb.from("video_blueprints")
+        .select("id").eq("video_id", videoId).maybeSingle();
+      
+      if (existingBlueprint) {
+        console.log(`Auto-learn: video ${videoId} already analyzed, updating instead of inserting`);
+      }
+
+      const safeUpsert = async (table: string, data: any, conflictKey?: string) => {
         try {
-          if (opts) await sb.from(table).upsert(data, opts);
-          else await sb.from(table).insert(data);
+          if (conflictKey) {
+            await sb.from(table).upsert(data, { onConflict: conflictKey });
+          } else {
+            // Check for duplicate title before inserting
+            if (data.title) {
+              const { data: existing } = await sb.from(table)
+                .select("id").eq("title", data.title).limit(1);
+              if (existing && existing.length > 0) {
+                console.log(`Dedup: skipping duplicate in ${table}: "${data.title.slice(0, 50)}"`);
+                return;
+              }
+            }
+            await sb.from(table).insert(data);
+          }
         } catch { /* ignore */ }
       };
 
       const learnPromises: Promise<void>[] = [];
 
       if (analysis.hookAnalysis?.powerScore >= 7) {
-        learnPromises.push(safeInsert("script_knowledge", {
+        learnPromises.push(safeUpsert("script_knowledge", {
           category: "hook",
           title: `Hook: ${analysis.hookAnalysis.hookType} — "${video.snippet.title}"`,
           content: `${analysis.hookAnalysis.hookText}\n\nPor que funciona: ${analysis.hookAnalysis.whyItWorks}`,
