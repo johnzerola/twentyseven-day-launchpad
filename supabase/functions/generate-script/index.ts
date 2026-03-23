@@ -736,37 +736,11 @@ DIÁLOGO INTERNO DO NARRADOR:
 - "Eu ia dizer que isso é impossível. Mas então eu vi os dados."
 - Isso cria CONEXÃO — o espectador sente que está pensando junto
 
-🧠 CONHECIMENTO YOUTUBE (algoritmo):
-${ytKnowledge.slice(0, 2500)}
-
 📡 CANAIS VIRAIS DE REFERÊNCIA:
 ${channelIntel || "N/A"}
 
-🎯 HOOKS REAIS DE ALTA PERFORMANCE (192 hooks testados):
-${hookLibrary.slice(0, 2000)}
-
-📐 ESTRUTURAS DE ROTEIRO VALIDADAS:
-${scriptStructures.slice(0, 2000)}
-
-⚡ ENGENHARIA DE ATENÇÃO (técnicas de retenção avançadas):
-${attEngineering.slice(0, 1500)}
-
-🎬 BIBLIOTECA DE ATENÇÃO (cenas que retêm):
-${attLibrary.slice(0, 1200)}
-
-🧠 GATILHOS PSICOLÓGICOS:
-${psychTriggers.slice(0, 1500)}
-
-🎬 FORMATOS VIRAIS:
-${viralFormats.slice(0, 1000)}
-
-📝 TÉCNICAS DE ROTEIRO:
-${scriptKnowledge.slice(0, 2500)}
-
-🧪 PSICOLOGIA DA AUDIÊNCIA:
-${psychPatterns.slice(0, 1200)}
-
-${viralTitlesBlock ? `\n🏆 TÍTULOS VIRAIS SIMILARES (945 títulos, top 10 relevantes):\n${viralTitlesBlock}\n` : ''}
+🧠 KNOWLEDGE BASE (RAG — top snippets relevantes ao tópico "${topic}"):
+${smartKnowledgeBlock || 'N/A — usando conhecimento geral'}
 
 ${selectedStyle}
 ${genreDirection ? `\n${genreDirection}\n` : ''}

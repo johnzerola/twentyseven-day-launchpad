@@ -60,7 +60,7 @@ export const SceneViewer = ({ scenes }: SceneViewerProps) => {
         <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
           className="border border-border rounded-lg p-4 hover:border-primary/20 transition-all bg-card/50">
           
-          {/* Header */}
+          {/* Header with Quality Badge */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Badge className="text-[9px] bg-primary/15 text-primary border-primary/20 font-bold">
@@ -72,6 +72,14 @@ export const SceneViewer = ({ scenes }: SceneViewerProps) => {
               {scene.sceneDurationSeconds && (
                 <Badge variant="outline" className="text-[9px]">⏱ {scene.sceneDurationSeconds}s</Badge>
               )}
+              {(() => {
+                const q = getPromptQuality(scene);
+                return (
+                  <Badge className={`text-[9px] ${q.color}`} title={q.issues.length > 0 ? q.issues.join(' • ') : 'Prompt de alta qualidade'}>
+                    {q.score}% {q.label}
+                  </Badge>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge variant="outline" className="text-[9px]">📷 {scene.cameraAngle}</Badge>

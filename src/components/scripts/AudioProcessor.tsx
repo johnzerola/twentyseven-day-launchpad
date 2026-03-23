@@ -382,13 +382,20 @@ export const AudioProcessor = ({
         </div>
       )}
 
-      {/* Generate Button */}
-      <Button onClick={generateSyncedScenes} disabled={isProcessing || !audioFile}
-        className="w-full gap-2 h-11 text-sm gradient-hero border-0">
-        {isProcessing
-          ? <><Loader2 className="w-4 h-4 animate-spin" /> {PHASE_LABELS[phase]}</>
-          : <><Sparkles className="w-4 h-4" /> 🧠 Gerar Cenas Sincronizadas do Áudio</>}
-      </Button>
+      {/* Generate + SRT Buttons */}
+      <div className="flex gap-2">
+        <Button onClick={generateSyncedScenes} disabled={isProcessing || !audioFile}
+          className="flex-1 gap-2 h-11 text-sm gradient-hero border-0">
+          {isProcessing
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> {PHASE_LABELS[phase]}</>
+            : <><Sparkles className="w-4 h-4" /> 🧠 Gerar Cenas Sincronizadas</>}
+        </Button>
+        {syncedScenes.length > 0 && (
+          <Button variant="outline" onClick={generateSRT8s} className="gap-2 h-11 text-xs border-accent/30 text-accent hover:bg-accent/10">
+            <Download className="w-4 h-4" /> SRT 8s
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

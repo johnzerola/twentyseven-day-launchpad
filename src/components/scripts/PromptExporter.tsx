@@ -108,17 +108,21 @@ export const PromptExporter = ({ scenes, characters, topic, videoStyle, language
         <Badge className="bg-accent/20 text-accent text-[10px]">DarkPlanner v3</Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Button className="gap-2 h-10 text-xs gradient-hero border-0" onClick={exportToAutoflow}>
-          <Copy className="w-3.5 h-3.5" /> AutoFlow ({scenes.length})
+          <Copy className="w-3.5 h-3.5" /> AutoFlow
         </Button>
         <Button variant="outline" className="gap-2 h-10 text-xs border-primary/30 text-primary hover:bg-primary/10" onClick={exportDarkPlannerFormat}>
-          <Download className="w-3.5 h-3.5" /> DarkPlanner v3
+          <Download className="w-3.5 h-3.5" /> DarkPlanner
+        </Button>
+        <Button variant="outline" className="gap-2 h-10 text-xs border-accent/30 text-accent hover:bg-accent/10" onClick={saveToLibrary} disabled={saving}>
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookmarkPlus className="w-3.5 h-3.5" />}
+          Biblioteca
         </Button>
       </div>
 
       <p className="text-[9px] text-muted-foreground text-center">
-        AutoFlow: [V1-S#] image ||| video • DarkPlanner: personagens + prompts separados
+        AutoFlow: [V1-S#] image ||| video • DarkPlanner: personagens + prompts separados • Biblioteca: salva para reutilizar
       </p>
     </div>
   );
