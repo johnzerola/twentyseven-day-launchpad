@@ -2057,6 +2057,60 @@ export type Database = {
           },
         ]
       }
+      processing_jobs: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string
+          current_step: string | null
+          error_message: string | null
+          id: string
+          input_data: Json
+          job_type: string
+          max_attempts: number | null
+          progress: number | null
+          result_data: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: string | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json
+          job_type?: string
+          max_attempts?: number | null
+          progress?: number | null
+          result_data?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: string | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json
+          job_type?: string
+          max_attempts?: number | null
+          progress?: number | null
+          result_data?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
