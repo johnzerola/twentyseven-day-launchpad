@@ -11,12 +11,16 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ── Default curated channels ──
 const DEFAULT_CHANNELS = [
+  // ── Restoration ──
   { url: "@mrsklaragarage", category: "restoration" },
   { url: "@Restoration-Factory", category: "restoration" },
   { url: "@kamilbusiness-22", category: "restoration" },
+  // ── Movies/Cinema ──
   { url: "@stash_movies", category: "movies" },
   { url: "@Filmaxia", category: "movies" },
+  // ── Animal Stories ──
   { url: "@VeteranDogTales", category: "animal_stories" },
+  // ── Western Stories ──
   { url: "@SilentWestTales", category: "western_stories" },
   { url: "@Dusty_Boots", category: "western_stories" },
   { url: "@CowboyStoryStation", category: "western_stories" },
@@ -25,18 +29,22 @@ const DEFAULT_CHANNELS = [
   { url: "@BobsStoriesFromtheOldWest", category: "western_stories" },
   { url: "@HorsebackChronicles-p3h", category: "western_stories" },
   { url: "@HeartOfThePrairie", category: "western_stories" },
+  // ── Survival Stories ──
   { url: "@TheFindersTale", category: "survival_stories" },
   { url: "@Outlanderssurvivalstories", category: "survival_stories" },
   { url: "@ForgottenOutlandsTeachings", category: "survival_stories" },
   { url: "@simplesurvival6", category: "survival_stories" },
   { url: "@MoutainFarmerStories", category: "survival_stories" },
+  // ── Inspirational ──
   { url: "@DreamsDontAge", category: "inspirational" },
   { url: "@GrandmaTrueStories", category: "inspirational" },
   { url: "@EverydayValorStories-o3t", category: "inspirational" },
   { url: "@SoulStories02", category: "inspirational" },
+  // ── Drama Stories ──
   { url: "@HEARTBREAK-STORIES-CHANNEL", category: "drama_stories" },
   { url: "@IntoThePastStories", category: "drama_stories" },
   { url: "@LoganStories", category: "drama_stories" },
+  // ── True Crime ──
   { url: "@48HourTrueCrime01", category: "true_crime" },
   { url: "@StoriesoftheMıssıng-HO", category: "true_crime" },
   { url: "@UNSOLVEDSTORIES-q9d", category: "true_crime" },
@@ -44,9 +52,204 @@ const DEFAULT_CHANNELS = [
   { url: "@TrueCrimeBreakdown1", category: "true_crime" },
   { url: "@TajnéPřípady", category: "true_crime" },
   { url: "@ScaryInteresting", category: "true_crime" },
+  // ── Stories (ID-based) ──
   { url: "channel/UCHL5AxOuChnnkXAzW4E5hgQ", category: "stories" },
   { url: "channel/UCqxEDM4DwBKgSkJc6zK-Dvw", category: "stories" },
   { url: "channel/UCEny9ly3uAew5ZasV3tXL7A", category: "stories" },
+
+  // ═══════════════════════════════════════════════
+  // ── NEW: Expanded Viral Faceless Channels v3.0 ──
+  // ═══════════════════════════════════════════════
+
+  // ── Pets & Animals ──
+  { url: "@TheDodo", category: "pets" },
+  { url: "@ViralPaws", category: "pets" },
+  { url: "@HeroicAnimals", category: "pets" },
+  { url: "@FunnyAnimals", category: "pets" },
+  { url: "@AnimalRescueStories", category: "pets" },
+  { url: "@CatPurrs", category: "pets" },
+  { url: "@PawsOfWar", category: "pets" },
+  { url: "@WildAnimalWorld", category: "pets" },
+
+  // ── Travel & Geography ──
+  { url: "@GeographyNow", category: "travel" },
+  { url: "@WondersOfTheWorld", category: "travel" },
+  { url: "@TopLuxury", category: "travel" },
+  { url: "@HighSideTravel", category: "travel" },
+  { url: "@PlacesAndFoods", category: "travel" },
+  { url: "@ExploringAbandoned", category: "travel" },
+  { url: "@TheMysteriousWorld", category: "travel" },
+
+  // ── Philosophy & Psychology ──
+  { url: "@Einzelganger", category: "philosophy" },
+  { url: "@PhilosophiesForLife", category: "philosophy" },
+  { url: "@Pursuit_of_Wonder", category: "philosophy" },
+  { url: "@TheSchoolOfLife", category: "philosophy" },
+  { url: "@AfterSkool", category: "philosophy" },
+  { url: "@FreeWillChannel", category: "philosophy" },
+  { url: "@MindfulThoughts", category: "philosophy" },
+
+  // ── Health & Fitness ──
+  { url: "@GravityTransformation", category: "health" },
+  { url: "@BullyJuice", category: "health" },
+  { url: "@Body_Hub", category: "health" },
+  { url: "@TheSeriousFitness", category: "health" },
+  { url: "@NutritionFactsOrg", category: "health" },
+
+  // ── Curiosidades / Facts (PT-BR) ──
+  { url: "@Fatos_Desconhecidos", category: "curiosidades" },
+  { url: "@CanalNostalgia", category: "curiosidades" },
+  { url: "@Ponto_em_Comum", category: "curiosidades" },
+  { url: "@Incrivel.club", category: "curiosidades" },
+  { url: "@FatosDesconhecidosX", category: "curiosidades" },
+  { url: "@Top10Archive", category: "curiosidades" },
+  { url: "@BEAmazed", category: "curiosidades" },
+  { url: "@BrightSide", category: "curiosidades" },
+
+  // ── História / History ──
+  { url: "@KingsAndGenerals", category: "history" },
+  { url: "@OverSimplified", category: "history" },
+  { url: "@Knowledgia", category: "history" },
+  { url: "@HistoryMarche", category: "history" },
+  { url: "@ToldInStone", category: "history" },
+  { url: "@InvictusMen", category: "history" },
+  { url: "@HistoryLegends", category: "history" },
+  { url: "@TheHistorian_scraft", category: "history" },
+
+  // ── Horror & Creepypasta ──
+  { url: "@MrNightmare", category: "horror" },
+  { url: "@LazyMasquerade", category: "horror" },
+  { url: "@MrBallen", category: "horror" },
+  { url: "@NukesTop5", category: "horror" },
+  { url: "@Chills", category: "horror" },
+  { url: "@CreepsMcPasta", category: "horror" },
+  { url: "@DarkCornerTv", category: "horror" },
+
+  // ── Finanças / Finance ──
+  { url: "@GrahamStephan", category: "finance" },
+  { url: "@MoneyGuyShow", category: "finance" },
+  { url: "@HowMoneyWorks", category: "finance" },
+  { url: "@TwoTeachMoney", category: "finance" },
+  { url: "@WhiteboardFinance", category: "finance" },
+  { url: "@PlainBagel", category: "finance" },
+
+  // ── Gaming ──
+  { url: "@GameTheory", category: "gaming" },
+  { url: "@Outside_Xbox", category: "gaming" },
+  { url: "@GamingBolt", category: "gaming" },
+  { url: "@Top10Gaming", category: "gaming" },
+  { url: "@WatchMojo", category: "gaming" },
+  { url: "@Looper", category: "gaming" },
+
+  // ── Psychology & Self-Improvement ──
+  { url: "@BetterThanYesterday", category: "psychology" },
+  { url: "@WisdomMotivation", category: "psychology" },
+  { url: "@MotivazioneItaliana", category: "psychology" },
+  { url: "@MotivationHub", category: "psychology" },
+  { url: "@AluxOfficial", category: "psychology" },
+  { url: "@TopThink", category: "psychology" },
+
+  // ── Mythology & Legends ──
+  { url: "@MythologyExplained", category: "mythology" },
+  { url: "@SeeUinHistory", category: "mythology" },
+  { url: "@MiscellaneaMythology", category: "mythology" },
+  { url: "@GrecianGodx", category: "mythology" },
+  { url: "@MythicalCreature", category: "mythology" },
+  { url: "@Mythology_Unleashed", category: "mythology" },
+  { url: "@TheAmbivert", category: "mythology" },
+
+  // ── Luxury & Billionaires ──
+  { url: "@LuxuryZone", category: "luxury" },
+  { url: "@OldMoney_Luxury", category: "luxury" },
+  { url: "@TopLuxuryLife", category: "luxury" },
+  { url: "@BillionaireLifestyle", category: "luxury" },
+  { url: "@MillionairePost", category: "luxury" },
+
+  // ── Cars & Automotive ──
+  { url: "@Supercar_Blondie", category: "cars" },
+  { url: "@CarWow", category: "cars" },
+  { url: "@MatDoes", category: "cars" },
+  { url: "@AutoTopNL", category: "cars" },
+  { url: "@TheStraightPipes", category: "cars" },
+
+  // ── Space & Science ──
+  { url: "@Kurzgesagt", category: "space" },
+  { url: "@RealLifeLore", category: "space" },
+  { url: "@SpaceExploration", category: "space" },
+  { url: "@Astrum", category: "space" },
+  { url: "@SEA_Official", category: "space" },
+  { url: "@CosmicDiscovery", category: "space" },
+  { url: "@Ridddle", category: "space" },
+
+  // ── DIY & Crafts ──
+  { url: "@5MinuteCrafts", category: "diy" },
+  { url: "@TROOM_TROOM", category: "diy" },
+  { url: "@HackSmith", category: "diy" },
+  { url: "@DIYPerks", category: "diy" },
+
+  // ── Conspiracy & Mysteries ──
+  { url: "@Lemmino", category: "mysteries" },
+  { url: "@LightHouseStories", category: "mysteries" },
+  { url: "@BuzzFeedUnsolved", category: "mysteries" },
+  { url: "@MysteriousMiddleEast", category: "mysteries" },
+  { url: "@BlameItOnJorge", category: "mysteries" },
+  { url: "@FellowsFilmTV", category: "mysteries" },
+
+  // ── Technology & AI ──
+  { url: "@Mrwhosetheboss", category: "technology" },
+  { url: "@TechLinked", category: "technology" },
+  { url: "@ColdFusion", category: "technology" },
+  { url: "@PolyMatter", category: "technology" },
+  { url: "@TwoMinutePapers", category: "technology" },
+
+  // ── Cooking & Food (Faceless) ──
+  { url: "@BabishCulinaryUniverse", category: "cooking" },
+  { url: "@SortedFood", category: "cooking" },
+  { url: "@ProHomeCooks", category: "cooking" },
+  { url: "@EpicMealTime", category: "cooking" },
+
+  // ── Compilation & Reddit Stories ──
+  { url: "@rSlash", category: "reddit_stories" },
+  { url: "@EmKay", category: "reddit_stories" },
+  { url: "@DarkFluff", category: "reddit_stories" },
+  { url: "@StorytimeReddit", category: "reddit_stories" },
+  { url: "@AskRedditStories-j7v", category: "reddit_stories" },
+
+  // ── Education & Explainers ──
+  { url: "@Veritasium", category: "education" },
+  { url: "@TedEd", category: "education" },
+  { url: "@Vsauce", category: "education" },
+  { url: "@MinuteEarth", category: "education" },
+  { url: "@SmarterEveryDay", category: "education" },
+
+  // ── Nature & Wildlife ──
+  { url: "@NatGeoWild", category: "nature" },
+  { url: "@AnnacondaAttack", category: "nature" },
+  { url: "@WildCreatures", category: "nature" },
+  { url: "@TheJungleExplorer", category: "nature" },
+
+  // ── Relationship & Social ──
+  { url: "@JarvisJohnson", category: "relationships" },
+  { url: "@PsychologyMind", category: "relationships" },
+  { url: "@CharlieHoupert", category: "relationships" },
+  { url: "@BetterIdeas", category: "relationships" },
+
+  // ── PT-BR Faceless Channels ──
+  { url: "@HistoriaMundi", category: "history_ptbr" },
+  { url: "@QuebrandoOTabu", category: "curiosidades_ptbr" },
+  { url: "@Ciencia_Todo_Dia", category: "science_ptbr" },
+  { url: "@VisualPolitikBR", category: "politics_ptbr" },
+  { url: "@NerdologiaTech", category: "tech_ptbr" },
+  { url: "@OFilosofoPop", category: "philosophy_ptbr" },
+  { url: "@MetaForando", category: "psychology_ptbr" },
+  { url: "@MundoDesconhecido", category: "mysteries_ptbr" },
+
+  // ── Spanish Faceless Channels ──
+  { url: "@CuriosamenteChannel", category: "curiosidades_es" },
+  { url: "@LaHiperactina", category: "science_es" },
+  { url: "@QuantumFracture", category: "science_es" },
+  { url: "@TeDijoNoSabias", category: "facts_es" },
+  { url: "@DrossRotzank", category: "horror_es" },
 ];
 
 function getYouTubeKeys(): string[] {
