@@ -2132,6 +2132,48 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_library: {
+        Row: {
+          created_at: string | null
+          id: string
+          project_id: string | null
+          prompt_text: string
+          quality_score: number | null
+          scene_type: string | null
+          style: string | null
+          tags: string[] | null
+          user_id: string
+          video_style: string | null
+          word_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          project_id?: string | null
+          prompt_text: string
+          quality_score?: number | null
+          scene_type?: string | null
+          style?: string | null
+          tags?: string[] | null
+          user_id: string
+          video_style?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          project_id?: string | null
+          prompt_text?: string
+          quality_score?: number | null
+          scene_type?: string | null
+          style?: string | null
+          tags?: string[] | null
+          user_id?: string
+          video_style?: string | null
+          word_count?: number | null
+        }
+        Relationships: []
+      }
       prompts: {
         Row: {
           ai_model: string | null
