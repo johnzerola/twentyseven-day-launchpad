@@ -12,7 +12,7 @@ import {
   Rocket, Trophy, Calendar, CheckCircle2, TrendingUp, 
   Flame, Zap, Play, Clock, Star, ChevronLeft, ChevronRight,
   BarChart3, Video, Eye, Users, Loader2, Brain, Youtube, Trash2,
-  FileText, AlertTriangle, ArrowRight, RefreshCw, Lightbulb
+  FileText, AlertTriangle, ArrowRight, RefreshCw, Lightbulb, Wand2
 } from 'lucide-react';
 import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
 import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';
@@ -77,6 +77,7 @@ export default function Tracker30Days() {
   const [channelName, setChannelName] = useState('');
   const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([]);
   const [syncingMetrics, setSyncingMetrics] = useState(false);
+  const [adapting, setAdapting] = useState(false);
 
   const loadPlan = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -281,6 +282,41 @@ export default function Tracker30Days() {
     toast.success('Plano arquivado. Você pode gerar um novo.');
   };
 
+  const adaptPlan = async () => {
+    if (!plan) return;
+    setAdapting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('adapt-30day-plan', {
+        body: { planId: plan.id },
+      });
+      if (error) throw error;
+      
+      if (data?.adaptation) {
+        const a = data.adaptation;
+        toast.success(`Plano adaptado! ${a.pace === 'ahead' ? '🚀 Acima da meta!' : a.pace === 'behind' ? '⚠️ Abaixo da meta' : '✅ No ritmo'}`);
+        
+        // Show strategy tips as alerts
+        if (a.strategy_tips?.length) {
+          setSmartAlerts(prev => [
+            ...prev.filter(al => al.type !== 'tip'),
+            ...a.strategy_tips.slice(0, 3).map((tip: string) => ({
+              type: 'tip' as const,
+              title: 'Sugestão IA',
+              message: tip,
+              icon: '🧠',
+            })),
+          ]);
+        }
+        
+        await loadPlan();
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao adaptar plano');
+    } finally {
+      setAdapting(false);
+    }
+  };
+
   const dayTasks = tasks.filter(t => t.day_number === selectedDay);
   const completedTotal = tasks.filter(t => t.completed).length;
   const totalTasks = tasks.length;
@@ -342,6 +378,10 @@ export default function Tracker30Days() {
             </div>
           </div>
           <div className="flex items-center gap-2 self-start">
+            <Button variant="outline" size="sm" onClick={adaptPlan} disabled={adapting}>
+              {adapting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              <span className="ml-1.5 hidden sm:inline text-xs">Adaptar</span>
+            </Button>
             <Button variant="outline" size="sm" onClick={syncYouTubeMetrics} disabled={syncingMetrics}>
               {syncingMetrics ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               <span className="ml-1.5 hidden sm:inline text-xs">Sync</span>
