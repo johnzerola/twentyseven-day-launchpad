@@ -455,6 +455,37 @@ Se você repetir qualquer um deles, o roteiro será REJEITADO novamente.\n`;
       }
     } catch (e) { console.warn("Rejection learning fetch error:", e); }
 
+    // ═══ SKILL SCORING — Learn from SUCCESS (which techniques work best per niche) ═══
+    let skillScoreBlock = '';
+    try {
+      if (currentUserId && niche) {
+        const { data: skills } = await sb.from("script_skill_scores")
+          .select("technique, avg_score, times_used, best_score")
+          .eq("user_id", currentUserId)
+          .eq("niche", niche?.toLowerCase() || 'geral')
+          .order("avg_score", { ascending: false })
+          .limit(10);
+        
+        if (skills && skills.length > 0) {
+          skillScoreBlock = `\n🎯 SKILL TREE — TÉCNICAS QUE MAIS FUNCIONAM PARA "${niche?.toUpperCase()}" (baseado em ${skills.reduce((s: number, sk: any) => s + sk.times_used, 0)} roteiros avaliados):
+${skills.map((sk: any) => `• ${sk.technique}: média ${sk.avg_score}/10 (usado ${sk.times_used}x, melhor: ${sk.best_score}/10)`).join('\n')}
+
+INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar melhor neste nicho.\n`;
+          console.log(`[SKILL-TREE] runId=${runId} Injected ${skills.length} skill scores for niche="${niche}"`);
+        }
+
+        // Also fetch niche benchmark
+        const { data: benchmark } = await sb.from("niche_score_benchmarks")
+          .select("avg_score, min_passing_score, top_techniques, total_scripts_scored")
+          .eq("niche", niche?.toLowerCase() || 'geral')
+          .maybeSingle();
+        
+        if (benchmark && benchmark.total_scripts_scored > 0) {
+          skillScoreBlock += `\n📊 BENCHMARK "${niche?.toUpperCase()}": média ${benchmark.avg_score}/20 em ${benchmark.total_scripts_scored} roteiros. Mínimo para aprovação: ${benchmark.min_passing_score}/20. Top técnicas: ${(benchmark.top_techniques || []).join(', ')}.\n`;
+        }
+      }
+    } catch (e) { console.warn("Skill score fetch error:", e); }
+
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
