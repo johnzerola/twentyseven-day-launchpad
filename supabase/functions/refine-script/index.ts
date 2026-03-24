@@ -267,7 +267,7 @@ APENAS texto de narração pura. ZERO anotações, ZERO marcações, ZERO coment
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
-    const userMessage = `ROTEIRO DO USUÁRIO (NÃO reescreva! NÃO mude a história!):\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO: Faça NO MÁXIMO 5 micro-edições em frases individuais. Preserve 90-95% do texto EXATAMENTE como está. A história, enredo e tom são INTOCÁVEIS. Retorne o roteiro COMPLETO.`;
+    const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. Retorne o roteiro COMPLETO.`;
 
     // ═══ PRIMARY: Claude Sonnet 4 (same engine as generation for voice consistency)
     if (CLAUDE_API_KEY) {
