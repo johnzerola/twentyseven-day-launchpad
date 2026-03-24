@@ -782,6 +782,7 @@ ${channelKnowledgeBlock}
 ${backtestBlock}
 ${referenceBlock}
 ${rejectionLearningsBlock}
+${skillScoreBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
