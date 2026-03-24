@@ -77,6 +77,7 @@ export default function Tracker30Days() {
   const [channelName, setChannelName] = useState('');
   const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([]);
   const [syncingMetrics, setSyncingMetrics] = useState(false);
+  const [adapting, setAdapting] = useState(false);
 
   const loadPlan = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
