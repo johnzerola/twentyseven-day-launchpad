@@ -282,6 +282,41 @@ export default function Tracker30Days() {
     toast.success('Plano arquivado. Você pode gerar um novo.');
   };
 
+  const adaptPlan = async () => {
+    if (!plan) return;
+    setAdapting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('adapt-30day-plan', {
+        body: { planId: plan.id },
+      });
+      if (error) throw error;
+      
+      if (data?.adaptation) {
+        const a = data.adaptation;
+        toast.success(`Plano adaptado! ${a.pace === 'ahead' ? '🚀 Acima da meta!' : a.pace === 'behind' ? '⚠️ Abaixo da meta' : '✅ No ritmo'}`);
+        
+        // Show strategy tips as alerts
+        if (a.strategy_tips?.length) {
+          setSmartAlerts(prev => [
+            ...prev.filter(al => al.type !== 'tip'),
+            ...a.strategy_tips.slice(0, 3).map((tip: string) => ({
+              type: 'tip' as const,
+              title: 'Sugestão IA',
+              message: tip,
+              icon: '🧠',
+            })),
+          ]);
+        }
+        
+        await loadPlan();
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao adaptar plano');
+    } finally {
+      setAdapting(false);
+    }
+  };
+
   const dayTasks = tasks.filter(t => t.day_number === selectedDay);
   const completedTotal = tasks.filter(t => t.completed).length;
   const totalTasks = tasks.length;
