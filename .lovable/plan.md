@@ -28,14 +28,32 @@
 
 ---
 
+## ✅ IMPLEMENTADO (V3.0 Completo)
+
+### 6. Weekly Channel Rescan
+- Nova edge function `weekly-channel-rescan` — re-analisa canais com 7+ dias sem scan
+- Detecta declínio/crescimento de subscribers e gera alertas
+- Classifica `content_category` automaticamente via IA para canais sem categoria
+- Loga alertas em `ai_learning` para retroalimentação
+
+### 7. Hook Patterns Expandidos
+- De 50 → 210+ hook patterns com templates reutilizáveis
+- Cobertura de 20 nichos (true_crime, horror, western, animal_rescue, restoration, etc.)
+
+### 8. Scene Prompt Knowledge Expandido
+- De 280 → 430+ templates de cena
+- Nichos adicionados: western, animal_chase, animal_rescue, restoration, gaming, cooking, survival, mythology, conspiracy, travel
+
+---
+
 ## 🔜 PRÓXIMOS PASSOS
 
-### Fase 2: Enriquecimento Massivo de Dados
+### Fase 2: Enriquecimento Massivo de Dados (Execução)
 - Executar `backfill-embeddings` para popular 2000+ vetores
 - Executar `expand-hook-patterns` com batch de 200+ títulos
-- Classificar `content_category` nos 709 canais existentes
+- Executar `weekly-channel-rescan` para classificar canais existentes
 
 ### Fase 3: Análise Profunda Automatizada
-- Edge function `weekly-channel-rescan` (cron semanal)
-- Alerta de declínio de métricas
-- Comparação temporal semana a semana
+- Configurar cron semanal para `weekly-channel-rescan`
+- Dashboard de alertas de declínio/crescimento no frontend
+
