@@ -701,6 +701,26 @@ IMPORTANTE: Você é Claude — use sua força natural de escrita criativa, nuan
     // ═══════════════════════════════════════════════════════
     const hookInjection = hookText ? `\n🎯 HOOK PRÉ-GERADO (USE COMO BASE dos primeiros 60s — você pode melhorar mas NÃO descarte):\n${hookText}\n` : '';
 
+    // ═══ NICHE-TO-REFERENCE MAPPING — Inject Hollywood/YouTube DNA by niche ═══
+    const NICHE_REFERENCE_MAP: Record<string, string> = {
+      'true_crime': '🎬 REFERÊNCIAS ELITE: Use a fórmula MrBallen (setup detalhado + entrega calma + conteúdo perturbador). Estrutura Coffeehouse Crime (evidência em cadeia). Bailey Sarian (personalidade + pesquisa profunda). Chernobyl (inevitabilidade como horror). Breaking Bad (ambiguidade moral).',
+      'crime': '🎬 REFERÊNCIAS ELITE: The Sopranos (subtexto > texto, mundano→violento whiplash). The Godfather (poder sussurra, montagem paralela). The Wire (sistema como vilão). Coffeehouse Crime (timeline precisa + especulação inteligente).',
+      'horror': '🎬 REFERÊNCIAS ELITE: Hitchcock (mostre o perigo ao espectador, NÃO ao personagem — tensão 10x). The Wire (dread lento e gradual). Chernobyl (silêncio e contenção > gritos). MrBallen (calma na entrega + horror no conteúdo = dissonância cognitiva).',
+      'terror': '🎬 REFERÊNCIAS ELITE: Hitchcock (bomba sob a mesa — dramatic irony). Chernobyl (horror do inevitável). Sopranos (whiplash mundano→violento). Detalhes sensoriais > gore explícito.',
+      'superacao': '🎬 REFERÊNCIAS ELITE: Titanic (história íntima dentro de evento épico). K-Drama (slow-burn com payoff catártico). Pixar (construa alegria 70% → devaste com emoção 30%). Schindler (especificidade cria universalidade).',
+      'emocionante': '🎬 REFERÊNCIAS ELITE: K-Drama (precisão emocional cirúrgica, delayed gratification). Pixar (sucker punch emocional após investimento). Titanic (mãos que se soltam > navio que afunda). Schindler (casaco vermelho — 1 detalhe = toda a tragédia).',
+      'documentário': '🎬 REFERÊNCIAS ELITE: Chernobyl (precisão científica como horror). The Wire (storytelling sistêmico). Coffeehouse Crime (cadeia de evidências). Netflix mid-season twist (reinterpretar tudo aos 50%).',
+      'finanças': '🎬 REFERÊNCIAS ELITE: Wolf of Wall Street (excesso como exposição, 4ª parede para cumplicidade). Breaking Bad (escalonamento moral). MrBeast ($1 vs $1M format). Dados ESPECÍFICOS sempre.',
+      'mitologia': '🎬 REFERÊNCIAS ELITE: Game of Thrones (world-building through conflict, stakes reais). K-Drama (precisão emocional em escala épica). Godfather (poder e lealdade). Cada cena é um quadro épico.',
+      'conspiração': '🎬 REFERÊNCIAS ELITE: Chernobyl (documentos reais + burocracia como vilão). The Wire (sistemas ocultos). Tarantino (não-linear para recontextualização). Coffeehouse Crime (evidência verificável + especulação rotulada).',
+      'curiosidades': '🎬 REFERÊNCIAS ELITE: Bright Side (curiosity gap + escalação em lista). MrBeast (30s escalation clock — algo novo a cada 30s). Pixar (surpreenda com emoção onde ninguém espera).',
+      'entretenimento': '🎬 REFERÊNCIAS ELITE: MrBeast (premissa impossível + execução épica + linguagem simples). Wolf of Wall Street (4ª parede + humor). Netflix binge architecture (loops sobrepostos).',
+      'história': '🎬 REFERÊNCIAS ELITE: Chernobyl (inevitabilidade como tensão). Schindler (1 detalhe específico = toda a era). Rashomon (mesmo evento, múltiplas perspectivas). Game of Thrones (ninguém está seguro).',
+      'psicologia': '🎬 REFERÊNCIAS ELITE: Sopranos (terapia como narrativa, subtexto). Breaking Bad (transformação moral gradual). Dark Knight (dilemas impossíveis sem resposta certa). K-Drama (emoção precisa).',
+    };
+    const nicheRefKey = Object.keys(NICHE_REFERENCE_MAP).find(k => nicheLC.includes(k));
+    const nicheReferenceBlock = nicheRefKey ? NICHE_REFERENCE_MAP[nicheRefKey] : '';
+
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
 Você é Claude — sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.
 
@@ -710,6 +730,22 @@ Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do rot
 - NÃO refine cirurgicamente (isso é trabalho do FASE 2)
 - FOQUE em criar narrativa com ALMA e estrutura sólida
 - O usuário vai editar seu texto antes de passar para a próxima fase
+
+═══ HOLLYWOOD MASTERCLASS — 10 PRINCÍPIOS DA ELITE ═══
+
+1. TRANSFORMAÇÃO > INFORMAÇÃO: Roteiros que TRANSFORMAM (moral, emocional, intelectual) retêm 3x mais que roteiros informativos. Cada minuto deve mudar algo no espectador. (Breaking Bad)
+2. STAKES REAIS: Estabeleça cedo que consequências são PERMANENTES e IRREVERSÍVEIS. Quando o espectador sabe que pode perder algo que ama, cada cena é tensa. (Game of Thrones)
+3. SUBTEXTO > TEXTO: O que NÃO é dito é mais poderoso. Mostre mãos tremendo, não diga "ele tinha medo". (The Sopranos)
+4. SISTEMA COMO VILÃO: Conflitos contra SISTEMAS (burocracia, sociedade, economia) ressoam mais que contra indivíduos porque são UNIVERSAIS. (The Wire, Chernobyl)
+5. MONTAGEM PARALELA: Duas cenas contrastantes simultâneas criam significado que nenhuma teria sozinha. Sagrado/profano, alegria/destruição. (The Godfather)
+6. INEVITABILIDADE COMO HORROR: Quando o espectador sabe o final, cada passo errado é AGONIZANTE. Use dramatic irony. (Chernobyl, Titanic)
+7. DELAYED GRATIFICATION: Plante sementes emocionais cedo e ESPERE. O payoff após 70% de construção é exponencialmente mais poderoso. (K-Dramas, Pixar)
+8. ESPECIFICIDADE = UNIVERSALIDADE: $847.000 > "muito dinheiro". Menina do casaco vermelho > "milhões morreram". O ESPECÍFICO é o que faz chorar. (Schindler)
+9. CONTRASTE EMOCIONAL ABRUPTO: Felicidade genuína → devastação. Comédia → horror. O CHOQUE emocional cria memória permanente. Máximo 2x por roteiro. (Parasite, Emotional Whiplash)
+10. ESCALAÇÃO SEM PLATÔ: NUNCA deixe a tensão diminuir no meio. Cada bloco MAIS intenso. Cada revelação MAIOR. Cada stake MAIS alto. (Dark Knight, MrBeast)
+
+═══ YOUTUBE ELITE DNA ═══
+${nicheReferenceBlock}
 
 ═══ MASTERCLASS CLAUDE — ROTEIROS QUE PRENDEM ═══
 
@@ -826,6 +862,12 @@ Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s c
 ⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.
 `}
 
+═══ EMOTION MAP (obrigatório para longform >5min) ═══
+Cada bloco de ~45-60s DEVE ter uma EMOÇÃO PRIMÁRIA diferente do bloco anterior:
+Bloco 1: [CURIOSIDADE/CHOQUE] → Bloco 2: [TENSÃO/MEDO] → Bloco 3: [EMPATIA/TRISTEZA] → Bloco 4: [ESPERANÇA/ALÍVIO] → Bloco 5: [CHOQUE/REVELAÇÃO] → ...
+REGRA: NUNCA dois blocos consecutivos com a mesma emoção primária.
+O espectador precisa de VARIAÇÃO emocional — monotonia = saída.
+
 ═══ CHECKLIST FINAL (AUTO-REVISÃO OBRIGATÓRIA ANTES DE ENVIAR) ═══
 Antes de responder, revise mentalmente e melhore qualquer trecho genérico, fraco ou previsível.
 
@@ -848,6 +890,7 @@ Antes de responder, revise mentalmente e melhore qualquer trecho genérico, frac
 ☐ Há CLIFFHANGERS entre blocos narrativos? (cada bloco termina com tensão)
 ☐ O INNER MONOLOGUE do narrador aparece em momentos de descoberta?
 ☐ Usou EMOTIONAL WHIPLASH no máximo 2x e com impacto real?
+☐ O EMOTION MAP alterna emoções entre blocos consecutivos?
 
 Você é Claude. Sua escrita tem PROFUNDIDADE que outras IAs não alcançam.
 Cada frase deve carregar PESO — emocional, informativo ou narrativo.
