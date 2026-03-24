@@ -378,6 +378,10 @@ export default function Tracker30Days() {
             </div>
           </div>
           <div className="flex items-center gap-2 self-start">
+            <Button variant="outline" size="sm" onClick={adaptPlan} disabled={adapting}>
+              {adapting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              <span className="ml-1.5 hidden sm:inline text-xs">Adaptar</span>
+            </Button>
             <Button variant="outline" size="sm" onClick={syncYouTubeMetrics} disabled={syncingMetrics}>
               {syncingMetrics ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               <span className="ml-1.5 hidden sm:inline text-xs">Sync</span>
