@@ -141,3 +141,9 @@ verify_jwt = false
 [functions.seed-reference-channels]
 verify_jwt = false
 
+[functions.adapt-30day-plan]
+verify_jwt = false
+
+[functions.expand-hook-patterns]
+verify_jwt = false
+

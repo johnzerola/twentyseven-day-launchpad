@@ -97,7 +97,21 @@ const KNOWLEDGE_SOURCES: KnowledgeSource[] = [
     select: "id, pattern_name, scene_type, attention_score, emotion, time_window, example_text, recovery_technique",
     textBuilder: (r) => `[Atenção Cena ${r.scene_type}] ${r.pattern_name} (${r.time_window}): atenção ${r.attention_score}/10, emoção: ${r.emotion}, exemplo: "${r.example_text || ''}", recuperação: ${r.recovery_technique || 'N/A'}`,
     metaBuilder: (r) => ({ scene_type: r.scene_type, score: r.attention_score }),
-    limit: 100,
+    limit: 200,
+  },
+  {
+    table: "content_dna",
+    select: "id, video_title, video_id, channel_name, niche, views, hook_pattern, hook_type, story_structure, pacing, emotion_primary, viral_score, why_viral, visual_style",
+    textBuilder: (r) => `[DNA Viral] "${r.video_title}" — ${r.channel_name} (${r.niche}): ${r.views} views, hook: ${r.hook_pattern || r.hook_type || 'N/A'}, estrutura: ${r.story_structure || 'N/A'}, pacing: ${r.pacing || 'N/A'}, emoção: ${r.emotion_primary || 'N/A'}, viral: ${r.viral_score}/10${r.why_viral ? `, razão: ${r.why_viral}` : ''}, estilo visual: ${r.visual_style || 'N/A'}`,
+    metaBuilder: (r) => ({ niche: r.niche, views: r.views, viral_score: r.viral_score, channel: r.channel_name }),
+    limit: 500,
+  },
+  {
+    table: "channel_intelligence",
+    select: "id, channel_name, niche, style, subscribers, avg_views, growth_rate, is_faceless, content_category, visual_style_notes, upload_frequency",
+    textBuilder: (r) => `[Canal ${r.is_faceless ? 'Faceless' : 'Face'}] ${r.channel_name} (${r.niche}, ${r.style}): ${r.subscribers} subs, ${r.avg_views} avg views, crescimento: ${r.growth_rate}, categoria: ${r.content_category || 'general'}, upload: ${r.upload_frequency || 'N/A'}${r.visual_style_notes ? `, visual: ${r.visual_style_notes}` : ''}`,
+    metaBuilder: (r) => ({ niche: r.niche, subs: r.subscribers, faceless: r.is_faceless, category: r.content_category }),
+    limit: 500,
   },
 ];
 
