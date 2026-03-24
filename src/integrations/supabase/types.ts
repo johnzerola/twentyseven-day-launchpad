@@ -475,6 +475,7 @@ export type Database = {
           analyzed_at: string | null
           avg_views: number
           channel_name: string
+          content_category: string | null
           country: string
           created_at: string | null
           growth_rate: string
@@ -497,6 +498,7 @@ export type Database = {
           analyzed_at?: string | null
           avg_views?: number
           channel_name: string
+          content_category?: string | null
           country?: string
           created_at?: string | null
           growth_rate?: string
@@ -519,6 +521,7 @@ export type Database = {
           analyzed_at?: string | null
           avg_views?: number
           channel_name?: string
+          content_category?: string | null
           country?: string
           created_at?: string | null
           growth_rate?: string
@@ -1747,6 +1750,36 @@ export type Database = {
         }
         Relationships: []
       }
+      niche_score_benchmarks: {
+        Row: {
+          avg_score: number | null
+          id: string
+          min_passing_score: number | null
+          niche: string
+          top_techniques: string[] | null
+          total_scripts_scored: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_score?: number | null
+          id?: string
+          min_passing_score?: number | null
+          niche: string
+          top_techniques?: string[] | null
+          total_scripts_scored?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_score?: number | null
+          id?: string
+          min_passing_score?: number | null
+          niche?: string
+          top_techniques?: string[] | null
+          total_scripts_scored?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       niche_velocity: {
         Row: {
           avg_views_per_video: number | null
@@ -2827,6 +2860,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      script_skill_scores: {
+        Row: {
+          avg_score: number | null
+          best_score: number | null
+          created_at: string | null
+          genre: string | null
+          id: string
+          last_used_at: string | null
+          niche: string
+          technique: string
+          times_used: number | null
+          total_score_contribution: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avg_score?: number | null
+          best_score?: number | null
+          created_at?: string | null
+          genre?: string | null
+          id?: string
+          last_used_at?: string | null
+          niche: string
+          technique: string
+          times_used?: number | null
+          total_score_contribution?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avg_score?: number | null
+          best_score?: number | null
+          created_at?: string | null
+          genre?: string | null
+          id?: string
+          last_used_at?: string | null
+          niche?: string
+          technique?: string
+          times_used?: number | null
+          total_score_contribution?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       script_structures: {
         Row: {
