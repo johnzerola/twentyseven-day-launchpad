@@ -12,7 +12,7 @@ import {
   Rocket, Trophy, Calendar, CheckCircle2, TrendingUp, 
   Flame, Zap, Play, Clock, Star, ChevronLeft, ChevronRight,
   BarChart3, Video, Eye, Users, Loader2, Brain, Youtube, Trash2,
-  FileText, AlertTriangle, ArrowRight, RefreshCw, Lightbulb
+  FileText, AlertTriangle, ArrowRight, RefreshCw, Lightbulb, Wand2
 } from 'lucide-react';
 import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
 import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';

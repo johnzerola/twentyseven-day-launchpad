@@ -291,6 +291,101 @@ serve(async (req) => {
       } catch (e) { console.warn("Failed to save rejection learning:", e); }
     } else {
       console.log(`[PHASE-3 SCORE] runId=${runId} APPROVED: GPT=${gpt}, Gemini=${gemini}, Combined=${combinedScore}/20`);
+      
+      // ═══ SKILL SCORING — Track which techniques led to approval ═══
+      try {
+        const authHeader = req.headers.get("authorization") || '';
+        const token = authHeader.replace("Bearer ", "");
+        if (token) {
+          const { data: claimsData } = await sb.auth.getClaims(token);
+          const userId = claimsData?.claims?.sub;
+          if (userId && niche) {
+            // Detect techniques used in the approved script
+            const techniques: { name: string; score: number }[] = [];
+            const scriptLower = script.toLowerCase();
+            
+            if (scriptLower.includes('espera') || scriptLower.includes('a menos que')) techniques.push({ name: 'Inner Monologue', score: gpt });
+            if (/\.\s*\n\n/.test(script) && scriptLower.includes('mas')) techniques.push({ name: 'Cliffhanger', score: gemini });
+            if (allStrengths.some((s: string) => s.toLowerCase().includes('emocion'))) techniques.push({ name: 'Emotional Whiplash', score: Math.max(gpt, gemini) });
+            if (allStrengths.some((s: string) => s.toLowerCase().includes('hook') || s.toLowerCase().includes('gancho'))) techniques.push({ name: 'Hook Power', score: gptScore?.hook_score || gpt });
+            if (allStrengths.some((s: string) => s.toLowerCase().includes('retenção') || s.toLowerCase().includes('reten'))) techniques.push({ name: 'Retention Engineering', score: gptScore?.retention_score || gpt });
+            if (allStrengths.some((s: string) => s.toLowerCase().includes('original'))) techniques.push({ name: 'Originality', score: gptScore?.originality_score || gpt });
+            if (scriptLower.match(/\d{1,3}(,\d{3})+|\$[\d,.]+/g)) techniques.push({ name: 'Specific Numbers', score: 8 });
+            if (allStrengths.some((s: string) => s.toLowerCase().includes('ritmo') || s.toLowerCase().includes('pacing'))) techniques.push({ name: 'Pacing Mastery', score: gptScore?.flow_score || gpt });
+            
+            // Always add the style as a technique
+            if (style) techniques.push({ name: `Style: ${style}`, score: Math.round(combinedScore / 2) });
+
+            for (const tech of techniques) {
+              await sb.from("script_skill_scores").upsert({
+                user_id: userId,
+                technique: tech.name,
+                niche: niche?.toLowerCase() || 'geral',
+                genre: style || null,
+                avg_score: tech.score,
+                times_used: 1,
+                total_score_contribution: tech.score,
+                best_score: tech.score,
+                last_used_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }, { 
+                onConflict: 'user_id,technique,niche',
+              });
+              
+              // Update avg: re-fetch and recalculate
+              const { data: existing } = await sb.from("script_skill_scores")
+                .select("times_used, total_score_contribution")
+                .eq("user_id", userId)
+                .eq("technique", tech.name)
+                .eq("niche", niche?.toLowerCase() || 'geral')
+                .single();
+              
+              if (existing) {
+                const newTimesUsed = (existing.times_used || 0) + 1;
+                const newTotal = (existing.total_score_contribution || 0) + tech.score;
+                await sb.from("script_skill_scores").update({
+                  times_used: newTimesUsed,
+                  total_score_contribution: newTotal,
+                  avg_score: Math.round((newTotal / newTimesUsed) * 10) / 10,
+                  best_score: Math.max(existing.total_score_contribution || 0, tech.score),
+                  last_used_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("user_id", userId)
+                .eq("technique", tech.name)
+                .eq("niche", niche?.toLowerCase() || 'geral');
+              }
+            }
+            
+            // Update niche benchmark
+            await sb.from("niche_score_benchmarks").upsert({
+              niche: niche?.toLowerCase() || 'geral',
+              avg_score: combinedScore,
+              total_scripts_scored: 1,
+              top_techniques: techniques.slice(0, 5).map(t => t.name),
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'niche' });
+            
+            // Re-calculate benchmark average
+            const { data: benchData } = await sb.from("niche_score_benchmarks")
+              .select("avg_score, total_scripts_scored")
+              .eq("niche", niche?.toLowerCase() || 'geral')
+              .single();
+            if (benchData) {
+              const newTotal = (benchData.total_scripts_scored || 0) + 1;
+              const newAvg = ((benchData.avg_score || 0) * (benchData.total_scripts_scored || 0) + combinedScore) / newTotal;
+              await sb.from("niche_score_benchmarks").update({
+                avg_score: Math.round(newAvg * 10) / 10,
+                total_scripts_scored: newTotal,
+                top_techniques: techniques.slice(0, 5).map(t => t.name),
+                updated_at: new Date().toISOString(),
+              }).eq("niche", niche?.toLowerCase() || 'geral');
+            }
+            
+            console.log(`[SKILL-TREE] runId=${runId} Saved ${techniques.length} technique scores for user=${userId}, niche=${niche}`);
+          }
+        }
+      } catch (e) { console.warn("Skill scoring save error:", e); }
     }
 
     return new Response(JSON.stringify({
