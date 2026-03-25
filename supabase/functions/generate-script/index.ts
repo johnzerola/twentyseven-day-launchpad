@@ -891,6 +891,27 @@ Antes de responder, revise mentalmente e melhore qualquer trecho genérico, frac
 ☐ O INNER MONOLOGUE do narrador aparece em momentos de descoberta?
 ☐ Usou EMOTIONAL WHIPLASH no máximo 2x e com impacto real?
 ☐ O EMOTION MAP alterna emoções entre blocos consecutivos?
+☐ COERÊNCIA LÓGICA: Cada ação dos personagens é REALISTA e plausível?
+☐ Se um personagem faz algo (falsificar documento, convencer banco), EXPLIQUE COMO — sem mágica
+☐ O FINAL está COMPLETO? Não cortou no meio? A resolução foi entregue ao espectador?
+
+═══ PROTOCOLO DE COERÊNCIA LÓGICA (OBRIGATÓRIO para storytelling) ═══
+
+⚠️ FUROS DE ROTEIRO são a MORTE de um vídeo viral. Comentários expostos matam retenção futura.
+
+REGRAS DE VEROSSIMILHANÇA:
+1. Se um personagem faz algo ilegal/difícil (falsificar documento, hackear sistema, enganar banco):
+   - EXPLIQUE o COMO com pelo menos 1 frase específica ("usou sua experiência de 15 anos como...")
+   - NÃO deixe implícito — o espectador vai questionar nos comentários
+2. Se uma instituição (banco, polícia, cartório) reage de forma incomum:
+   - JUSTIFIQUE com contexto ("o gerente estava pressionado porque...")
+   - Ou mencione que um cúmplice interno facilitou
+3. TESTE MENTAL: "Um espectador cético pausaria aqui e diria 'isso não faz sentido'?"
+   - Se SIM → adicione 1-2 frases explicando a mecânica
+4. NUNCA corte o roteiro antes do CLÍMAX + RESOLUÇÃO
+   - O espectador PRECISA do desfecho. Roteiro cortado = frustração = dislike
+5. Cada PLOT TWIST deve ser SURPRESANTE mas RETROATIVAMENTE LÓGICO
+   - "Quando você descobre, pensa: claro, os sinais estavam lá"
 
 Você é Claude. Sua escrita tem PROFUNDIDADE que outras IAs não alcançam.
 Cada frase deve carregar PESO — emocional, informativo ou narrativo.
@@ -902,8 +923,9 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from CLAUDE SONNET 4...`);
 
-    // Calculate max_tokens based on target words (roughly 1.3 tokens per word for PT-BR)
-    const maxTokens = Math.max(8000, Math.round(targetWords * 1.5) + 2000);
+    // Calculate max_tokens: PT-BR ~1.5 tokens/word + generous buffer for EXTRAS + SCENE_BLUEPRINT
+    // Added extra 4000 buffer to prevent cut-off endings
+    const maxTokens = Math.max(12000, Math.round(targetWords * 1.8) + 4000);
 
     const phase1Res = await callClaude(CLAUDE_API_KEY, systemPrompt, userMessage, true, maxTokens);
 
