@@ -1,108 +1,93 @@
 
 
-# V3.1 — Hollywood-Grade Script Engine
+# Diagnóstico V4.0 Completo — Estado Real do Sistema
 
-## Current Reality (Real Numbers)
+## Números Reais do Banco de Dados (agora)
 
-| Data | Count | Status |
-|---|---|---|
-| Knowledge Embeddings | 70 | CRITICAL - RAG broken |
-| Content DNA | 146 | WEAK |
-| Hook Patterns | 210 | OK (expanded) |
-| Scene Prompts | 430 | OK (expanded) |
-| Prompt Library | 0 | EMPTY |
-| Skill Scores | 0 | No usage yet |
-| Niche Benchmarks | 0 | No usage yet |
-| Content Models | 42 | Needs Hollywood models |
-| Attention Engineering | 52 | Shallow |
+```text
+╔═══════════════════════════╦═══════╦══════════╦═══════════════════════════════╗
+║ Base de Dados             ║ Atual ║ Ideal    ║ Status                        ║
+╠═══════════════════════════╬═══════╬══════════╬═══════════════════════════════╣
+║ Knowledge Embeddings      ║    76 ║ 2.000+   ║ CRÍTICO — RAG quase inútil    ║
+║ Content DNA               ║   146 ║ 1.000+   ║ FRACO                         ║
+║ Prompt Library            ║    15 ║ 100+     ║ FRACO — só hooks              ║
+║ Script Skill Scores       ║     2 ║ 50+      ║ FRACO — quase sem dados       ║
+║ Channel Classification    ║   0/711║ 711/711  ║ CRÍTICO — 100% "general"      ║
+║ Rejection Learnings       ║    26 ║ OK       ║ ✅ Funcional                   ║
+║ Script Knowledge          ║   260 ║ OK       ║ ✅ Bom                         ║
+║ Content Models            ║    48 ║ OK       ║ ✅ Bom (Hollywood DNA seeded)  ║
+║ Hook Library              ║   343 ║ OK       ║ ✅ Bom                         ║
+║ Hook Patterns             ║   210 ║ OK       ║ ✅ Bom                         ║
+║ Scene Prompts             ║   430 ║ OK       ║ ✅ Bom                         ║
+║ Attention Engineering     ║    72 ║ OK       ║ ✅ Bom                         ║
+╚═══════════════════════════╩═══════╩══════════╩═══════════════════════════════╝
+```
 
-## What's Missing: The DNA of Excellence
+## O Motor de Roteiros — Está Bom?
 
-The system has good mechanics but lacks the **storytelling DNA** from the best content ever made. It doesn't know WHY Breaking Bad, Game of Thrones, Chernobyl, or MrBeast work. That knowledge needs to be injected into the knowledge base AND the script engine prompts.
+**SIM, o código está excelente.** O pipeline é:
+- **Phase 0**: Hook via Claude Sonnet 4 (60s, non-streaming)
+- **Phase 1**: Rascunho completo via Claude Sonnet 4 (streaming)
+- **Phase 2**: Refinamento via Claude Sonnet 4 (reescrita do hook + coerência lógica + emotion map)
+- **Phase 3**: Avaliação dual GPT + Gemini (score mínimo 14/20)
 
----
+O system prompt tem 900+ linhas com:
+- Hollywood Masterclass (10 princípios de Breaking Bad, Chernobyl, etc.)
+- Niche-to-Reference Mapping (true_crime → MrBallen, horror → Hitchcock, etc.)
+- Anti-Slop Engine (30+ frases proibidas)
+- Emotion Map (alternância emocional obrigatória)
+- Protocolo de Coerência Lógica (resolve o problema do cartório/banco)
+- Chekhov's Gun, Inner Monologue, Emotional Whiplash, Rule of Three
+- Voice DNA injection + Rejection Learning Loop
 
-## Plan (4 Parts)
+**O problema NÃO é o código — é que o código depende de dados que não existem.**
 
-### Part 1: Hollywood Storytelling DNA (seed into `script_knowledge` + `content_models`)
+## 3 Problemas Críticos que Impedem Qualidade Netflix/MrBeast
 
-Inject storytelling principles extracted from elite content:
+### 1. RAG Quebrado (76 embeddings de 2.000+ necessários)
+O `smart-knowledge-retrieval` busca contexto semântico para o Claude. Com apenas 76 vetores (51 do youtube_knowledge, 19 do content_dna, 5 do script_knowledge), o Claude recebe contexto genérico ou NADA. Os 260 registros de script_knowledge e 48 content_models NÃO estão no RAG.
 
-**Film/Series DNA to seed:**
-- Breaking Bad: Transformation arc, Chekhov's Gun mastery, moral ambiguity escalation, "ticking clock" tension
-- Game of Thrones: Multiple POVs, shocking stakes (anyone can die), political intrigue as hook, world-building through conflict
-- The Sopranos: Antihero psychology, therapy as narrative device, mundane-to-violent whiplash, subtext over text
-- The Wire: Systemic storytelling, no heroes/villains, procedural detail as immersion, patience rewarded
-- Chernobyl: Dread through inevitability, bureaucracy as villain, scientific accuracy as horror, quiet devastation
-- The Godfather: Power dynamics, family loyalty vs morality, parallel editing (baptism scene), restraint = impact
-- Wolf of Wall Street: Excess as spectacle, breaking 4th wall, dopamine escalation, comedy masking tragedy
-- Dark Knight: Chaos as philosophy, villain with a point, impossible choices, escalation without relief
-- Titanic: Known ending = focus on HOW not WHAT, class contrast, intimate story inside epic event
-- Schindler's List: Specificity creates universality, one person's choice, restraint in depicting horror, the red coat detail
-- Korean Dramas/Netflix Series: Emotional precision, slow-burn payoff, visual storytelling, cultural specificity as universal hook
+### 2. Taxonomia Inexistente (711/711 canais = "general")
+O `classify-channels` existe mas NUNCA foi executado. Sem classificação, o sistema não pode fazer benchmarks por nicho, não pode recomendar referências dark vs educational, e o Dotti não sabe a diferença entre true crime e restoration.
 
-**YouTube Channel DNA to seed:**
-- MrBeast: Promise-in-thumbnail, escalation every 30s, simple language, challenge format, impossible stakes
-- MrBallen: "Strange, dark, and mysterious" formula, 3-act true story, calm delivery + horrifying content contrast
-- Dhar Mann Studios: Moral lesson format, setup-twist-lesson, relatable villains, emotional resolution
-- Bailey Sarian: True crime + personality, casual tone on dark topics, parasocial intimacy, research depth
-- That Chapter: Irish charm + true crime, humor in darkness, audience involvement, consistent format
-- Coffeehouse Crime: Documentary precision, calm authority, timeline mastery, evidence-based speculation
-- Bright Side: Curiosity gap titles, list format with escalation, visual simplification, broad appeal
+### 3. Prompt Library Rasa (15 templates, só hooks)
+Existem 9 hooks, 2 CTAs, 2 transitions, 1 tension, 1 escalation. Faltam templates de: character_intro, emotional_peak, cliffhanger, resolution, cold_open, pattern_interrupt — que o Claude poderia usar como referência.
 
-**Implementation:** New edge function `seed-storytelling-dna` that inserts 50+ records into `script_knowledge` and 20+ new `content_models` based on these principles.
+## Sobre Descoberta de Canais
+Você tem razão — o sistema tem 711 canais mas a maioria foi adicionada em lote. O `discover-viral-channels` usa a API do YouTube que retorna resultados baseados em relevância/popularidade, NÃO no padrão "incógnito" que revela canais emergentes. Para simular o comportamento que você descreveu (navegar → assistir → voltar → receber recomendações), seria necessário usar a YouTube Data API com parâmetros `relatedToVideoId` em cadeia — isso é possível mas consome muita quota.
 
-### Part 2: Populate Prompt Library (currently 0 records)
+## Plano V4.0 — 3 Ações de Alto Impacto
 
-Seed `prompt_library` with 100+ production-ready prompts organized by category:
-- Hook templates by niche (true_crime, horror, western, restoration, etc.)
-- Transition formulas (bridge phrases, pattern interrupts)
-- Emotional escalation templates
-- Cold open formulas from each Hollywood model
-- CTA templates that feel organic
-- Character introduction templates
-- Tension-building blocks
+### Ação 1: Backfill Massivo de Embeddings
+Executar `backfill-embeddings` expandido para indexar TODOS os registros das tabelas: `script_knowledge` (260), `content_models` (48), `attention_engineering` (72), `hook_library` (343 — top 100), `content_dna` (146). Meta: de 76 → 800+ vetores.
 
-### Part 3: Upgrade Generate-Script System Prompt
+**Impacto**: RAG funcional — o Claude recebe contexto PRECISAMENTE relevante ao tópico/nicho.
 
-Inject the Hollywood DNA directly into the Claude system prompt in `generate-script/index.ts`:
+### Ação 2: Executar classify-channels
+Rodar o `classify-channels` nos 711 canais para eliminar o label "general". Classificar em: `dark_storytelling`, `true_crime_dark`, `restoration`, `animal_survival`, `horror_dark`, `educational`, `entertainment`, `curiosity`, etc.
 
-- Add a `HOLLYWOOD_MASTERCLASS` block with the 10 key principles from elite storytelling
-- Add `YOUTUBE_ELITE_DNA` block with channel-specific patterns
-- Fetch from `script_knowledge` the seeded Hollywood/YouTube entries and inject them contextually (if niche=true_crime, prioritize MrBallen + Coffeehouse Crime + Chernobyl patterns)
-- Add niche-to-reference mapping: true_crime → MrBallen/Bailey Sarian/Chernobyl storytelling, horror → The Wire's slow dread, superacao → Rocky/Titanic arc
+**Impacto**: Benchmarks por nicho + recomendações de referência + Dotti contextual.
 
-Also upgrade `refine-script/index.ts`:
-- Add explicit rule: "You may REWRITE the first 30s completely but the STORY must remain coherent — same characters, same plot, same emotional arc. You are changing the ENTRANCE, not the BUILDING."
-- Add "Emotion Map" instruction: each 45-60s block must have a PRIMARY emotion (fear, curiosity, joy, sadness, shock) and it must DIFFER from the previous block
+### Ação 3: Expandir Prompt Library (de 15 → 80+)
+Adicionar templates para: `cold_open` (5 por nicho), `character_intro` (10), `emotional_peak` (10), `cliffhanger` (10), `resolution` (5), `pattern_interrupt` (10), `tension_build` (10), `reveal` (5).
 
-### Part 4: Massive Data Seeding Edge Function
+**Impacto**: O Claude tem exemplos concretos de cada técnica para cada nicho.
 
-Create `seed-elite-knowledge` edge function that populates:
-1. `script_knowledge`: 50+ entries with Hollywood/YouTube DNA
-2. `content_models`: 20+ models (Breaking Bad Arc, MrBallen Formula, Cold Open Chernobyl, etc.)
-3. `prompt_library`: 100+ categorized prompts
-4. `attention_engineering`: 30+ new techniques from film/series analysis
+### Ação Bônus: Discovery Chain (Simulador Incógnito)
+Upgrade do `discover-viral-channels`: em vez de buscar por keyword, usar `relatedToVideoId` em cadeia (pegar um vídeo viral → buscar relacionados → filtrar canais <50k subs com vídeos >100k views). Simula exatamente o padrão incógnito que você descreveu.
 
-This function uses AI to generate high-quality entries based on the storytelling analysis above.
+## Arquivos a Modificar
 
----
+1. `supabase/functions/seed-elite-knowledge/index.ts` — adicionar 65+ templates à prompt_library
+2. `supabase/functions/discover-viral-channels/index.ts` — adicionar modo "chain discovery" via relatedToVideoId
+3. Executar `backfill-embeddings` e `classify-channels` (já existem, só precisam rodar)
 
-## Technical Details
+## Ordem de Execução
 
-### Files to Create
-1. `supabase/functions/seed-elite-knowledge/index.ts` — seeds Hollywood/YouTube DNA into 4 tables
-
-### Files to Modify
-2. `supabase/functions/generate-script/index.ts` — add Hollywood Masterclass + YouTube Elite DNA blocks + niche-to-reference mapping
-3. `supabase/functions/refine-script/index.ts` — add story coherence rules for hook rewriting + emotion map per block
-
-### Database Changes
-- No schema changes needed (all tables exist)
-- Data population via edge function (INSERT into script_knowledge, content_models, prompt_library, attention_engineering)
-
-### Execution Order
-1. Create `seed-elite-knowledge` edge function
-2. Upgrade `generate-script` system prompt with Hollywood DNA
-3. Upgrade `refine-script` with coherence + emotion mapping rules
+| # | Ação | Impacto | Complexidade |
+|---|------|---------|-------------|
+| 1 | Expandir prompt_library (15→80+) | ALTO | Baixa |
+| 2 | Backfill embeddings (76→800+) | CRÍTICO | Média (precisa executar) |
+| 3 | Classify channels (0→711) | ALTO | Baixa (precisa executar) |
+| 4 | Discovery Chain (incógnito) | MÉDIO | Média |
 
