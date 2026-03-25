@@ -150,3 +150,9 @@ verify_jwt = false
 [functions.seed-elite-knowledge]
 verify_jwt = false
 
+[functions.discover-viral-channels]
+verify_jwt = false
+
+[functions.classify-channels]
+verify_jwt = false
+
