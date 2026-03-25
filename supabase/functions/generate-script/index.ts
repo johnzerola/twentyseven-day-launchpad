@@ -902,8 +902,9 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from CLAUDE SONNET 4...`);
 
-    // Calculate max_tokens based on target words (roughly 1.3 tokens per word for PT-BR)
-    const maxTokens = Math.max(8000, Math.round(targetWords * 1.5) + 2000);
+    // Calculate max_tokens: PT-BR ~1.5 tokens/word + generous buffer for EXTRAS + SCENE_BLUEPRINT
+    // Added extra 4000 buffer to prevent cut-off endings
+    const maxTokens = Math.max(12000, Math.round(targetWords * 1.8) + 4000);
 
     const phase1Res = await callClaude(CLAUDE_API_KEY, systemPrompt, userMessage, true, maxTokens);
 
