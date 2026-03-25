@@ -313,7 +313,7 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
     if (CLAUDE_API_KEY) {
       console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from CLAUDE SONNET 4...`);
       
-      const maxTokens = Math.max(8000, Math.round(tw * 1.5) + 2000);
+      const maxTokens = Math.max(12000, Math.round(tw * 1.8) + 4000);
       
       const refineRes = await fetch(CLAUDE_API_URL, {
         method: "POST",
