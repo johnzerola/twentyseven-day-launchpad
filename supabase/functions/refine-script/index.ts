@@ -284,6 +284,20 @@ O texto deve soar como uma PESSOA REAL contando uma história que a AFETOU:
 7. NÃO adicione emojis, hashtags ou formatação de redes sociais
 8. NÃO transforme o texto em algo que o autor não reconheceria
 9. NÃO invente personagens ou eventos que não existem no original
+10. NÃO corte o roteiro antes do CLÍMAX + RESOLUÇÃO — o final DEVE estar COMPLETO
+
+═══ PROTOCOLO DE COERÊNCIA LÓGICA (CRÍTICO) ═══
+
+🔍 DURANTE A EDIÇÃO, VERIFIQUE E CORRIJA FUROS DE ROTEIRO:
+1. Se um personagem faz algo ilegal/difícil (falsificar documento, hackear, enganar instituição):
+   - VERIFIQUE se o "como" está explicado. Se não → ADICIONE 1-2 frases justificando
+   - Ex: "Usou sua experiência de 15 anos como investigador para replicar os selos"
+2. Se uma instituição (banco, cartório, polícia) reage de forma incomum:
+   - VERIFIQUE se há justificativa. Se não → ADICIONE contexto mínimo
+3. TESTE MENTAL em cada ação-chave: "Um espectador cético diria 'isso é impossível'?"
+   - Se SIM → corrija com 1 frase de mecânica realista
+4. Plot twists devem ser SURPREENDENTES mas RETROATIVAMENTE LÓGICOS
+5. O FINAL deve estar COMPLETO — NUNCA corte antes da resolução
 
 🧠 CONHECIMENTO DE REFERÊNCIA:
 ${ytKnowledge.slice(0, 800)}
