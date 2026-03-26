@@ -456,6 +456,7 @@ const TOOL_TIMEOUTS_MS: Record<string, number> = {
 
 const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
   "analyze_channel",
+  "analyze_niche",
   "youtube_channel_stats",
   "youtube_channel_videos",
   "youtube_video_stats",
