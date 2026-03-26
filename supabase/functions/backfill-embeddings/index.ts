@@ -143,7 +143,7 @@ const KNOWLEDGE_SOURCES: KnowledgeSource[] = [
   },
 ];
 
-async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
+function generateEmbeddingSync(text: string): number[] {
   // Use deterministic hash-based embedding for speed and reliability
   // This creates semantically meaningful vectors using text features
   const embedding = new Array(768).fill(0);
