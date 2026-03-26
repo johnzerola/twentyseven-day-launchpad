@@ -548,9 +548,10 @@ export const ScriptGenerator = ({
           
           // Re-score
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
-          const { data: reScoreData } = await supabase.functions.invoke('score-script', {
+          const { data: reScoreData, error: reScoreError2 } = await supabase.functions.invoke('score-script', {
             body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
           });
+          if (reScoreError2) console.warn('Re-score failed:', reScoreError2);
           
           if (reScoreData) {
             setDualScore(reScoreData);
