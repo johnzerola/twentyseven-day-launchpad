@@ -1157,7 +1157,7 @@ serve(async (req) => {
     // ===== FETCH USER-SPECIFIC DATA =====
     let userProfileContext = '';
     if (currentUserId) {
-      const [userChannels, savedSearches, savedScripts, savedTitles, outliers, onboardingPlan, plannerCards, trackedChannels] = await Promise.all([
+      const [userChannels, savedSearches, savedScripts, savedTitles, outliers, onboardingPlan, plannerCards, trackedChannels, videoPerf, scriptPrefs] = await Promise.all([
         sb.from("user_channels").select("channel_name, niche, subscribers, views, videos, youtube_channel_id, analysis_json").eq("user_id", currentUserId).limit(10),
         sb.from("saved_searches").select("query, tab, notes, filters_json, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(15),
         sb.from("saved_scripts").select("topic, style, video_type, duration, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(10),
@@ -1166,6 +1166,8 @@ serve(async (req) => {
         sb.from("onboarding_plans").select("niche, goal, language, content_type, time_per_day, plan_json").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(1),
         sb.from("planner_cards").select("title, column_id, priority, tags").eq("user_id", currentUserId).order("updated_at", { ascending: false }).limit(15),
         sb.from("tracked_channels").select("channel_name, youtube_channel_id, subscribers, folder").eq("user_id", currentUserId).limit(20),
+        sb.from("video_performance").select("title, views_current, views_day1, views_day3, views_day7, avg_retention_percent, ctr_percent, hook_type, niche, performance_grade, published_at").eq("user_id", currentUserId).order("published_at", { ascending: false }).limit(15),
+        sb.from("user_script_preferences").select("niche, preferred_pov, preferred_duration_min, preferred_hook_styles, avg_retention, total_scripts, insights_json").eq("user_id", currentUserId).limit(5),
       ]);
 
       const blocks: string[] = [];
@@ -1210,6 +1212,22 @@ serve(async (req) => {
           byColumn[c.column_id].push(`${c.title} [${c.priority || 'média'}]`);
         });
         blocks.push(`### 📋 Tarefas:\n` + Object.entries(byColumn).map(([col, items]) => `**${col}**: ${items.join(', ')}`).join('\n'));
+      }
+      if (videoPerf.data?.length) {
+        const avgRetention = videoPerf.data.filter((v: any) => v.avg_retention_percent).reduce((s: number, v: any) => s + (v.avg_retention_percent || 0), 0) / Math.max(videoPerf.data.filter((v: any) => v.avg_retention_percent).length, 1);
+        const avgCtr = videoPerf.data.filter((v: any) => v.ctr_percent).reduce((s: number, v: any) => s + (v.ctr_percent || 0), 0) / Math.max(videoPerf.data.filter((v: any) => v.ctr_percent).length, 1);
+        const topByViews = [...videoPerf.data].sort((a: any, b: any) => (b.views_current || 0) - (a.views_current || 0)).slice(0, 5);
+        blocks.push(`### 📈 Performance Real dos Vídeos (${videoPerf.data.length} últimos):\n` +
+          `- Retenção média: ${avgRetention.toFixed(1)}%\n` +
+          `- CTR médio: ${avgCtr.toFixed(1)}%\n` +
+          `- Top vídeos:\n` +
+          topByViews.map((v: any) => `  - "${v.title}" — ${(v.views_current || 0).toLocaleString()} views, ${v.avg_retention_percent || '?'}% retenção, ${v.ctr_percent || '?'}% CTR, hook: ${v.hook_type || '?'}, grade: ${v.performance_grade || '?'}`).join('\n') +
+          `\n- Velocity (views dia 1):\n` +
+          videoPerf.data.filter((v: any) => v.views_day1).slice(0, 5).map((v: any) => `  - "${v.title?.slice(0, 40)}": D1=${v.views_day1}, D3=${v.views_day3 || '?'}, D7=${v.views_day7 || '?'}`).join('\n'));
+      }
+      if (scriptPrefs.data?.length) {
+        blocks.push(`### 🧠 Preferências Aprendidas (cross-projeto):\n` +
+          scriptPrefs.data.map((p: any) => `- **${p.niche}** (${p.total_scripts || 0} roteiros): POV=${p.preferred_pov || '?'}, duração ideal=${p.preferred_duration_min || '?'}min, hooks preferidos=${(p.preferred_hook_styles || []).join(', ') || '?'}, retenção média=${p.avg_retention || '?'}%`).join('\n'));
       }
       if (blocks.length > 0) {
         userProfileContext = `\n## 👤 PERFIL DO USUÁRIO (USE ESTES DADOS PARA PERSONALIZAR TUDO)\n${blocks.join('\n\n')}`;
@@ -1485,7 +1503,10 @@ ${knowledgeBlock}
 5. Sempre inclua RPM + competição + projeção financeira nas recomendações
 6. Ao final: "🎯 **Próximo passo:** [ação específica imediata]"
 7. ${usedSemantic ? 'RAG semântico ativo — priorize esses dados.' : 'RAG por score ativo.'}
-8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados`;
+8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados
+9. Se há dados de PERFORMANCE REAL, CRUZE COM BENCHMARKS DO NICHO proativamente. Ex: "Sua retenção de 67% está ACIMA da média de 52% do seu nicho — duplique nesse formato." Não espere o usuário perguntar.
+10. Se há PREFERÊNCIAS APRENDIDAS, use-as para personalizar recomendações de formato, duração e hook.
+11. Use MÚLTIPLAS RODADAS de ferramentas quando necessário: busque dados na rodada 1, analise/cruze na rodada 2, sintetize na rodada 3. NÃO pare após coletar dados sem interpretar.`;
 
     // First AI call with tools — use fast model for tool selection
     const aiMessages = [{ role: "system", content: systemPrompt }, ...messages];
@@ -1534,8 +1555,8 @@ ${knowledgeBlock}
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 1;
-    const MAX_PARALLEL_TOOLS = 4;
+    const MAX_TOOL_ROUNDS = 3;
+    const MAX_PARALLEL_TOOLS = 5;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
       toolRound++;
