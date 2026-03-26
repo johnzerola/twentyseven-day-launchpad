@@ -211,6 +211,21 @@ export function YPPProgressDashboard() {
           </div>
         )}
 
+        {/* YPP Sprint Alert */}
+        {!isYPPReady && (subsRemaining <= 500 || watchRemaining <= 200) && (
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Zap className="w-4 h-4 text-destructive animate-pulse" />
+              <span className="text-xs font-bold text-destructive">🔥 SPRINT FINAL — YPP ao alcance!</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {subsRemaining <= 500 && subsRemaining > 0 && `Faltam apenas ${subsRemaining} inscritos. `}
+              {watchRemaining <= 200 && watchRemaining > 0 && `Faltam ${watchRemaining.toLocaleString()}h de exibição. `}
+              O Planner Diário foi ajustado para modo de máxima viralidade — priorize Shorts e temas trending.
+            </p>
+          </div>
+        )}
+
         {/* No OAuth warning */}
         {!hasOAuth && (
           <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
