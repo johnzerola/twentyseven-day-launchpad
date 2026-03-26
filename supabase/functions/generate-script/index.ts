@@ -825,6 +825,7 @@ ${backtestBlock}
 ${referenceBlock}
 ${rejectionLearningsBlock}
 ${skillScoreBlock}
+${userPrefsBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
