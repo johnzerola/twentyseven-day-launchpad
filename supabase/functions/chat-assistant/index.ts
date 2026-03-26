@@ -1131,6 +1131,97 @@ async function executeTool(
         break;
       }
 
+      // ===== NEW V5 TOOLS =====
+      case "analyze_thumbnail_ctr": {
+        // Use AI to analyze thumbnail from URL
+        const lovKey = Deno.env.get("LOVABLE_API_KEY");
+        if (!lovKey) { result = { error: "API key not configured" }; break; }
+        try {
+          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "You are a YouTube thumbnail CTR expert. Analyze the thumbnail and provide: composition score (1-10), emotional impact (1-10), color analysis, text readability, estimated CTR potential, and 3 specific improvements. Respond in Portuguese brasileiro." },
+                { role: "user", content: `Analyze this YouTube thumbnail for CTR potential.\nImage URL: ${args.image_url}\nVideo title: ${args.video_title || 'Unknown'}\nNiche: ${args.niche || 'general'}\n\nProvide detailed analysis with scores and actionable improvements.` },
+              ],
+            }),
+          });
+          const data = await resp.json();
+          result = { analysis: data.choices?.[0]?.message?.content || "No analysis", model: "gemini-2.5-flash" };
+        } catch (e: any) { result = { error: e.message }; }
+        break;
+      }
+
+      case "generate_thumbnail_prompt": {
+        result = await callFn("generate-thumbnail-prompt", {
+          video_title: args.video_title,
+          niche: args.niche,
+          emotion: args.emotion || "curiosity",
+          style: args.style || "auto",
+          count: 3,
+        });
+        break;
+      }
+
+      case "link_script_to_real_video": {
+        result = await callFn("link-script-to-video", {
+          script_id: args.script_id || null,
+          youtube_url: args.youtube_url,
+        });
+        break;
+      }
+
+      case "monetization_diagnosis": {
+        // Query internal knowledge bases
+        const [algoKnowledge, monetKnowledge, channelData] = await Promise.all([
+          sb.from("youtube_algorithm_knowledge")
+            .select("title, content, data_json, category")
+            .in("category", ["ypp_requirements", "longform_algorithm", "shorts_algorithm"])
+            .order("priority", { ascending: false })
+            .limit(15),
+          sb.from("monetization_knowledge_base")
+            .select("title, content, data_json, topic, country_code")
+            .limit(20),
+          args.channel_id ? sb.from("user_channels").select("*").eq("id", args.channel_id).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+
+        result = {
+          algorithm_knowledge: (algoKnowledge.data || []).map((k: any) => ({ title: k.title, content: k.content, data: k.data_json })),
+          monetization_data: (monetKnowledge.data || []).map((m: any) => ({ title: m.title, content: m.content, data: m.data_json, country: m.country_code })),
+          channel: channelData.data,
+          niche: args.niche,
+          target_revenue: args.target_revenue_usd,
+        };
+        break;
+      }
+
+      case "algorithm_current_status": {
+        // Combine internal knowledge + Perplexity research
+        const [internalKnowledge, perplexityResult] = await Promise.all([
+          sb.from("youtube_algorithm_knowledge")
+            .select("title, content, data_json, category, confidence_score")
+            .eq("applies_to_format", args.format === "shorts" ? "shorts" : args.format === "longform" ? "longform" : "both")
+            .order("priority", { ascending: false })
+            .limit(10),
+          callFn("perplexity-research", {
+            singleQuery: {
+              query: `YouTube algorithm best practices 2025-2026 for ${args.niche} ${args.format || "both"} videos. What's working right now? Recent changes?`,
+              searchRecency: "month",
+            },
+          }),
+        ]);
+
+        result = {
+          internal_knowledge: (internalKnowledge.data || []).map((k: any) => ({ title: k.title, content: k.content, data: k.data_json, confidence: k.confidence_score })),
+          live_research: perplexityResult,
+          niche: args.niche,
+          format: args.format,
+        };
+        break;
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
