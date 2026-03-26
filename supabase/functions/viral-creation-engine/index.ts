@@ -27,12 +27,28 @@ serve(async (req) => {
 
   const startTime = Date.now();
   try {
+    // ═══ AUTH CHECK ═══
+    const authHeader = req.headers.get("authorization") || '';
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const _authSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } });
+    const { data: _claims, error: _authErr } = await _authSb.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (_authErr || !_claims?.claims) {
+      return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const {
       niche, language = "pt", video_type = "long",
-      topic_seed, // Optional: user-provided topic hint
-      style, // Optional: narração, dopaminérgico, storytelling, etc.
-      duration = 15, // minutes for long, seconds for short
-      count = 3, // how many concepts to generate
+      topic_seed,
+      style,
+      duration = 15,
+      count = 3,
     } = await req.json();
 
     if (!niche) throw new Error("niche is required");
