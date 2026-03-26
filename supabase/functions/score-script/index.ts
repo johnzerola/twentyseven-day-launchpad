@@ -383,6 +383,57 @@ serve(async (req) => {
             }
             
             console.log(`[SKILL-TREE] runId=${runId} Saved ${techniques.length} technique scores for user=${userId}, niche=${niche}`);
+
+            // ═══ USER SCRIPT PREFERENCES — Learn cross-project patterns ═══
+            try {
+              const scriptWords = script.split(/\s+/).length;
+              const estimatedDuration = Math.round(scriptWords / 150); // ~150 wpm
+              const detectedPov = script.match(/\beu\b.*\b(vi|fiz|senti|percebi)\b/i) ? '1st_person' 
+                : script.match(/\bele\b.*\b(viu|fez|sentiu)\b/i) ? '3rd_person' : null;
+              
+              const topHookTypes = techniques
+                .filter(t => t.name.includes('Hook') || t.name.includes('hook'))
+                .map(t => t.name);
+
+              const { data: existing } = await sb.from("user_script_preferences")
+                .select("*")
+                .eq("user_id", userId)
+                .eq("niche", niche?.toLowerCase() || 'general')
+                .maybeSingle();
+
+              if (existing) {
+                const newCount = (existing.total_scripts_generated || 0) + 1;
+                const newAvgScore = ((existing.avg_score_achieved || 0) * (existing.total_scripts_generated || 0) + combinedScore) / newCount;
+                const mergedHooks = [...new Set([...(existing.best_hook_types || []), ...topHookTypes])].slice(0, 5);
+                const mergedPatterns = [...(Array.isArray(existing.top_performing_patterns) ? existing.top_performing_patterns : []), 
+                  ...techniques.map(t => ({ name: t.name, score: t.score }))
+                ].slice(-10);
+
+                await sb.from("user_script_preferences").update({
+                  total_scripts_generated: newCount,
+                  avg_score_achieved: Math.round(newAvgScore * 10) / 10,
+                  preferred_pov: detectedPov || existing.preferred_pov,
+                  preferred_duration_min: estimatedDuration || existing.preferred_duration_min,
+                  preferred_style: style || existing.preferred_style,
+                  best_hook_types: mergedHooks,
+                  top_performing_patterns: mergedPatterns,
+                  updated_at: new Date().toISOString(),
+                }).eq("user_id", userId).eq("niche", niche?.toLowerCase() || 'general');
+              } else {
+                await sb.from("user_script_preferences").insert({
+                  user_id: userId,
+                  niche: niche?.toLowerCase() || 'general',
+                  preferred_pov: detectedPov,
+                  preferred_duration_min: estimatedDuration,
+                  preferred_style: style,
+                  best_hook_types: topHookTypes,
+                  avg_score_achieved: combinedScore,
+                  total_scripts_generated: 1,
+                  top_performing_patterns: techniques.map(t => ({ name: t.name, score: t.score })),
+                });
+              }
+              console.log(`[USER-PREFS] Saved preferences for user=${userId}, niche=${niche}`);
+            } catch (prefErr) { console.warn("User preferences save error:", prefErr); }
           }
         }
       } catch (e) { console.warn("Skill scoring save error:", e); }
