@@ -120,6 +120,21 @@ serve(async (req) => {
       // Detect emerging channels
       await invokeFunction("detect-emerging-channels", {});
 
+      // Weekly channel rescan
+      await invokeFunction("weekly-channel-rescan", {});
+
+      // Recalculate viral scores
+      await invokeFunction("viral-score-worker", {});
+
+      // Update niche benchmarks
+      await invokeFunction("niche-benchmark", {});
+
+      // Classify unclassified channels
+      await invokeFunction("classify-channels", {});
+
+      // Generate adaptive plans for all active users
+      await invokeFunction("generate-adaptive-plan", { mode: "all_users" });
+
       // Knowledge base health check
       const { data: embCount } = await sb.from("knowledge_embeddings")
         .select("id", { count: "exact", head: true });
@@ -130,7 +145,7 @@ serve(async (req) => {
       // Title score calibration
       await invokeFunction("title-score", { mode: "calibrate" });
 
-      // ★ NEW: Refresh materialized views for fresh aggregated data
+      // Refresh materialized views
       try {
         await sb.rpc("refresh_materialized_views");
         report.push({ function: "refresh_materialized_views", success: true });
@@ -138,7 +153,7 @@ serve(async (req) => {
         report.push({ function: "refresh_materialized_views", success: false, error: (e as Error).message });
       }
 
-      // ★ NEW: Update confirmed viral status on emerging_videos
+      // Update confirmed viral status
       await sb.from("emerging_videos")
         .update({ status: "confirmed_viral", confirmed_viral_at: new Date().toISOString() })
         .eq("status", "pre_viral")
