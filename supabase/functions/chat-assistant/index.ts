@@ -439,6 +439,87 @@ const DOTTI_TOOLS = [
       },
     },
   },
+  // ===== NEW V5 TOOLS =====
+  {
+    type: "function",
+    function: {
+      name: "analyze_thumbnail_ctr",
+      description: "Analyze a YouTube thumbnail for CTR potential. Upload image URL and get: composition score, emotional impact, color analysis, text readability, CTR prediction, and improvement suggestions.",
+      parameters: {
+        type: "object",
+        properties: {
+          image_url: { type: "string", description: "URL of the thumbnail image" },
+          video_title: { type: "string", description: "Associated video title" },
+          niche: { type: "string", description: "Channel niche" },
+        },
+        required: ["image_url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_thumbnail_prompt",
+      description: "Generate Midjourney/DALL-E prompts for a high-CTR YouTube thumbnail based on title and niche. Returns 3 variants ordered by expected CTR.",
+      parameters: {
+        type: "object",
+        properties: {
+          video_title: { type: "string", description: "Video title" },
+          niche: { type: "string", description: "Channel niche" },
+          emotion: { type: "string", description: "Target emotion: shock, curiosity, fear, excitement, wonder" },
+          style: { type: "string", description: "shock, curiosity, emotion, contrast, minimal" },
+        },
+        required: ["video_title", "niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_script_to_real_video",
+      description: "Link a generated script to its published YouTube video to track real performance and learn from results. ALWAYS use when user says they published a video.",
+      parameters: {
+        type: "object",
+        properties: {
+          script_id: { type: "string", description: "ID of the saved script" },
+          youtube_url: { type: "string", description: "YouTube video URL" },
+        },
+        required: ["youtube_url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "monetization_diagnosis",
+      description: "ALWAYS USE when user asks about monetization, YPP, revenue, how long to monetize. Queries algorithm knowledge base and monetization data for accurate projections.",
+      parameters: {
+        type: "object",
+        properties: {
+          channel_id: { type: "string", description: "User channel ID" },
+          target_revenue_usd: { type: "number", description: "Monthly revenue target in USD" },
+          country: { type: "string", description: "Target country code" },
+          niche: { type: "string", description: "Channel niche" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "algorithm_current_status",
+      description: "Get current YouTube algorithm best practices and what's working RIGHT NOW in a specific niche. Uses Perplexity for real-time data + internal knowledge base.",
+      parameters: {
+        type: "object",
+        properties: {
+          niche: { type: "string", description: "Niche to research" },
+          format: { type: "string", enum: ["shorts", "longform", "both"], description: "Video format" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
 ];
 
 // ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
@@ -1050,6 +1131,97 @@ async function executeTool(
         break;
       }
 
+      // ===== NEW V5 TOOLS =====
+      case "analyze_thumbnail_ctr": {
+        // Use AI to analyze thumbnail from URL
+        const lovKey = Deno.env.get("LOVABLE_API_KEY");
+        if (!lovKey) { result = { error: "API key not configured" }; break; }
+        try {
+          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "You are a YouTube thumbnail CTR expert. Analyze the thumbnail and provide: composition score (1-10), emotional impact (1-10), color analysis, text readability, estimated CTR potential, and 3 specific improvements. Respond in Portuguese brasileiro." },
+                { role: "user", content: `Analyze this YouTube thumbnail for CTR potential.\nImage URL: ${args.image_url}\nVideo title: ${args.video_title || 'Unknown'}\nNiche: ${args.niche || 'general'}\n\nProvide detailed analysis with scores and actionable improvements.` },
+              ],
+            }),
+          });
+          const data = await resp.json();
+          result = { analysis: data.choices?.[0]?.message?.content || "No analysis", model: "gemini-2.5-flash" };
+        } catch (e: any) { result = { error: e.message }; }
+        break;
+      }
+
+      case "generate_thumbnail_prompt": {
+        result = await callFn("generate-thumbnail-prompt", {
+          video_title: args.video_title,
+          niche: args.niche,
+          emotion: args.emotion || "curiosity",
+          style: args.style || "auto",
+          count: 3,
+        });
+        break;
+      }
+
+      case "link_script_to_real_video": {
+        result = await callFn("link-script-to-video", {
+          script_id: args.script_id || null,
+          youtube_url: args.youtube_url,
+        });
+        break;
+      }
+
+      case "monetization_diagnosis": {
+        // Query internal knowledge bases
+        const [algoKnowledge, monetKnowledge, channelData] = await Promise.all([
+          sb.from("youtube_algorithm_knowledge")
+            .select("title, content, data_json, category")
+            .in("category", ["ypp_requirements", "longform_algorithm", "shorts_algorithm"])
+            .order("priority", { ascending: false })
+            .limit(15),
+          sb.from("monetization_knowledge_base")
+            .select("title, content, data_json, topic, country_code")
+            .limit(20),
+          args.channel_id ? sb.from("user_channels").select("*").eq("id", args.channel_id).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+
+        result = {
+          algorithm_knowledge: (algoKnowledge.data || []).map((k: any) => ({ title: k.title, content: k.content, data: k.data_json })),
+          monetization_data: (monetKnowledge.data || []).map((m: any) => ({ title: m.title, content: m.content, data: m.data_json, country: m.country_code })),
+          channel: channelData.data,
+          niche: args.niche,
+          target_revenue: args.target_revenue_usd,
+        };
+        break;
+      }
+
+      case "algorithm_current_status": {
+        // Combine internal knowledge + Perplexity research
+        const [internalKnowledge, perplexityResult] = await Promise.all([
+          sb.from("youtube_algorithm_knowledge")
+            .select("title, content, data_json, category, confidence_score")
+            .eq("applies_to_format", args.format === "shorts" ? "shorts" : args.format === "longform" ? "longform" : "both")
+            .order("priority", { ascending: false })
+            .limit(10),
+          callFn("perplexity-research", {
+            singleQuery: {
+              query: `YouTube algorithm best practices 2025-2026 for ${args.niche} ${args.format || "both"} videos. What's working right now? Recent changes?`,
+              searchRecency: "month",
+            },
+          }),
+        ]);
+
+        result = {
+          internal_knowledge: (internalKnowledge.data || []).map((k: any) => ({ title: k.title, content: k.content, data: k.data_json, confidence: k.confidence_score })),
+          live_research: perplexityResult,
+          niche: args.niche,
+          format: args.format,
+        };
+        break;
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
@@ -1231,6 +1403,23 @@ serve(async (req) => {
       }
       if (blocks.length > 0) {
         userProfileContext = `\n## 👤 PERFIL DO USUÁRIO (USE ESTES DADOS PARA PERSONALIZAR TUDO)\n${blocks.join('\n\n')}`;
+      }
+
+      // Fetch user_content_memory (learned DNA)
+      const { data: memory } = await sb.from('user_content_memory').select('*').eq('user_id', currentUserId).maybeSingle();
+      if (memory) {
+        userProfileContext += `\n\n## 🧠 DNA DO CANAL (APRENDIZADOS DOS ROTEIROS REAIS)
+- Duração ideal para este canal: ${memory.preferred_duration_minutes || 'ainda calculando'}min
+- Estilo com melhor performance: ${memory.best_performing_style || 'ainda calculando'}
+- Hook que mais funciona: ${memory.preferred_hook_type || 'ainda calculando'}
+- Retenção média do canal: ${memory.avg_retention_pct || 'N/A'}%
+- Total roteiros gerados: ${memory.total_scripts_generated}
+- Total publicados: ${memory.total_scripts_published}
+- Views acumuladas: ${memory.total_views_accumulated?.toLocaleString() || '0'}
+- Padrões IA: ${JSON.stringify(memory.ai_identified_patterns || []).slice(0, 500)}
+- Tópicos já usados: ${(memory.last_topics_used || []).slice(0, 10).join(', ')}
+- Tópicos a evitar: ${(memory.topics_to_avoid || []).join(', ') || 'nenhum'}
+- INSTRUÇÃO: Use estes dados para personalizar TUDO. Se o canal performa melhor com "${memory.best_performing_style}", gere conteúdo nesse estilo. Se ${memory.preferred_duration_minutes}min retém mais, sugira essa duração.`;
       }
     }
 
@@ -1494,6 +1683,38 @@ ${knowledgeBlock}
 ### 📺 Canais na Base (${channelIntel.data?.length || 0}):\n${channelContext}
 ### 🔥 Títulos Virais (${viralTitles.data?.length || 0}):\n${viralContext}
 ### 📊 Nichos (${nicheDb.data?.length || 0}):\n${nicheContext}
+
+## 💰 CONHECIMENTO DE MONETIZAÇÃO (USE SEMPRE)
+
+### CAMINHO MAIS RÁPIDO PARA MONETIZAR:
+1. Long-form 8-15min + Shorts como teaser = combinação mais rápida para YPP
+2. Bolha dos 12 vídeos: Algoritmo precisa de 10-12 vídeos CONSISTENTES no mesmo nicho
+3. Semana 1-4: Furar a bolha dos 12 vídeos = ÚNICA prioridade
+4. Shorts SOZINHOS = caminho muito mais lento (10M views para YPP vs 4K horas watch time)
+5. Community posts 2x/semana desde o início = algoritmo favorece canais ativos
+
+### SINAIS DE CANAL QUE VAI MONETIZAR:
+- Retenção longform > 40% após 10 vídeos ✅
+- CTR > 4% após ajuste de thumbnail ✅
+- Shorts com swipe ratio > 81% ✅
+- Upload consistente por 4+ semanas ✅
+
+### SINAIS DE CANAL QUE VAI TRAVAR:
+- Retenção < 25% nos primeiros 5 vídeos ❌
+- Nicho mudando a cada vídeo ❌
+- Shorts como único conteúdo ❌
+- Upload irregular (3 semanas sem postar) ❌
+
+### RPM REAL (para projeções honestas):
+Brasil: $0.80-2.50/1K views | EUA: $6-15/1K views | PT: $2.50-5/1K views
+Nicho Finanças: 3-5x o RPM base | Horror/Curiosidades: 0.8-1.2x base
+Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
+
+### RECEITA ALÉM DO ADSENSE:
+- Infoproduto R$17-47 via link na bio desde vídeo 1
+- Afiliados Amazon 3-8% comissão no mês 2
+- Micro-sponsorship $50-200/vídeo com 1000+ subs
+- Membership após 1000 subs: 2-5% da audiência converte
 
 ## REGRAS FINAIS:
 1. Português brasileiro, tom de MENTOR BRUTALMENTE HONESTO
