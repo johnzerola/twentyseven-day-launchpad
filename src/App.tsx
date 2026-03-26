@@ -24,6 +24,7 @@ import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 import ChannelIntelligence from "./pages/ChannelIntelligence";
 import Tracker30Days from "./pages/Tracker30Days";
 import GrowthTools from "./pages/GrowthTools";
+import PowerTools from "./pages/PowerTools";
 import ShortsTrends from "./pages/ShortsTrends";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/tracker" element={<P><Tracker30Days /></P>} />
             <Route path="/growth-tools" element={<P><GrowthTools /></P>} />
             <Route path="/shorts-trends" element={<P><ShortsTrends /></P>} />
+            <Route path="/power-tools" element={<P><PowerTools /></P>} />
 
             {/* Merged/redirect routes */}
             <Route path="/branding" element={<Navigate to="/growth-tools" replace />} />

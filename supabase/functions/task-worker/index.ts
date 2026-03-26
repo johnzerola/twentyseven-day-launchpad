@@ -67,11 +67,20 @@ serve(async (req) => {
     }
 
     const results: any[] = [];
+    let totalFailed = 0;
 
     for (const task of tasks) {
+      const taskStart = Date.now();
       await sb.from("task_queue")
         .update({ status: "running", started_at: new Date().toISOString(), attempts: task.attempts + 1 })
         .eq("id", task.id);
+
+      // Log progress for each task
+      await sb.from("execution_logs").insert({
+        function_name: `task-worker:${task.task_type}`,
+        success: true,
+        metadata: { phase: "started", task_id: task.id, attempt: task.attempts + 1 },
+      }).catch(() => {});
 
       try {
         let result: any = null;
@@ -121,21 +130,50 @@ serve(async (req) => {
             break;
         }
 
+        // Check if the called function returned an error
+        const hasError = result?.error || result?.status === 'error';
+        if (hasError) {
+          throw new Error(result.error || result.message || 'Function returned error');
+        }
+
         await sb.from("task_queue")
           .update({ status: "done", result, completed_at: new Date().toISOString() })
           .eq("id", task.id);
+
+        await sb.from("execution_logs").insert({
+          function_name: `task-worker:${task.task_type}`,
+          success: true,
+          duration_ms: Date.now() - taskStart,
+          metadata: { phase: "completed", task_id: task.id },
+        }).catch(() => {});
 
         results.push({ id: task.id, task_type: task.task_type, status: "done" });
       } catch (e: any) {
         const attempts = task.attempts + 1;
         const shouldRetry = attempts < (task.max_attempts || 3);
+        totalFailed++;
+
+        // Log failure with full context
+        await sb.from("execution_logs").insert({
+          function_name: `task-worker:${task.task_type}`,
+          success: false,
+          duration_ms: Date.now() - taskStart,
+          error_message: e.message?.slice(0, 500),
+          metadata: {
+            phase: shouldRetry ? "retry_scheduled" : "permanently_failed",
+            task_id: task.id,
+            attempt: attempts,
+            max_attempts: task.max_attempts || 3,
+            payload_preview: JSON.stringify(task.payload || {}).slice(0, 200),
+          },
+        }).catch(() => {});
 
         if (shouldRetry) {
           const backoff = BACKOFF_BASE_MS * Math.pow(2, attempts - 1);
           await sb.from("task_queue")
             .update({ status: "pending", error_message: e.message, scheduled_at: new Date(Date.now() + backoff).toISOString() })
             .eq("id", task.id);
-          results.push({ id: task.id, task_type: task.task_type, status: "retry" });
+          results.push({ id: task.id, task_type: task.task_type, status: "retry", next_attempt_in_ms: backoff });
         } else {
           await sb.from("task_queue")
             .update({ status: "failed", error_message: e.message, completed_at: new Date().toISOString() })
@@ -148,8 +186,9 @@ serve(async (req) => {
     await sb.from("execution_logs").insert({
       function_name: "task-worker",
       duration_ms: Date.now() - startTime,
-      success: true,
-      metadata: { tasks_processed: results.length, results },
+      success: totalFailed === 0,
+      error_message: totalFailed > 0 ? `${totalFailed}/${results.length} tasks failed` : null,
+      metadata: { tasks_processed: results.length, failed: totalFailed, results },
     }).catch(() => {});
 
     return new Response(JSON.stringify({ success: true, processed: results, economy_mode: true }), {

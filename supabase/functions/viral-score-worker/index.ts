@@ -459,25 +459,41 @@ async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number
 async function getVelocityHistory(sb: any, channelId: string | null): Promise<number[]> {
   if (!channelId) return [];
   
-  // First: check real velocity from video_performance (most accurate)
-  const { data: perfData } = await sb.from("video_performance")
-    .select("views_day1, views_day3, views_day7, published_at")
-    .not("views_day1", "is", null)
+  // Step 1: Find youtube_video_ids for this channel from viral_titles_db
+  const { data: channelVideos } = await sb.from("viral_titles_db")
+    .select("id")
+    .eq("channel_id", channelId)
     .order("published_at", { ascending: false })
-    .limit(10);
+    .limit(20);
   
-  if (perfData?.length) {
-    const velocities = perfData
-      .filter((p: any) => p.views_day1 > 0 && p.published_at)
-      .map((p: any) => {
-        const hoursAlive = Math.max(24, (Date.now() - new Date(p.published_at).getTime()) / 3600000);
-        const bestViews = p.views_day7 || p.views_day3 || p.views_day1;
-        return bestViews / hoursAlive;
-      });
-    if (velocities.length > 0) return velocities;
+  const videoIds = (channelVideos || []).map((v: any) => v.id).filter(Boolean);
+  
+  // Step 2: Get real velocity from video_performance for these specific videos
+  if (videoIds.length > 0) {
+    const { data: perfData } = await sb.from("video_performance")
+      .select("views_day1, views_day3, views_day7, published_at, youtube_video_id")
+      .in("youtube_video_id", videoIds.slice(0, 15))
+      .not("views_day1", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(10);
+    
+    if (perfData?.length) {
+      const velocities = perfData
+        .filter((p: any) => p.views_day1 > 0 && p.published_at)
+        .map((p: any) => {
+          // Use 48h velocity: views_day3 gives ~72h, views_day1 gives ~24h
+          // Calculate views-per-hour from the earliest available snapshot
+          if (p.views_day1) return p.views_day1 / 24; // views per hour in first 24h
+          if (p.views_day3) return p.views_day3 / 72;
+          if (p.views_day7) return p.views_day7 / 168;
+          return 0;
+        })
+        .filter((v: number) => v > 0);
+      if (velocities.length > 0) return velocities;
+    }
   }
 
-  // Fallback: velocity_snapshots
+  // Fallback: velocity_snapshots (realtime tracking data)
   const { data: snapshots } = await sb.from("velocity_snapshots")
     .select("views_per_hour")
     .eq("channel_id", channelId)
