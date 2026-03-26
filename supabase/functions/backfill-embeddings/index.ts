@@ -244,34 +244,39 @@ serve(async (req) => {
 
       console.log(`${source.table}: ${newRows.length} rows to embed (capped at ${maxItems})`);
 
-      for (const row of newRows) {
-        try {
-          const text = source.textBuilder(row);
-          const embedding = await generateEmbedding(text, LOVABLE_API_KEY);
-          const embeddingStr = `[${embedding.join(',')}]`;
-
-          const { error: upsertErr } = await sb
-            .from("knowledge_embeddings")
-            .upsert({
+      // Process in batches of 25 for bulk upsert
+      const BATCH = 25;
+      for (let i = 0; i < newRows.length; i += BATCH) {
+        const batch = newRows.slice(i, i + BATCH);
+        const records = batch.map(row => {
+          try {
+            const text = source.textBuilder(row);
+            const embedding = generateEmbeddingSync(text);
+            return {
               source_table: source.table,
               source_id: row.id,
               content_text: text.slice(0, 5000),
               metadata: source.metaBuilder(row),
-              embedding: embeddingStr,
-            }, { onConflict: 'source_table,source_id' });
+              embedding: `[${embedding.join(',')}]`,
+            };
+          } catch (e) {
+            report[source.table].errors++;
+            return null;
+          }
+        }).filter(Boolean);
+
+        if (records.length > 0) {
+          const { error: upsertErr } = await sb
+            .from("knowledge_embeddings")
+            .upsert(records as any[], { onConflict: 'source_table,source_id' });
 
           if (upsertErr) {
-            console.error(`Upsert error for ${source.table}/${row.id}:`, upsertErr);
-            report[source.table].errors++;
+            console.error(`Batch upsert error for ${source.table}:`, upsertErr);
+            report[source.table].errors += records.length;
           } else {
-            report[source.table].processed++;
+            report[source.table].processed += records.length;
           }
-        } catch (e) {
-          console.error(`Embedding error for ${source.table}/${row.id}:`, e);
-          report[source.table].errors++;
         }
-        
-        // No delay needed — local embedding generation
       }
     }
 
