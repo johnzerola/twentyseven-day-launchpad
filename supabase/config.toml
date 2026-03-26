@@ -159,3 +159,18 @@ verify_jwt = false
 [functions.seed-complete-knowledge]
 verify_jwt = false
 
+[functions.extract-user-learnings]
+verify_jwt = false
+
+[functions.generate-adaptive-plan]
+verify_jwt = false
+
+[functions.generate-thumbnail-prompt]
+verify_jwt = false
+
+[functions.link-script-to-video]
+verify_jwt = false
+
+[functions.sync-video-metrics]
+verify_jwt = false
+
