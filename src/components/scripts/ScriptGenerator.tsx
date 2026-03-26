@@ -236,9 +236,12 @@ export const ScriptGenerator = ({
       body: JSON.stringify(body),
     });
 
-    if (resp.status === 402) throw new Error('Créditos insuficientes.');
+    if (resp.status === 402) throw new Error('Créditos insuficientes. Vá em Settings → Workspace → Usage para recarregar.');
     if (resp.status === 429) throw new Error('Rate limit. Aguarde e tente novamente.');
-    if (!resp.ok || !resp.body) throw new Error(`Erro na função ${fnName}`);
+    if (!resp.ok || !resp.body) {
+      const errBody = await resp.json().catch(() => ({}));
+      throw new Error(errBody?.error || `Erro na função ${fnName} (${resp.status})`);
+    }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
