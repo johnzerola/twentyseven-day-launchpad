@@ -353,7 +353,7 @@ serve(async (req) => {
     } catch (e) { console.warn("[SMART-RAG] Failed, using fallback:", e); }
 
     // ═══ ESSENTIAL QUERIES (always needed, small payload) ═══
-    const [voiceRes, backtestRes, channelRes] = await Promise.all([
+    const [voiceRes, backtestRes, channelRes, userPrefsRes] = await Promise.all([
       currentUserId
         ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers")
             .eq("user_id", currentUserId).order("last_analyzed_at", { ascending: false }).limit(1).maybeSingle()
@@ -363,6 +363,12 @@ serve(async (req) => {
         .order("created_at", { ascending: false }).limit(5),
       sb.from("channel_intelligence").select("channel_name,style,viral_patterns,avg_views,niche")
         .eq("is_faceless", true).order("avg_views", { ascending: false }).limit(5),
+      currentUserId
+        ? sb.from("user_script_preferences").select("*")
+            .eq("user_id", currentUserId)
+            .eq("niche", (niche || 'general').toLowerCase())
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     const channelIntel = (channelRes.data || []).map((r: any) => {
