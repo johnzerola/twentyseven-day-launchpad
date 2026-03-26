@@ -307,13 +307,14 @@ serve(async (req) => {
       });
     }
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: claimsData, error: claimsError } = await sb.auth.getClaims(authHeader.replace("Bearer ", ""));
-    if (claimsError || !claimsData?.claims) {
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await sb.auth.getUser(token);
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const currentUserId: string | null = claimsData.claims.sub || null;
+    const currentUserId: string | null = userData.user.id || null;
 
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
@@ -353,7 +354,7 @@ serve(async (req) => {
     } catch (e) { console.warn("[SMART-RAG] Failed, using fallback:", e); }
 
     // ═══ ESSENTIAL QUERIES (always needed, small payload) ═══
-    const [voiceRes, backtestRes, channelRes] = await Promise.all([
+    const [voiceRes, backtestRes, channelRes, userPrefsRes] = await Promise.all([
       currentUserId
         ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers")
             .eq("user_id", currentUserId).order("last_analyzed_at", { ascending: false }).limit(1).maybeSingle()
@@ -363,6 +364,12 @@ serve(async (req) => {
         .order("created_at", { ascending: false }).limit(5),
       sb.from("channel_intelligence").select("channel_name,style,viral_patterns,avg_views,niche")
         .eq("is_faceless", true).order("avg_views", { ascending: false }).limit(5),
+      currentUserId
+        ? sb.from("user_script_preferences").select("*")
+            .eq("user_id", currentUserId)
+            .eq("niche", (niche || 'general').toLowerCase())
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     const channelIntel = (channelRes.data || []).map((r: any) => {
@@ -485,6 +492,25 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
         }
       }
     } catch (e) { console.warn("Skill score fetch error:", e); }
+
+    // ========== USER SCRIPT PREFERENCES (cross-project memory) ==========
+    let userPrefsBlock = '';
+    const userPrefs = userPrefsRes?.data;
+    if (userPrefs && userPrefs.total_scripts_generated >= 3) {
+      userPrefsBlock = `\n🧠 MEMÓRIA DO CRIADOR (aprendido de ${userPrefs.total_scripts_generated} roteiros anteriores neste nicho):`;
+      if (userPrefs.preferred_pov) userPrefsBlock += `\n• POV preferido: ${userPrefs.preferred_pov}`;
+      if (userPrefs.preferred_duration_min) userPrefsBlock += `\n• Duração ideal: ${userPrefs.preferred_duration_min} minutos`;
+      if (userPrefs.preferred_style) userPrefsBlock += `\n• Estilo favorito: ${userPrefs.preferred_style}`;
+      if (userPrefs.best_hook_types?.length) userPrefsBlock += `\n• Hooks que mais funcionam: ${userPrefs.best_hook_types.join(', ')}`;
+      if (userPrefs.avg_score_achieved > 0) userPrefsBlock += `\n• Score médio: ${userPrefs.avg_score_achieved}/20`;
+      const topPatterns = userPrefs.top_performing_patterns || [];
+      if (Array.isArray(topPatterns) && topPatterns.length > 0) {
+        userPrefsBlock += `\n• Padrões de sucesso: ${topPatterns.slice(0, 5).map((p: any) => typeof p === 'string' ? p : p.name || JSON.stringify(p)).join(', ')}`;
+      }
+      if (userPrefs.voice_notes) userPrefsBlock += `\n• Notas de voz: ${userPrefs.voice_notes}`;
+      userPrefsBlock += `\nINSTRUÇÃO: Adapte o roteiro às preferências COMPROVADAS deste criador. Estas preferências geraram os melhores resultados.\n`;
+      console.log(`[USER-PREFS] runId=${runId} Injected preferences for niche="${niche}" (${userPrefs.total_scripts_generated} scripts)`);
+    }
 
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
@@ -819,6 +845,7 @@ ${backtestBlock}
 ${referenceBlock}
 ${rejectionLearningsBlock}
 ${skillScoreBlock}
+${userPrefsBlock}
 
 ${ANTI_SLOP_DIRECTIVE}
 
