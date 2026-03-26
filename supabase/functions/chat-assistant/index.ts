@@ -442,14 +442,16 @@ const DOTTI_TOOLS = [
 ];
 
 // ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
-const DEFAULT_TOOL_TIMEOUT_MS = 12000;
+const DEFAULT_TOOL_TIMEOUT_MS = 15000;
 const TOOL_TIMEOUTS_MS: Record<string, number> = {
-  // YouTube-intensive tools can exhaust quota quickly; fail fast to avoid full chat failure.
-  "analyze-channel": 8000,
-  "youtube_channel_stats": 7000,
-  "youtube_channel_videos": 7000,
-  "youtube_video_stats": 7000,
-  "youtube_search_api": 7000,
+  "analyze-channel": 12000,
+  "youtube_channel_stats": 10000,
+  "youtube_channel_videos": 10000,
+  "youtube_video_stats": 10000,
+  "youtube_search_api": 10000,
+  "perplexity-research": 20000,
+  "claude_deep_analysis": 20000,
+  "gpt_expert_analysis": 15000,
 };
 
 const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
@@ -1091,13 +1093,17 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
-    const { data: claimsData, error: claimsError } = await sb.auth.getClaims(authHeader.replace('Bearer ', ''));
-    if (claimsError || !claimsData?.claims) {
+    
+    // Validate token and get user ID
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await sb.auth.getUser(token);
+    if (userError || !userData?.user) {
+      console.error("Auth error:", userError?.message || "No user");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const currentUserId: string | null = claimsData.claims.sub || null;
+    const currentUserId: string | null = userData.user.id || null;
 
     const { messages, currentPage, mode, onboardingData, conversationId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -1465,7 +1471,7 @@ ${knowledgeBlock}
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 1;
+    const MAX_TOOL_ROUNDS = 2;
     const MAX_PARALLEL_TOOLS = 5;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {

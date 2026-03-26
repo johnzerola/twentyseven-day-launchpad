@@ -381,8 +381,9 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
 
       setOnboarding(prev => ({ ...prev, step: 'plan_ready' }));
       setHasSeenOnboarding(true);
-    } catch {
-      addAssistantMsg('❌ Ocorreu um erro ao gerar o plano. Tente novamente.');
+    } catch (err) {
+      console.error('Dotti onboarding error:', err);
+      addAssistantMsg('⚠️ Erro ao gerar o plano. Verifique sua conexão e tente novamente.');
       setOnboarding(prev => ({ ...prev, step: 'idle' }));
     } finally {
       setLoading(false);
@@ -414,12 +415,17 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
         method: 'POST',
         headers: authHeaders2,
         body: JSON.stringify({
-          messages: newMessages.filter((_, i) => i > 0),
+          messages: newMessages.filter(m => m.role === 'user' || m.role === 'assistant').slice(-20),
           currentPage: location.pathname,
           conversationId,
         }),
       });
 
+      if (resp.status === 401) {
+        addAssistantMsg('🔒 Sessão expirada. Faça login novamente.');
+        setLoading(false);
+        return;
+      }
       if (resp.status === 429) {
         addAssistantMsg('⏳ Rate limit atingido. Tente novamente em alguns segundos.');
         setLoading(false);
@@ -431,7 +437,15 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
         return;
       }
 
-      if (!resp.ok || !resp.body) throw new Error('Erro');
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({ error: 'Erro desconhecido' }));
+        console.error('Dotti error:', resp.status, errData);
+        addAssistantMsg(`⚠️ Erro: ${errData.error || 'Falha na comunicação'}. Tente novamente.`);
+        setLoading(false);
+        return;
+      }
+
+      if (!resp.body) throw new Error('Sem resposta');
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -469,8 +483,9 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
           }
         }
       }
-    } catch {
-      addAssistantMsg('Desculpe, ocorreu um erro. Tente novamente.');
+    } catch (err) {
+      console.error('Dotti chat error:', err);
+      addAssistantMsg('⚠️ Ocorreu um erro na comunicação. Verifique sua conexão e tente novamente.');
     } finally {
       setLoading(false);
     }
