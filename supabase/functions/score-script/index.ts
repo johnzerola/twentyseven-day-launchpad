@@ -297,8 +297,8 @@ serve(async (req) => {
         const authHeader = req.headers.get("authorization") || '';
         const token = authHeader.replace("Bearer ", "");
         if (token) {
-          const { data: claimsData } = await sb.auth.getClaims(token);
-          const userId = claimsData?.claims?.sub;
+          const { data: userData } = await sb.auth.getUser(token);
+          const userId = userData?.user?.id;
           if (userId && niche) {
             // Detect techniques used in the approved script
             const techniques: { name: string; score: number }[] = [];
