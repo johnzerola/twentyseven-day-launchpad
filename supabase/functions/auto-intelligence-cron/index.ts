@@ -50,38 +50,44 @@ serve(async (req) => {
   try {
     // ═══ DAILY TASKS (every day at 06:00 UTC) ═══
     if (schedule === "daily" || schedule === "weekly") {
-      // 1. Track video performance for all users
+      // 1. Sync real video metrics
+      await invokeFunction("sync-video-metrics", {});
+
+      // 2. Track video performance for all users
       await invokeFunction("track-video-performance", { mode: "check_all" });
 
-      // 2. Daily data ingestion (Brave search + task queue)
+      // 3. Daily data ingestion (Brave search + task queue)
       await invokeFunction("daily-data-ingestion", {});
 
-      // 3. Light self-learning (scan trending + update patterns)
+      // 4. Light self-learning (scan trending + update patterns)
       await invokeFunction("self-learning-engine", { mode: "scan_trending", maxVideos: 5 });
 
-      // 4. Daily backfill embeddings
+      // 5. Daily backfill embeddings
       await invokeFunction("backfill-embeddings", { batchSize: 3 });
 
-      // 5. Intelligence sync (user activity feed)
+      // 6. Intelligence sync (user activity feed)
       await invokeFunction("intelligence-sync-engine", { mode: "user_activity_feed" });
 
-      // 6. Ranking check for tracked videos
+      // 7. Ranking check for tracked videos
       await invokeFunction("track-video-performance", { mode: "check_rankings" });
 
-      // 7. Backtesting — compare predictions vs reality
+      // 8. Backtesting — compare predictions vs reality
       await invokeFunction("backtest-scores", {});
 
-      // 8. Pattern evolution — adjust hooks/patterns based on real results
+      // 9. Pattern evolution — adjust hooks/patterns based on real results
       await invokeFunction("evolve-patterns", {});
 
-      // 9. Velocity snapshots
+      // 10. Velocity snapshots
       await invokeFunction("velocity-tracker", {});
 
-      // 10. ★ NEW: Self-learning worker — close feedback loop & calibrate weights
+      // 11. Self-learning worker — close feedback loop & calibrate weights
       await invokeFunction("self-learning-worker", {});
 
-      // 11. ★ NEW: Pre-viral detection — find videos about to explode
+      // 12. Pre-viral detection — find videos about to explode
       await invokeFunction("pre-viral-detection", {});
+
+      // 13. Extract user learnings from linked videos
+      await invokeFunction("extract-user-learnings", {});
     }
 
     // ═══ MIDDAY VELOCITY CHECK (12:00 UTC) ═══
