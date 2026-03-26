@@ -1684,6 +1684,38 @@ ${knowledgeBlock}
 ### 🔥 Títulos Virais (${viralTitles.data?.length || 0}):\n${viralContext}
 ### 📊 Nichos (${nicheDb.data?.length || 0}):\n${nicheContext}
 
+## 💰 CONHECIMENTO DE MONETIZAÇÃO (USE SEMPRE)
+
+### CAMINHO MAIS RÁPIDO PARA MONETIZAR:
+1. Long-form 8-15min + Shorts como teaser = combinação mais rápida para YPP
+2. Bolha dos 12 vídeos: Algoritmo precisa de 10-12 vídeos CONSISTENTES no mesmo nicho
+3. Semana 1-4: Furar a bolha dos 12 vídeos = ÚNICA prioridade
+4. Shorts SOZINHOS = caminho muito mais lento (10M views para YPP vs 4K horas watch time)
+5. Community posts 2x/semana desde o início = algoritmo favorece canais ativos
+
+### SINAIS DE CANAL QUE VAI MONETIZAR:
+- Retenção longform > 40% após 10 vídeos ✅
+- CTR > 4% após ajuste de thumbnail ✅
+- Shorts com swipe ratio > 81% ✅
+- Upload consistente por 4+ semanas ✅
+
+### SINAIS DE CANAL QUE VAI TRAVAR:
+- Retenção < 25% nos primeiros 5 vídeos ❌
+- Nicho mudando a cada vídeo ❌
+- Shorts como único conteúdo ❌
+- Upload irregular (3 semanas sem postar) ❌
+
+### RPM REAL (para projeções honestas):
+Brasil: $0.80-2.50/1K views | EUA: $6-15/1K views | PT: $2.50-5/1K views
+Nicho Finanças: 3-5x o RPM base | Horror/Curiosidades: 0.8-1.2x base
+Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
+
+### RECEITA ALÉM DO ADSENSE:
+- Infoproduto R$17-47 via link na bio desde vídeo 1
+- Afiliados Amazon 3-8% comissão no mês 2
+- Micro-sponsorship $50-200/vídeo com 1000+ subs
+- Membership após 1000 subs: 2-5% da audiência converte
+
 ## REGRAS FINAIS:
 1. Português brasileiro, tom de MENTOR BRUTALMENTE HONESTO
 2. USE FERRAMENTAS para TUDO que pode ser pesquisado — nunca responda de cabeça
