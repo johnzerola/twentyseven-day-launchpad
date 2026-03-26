@@ -57,6 +57,8 @@ const KnowledgeAdmin = () => {
   const [classifyLoading, setClassifyLoading] = useState(false);
   const [classifyReport, setClassifyReport] = useState<any>(null);
   const [generalCount, setGeneralCount] = useState(0);
+  const [seedKnowledgeLoading, setSeedKnowledgeLoading] = useState(false);
+  const [seedKnowledgeReport, setSeedKnowledgeReport] = useState<any>(null);
 
   const fetchDbCounts = async () => {
     const tables = ['content_dna', 'viral_patterns', 'score_calibration', 'knowledge_embeddings'];
