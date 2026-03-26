@@ -1487,14 +1487,14 @@ ${knowledgeBlock}
 7. ${usedSemantic ? 'RAG semântico ativo — priorize esses dados.' : 'RAG por score ativo.'}
 8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados`;
 
-    // First AI call with tools — use Pro model for better tool orchestration
+    // First AI call with tools — use fast model for tool selection
     const aiMessages = [{ role: "system", content: systemPrompt }, ...messages];
     
     const firstResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-lite",
         messages: aiMessages,
         tools: DOTTI_TOOLS,
         stream: false,
@@ -1512,12 +1512,30 @@ ${knowledgeBlock}
     const firstResult = await firstResponse.json();
     const firstChoice = firstResult.choices?.[0]?.message;
 
-    // Multi-round tool execution (up to 3 rounds)
+    // If model answered directly (no tools needed), stream it back
+    if (!firstChoice?.tool_calls?.length && firstChoice?.content) {
+      // Re-stream with the better model for quality response
+      const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: aiMessages,
+          stream: true,
+        }),
+      });
+      if (!streamResponse.ok) throw new Error("Stream error");
+      return new Response(streamResponse.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // Tool execution (single round for speed)
     let currentMessages = [...aiMessages];
     let currentChoice = firstChoice;
     let toolRound = 0;
-    const MAX_TOOL_ROUNDS = 2;
-    const MAX_PARALLEL_TOOLS = 5;
+    const MAX_TOOL_ROUNDS = 1;
+    const MAX_PARALLEL_TOOLS = 4;
 
     while (currentChoice?.tool_calls?.length > 0 && toolRound < MAX_TOOL_ROUNDS) {
       toolRound++;
