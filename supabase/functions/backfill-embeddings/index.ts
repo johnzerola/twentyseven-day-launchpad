@@ -184,7 +184,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { tables, batchSize = 3 } = await req.json().catch(() => ({}));
+    const { tables, batchSize = 3, maxItems = 10 } = await req.json().catch(() => ({}));
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -222,44 +222,38 @@ serve(async (req) => {
         .eq("source_table", source.table);
 
       const existingIds = new Set((existing || []).map(e => e.source_id));
-      const newRows = rows.filter(r => !existingIds.has(r.id));
+      const newRows = rows.filter(r => !existingIds.has(r.id)).slice(0, maxItems);
 
-      console.log(`${source.table}: ${newRows.length} new rows to embed (${existingIds.size} existing)`);
+      console.log(`${source.table}: ${newRows.length} rows to embed (capped at ${maxItems})`);
 
-      // Process in small batches
-      for (let i = 0; i < newRows.length; i += batchSize) {
-        const batch = newRows.slice(i, i + batchSize);
+      for (const row of newRows) {
+        try {
+          const text = source.textBuilder(row);
+          const embedding = await generateEmbedding(text, LOVABLE_API_KEY);
+          const embeddingStr = `[${embedding.join(',')}]`;
 
-        for (const row of batch) {
-          try {
-            const text = source.textBuilder(row);
-            const embedding = await generateEmbedding(text, LOVABLE_API_KEY);
-            const embeddingStr = `[${embedding.join(',')}]`;
+          const { error: upsertErr } = await sb
+            .from("knowledge_embeddings")
+            .upsert({
+              source_table: source.table,
+              source_id: row.id,
+              content_text: text.slice(0, 5000),
+              metadata: source.metaBuilder(row),
+              embedding: embeddingStr,
+            }, { onConflict: 'source_table,source_id' });
 
-            const { error: upsertErr } = await sb
-              .from("knowledge_embeddings")
-              .upsert({
-                source_table: source.table,
-                source_id: row.id,
-                content_text: text.slice(0, 5000),
-                metadata: source.metaBuilder(row),
-                embedding: embeddingStr,
-              }, { onConflict: 'source_table,source_id' });
-
-            if (upsertErr) {
-              console.error(`Upsert error for ${source.table}/${row.id}:`, upsertErr);
-              report[source.table].errors++;
-            } else {
-              report[source.table].processed++;
-            }
-          } catch (e) {
-            console.error(`Embedding error for ${source.table}/${row.id}:`, e);
+          if (upsertErr) {
+            console.error(`Upsert error for ${source.table}/${row.id}:`, upsertErr);
             report[source.table].errors++;
+          } else {
+            report[source.table].processed++;
           }
-          
-          // Rate limit spacing
-          await new Promise(r => setTimeout(r, 500));
+        } catch (e) {
+          console.error(`Embedding error for ${source.table}/${row.id}:`, e);
+          report[source.table].errors++;
         }
+        
+        await new Promise(r => setTimeout(r, 300));
       }
     }
 
