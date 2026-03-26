@@ -458,6 +458,37 @@ async function computeCrossNicheMomentum(sb: any): Promise<Record<string, number
 // ═══════════════════════════════════════════════════════════════════
 async function getVelocityHistory(sb: any, channelId: string | null): Promise<number[]> {
   if (!channelId) return [];
+  
+  // First: check real velocity from video_performance (most accurate)
+  const { data: perfData } = await sb.from("video_performance")
+    .select("views_day1, views_day3, views_day7, published_at")
+    .not("views_day1", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(10);
+  
+  if (perfData?.length) {
+    const velocities = perfData
+      .filter((p: any) => p.views_day1 > 0 && p.published_at)
+      .map((p: any) => {
+        const hoursAlive = Math.max(24, (Date.now() - new Date(p.published_at).getTime()) / 3600000);
+        const bestViews = p.views_day7 || p.views_day3 || p.views_day1;
+        return bestViews / hoursAlive;
+      });
+    if (velocities.length > 0) return velocities;
+  }
+
+  // Fallback: velocity_snapshots
+  const { data: snapshots } = await sb.from("velocity_snapshots")
+    .select("views_per_hour")
+    .eq("channel_id", channelId)
+    .order("snapshot_at", { ascending: false })
+    .limit(5);
+  
+  if (snapshots?.length) {
+    return snapshots.map((s: any) => s.views_per_hour || 0).filter((v: number) => v > 0);
+  }
+
+  // Final fallback: emerging_channels meta
   const { data: ch } = await sb.from("emerging_channels")
     .select("meta").eq("channel_id", channelId).maybeSingle();
   const meta = (ch?.meta as any) || {};
