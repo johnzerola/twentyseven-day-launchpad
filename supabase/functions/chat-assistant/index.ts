@@ -532,11 +532,55 @@ async function executeTool(
       }
 
       case "analyze_niche": {
-        result = await callFn("niche-explorer", {
+        // Fast path: use internal DB instead of heavy niche-explorer edge function
+        const nicheQuery = args.niche?.toLowerCase() || '';
+        const nicheCountry = args.country || 'BR';
+        
+        const [nicheDbResult, nicheChannels, nicheVirals] = await Promise.all([
+          sb.from("niche_database").select("*").or(`name.ilike.%${nicheQuery}%,sub_niches.cs.{${nicheQuery}}`).limit(10),
+          sb.from("channel_intelligence")
+            .select("channel_name, subscribers, avg_views, growth_rate, rpm_estimate, style, is_faceless, country, upload_frequency")
+            .ilike("niche", `%${nicheQuery}%`)
+            .order("avg_views", { ascending: false })
+            .limit(15),
+          sb.from("viral_titles_db")
+            .select("title, views, channel_name, emotional_triggers, why_viral")
+            .ilike("niche", `%${nicheQuery}%`)
+            .order("views", { ascending: false })
+            .limit(10),
+        ]);
+        
+        const nicheInfo = nicheDbResult.data?.[0];
+        result = {
           niche: args.niche,
-          country: args.country || "BR",
-          language: args.language || "pt",
-        });
+          country: nicheCountry,
+          database: nicheInfo ? {
+            rpm: nicheInfo.rpm_estimate,
+            difficulty: nicheInfo.difficulty,
+            saturation: nicheInfo.saturation,
+            faceless_friendly: nicheInfo.faceless_friendly,
+            sub_niches: nicheInfo.sub_niches,
+          } : { note: "Niche not in database — using channel data" },
+          channels: (nicheChannels.data || []).map((c: any) => ({
+            name: c.channel_name,
+            subs: c.subscribers,
+            avgViews: c.avg_views,
+            growth: c.growth_rate,
+            rpm: c.rpm_estimate,
+            faceless: c.is_faceless,
+            country: c.country,
+            uploadFreq: c.upload_frequency,
+          })),
+          viralTitles: (nicheVirals.data || []).map((v: any) => ({
+            title: v.title,
+            views: v.views,
+            channel: v.channel_name,
+            triggers: v.emotional_triggers,
+            whyViral: v.why_viral,
+          })),
+          totalChannelsInNiche: (nicheChannels.data || []).length,
+          avgRPM: nicheInfo?.rpm_estimate || (nicheChannels.data || []).reduce((s: number, c: any) => s + (c.rpm_estimate || 0), 0) / Math.max((nicheChannels.data || []).length, 1),
+        };
         break;
       }
 
