@@ -492,6 +492,25 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
       }
     } catch (e) { console.warn("Skill score fetch error:", e); }
 
+    // ========== USER SCRIPT PREFERENCES (cross-project memory) ==========
+    let userPrefsBlock = '';
+    const userPrefs = userPrefsRes?.data;
+    if (userPrefs && userPrefs.total_scripts_generated >= 3) {
+      userPrefsBlock = `\n🧠 MEMÓRIA DO CRIADOR (aprendido de ${userPrefs.total_scripts_generated} roteiros anteriores neste nicho):`;
+      if (userPrefs.preferred_pov) userPrefsBlock += `\n• POV preferido: ${userPrefs.preferred_pov}`;
+      if (userPrefs.preferred_duration_min) userPrefsBlock += `\n• Duração ideal: ${userPrefs.preferred_duration_min} minutos`;
+      if (userPrefs.preferred_style) userPrefsBlock += `\n• Estilo favorito: ${userPrefs.preferred_style}`;
+      if (userPrefs.best_hook_types?.length) userPrefsBlock += `\n• Hooks que mais funcionam: ${userPrefs.best_hook_types.join(', ')}`;
+      if (userPrefs.avg_score_achieved > 0) userPrefsBlock += `\n• Score médio: ${userPrefs.avg_score_achieved}/20`;
+      const topPatterns = userPrefs.top_performing_patterns || [];
+      if (Array.isArray(topPatterns) && topPatterns.length > 0) {
+        userPrefsBlock += `\n• Padrões de sucesso: ${topPatterns.slice(0, 5).map((p: any) => typeof p === 'string' ? p : p.name || JSON.stringify(p)).join(', ')}`;
+      }
+      if (userPrefs.voice_notes) userPrefsBlock += `\n• Notas de voz: ${userPrefs.voice_notes}`;
+      userPrefsBlock += `\nINSTRUÇÃO: Adapte o roteiro às preferências COMPROVADAS deste criador. Estas preferências geraram os melhores resultados.\n`;
+      console.log(`[USER-PREFS] runId=${runId} Injected preferences for niche="${niche}" (${userPrefs.total_scripts_generated} scripts)`);
+    }
+
     // ========== Speech rate ==========
     const speechRates: Record<string, number> = {
       'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
