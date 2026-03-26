@@ -186,8 +186,9 @@ serve(async (req) => {
     await sb.from("execution_logs").insert({
       function_name: "task-worker",
       duration_ms: Date.now() - startTime,
-      success: true,
-      metadata: { tasks_processed: results.length, results },
+      success: totalFailed === 0,
+      error_message: totalFailed > 0 ? `${totalFailed}/${results.length} tasks failed` : null,
+      metadata: { tasks_processed: results.length, failed: totalFailed, results },
     }).catch(() => {});
 
     return new Response(JSON.stringify({ success: true, processed: results, economy_mode: true }), {
