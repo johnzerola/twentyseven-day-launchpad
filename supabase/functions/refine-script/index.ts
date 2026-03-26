@@ -334,6 +334,8 @@ ${pastRejectionBlock}
 RETORNE APENAS o roteiro COMPLETO com suas edições integradas.
 APENAS texto de narração pura. ZERO anotações, ZERO marcações, ZERO comentários. Valores em $.
 
+${YPP_2025_REFINE_DIRECTIVE}
+
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
     const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. Retorne o roteiro COMPLETO.`;

@@ -892,6 +892,8 @@ ${rejectionLearningsBlock}
 ${skillScoreBlock}
 ${userPrefsBlock}
 
+${YPP_2025_DIRECTIVE}
+
 ${ANTI_SLOP_DIRECTIVE}
 
 Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'} | Formato: ${isShort ? 'SHORT (vertical 9:16)' : 'LONGFORM (16:9)'}
