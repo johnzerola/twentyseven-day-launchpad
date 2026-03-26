@@ -482,8 +482,9 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
           }
         }
       }
-    } catch {
-      addAssistantMsg('Desculpe, ocorreu um erro. Tente novamente.');
+    } catch (err) {
+      console.error('Dotti chat error:', err);
+      addAssistantMsg('⚠️ Ocorreu um erro na comunicação. Verifique sua conexão e tente novamente.');
     } finally {
       setLoading(false);
     }
