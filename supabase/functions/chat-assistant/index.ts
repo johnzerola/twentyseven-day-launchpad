@@ -1404,6 +1404,23 @@ serve(async (req) => {
       if (blocks.length > 0) {
         userProfileContext = `\n## 👤 PERFIL DO USUÁRIO (USE ESTES DADOS PARA PERSONALIZAR TUDO)\n${blocks.join('\n\n')}`;
       }
+
+      // Fetch user_content_memory (learned DNA)
+      const { data: memory } = await sb.from('user_content_memory').select('*').eq('user_id', currentUserId).maybeSingle();
+      if (memory) {
+        userProfileContext += `\n\n## 🧠 DNA DO CANAL (APRENDIZADOS DOS ROTEIROS REAIS)
+- Duração ideal para este canal: ${memory.preferred_duration_minutes || 'ainda calculando'}min
+- Estilo com melhor performance: ${memory.best_performing_style || 'ainda calculando'}
+- Hook que mais funciona: ${memory.preferred_hook_type || 'ainda calculando'}
+- Retenção média do canal: ${memory.avg_retention_pct || 'N/A'}%
+- Total roteiros gerados: ${memory.total_scripts_generated}
+- Total publicados: ${memory.total_scripts_published}
+- Views acumuladas: ${memory.total_views_accumulated?.toLocaleString() || '0'}
+- Padrões IA: ${JSON.stringify(memory.ai_identified_patterns || []).slice(0, 500)}
+- Tópicos já usados: ${(memory.last_topics_used || []).slice(0, 10).join(', ')}
+- Tópicos a evitar: ${(memory.topics_to_avoid || []).join(', ') || 'nenhum'}
+- INSTRUÇÃO: Use estes dados para personalizar TUDO. Se o canal performa melhor com "${memory.best_performing_style}", gere conteúdo nesse estilo. Se ${memory.preferred_duration_minutes}min retém mais, sugira essa duração.`;
+      }
     }
 
     // ===== SEMANTIC SEARCH =====
