@@ -95,11 +95,35 @@ serve(async (req) => {
 
     pipelineLog.steps.push({ name: "RAG_search", engine: "brave", duration_ms: Date.now() - step1Start, results: ragContext ? "cached_or_fetched" : "empty" });
 
+    // ═══ USER DNA INJECTION ═══
+    let userDnaContext = '';
+    if (user_id) {
+      const { data: userMemory } = await sb
+        .from('user_content_memory')
+        .select('*')
+        .eq('user_id', user_id)
+        .maybeSingle();
+
+      if (userMemory) {
+        const mem = userMemory as any;
+        userDnaContext = `
+### 🧬 DNA DO CANAL DO USUÁRIO (ADAPTE O ROTEIRO):
+- Duração que funciona: ${mem.preferred_duration_minutes || duration_minutes}min
+- Estilo com mais retenção: ${mem.best_performing_style || 'geral'}
+- Hook favorito do nicho: ${mem.preferred_hook_type || 'qualquer'}
+- Retenção média atual: ${mem.avg_retention_pct || 'não calculado'}%
+- Padrões identificados: ${JSON.stringify(mem.ai_identified_patterns || []).slice(0, 400)}
+- Tópicos recentes (evitar repetir): ${(mem.last_topics_used || []).slice(0, 8).join(', ')}
+INSTRUÇÃO CRÍTICA: Adapte CADA FASE do roteiro com base neste DNA. Personalize, não seja genérico.
+`;
+      }
+    }
+
     // ════════════════════════════════════════════════════════════
     // STEP 2: HookGen (GPT-5 — Phase 0)
     // ════════════════════════════════════════════════════════════
     const step2Start = Date.now();
-    const hooks = await callHookGen(aiH, ragContext, dbCtx, detectedNiche, video_title, langLabel);
+    const hooks = await callHookGen(aiH, ragContext + userDnaContext, dbCtx, detectedNiche, video_title, langLabel);
 
     const bestHook = hooks.length > 0
       ? hooks.sort((a: any, b: any) => (b.retention_score || 0) - (a.retention_score || 0))[0]

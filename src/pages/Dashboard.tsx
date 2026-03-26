@@ -6,6 +6,8 @@ import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashbo
 import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
 import { ScriptPerformanceHistory } from '@/components/dashboard/ScriptPerformanceHistory';
 import { DailyPlanner } from '@/components/dashboard/DailyPlanner';
+import { ChannelDNA } from '@/components/dashboard/ChannelDNA';
+import { YPPProximityAlert } from '@/components/dashboard/YPPProximityAlert';
 import { DashboardSkeleton } from '@/components/PageSkeletons';
 import { VideoPerformanceTracker } from '@/components/dashboard/VideoPerformanceTracker';
 import { ABTestManager } from '@/components/dashboard/ABTestManager';
@@ -169,6 +171,12 @@ const Dashboard = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* YPP Proximity Alert */}
+        <YPPProximityAlert />
+
+        {/* Channel DNA */}
+        <ChannelDNA />
 
         {/* Daily Planner */}
         <DailyPlanner />

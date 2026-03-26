@@ -27,6 +27,8 @@ import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown'
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
 import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 import { ViralThemeWizard } from '@/components/scripts/ViralThemeWizard';
+import { ThumbnailGenerator } from '@/components/scripts/ThumbnailGenerator';
+import { ScriptPerformanceTracker } from '@/components/dashboard/ScriptPerformanceTracker';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
@@ -1169,6 +1171,22 @@ const Scripts = () => {
                     topic={topic} niche={niche} language={language}
                     script={script} videoStyle={videoStyle} syncedScenes={syncedScenes}
                   />
+                </motion.div>
+              )}
+
+              {/* Step 6: Thumbnail Generator */}
+              {activeStep === 'titles' && script && (
+                <motion.div key="thumbnail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5 mt-4">
+                  <ThumbnailGenerator videoTitle={topic} niche={niche} />
+                </motion.div>
+              )}
+
+              {/* Script Performance Tracker - always visible when script exists */}
+              {script && (
+                <motion.div key="perf-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <ScriptPerformanceTracker scriptTopic={topic} />
                 </motion.div>
               )}
             </AnimatePresence>
