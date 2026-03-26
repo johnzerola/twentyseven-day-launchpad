@@ -236,9 +236,12 @@ export const ScriptGenerator = ({
       body: JSON.stringify(body),
     });
 
-    if (resp.status === 402) throw new Error('Créditos insuficientes.');
+    if (resp.status === 402) throw new Error('Créditos insuficientes. Vá em Settings → Workspace → Usage para recarregar.');
     if (resp.status === 429) throw new Error('Rate limit. Aguarde e tente novamente.');
-    if (!resp.ok || !resp.body) throw new Error(`Erro na função ${fnName}`);
+    if (!resp.ok || !resp.body) {
+      const errBody = await resp.json().catch(() => ({}));
+      throw new Error(errBody?.error || `Erro na função ${fnName} (${resp.status})`);
+    }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -471,7 +474,13 @@ export const ScriptGenerator = ({
         body: { script: textToScore.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
       });
 
-      if (error) throw new Error(error.message || 'Erro na avaliação');
+      if (error) {
+        const errMsg = typeof error === 'object' && error.message ? error.message : String(error);
+        if (errMsg.includes('402') || errMsg.includes('Créditos') || errMsg.includes('insuficientes')) {
+          throw new Error('Créditos insuficientes. Vá em Settings → Workspace → Usage para recarregar.');
+        }
+        throw new Error(errMsg || 'Erro na avaliação');
+      }
 
       const result: DualScore = data;
 
@@ -489,9 +498,10 @@ export const ScriptGenerator = ({
           
           // Re-score the improved version
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
-          const { data: reScoreData } = await supabase.functions.invoke('score-script', {
+          const { data: reScoreData, error: reScoreError } = await supabase.functions.invoke('score-script', {
             body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
           });
+          if (reScoreError) console.warn('Re-score failed:', reScoreError);
           
           if (reScoreData && reScoreData.approved) {
             setDualScore(reScoreData);
@@ -538,9 +548,10 @@ export const ScriptGenerator = ({
           
           // Re-score
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
-          const { data: reScoreData } = await supabase.functions.invoke('score-script', {
+          const { data: reScoreData, error: reScoreError2 } = await supabase.functions.invoke('score-script', {
             body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
           });
+          if (reScoreError2) console.warn('Re-score failed:', reScoreError2);
           
           if (reScoreData) {
             setDualScore(reScoreData);
