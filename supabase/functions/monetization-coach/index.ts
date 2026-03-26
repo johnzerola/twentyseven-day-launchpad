@@ -54,12 +54,47 @@ const MONETIZATION_KNOWLEDGE = `
 - Shorts NÃO substituem long-form, são COMPLEMENTO
 - Melhor horário para shorts: 11h-13h e 18h-20h (horário local)
 
+### MONETIZAÇÃO ALÉM DO ADSENSE (ordem de implementação real)
+
+#### 1. AFILIADOS INTEGRADOS AO CONTEÚDO (Mês 0+, sem requisitos)
+- Amazon Associates: link na descrição para produtos mencionados no vídeo
+- Hotmart/Eduzz/Kiwify: infoprodutos do nicho (comissão 30-80%)
+- Shopee/AliExpress: produtos virais com comissão 5-15%
+- Estratégia: NUNCA fazer "review de produto" genérico — integre naturalmente ("o mic que uso é X, link abaixo")
+- CPV (custo por venda) > CPM para canais pequenos
+- Canais com 500 subs podem gerar R$500-2000/mês com afiliados bem posicionados
+
+#### 2. SPONSORSHIP DIRETO (Mês 1+, a partir de 500 subs)
+- Micro-sponsorships: marcas de nicho pagam $50-200 por vídeo para canais com <5K subs
+- Plataformas: Collabstr, Grin, AspireIQ, ou DM direto para marcas do nicho
+- Media kit: crie com Canva mostrando engajamento (não subs) — taxa de like/comentário importa mais
+- Precificação: $20-50 por 1K views estimadas (canais pequenos)
+- Integração nativa: 15-30s no meio do vídeo retém melhor que pre-roll
+
+#### 3. INFOPRODUTOS PRÓPRIOS (Mês 1+)
+- E-book/checklist: R$17-47, vende pelo link na descrição
+- Mini-curso: R$97-197 em plataforma como Hotmart
+- Templates/presets: se nicho é criativo (edição, design, produtividade)
+- Comunidade paga: Discord/Telegram VIP por R$19-49/mês
+- LTV > RPM: 1 venda de R$97 = RPM de ~65.000 views no Brasil
+
+#### 4. W REWARDS (Alternativa ao YPP, sem requisitos)
+- Programa alternativo: $0.50-1.00 por 1K views
+- Ideal para: canais com risco de "conteúdo reutilizado", compilações, motivação
+- Não conflita com AdSense — pode usar ambos após YPP
+
+#### 5. ADSENSE/YPP (Mês 3-6+)
+- Requisitos: 1K subs + 4K horas watch time OU 10M views Shorts
+- RPM varia drasticamente por país e nicho
+- Shorts RPM: $0.04-0.07 (muito baixo — nunca dependa só disso)
+
 ### SINAIS DE IDEIAS RUINS (ser honesto)
 - Nicho ultra-saturado sem diferencial (ex: "motivação genérica")
 - Conteúdo que depende 100% de facecam sem experiência
-- Nichos com RPM < $0.50 esperando "ficar rico"
+- Nichos com RPM < $0.50 esperando "ficar rico" SÓ com AdSense
 - Copiar exatamente o que outros fazem sem inovação
 - Expectativa de 10K subs em 30 dias (irreal para 99% dos canais)
+- Ignorar afiliados/sponsorship e esperar só pelo YPP (erro mais comum)
 `;
 
 serve(async (req) => {

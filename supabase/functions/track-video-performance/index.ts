@@ -240,6 +240,50 @@ serve(async (req) => {
                     insight: `[Grade ${grade}] "${vid.title}" — ${views} views in ${Math.floor(daysSince)}d. Hook: ${feedback.hook_verdict}. Title: ${feedback.title_verdict}. Lessons: ${feedback.lessons.join('; ')}. Next time: ${feedback.next_time}`,
                   });
 
+                  // ═══ CLOSE SCRIPT→PERFORMANCE LOOP ═══
+                  // If this video was generated from a saved script, feed real results back
+                  if (vid.script_id) {
+                    try {
+                      const { data: script } = await sb.from("saved_scripts")
+                        .select("style, video_type, duration, topic")
+                        .eq("id", vid.script_id)
+                        .maybeSingle();
+
+                      if (script) {
+                        // Update user_script_preferences with real performance data
+                        const { data: existingPref } = await sb.from("user_script_preferences")
+                          .select("id, preferred_styles, avg_retention_by_style")
+                          .eq("user_id", vid.user_id)
+                          .maybeSingle();
+
+                        const styleKey = script.style || script.video_type || 'default';
+                        const retention = vid.avg_retention_percent || 50;
+
+                        if (existingPref) {
+                          // Merge real performance into preference tracking
+                          const retByStyle = (existingPref.avg_retention_by_style as Record<string, any>) || {};
+                          if (!retByStyle[styleKey]) retByStyle[styleKey] = { total: 0, count: 0 };
+                          retByStyle[styleKey].total += retention;
+                          retByStyle[styleKey].count += 1;
+
+                          await sb.from("user_script_preferences").update({
+                            avg_retention_by_style: retByStyle,
+                            updated_at: new Date().toISOString(),
+                          }).eq("id", existingPref.id);
+                        }
+
+                        // Log specific script→performance insight
+                        await sb.from("ai_learning").insert({
+                          topic: "script_performance_link",
+                          source: "track-video-performance",
+                          insight: `Script style="${styleKey}" duration=${script.duration}min topic="${script.topic}" → Grade ${grade}, ${views} views, ${retention}% retention in ${Math.floor(daysSince)}d. ${feedback.hook_verdict}`,
+                        });
+                      }
+                    } catch (e) {
+                      console.error("Script→performance link error:", e);
+                    }
+                  }
+
                   // ═══ FEED BACK TO hook_library (evolve hooks based on real data) ═══
                   if (vid.hook_type) {
                     const retention_adj = grade === 'S' || grade === 'A' ? 0.5 : grade === 'D' || grade === 'F' ? -0.5 : 0;
