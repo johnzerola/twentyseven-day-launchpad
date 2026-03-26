@@ -271,7 +271,7 @@ serve(async (req) => {
           report[source.table].errors++;
         }
         
-        await new Promise(r => setTimeout(r, 300));
+        // No delay needed — local embedding generation
       }
     }
 
