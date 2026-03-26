@@ -172,6 +172,12 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* YPP Proximity Alert */}
+        <YPPProximityAlert />
+
+        {/* Channel DNA */}
+        <ChannelDNA />
+
         {/* Daily Planner */}
         <DailyPlanner />
 
