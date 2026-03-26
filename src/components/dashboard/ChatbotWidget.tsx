@@ -381,8 +381,9 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
 
       setOnboarding(prev => ({ ...prev, step: 'plan_ready' }));
       setHasSeenOnboarding(true);
-    } catch {
-      addAssistantMsg('❌ Ocorreu um erro ao gerar o plano. Tente novamente.');
+    } catch (err) {
+      console.error('Dotti onboarding error:', err);
+      addAssistantMsg('⚠️ Erro ao gerar o plano. Verifique sua conexão e tente novamente.');
       setOnboarding(prev => ({ ...prev, step: 'idle' }));
     } finally {
       setLoading(false);
