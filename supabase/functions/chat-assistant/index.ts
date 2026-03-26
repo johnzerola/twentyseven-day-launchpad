@@ -1157,7 +1157,7 @@ serve(async (req) => {
     // ===== FETCH USER-SPECIFIC DATA =====
     let userProfileContext = '';
     if (currentUserId) {
-      const [userChannels, savedSearches, savedScripts, savedTitles, outliers, onboardingPlan, plannerCards, trackedChannels] = await Promise.all([
+      const [userChannels, savedSearches, savedScripts, savedTitles, outliers, onboardingPlan, plannerCards, trackedChannels, videoPerf, scriptPrefs] = await Promise.all([
         sb.from("user_channels").select("channel_name, niche, subscribers, views, videos, youtube_channel_id, analysis_json").eq("user_id", currentUserId).limit(10),
         sb.from("saved_searches").select("query, tab, notes, filters_json, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(15),
         sb.from("saved_scripts").select("topic, style, video_type, duration, created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(10),
@@ -1166,6 +1166,8 @@ serve(async (req) => {
         sb.from("onboarding_plans").select("niche, goal, language, content_type, time_per_day, plan_json").eq("user_id", currentUserId).order("created_at", { ascending: false }).limit(1),
         sb.from("planner_cards").select("title, column_id, priority, tags").eq("user_id", currentUserId).order("updated_at", { ascending: false }).limit(15),
         sb.from("tracked_channels").select("channel_name, youtube_channel_id, subscribers, folder").eq("user_id", currentUserId).limit(20),
+        sb.from("video_performance").select("title, views_current, views_day1, views_day3, views_day7, avg_retention_percent, ctr_percent, hook_type, niche, performance_grade, published_at").eq("user_id", currentUserId).order("published_at", { ascending: false }).limit(15),
+        sb.from("user_script_preferences").select("niche, preferred_pov, preferred_duration_min, preferred_hook_styles, avg_retention, total_scripts, insights_json").eq("user_id", currentUserId).limit(5),
       ]);
 
       const blocks: string[] = [];
