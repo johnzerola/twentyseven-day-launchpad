@@ -32,6 +32,24 @@ function detectSlop(text: string): { slopScore: number; slopPenalty: number; det
   const supDensity = superlatives.length / (words / 1000); // per 1000 words
   if (supDensity > 5) { count += Math.floor(supDensity - 5); details.push(`superlativos: ${superlatives.length} (${supDensity.toFixed(1)}/1k palavras)`); }
   
+  // JENGA THEORY CHECK: detect long stretches without pattern breaks
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+  let longStretchCount = 0;
+  for (const para of paragraphs) {
+    const paraWords = para.split(/\s+/).length;
+    // If a paragraph has 100+ words without a natural break (question mark, ellipsis, short sentence)
+    if (paraWords > 100) {
+      const hasBreak = /[?]|\.{3}|\n/.test(para);
+      if (!hasBreak) {
+        longStretchCount++;
+      }
+    }
+  }
+  if (longStretchCount > 2) {
+    count += longStretchCount;
+    details.push(`Jenga: ${longStretchCount} trechos de 100+ palavras sem quebra de padrão`);
+  }
+  
   // Penalty: 0 if clean, -0.5 per slop pattern found (max -3)
   const penalty = Math.min(3, count * 0.5);
   return { slopScore: count, slopPenalty: penalty, details };
