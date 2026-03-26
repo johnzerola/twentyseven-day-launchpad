@@ -25,6 +25,7 @@ const navItems = [
   { key: 'Niche Explorer', icon: Compass, path: '/niches' },
   { key: 'Shorts Trends', icon: TrendingUp, path: '/shorts-trends' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
+  { key: 'Power Tools', icon: Crosshair, path: '/power-tools' },
   { key: 'Multichannel', icon: Layers, path: '/multichannel' },
   { key: 'Knowledge Admin', icon: Database, path: '/knowledge' },
 ];
