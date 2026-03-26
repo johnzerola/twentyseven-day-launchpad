@@ -1100,6 +1100,71 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_adaptive_plan: {
+        Row: {
+          adaptation_reason: string | null
+          ai_adaptation_notes: string | null
+          ai_adapted: boolean | null
+          channel_id: string | null
+          completed_tasks: number | null
+          completion_pct: number | null
+          created_at: string | null
+          generated_based_on: string | null
+          id: string
+          plan_date: string
+          tasks: Json
+          total_tasks: number | null
+          updated_at: string | null
+          user_id: string
+          week_number: number
+          yesterday_performance: Json | null
+        }
+        Insert: {
+          adaptation_reason?: string | null
+          ai_adaptation_notes?: string | null
+          ai_adapted?: boolean | null
+          channel_id?: string | null
+          completed_tasks?: number | null
+          completion_pct?: number | null
+          created_at?: string | null
+          generated_based_on?: string | null
+          id?: string
+          plan_date: string
+          tasks?: Json
+          total_tasks?: number | null
+          updated_at?: string | null
+          user_id: string
+          week_number: number
+          yesterday_performance?: Json | null
+        }
+        Update: {
+          adaptation_reason?: string | null
+          ai_adaptation_notes?: string | null
+          ai_adapted?: boolean | null
+          channel_id?: string | null
+          completed_tasks?: number | null
+          completion_pct?: number | null
+          created_at?: string | null
+          generated_based_on?: string | null
+          id?: string
+          plan_date?: string
+          tasks?: Json
+          total_tasks?: number | null
+          updated_at?: string | null
+          user_id?: string
+          week_number?: number
+          yesterday_performance?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_adaptive_plan_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_tasks: {
         Row: {
           actual_subs: number | null
@@ -1633,6 +1698,51 @@ export type Database = {
           total_views?: number | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      monetization_knowledge_base: {
+        Row: {
+          confidence_score: number | null
+          content: string
+          country_code: string | null
+          created_at: string | null
+          data_json: Json | null
+          embedding: string | null
+          id: string
+          last_updated: string | null
+          niche: string | null
+          source: string | null
+          title: string
+          topic: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          content: string
+          country_code?: string | null
+          created_at?: string | null
+          data_json?: Json | null
+          embedding?: string | null
+          id?: string
+          last_updated?: string | null
+          niche?: string | null
+          source?: string | null
+          title: string
+          topic: string
+        }
+        Update: {
+          confidence_score?: number | null
+          content?: string
+          country_code?: string | null
+          created_at?: string | null
+          data_json?: Json | null
+          embedding?: string | null
+          id?: string
+          last_updated?: string | null
+          niche?: string | null
+          source?: string | null
+          title?: string
+          topic?: string
         }
         Relationships: []
       }
@@ -2855,6 +2965,80 @@ export type Database = {
         }
         Relationships: []
       }
+      script_performance_link: {
+        Row: {
+          avg_retention_pct: number | null
+          beat_channel_average: boolean | null
+          comments: number | null
+          created_at: string | null
+          ctr_pct: number | null
+          id: string
+          learnings_extracted: boolean | null
+          learnings_json: Json | null
+          likes: number | null
+          performance_grade: string | null
+          published_at: string | null
+          script_id: string | null
+          updated_at: string | null
+          user_id: string
+          video_title: string | null
+          views_30d: number | null
+          views_48h: number | null
+          views_7d: number | null
+          youtube_video_id: string
+        }
+        Insert: {
+          avg_retention_pct?: number | null
+          beat_channel_average?: boolean | null
+          comments?: number | null
+          created_at?: string | null
+          ctr_pct?: number | null
+          id?: string
+          learnings_extracted?: boolean | null
+          learnings_json?: Json | null
+          likes?: number | null
+          performance_grade?: string | null
+          published_at?: string | null
+          script_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          video_title?: string | null
+          views_30d?: number | null
+          views_48h?: number | null
+          views_7d?: number | null
+          youtube_video_id: string
+        }
+        Update: {
+          avg_retention_pct?: number | null
+          beat_channel_average?: boolean | null
+          comments?: number | null
+          created_at?: string | null
+          ctr_pct?: number | null
+          id?: string
+          learnings_extracted?: boolean | null
+          learnings_json?: Json | null
+          likes?: number | null
+          performance_grade?: string | null
+          published_at?: string | null
+          script_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          video_title?: string | null
+          views_30d?: number | null
+          views_48h?: number | null
+          views_7d?: number | null
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_performance_link_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "saved_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       script_scores: {
         Row: {
           ai_feedback: Json | null
@@ -3157,6 +3341,54 @@ export type Database = {
         }
         Relationships: []
       }
+      thumbnail_prompt_library: {
+        Row: {
+          color_palette: string[] | null
+          created_at: string | null
+          dalle_prompt: string
+          effectiveness_score: number | null
+          emotion_target: string | null
+          expected_ctr_pct: number | null
+          face_required: boolean | null
+          id: string
+          midjourney_prompt: string
+          niche: string
+          reference_channels: string[] | null
+          style: string
+          title: string
+        }
+        Insert: {
+          color_palette?: string[] | null
+          created_at?: string | null
+          dalle_prompt: string
+          effectiveness_score?: number | null
+          emotion_target?: string | null
+          expected_ctr_pct?: number | null
+          face_required?: boolean | null
+          id?: string
+          midjourney_prompt: string
+          niche: string
+          reference_channels?: string[] | null
+          style: string
+          title: string
+        }
+        Update: {
+          color_palette?: string[] | null
+          created_at?: string | null
+          dalle_prompt?: string
+          effectiveness_score?: number | null
+          emotion_target?: string | null
+          expected_ctr_pct?: number | null
+          face_required?: boolean | null
+          id?: string
+          midjourney_prompt?: string
+          niche?: string
+          reference_channels?: string[] | null
+          style?: string
+          title?: string
+        }
+        Relationships: []
+      }
       title_rankings: {
         Row: {
           checked_at: string | null
@@ -3278,6 +3510,83 @@ export type Database = {
           youtube_channel_id?: string
         }
         Relationships: []
+      }
+      user_content_memory: {
+        Row: {
+          ai_identified_patterns: Json | null
+          avg_retention_pct: number | null
+          best_performing_duration_minutes: number | null
+          best_performing_niche: string | null
+          best_performing_style: string | null
+          channel_id: string | null
+          created_at: string | null
+          id: string
+          last_topics_used: string[] | null
+          preferred_duration_minutes: number | null
+          preferred_hook_type: string | null
+          preferred_narration_style: string | null
+          preferred_style: string | null
+          topics_to_avoid: string[] | null
+          total_scripts_generated: number | null
+          total_scripts_published: number | null
+          total_views_accumulated: number | null
+          updated_at: string | null
+          user_id: string
+          worst_performing_style: string | null
+        }
+        Insert: {
+          ai_identified_patterns?: Json | null
+          avg_retention_pct?: number | null
+          best_performing_duration_minutes?: number | null
+          best_performing_niche?: string | null
+          best_performing_style?: string | null
+          channel_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_topics_used?: string[] | null
+          preferred_duration_minutes?: number | null
+          preferred_hook_type?: string | null
+          preferred_narration_style?: string | null
+          preferred_style?: string | null
+          topics_to_avoid?: string[] | null
+          total_scripts_generated?: number | null
+          total_scripts_published?: number | null
+          total_views_accumulated?: number | null
+          updated_at?: string | null
+          user_id: string
+          worst_performing_style?: string | null
+        }
+        Update: {
+          ai_identified_patterns?: Json | null
+          avg_retention_pct?: number | null
+          best_performing_duration_minutes?: number | null
+          best_performing_niche?: string | null
+          best_performing_style?: string | null
+          channel_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_topics_used?: string[] | null
+          preferred_duration_minutes?: number | null
+          preferred_hook_type?: string | null
+          preferred_narration_style?: string | null
+          preferred_style?: string | null
+          topics_to_avoid?: string[] | null
+          total_scripts_generated?: number | null
+          total_scripts_published?: number | null
+          total_views_accumulated?: number | null
+          updated_at?: string | null
+          user_id?: string
+          worst_performing_style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_content_memory_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_progress: {
         Row: {
@@ -3791,6 +4100,66 @@ export type Database = {
         }
         Relationships: []
       }
+      viral_mechanics_library: {
+        Row: {
+          avg_ctr_boost_pct: number | null
+          avg_retention_boost_pct: number | null
+          avg_views_multiplier: number | null
+          best_niches: string[] | null
+          best_video_format: string | null
+          category: string
+          created_at: string | null
+          description: string
+          difficulty: string | null
+          effectiveness_score: number | null
+          embedding: string | null
+          example_channels: string[] | null
+          example_titles: string[] | null
+          how_to_apply: string
+          id: string
+          mechanic_name: string
+          real_world_evidence: string | null
+        }
+        Insert: {
+          avg_ctr_boost_pct?: number | null
+          avg_retention_boost_pct?: number | null
+          avg_views_multiplier?: number | null
+          best_niches?: string[] | null
+          best_video_format?: string | null
+          category: string
+          created_at?: string | null
+          description: string
+          difficulty?: string | null
+          effectiveness_score?: number | null
+          embedding?: string | null
+          example_channels?: string[] | null
+          example_titles?: string[] | null
+          how_to_apply: string
+          id?: string
+          mechanic_name: string
+          real_world_evidence?: string | null
+        }
+        Update: {
+          avg_ctr_boost_pct?: number | null
+          avg_retention_boost_pct?: number | null
+          avg_views_multiplier?: number | null
+          best_niches?: string[] | null
+          best_video_format?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          difficulty?: string | null
+          effectiveness_score?: number | null
+          embedding?: string | null
+          example_channels?: string[] | null
+          example_titles?: string[] | null
+          how_to_apply?: string
+          id?: string
+          mechanic_name?: string
+          real_world_evidence?: string | null
+        }
+        Relationships: []
+      }
       viral_patterns: {
         Row: {
           created_at: string | null
@@ -3872,6 +4241,60 @@ export type Database = {
           title_pattern?: string | null
           views?: number
           why_viral?: string | null
+        }
+        Relationships: []
+      }
+      youtube_algorithm_knowledge: {
+        Row: {
+          applies_to_format: string | null
+          applies_to_niche: string | null
+          category: string
+          confidence_score: number | null
+          content: string
+          created_at: string | null
+          data_json: Json | null
+          embedding: string | null
+          id: string
+          last_verified_at: string | null
+          priority: number | null
+          source: string | null
+          title: string
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applies_to_format?: string | null
+          applies_to_niche?: string | null
+          category: string
+          confidence_score?: number | null
+          content: string
+          created_at?: string | null
+          data_json?: Json | null
+          embedding?: string | null
+          id?: string
+          last_verified_at?: string | null
+          priority?: number | null
+          source?: string | null
+          title: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applies_to_format?: string | null
+          applies_to_niche?: string | null
+          category?: string
+          confidence_score?: number | null
+          content?: string
+          created_at?: string | null
+          data_json?: Json | null
+          embedding?: string | null
+          id?: string
+          last_verified_at?: string | null
+          priority?: number | null
+          source?: string | null
+          title?: string
+          updated_at?: string | null
+          valid_until?: string | null
         }
         Relationships: []
       }

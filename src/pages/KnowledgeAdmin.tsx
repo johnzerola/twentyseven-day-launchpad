@@ -57,6 +57,8 @@ const KnowledgeAdmin = () => {
   const [classifyLoading, setClassifyLoading] = useState(false);
   const [classifyReport, setClassifyReport] = useState<any>(null);
   const [generalCount, setGeneralCount] = useState(0);
+  const [seedKnowledgeLoading, setSeedKnowledgeLoading] = useState(false);
+  const [seedKnowledgeReport, setSeedKnowledgeReport] = useState<any>(null);
 
   const fetchDbCounts = async () => {
     const tables = ['content_dna', 'viral_patterns', 'score_calibration', 'knowledge_embeddings'];
@@ -448,6 +450,68 @@ const KnowledgeAdmin = () => {
           </div>
         )}
 
+        {/* 🧠 Seed Complete Knowledge */}
+        <div className="glass rounded-xl p-5 border border-emerald-500/20">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="font-bold font-['Space_Grotesk']">🧠 Seed Complete Knowledge</h2>
+                <p className="text-xs text-muted-foreground">Popula algoritmo YT, mecânicas virais e monetização</p>
+              </div>
+            </div>
+            <Button
+              onClick={async () => {
+                setSeedKnowledgeLoading(true);
+                setSeedKnowledgeReport(null);
+                toast.info('🧠 Inserindo base de conhecimento completa...');
+                try {
+                  const headers = await getAuthHeaders();
+                  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seed-complete-knowledge`, {
+                    method: 'POST',
+                    headers: { ...headers, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tables: ['all'] }),
+                  });
+                  const result = await res.json();
+                  if (result.success) {
+                    setSeedKnowledgeReport(result.report);
+                    const total = Object.values(result.report as Record<string, any>).reduce((s: number, r: any) => s + (r.inserted || 0), 0);
+                    toast.success(`✅ ${total} registros inseridos na base de conhecimento!`);
+                  } else {
+                    toast.error(result.error || 'Erro no seed');
+                  }
+                } catch (e) {
+                  toast.error('Erro de conexão');
+                } finally {
+                  setSeedKnowledgeLoading(false);
+                }
+              }}
+              disabled={seedKnowledgeLoading}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+              size="sm"
+            >
+              {seedKnowledgeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+              {seedKnowledgeLoading ? 'Inserindo...' : 'Executar Seed Completo'}
+            </Button>
+          </div>
+          {seedKnowledgeReport && (
+            <div className="bg-background/50 rounded-lg p-3 border border-border/50">
+              <p className="text-xs font-medium mb-2 text-emerald-400">✅ Relatório do Seed</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
+                {Object.entries(seedKnowledgeReport).map(([table, data]: [string, any]) => (
+                  <div key={table} className="bg-secondary/20 rounded p-2">
+                    <p className="font-medium">{table.replace(/_/g, ' ')}</p>
+                    <p className="text-muted-foreground">
+                      {(data as any).inserted || 0} inseridos · {(data as any).skipped || 0} existentes · {(data as any).errors || 0} erros
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabKey)}>
           <TabsList className="w-full grid grid-cols-4 h-auto">
