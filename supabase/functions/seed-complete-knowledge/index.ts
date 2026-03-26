@@ -86,7 +86,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { tables } = await req.json().catch(() => ({ tables: ["all"] }));
+    const body = await req.json().catch(() => ({}));
+    const tables = body.tables || ["all"];
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const report: Record<string, { inserted: number; skipped: number; errors: number }> = {};
