@@ -474,7 +474,13 @@ export const ScriptGenerator = ({
         body: { script: textToScore.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
       });
 
-      if (error) throw new Error(error.message || 'Erro na avaliação');
+      if (error) {
+        const errMsg = typeof error === 'object' && error.message ? error.message : String(error);
+        if (errMsg.includes('402') || errMsg.includes('Créditos') || errMsg.includes('insuficientes')) {
+          throw new Error('Créditos insuficientes. Vá em Settings → Workspace → Usage para recarregar.');
+        }
+        throw new Error(errMsg || 'Erro na avaliação');
+      }
 
       const result: DualScore = data;
 
