@@ -442,14 +442,16 @@ const DOTTI_TOOLS = [
 ];
 
 // ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
-const DEFAULT_TOOL_TIMEOUT_MS = 12000;
+const DEFAULT_TOOL_TIMEOUT_MS = 15000;
 const TOOL_TIMEOUTS_MS: Record<string, number> = {
-  // YouTube-intensive tools can exhaust quota quickly; fail fast to avoid full chat failure.
-  "analyze-channel": 8000,
-  "youtube_channel_stats": 7000,
-  "youtube_channel_videos": 7000,
-  "youtube_video_stats": 7000,
-  "youtube_search_api": 7000,
+  "analyze-channel": 12000,
+  "youtube_channel_stats": 10000,
+  "youtube_channel_videos": 10000,
+  "youtube_video_stats": 10000,
+  "youtube_search_api": 10000,
+  "perplexity-research": 20000,
+  "claude_deep_analysis": 20000,
+  "gpt_expert_analysis": 15000,
 };
 
 const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
