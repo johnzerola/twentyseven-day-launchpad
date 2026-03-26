@@ -1174,6 +1174,22 @@ const Scripts = () => {
                   />
                 </motion.div>
               )}
+
+              {/* Step 6: Thumbnail Generator */}
+              {activeStep === 'titles' && script && (
+                <motion.div key="thumbnail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5 mt-4">
+                  <ThumbnailGenerator videoTitle={topic} niche={niche} />
+                </motion.div>
+              )}
+
+              {/* Script Performance Tracker - always visible when script exists */}
+              {script && (
+                <motion.div key="perf-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <ScriptPerformanceTracker scriptTopic={topic} />
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* Script output is now inside ScriptGenerator but displayed here when active */}
