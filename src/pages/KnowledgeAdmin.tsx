@@ -381,6 +381,73 @@ const KnowledgeAdmin = () => {
           <ReferenceChannelAnalyzer />
         </div>
 
+        {/* 🏷️ Classify Channels */}
+        {generalCount > 0 && (
+          <div className="glass rounded-xl p-5 border border-chart-3/20">
+            <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-chart-3/20 flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-chart-3" />
+                </div>
+                <div>
+                  <h2 className="font-bold font-['Space_Grotesk']">🏷️ Classificar Canais</h2>
+                  <p className="text-xs text-muted-foreground">{generalCount} canais com niche = "general" precisam de classificação</p>
+                </div>
+              </div>
+              <Button
+                onClick={async () => {
+                  setClassifyLoading(true);
+                  setClassifyReport(null);
+                  toast.info(`🏷️ Classificando canais... batch de 50`);
+                  try {
+                    const headers = await getAuthHeaders();
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/classify-channels`, {
+                      method: 'POST',
+                      headers: { ...headers, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ batchSize: 50 }),
+                    });
+                    const result = await res.json();
+                    setClassifyReport(result);
+                    if (result.classified > 0) {
+                      setGeneralCount(prev => Math.max(0, prev - result.classified));
+                      toast.success(`✅ ${result.classified} canais classificados!`);
+                    } else {
+                      toast.info(result.message || 'Nenhum canal para classificar');
+                    }
+                  } catch (e) {
+                    toast.error('Erro ao classificar canais');
+                  } finally {
+                    setClassifyLoading(false);
+                  }
+                }}
+                disabled={classifyLoading}
+                className="gap-2"
+                size="sm"
+              >
+                {classifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+                {classifyLoading ? 'Classificando...' : `Classificar Próximo Batch (50)`}
+              </Button>
+            </div>
+            {classifyReport && (
+              <div className="bg-background/50 rounded-lg p-3 border border-border/50 text-[11px]">
+                <p className="text-chart-3 font-medium mb-1">
+                  ✅ {classifyReport.classified || 0} classificados · {classifyReport.errors || 0} erros
+                </p>
+                {classifyReport.results && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 mt-2">
+                    {(classifyReport.results || []).slice(0, 12).map((r: any, i: number) => (
+                      <div key={i} className="bg-secondary/20 rounded p-1.5">
+                        <p className="font-medium truncate">{r.channel_name}</p>
+                        <p className="text-muted-foreground">{r.new_category || '?'}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
 
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabKey)}>
           <TabsList className="w-full grid grid-cols-4 h-auto">
