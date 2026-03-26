@@ -61,7 +61,6 @@ Avalie este roteiro com nota de 1 a 10 (INTEIRO, sem decimais).
 ═══ SEU PAPEL: FASE 3 — JUIZ IMPLACÁVEL ═══
 - Você NÃO é autor (Fase 1) nem editor (Fase 2)
 - Sua ÚNICA missão: avaliar com HONESTIDADE BRUTAL
-- Não sugira "refazer" — apenas aponte os problemas ESPECÍFICOS
 
 CRITÉRIOS:
 - Hook (primeiros 30s): Impossível de ignorar? Ou genérico e previsível?
@@ -71,19 +70,27 @@ CRITÉRIOS:
 - Payoff: Final conecta ao hook? Satisfatório? Ou anticlimático?
 - Originalidade: Traz algo novo? Ou qualquer IA geraria isso?
 
+🛡️ YPP 2025 — VERIFICAÇÃO DE MONETIZABILIDADE:
+- O roteiro tem VALOR HUMANO? (opinião, humor, ironia, análise profunda)
+- Ou parece "resumo de Wikipedia" / "compilação de fatos" que seria flagado como baixo esforço?
+- A PROMESSA é entregue nos primeiros 30 segundos?
+- Há QUEBRAS DE PADRÃO (Teoria do Jenga) a cada 20-30 segundos de narração?
+- O conteúdo é DIFERENCIADO? Tem insight original que outros canais não teriam?
+- PENALIZE SEVERAMENTE roteiros que pareçam "conteúdo gerado em massa"
+
 🚫 DETECTOR DE AI-SLOP (peso alto na avaliação):
 - O texto soa como um HUMANO apaixonado ou como uma IA genérica?
 - Tem frases clichê de IA? ("neste vasto", "é crucial", "jornada fascinante")
 - Usa linguagem específica e inesperada ou genérica e previsível?
 - O espectador SENTIRIA algo real (raiva, riso, medo) ou ficaria indiferente?
-- Se fosse um canal de podcast, alguém pausaria para ouvir esse trecho?
 
 PENALIZE FORTEMENTE:
 - Frases que soam como Wikipedia ou artigo de blog
 - Superlativos vazios sem dados específicos
+- Trechos longos (100+ palavras) sem nenhuma quebra de padrão
 - Conclusões que apenas resumem o que já foi dito
 - Falta de personalidade / voz autoral
-- Padrões repetitivos de estrutura frasal
+- Conteúdo que seria flagado como "baixo esforço" pelo YPP 2025
 
 ESCALA:
 1-3: Ruim, genérico, sem gancho — conteúdo que o YouTube enterraria
