@@ -203,8 +203,6 @@ serve(async (req) => {
 
   try {
     const { tables, batchSize = 3, maxItems = 500 } = await req.json().catch(() => ({}));
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
