@@ -1503,7 +1503,10 @@ ${knowledgeBlock}
 5. Sempre inclua RPM + competição + projeção financeira nas recomendações
 6. Ao final: "🎯 **Próximo passo:** [ação específica imediata]"
 7. ${usedSemantic ? 'RAG semântico ativo — priorize esses dados.' : 'RAG por score ativo.'}
-8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados`;
+8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados
+9. Se há dados de PERFORMANCE REAL, CRUZE COM BENCHMARKS DO NICHO proativamente. Ex: "Sua retenção de 67% está ACIMA da média de 52% do seu nicho — duplique nesse formato." Não espere o usuário perguntar.
+10. Se há PREFERÊNCIAS APRENDIDAS, use-as para personalizar recomendações de formato, duração e hook.
+11. Use MÚLTIPLAS RODADAS de ferramentas quando necessário: busque dados na rodada 1, analise/cruze na rodada 2, sintetize na rodada 3. NÃO pare após coletar dados sem interpretar.`;
 
     // First AI call with tools — use fast model for tool selection
     const aiMessages = [{ role: "system", content: systemPrompt }, ...messages];
