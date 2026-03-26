@@ -439,6 +439,87 @@ const DOTTI_TOOLS = [
       },
     },
   },
+  // ===== NEW V5 TOOLS =====
+  {
+    type: "function",
+    function: {
+      name: "analyze_thumbnail_ctr",
+      description: "Analyze a YouTube thumbnail for CTR potential. Upload image URL and get: composition score, emotional impact, color analysis, text readability, CTR prediction, and improvement suggestions.",
+      parameters: {
+        type: "object",
+        properties: {
+          image_url: { type: "string", description: "URL of the thumbnail image" },
+          video_title: { type: "string", description: "Associated video title" },
+          niche: { type: "string", description: "Channel niche" },
+        },
+        required: ["image_url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_thumbnail_prompt",
+      description: "Generate Midjourney/DALL-E prompts for a high-CTR YouTube thumbnail based on title and niche. Returns 3 variants ordered by expected CTR.",
+      parameters: {
+        type: "object",
+        properties: {
+          video_title: { type: "string", description: "Video title" },
+          niche: { type: "string", description: "Channel niche" },
+          emotion: { type: "string", description: "Target emotion: shock, curiosity, fear, excitement, wonder" },
+          style: { type: "string", description: "shock, curiosity, emotion, contrast, minimal" },
+        },
+        required: ["video_title", "niche"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_script_to_real_video",
+      description: "Link a generated script to its published YouTube video to track real performance and learn from results. ALWAYS use when user says they published a video.",
+      parameters: {
+        type: "object",
+        properties: {
+          script_id: { type: "string", description: "ID of the saved script" },
+          youtube_url: { type: "string", description: "YouTube video URL" },
+        },
+        required: ["youtube_url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "monetization_diagnosis",
+      description: "ALWAYS USE when user asks about monetization, YPP, revenue, how long to monetize. Queries algorithm knowledge base and monetization data for accurate projections.",
+      parameters: {
+        type: "object",
+        properties: {
+          channel_id: { type: "string", description: "User channel ID" },
+          target_revenue_usd: { type: "number", description: "Monthly revenue target in USD" },
+          country: { type: "string", description: "Target country code" },
+          niche: { type: "string", description: "Channel niche" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "algorithm_current_status",
+      description: "Get current YouTube algorithm best practices and what's working RIGHT NOW in a specific niche. Uses Perplexity for real-time data + internal knowledge base.",
+      parameters: {
+        type: "object",
+        properties: {
+          niche: { type: "string", description: "Niche to research" },
+          format: { type: "string", enum: ["shorts", "longform", "both"], description: "Video format" },
+        },
+        required: ["niche"],
+      },
+    },
+  },
 ];
 
 // ===== TOOL EXECUTION WITH RETRY + TIMEOUT =====
