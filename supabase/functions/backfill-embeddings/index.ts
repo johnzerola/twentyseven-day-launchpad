@@ -113,6 +113,34 @@ const KNOWLEDGE_SOURCES: KnowledgeSource[] = [
     metaBuilder: (r) => ({ niche: r.niche, subs: r.subscribers, faceless: r.is_faceless, category: r.content_category }),
     limit: 500,
   },
+  {
+    table: "youtube_algorithm_knowledge",
+    select: "id, category, title, content, applies_to_format, priority, confidence_score",
+    textBuilder: (r) => `[Algoritmo YT ${r.category}] ${r.title}: ${r.content} (formato: ${r.applies_to_format || 'both'}, prioridade: ${r.priority})`,
+    metaBuilder: (r) => ({ category: r.category, format: r.applies_to_format, priority: r.priority, confidence: r.confidence_score }),
+    limit: 200,
+  },
+  {
+    table: "viral_mechanics_library",
+    select: "id, mechanic_name, category, description, how_to_apply, effectiveness_score, best_video_format, difficulty",
+    textBuilder: (r) => `[Mecânica Viral ${r.category}] ${r.mechanic_name}: ${r.description} | Como aplicar: ${r.how_to_apply} (eficácia: ${r.effectiveness_score}/10, formato: ${r.best_video_format}, dificuldade: ${r.difficulty})`,
+    metaBuilder: (r) => ({ category: r.category, score: r.effectiveness_score, format: r.best_video_format }),
+    limit: 200,
+  },
+  {
+    table: "monetization_knowledge_base",
+    select: "id, topic, title, content, country_code, niche, confidence_score",
+    textBuilder: (r) => `[Monetização ${r.topic}] ${r.title}: ${r.content} (país: ${r.country_code}, nicho: ${r.niche || 'all'})`,
+    metaBuilder: (r) => ({ topic: r.topic, country: r.country_code, niche: r.niche }),
+    limit: 200,
+  },
+  {
+    table: "prompt_library",
+    select: "id, title, scene_type, visual_style, prompt_text, quality_score",
+    textBuilder: (r) => `[Prompt ${r.scene_type}] ${r.title} (${r.visual_style}): ${(r.prompt_text || '').slice(0, 300)} | qualidade: ${r.quality_score || 'N/A'}`,
+    metaBuilder: (r) => ({ scene_type: r.scene_type, style: r.visual_style, quality: r.quality_score }),
+    limit: 200,
+  },
 ];
 
 async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
