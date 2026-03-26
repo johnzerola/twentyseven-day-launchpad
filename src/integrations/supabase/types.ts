@@ -3238,6 +3238,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_script_preferences: {
+        Row: {
+          avg_score_achieved: number | null
+          best_hook_types: string[] | null
+          id: string
+          learned_at: string | null
+          niche: string
+          preferred_duration_min: number | null
+          preferred_pov: string | null
+          preferred_style: string | null
+          top_performing_patterns: Json | null
+          total_scripts_generated: number | null
+          updated_at: string | null
+          user_id: string
+          voice_notes: string | null
+        }
+        Insert: {
+          avg_score_achieved?: number | null
+          best_hook_types?: string[] | null
+          id?: string
+          learned_at?: string | null
+          niche?: string
+          preferred_duration_min?: number | null
+          preferred_pov?: string | null
+          preferred_style?: string | null
+          top_performing_patterns?: Json | null
+          total_scripts_generated?: number | null
+          updated_at?: string | null
+          user_id: string
+          voice_notes?: string | null
+        }
+        Update: {
+          avg_score_achieved?: number | null
+          best_hook_types?: string[] | null
+          id?: string
+          learned_at?: string | null
+          niche?: string
+          preferred_duration_min?: number | null
+          preferred_pov?: string | null
+          preferred_style?: string | null
+          top_performing_patterns?: Json | null
+          total_scripts_generated?: number | null
+          updated_at?: string | null
+          user_id?: string
+          voice_notes?: string | null
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           active_devices: number
