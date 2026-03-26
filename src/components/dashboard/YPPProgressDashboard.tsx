@@ -45,26 +45,60 @@ export function YPPProgressDashboard() {
       .select('channel_id, channel_name')
       .eq('user_id', user.id);
 
-    setHasOAuth(!!(oauthTokens as any)?.length);
+    const userHasOAuth = !!(oauthTokens as any)?.length;
+    setHasOAuth(userHasOAuth);
 
-    // Get best channel data
     const mainChannel = channels[0] as any;
     const subs = mainChannel.subscribers || 0;
-    
-    // Estimate watch hours from video performance data
-    const { data: perfData } = await supabase
-      .from('video_performance')
-      .select('views_current, avg_retention_percent, created_at')
-      .eq('user_id', user.id);
 
+    // ═══ REAL WATCH HOURS — via YouTube Analytics API (if OAuth connected) ═══
+    let realWatchHours: number | null = null;
+    let realSubs: number | null = null;
+
+    if (userHasOAuth) {
+      try {
+        // Fetch last 365 days of real analytics — estimatedMinutesWatched is the TRUE metric
+        const { data: analyticsResult, error: analyticsError } = await supabase.functions.invoke('youtube-analytics', {
+          body: {
+            metrics: 'estimatedMinutesWatched,subscribersGained',
+            startDate: new Date(Date.now() - 365 * 86400000).toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+          },
+        });
+
+        if (!analyticsError && analyticsResult?.rows) {
+          // Sum all daily estimatedMinutesWatched → convert to hours
+          let totalMinutesWatched = 0;
+          let totalSubsGained = 0;
+          for (const row of analyticsResult.rows) {
+            totalMinutesWatched += row[1] || 0; // estimatedMinutesWatched is col 1
+            totalSubsGained += row[2] || 0;     // subscribersGained is col 2
+          }
+          realWatchHours = Math.round(totalMinutesWatched / 60);
+          realSubs = subs; // Subs from channel data is already accurate
+          console.log(`[YPP] Real watch hours from YouTube Analytics: ${realWatchHours}h (${totalMinutesWatched} mins)`);
+        }
+      } catch (e) {
+        console.warn('[YPP] Failed to fetch real analytics, falling back to estimate:', e);
+      }
+    }
+
+    // ═══ FALLBACK: estimate from video_performance with ACTUAL duration ═══
     let estimatedWatchHours = 0;
-    if (perfData?.length) {
-      for (const v of perfData) {
-        const avgRetention = (v as any).avg_retention_percent || 50;
-        const views = (v as any).views_current || 0;
-        // Average short = 30s, retention% of that
-        const watchMinutes = (views * 0.5 * (avgRetention / 100)) / 60;
-        estimatedWatchHours += watchMinutes;
+    if (realWatchHours === null) {
+      const { data: perfData } = await supabase
+        .from('video_performance')
+        .select('views_current, avg_retention_percent, duration_seconds')
+        .eq('user_id', user.id);
+
+      if (perfData?.length) {
+        for (const v of perfData) {
+          const retention = (v as any).avg_retention_percent || 50;
+          const views = (v as any).views_current || 0;
+          const durationSec = (v as any).duration_seconds || 30; // Use REAL duration, not 0.5
+          // Real formula: views * duration * retention% → hours
+          estimatedWatchHours += (views * durationSec * (retention / 100)) / 3600;
+        }
       }
     }
 
@@ -77,10 +111,13 @@ export function YPPProgressDashboard() {
     const subsMilestone = (milestones as any)?.find((m: any) => m.milestone_type === 'subscribers');
     const watchMilestone = (milestones as any)?.find((m: any) => m.milestone_type === 'watch_hours');
 
+    // Priority: real YouTube data > milestone tracker > estimate
+    const finalWatchHours = realWatchHours ?? watchMilestone?.current_value ?? Math.round(estimatedWatchHours);
+
     setData({
       subscribers: subsMilestone?.current_value || subs,
-      watchHoursTotal: watchMilestone?.current_value || Math.round(estimatedWatchHours),
-      shortsViews: (perfData as any)?.reduce((sum: number, v: any) => sum + (v.views_current || 0), 0) || 0,
+      watchHoursTotal: finalWatchHours,
+      shortsViews: 0,
       totalViews: mainChannel.total_views || 0,
       channelName: mainChannel.channel_name || 'Meu Canal',
       channelId: mainChannel.youtube_channel_id || '',
