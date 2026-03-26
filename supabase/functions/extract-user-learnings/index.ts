@@ -3,26 +3,52 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await sb.auth.getUser(token);
-    if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
-    const userId = userData.user.id;
+    
+    const body = await req.json().catch(() => ({}));
+    let userId: string;
 
-    const { channel_id } = await req.json().catch(() => ({}));
+    // Support both user-auth and cron/service-key modes
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData } = await sb.auth.getUser(token);
+    
+    if (userData?.user) {
+      userId = userData.user.id;
+    } else if (body.user_id) {
+      // Called from cron with explicit user_id
+      userId = body.user_id;
+    } else {
+      // Cron mode: process all users with performance data
+      const { data: allLinks } = await sb.from("script_performance_link")
+        .select("user_id")
+        .not("avg_retention_pct", "is", null);
+      const userIds = [...new Set((allLinks || []).map((l: any) => l.user_id))];
+      const results: any[] = [];
+      for (const uid of userIds) {
+        try {
+          const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/extract-user-learnings`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: uid }),
+          });
+          const data = await res.json().catch(() => ({}));
+          results.push({ user_id: uid, success: res.ok, ...data });
+        } catch (e) { results.push({ user_id: uid, success: false, error: (e as Error).message }); }
+      }
+      return new Response(JSON.stringify({ success: true, mode: "all_users", processed: results.length, results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { channel_id } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 

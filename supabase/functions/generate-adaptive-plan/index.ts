@@ -10,19 +10,44 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const body = await req.json().catch(() => ({}));
+    let userId: string;
+
+    // Support both user-auth and cron/service-key modes
+    const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await sb.auth.getUser(token);
-    if (userError || !userData?.user) {
+    const { data: userData } = await sb.auth.getUser(token);
+
+    if (userData?.user) {
+      userId = userData.user.id;
+    } else if (body.user_id) {
+      userId = body.user_id;
+    } else if (body.mode === "all_users") {
+      // Cron mode: generate plans for all active users
+      const { data: plans } = await sb.from("onboarding_plans").select("user_id").order("created_at", { ascending: false });
+      const userIds = [...new Set((plans || []).map((p: any) => p.user_id))];
+      const results: any[] = [];
+      for (const uid of userIds.slice(0, 50)) {
+        try {
+          const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-adaptive-plan`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: uid }),
+          });
+          const data = await res.json().catch(() => ({}));
+          results.push({ user_id: uid, success: res.ok });
+        } catch (e) { results.push({ user_id: uid, success: false }); }
+      }
+      return new Response(JSON.stringify({ success: true, mode: "all_users", processed: results.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } else {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
-    const userId = userData.user.id;
 
-    const { channel_id, week_number, target_date } = await req.json().catch(() => ({}));
+    const { channel_id, week_number, target_date } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
