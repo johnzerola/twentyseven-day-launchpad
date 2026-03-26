@@ -534,7 +534,7 @@ async function executeTool(
 
       case "analyze_niche": {
         // Fast path: use internal DB instead of heavy niche-explorer edge function
-        const nicheQuery = args.niche?.toLowerCase() || '';
+        const nicheQuery = (args.niche || args.query || '').toLowerCase();
         const nicheCountry = args.country || 'BR';
         
         const [nicheDbResult, nicheChannels, nicheVirals] = await Promise.all([
