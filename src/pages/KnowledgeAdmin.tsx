@@ -142,7 +142,12 @@ const KnowledgeAdmin = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); fetchEmbeddingCount(); fetchDbCounts(); }, []);
+  useEffect(() => {
+    fetchAll(); fetchEmbeddingCount(); fetchDbCounts();
+    // Count "general" channels
+    supabase.from('channel_intelligence').select('*', { count: 'exact', head: true }).eq('content_category', 'general')
+      .then(({ count }) => setGeneralCount(count || 0));
+  }, []);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
