@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarCheck, CheckCircle2, Circle, Clock, Sparkles, Loader2, ChevronDown, ChevronUp, RotateCcw, Zap, TrendingUp, AlertTriangle, BarChart3 } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, Circle, Clock, Sparkles, Loader2, ChevronDown, ChevronUp, RotateCcw, Zap, TrendingUp, AlertTriangle, BarChart3, Copy, FileText, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,6 +8,67 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+
+/** Zero-friction: shows latest ready scripts with copy buttons */
+const ReadyToProduce = () => {
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setLoading(false); return; }
+
+      const { data } = await supabase
+        .from('saved_scripts')
+        .select('id, topic, script_content, video_type, created_at')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      setScripts(data || []);
+      setLoading(false);
+    })();
+  }, []);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado!`);
+  };
+
+  if (loading || scripts.length === 0) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/30">
+      <div className="flex items-center gap-2 mb-2">
+        <FileText className="w-3.5 h-3.5 text-primary" />
+        <span className="text-[11px] font-semibold text-foreground">Pronto para produzir</span>
+        <Badge variant="outline" className="text-[8px]">{scripts.length} roteiros</Badge>
+      </div>
+      <div className="space-y-1.5">
+        {scripts.map((s) => (
+          <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10 group">
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-medium truncate">{s.topic}</p>
+              <p className="text-[9px] text-muted-foreground">
+                {s.video_type === 'short' ? '📱 Short' : '🎬 Longform'} • {new Date(s.created_at).toLocaleDateString('pt-BR')}
+              </p>
+            </div>
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[9px] gap-1 opacity-70 group-hover:opacity-100"
+              onClick={() => copyToClipboard(s.script_content, 'Roteiro')}>
+              <Copy className="w-3 h-3" /> Copiar
+            </Button>
+            <Link to="/scripts" onClick={e => e.stopPropagation()}>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-[9px] gap-1 opacity-70 group-hover:opacity-100">
+                <ExternalLink className="w-3 h-3" /> Editar
+              </Button>
+            </Link>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 interface DailyTask {
   id: string;
@@ -481,6 +542,9 @@ export const DailyPlanner = () => {
                   </div>
                 </motion.div>
               ))}
+
+              {/* Ready-to-Produce Section */}
+              <ReadyToProduce />
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-2">
