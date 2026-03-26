@@ -1091,13 +1091,17 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
-    const { data: claimsData, error: claimsError } = await sb.auth.getClaims(authHeader.replace('Bearer ', ''));
-    if (claimsError || !claimsData?.claims) {
+    
+    // Validate token and get user ID
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await sb.auth.getUser(token);
+    if (userError || !userData?.user) {
+      console.error("Auth error:", userError?.message || "No user");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const currentUserId: string | null = claimsData.claims.sub || null;
+    const currentUserId: string | null = userData.user.id || null;
 
     const { messages, currentPage, mode, onboardingData, conversationId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
