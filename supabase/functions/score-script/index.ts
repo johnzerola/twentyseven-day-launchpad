@@ -185,6 +185,8 @@ serve(async (req) => {
             flow_score: { type: "number", description: "Flow and pacing 1-10" },
             payoff_score: { type: "number", description: "Ending quality 1-10" },
             originality_score: { type: "number", description: "Originality and human voice 1-10 (penalize AI-sounding text)" },
+            ypp_monetizable: { type: "boolean", description: "True if the script would pass YPP 2025 review (has human value, not repetitive/mass-generated)" },
+            jenga_score: { type: "number", description: "Pattern break frequency 1-10 (10=perfect breaks every 20-30s, 1=monotone)" },
             ai_slop_detected: { type: "boolean", description: "True if the text sounds like generic AI output" },
             strengths: { type: "array", items: { type: "string" }, description: "Top 3 strengths" },
             weaknesses: { type: "array", items: { type: "string" }, description: "Top 3 weaknesses" },
