@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, Clock, TrendingUp, RefreshCw, Youtube, Loader2, CheckCircle2, AlertTriangle, Target } from 'lucide-react';
+import { Users, Clock, TrendingUp, RefreshCw, Youtube, Loader2, CheckCircle2, AlertTriangle, Target, Zap } from 'lucide-react';
 
 interface YPPData {
   subscribers: number;
