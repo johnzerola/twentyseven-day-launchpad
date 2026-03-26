@@ -54,6 +54,9 @@ const KnowledgeAdmin = () => {
   const [refChannelLoading, setRefChannelLoading] = useState(false);
   const [refChannelBatch, setRefChannelBatch] = useState(0);
   const [refChannelReport, setRefChannelReport] = useState<any>(null);
+  const [classifyLoading, setClassifyLoading] = useState(false);
+  const [classifyReport, setClassifyReport] = useState<any>(null);
+  const [generalCount, setGeneralCount] = useState(0);
 
   const fetchDbCounts = async () => {
     const tables = ['content_dna', 'viral_patterns', 'score_calibration', 'knowledge_embeddings'];
