@@ -1213,6 +1213,22 @@ serve(async (req) => {
         });
         blocks.push(`### 📋 Tarefas:\n` + Object.entries(byColumn).map(([col, items]) => `**${col}**: ${items.join(', ')}`).join('\n'));
       }
+      if (videoPerf.data?.length) {
+        const avgRetention = videoPerf.data.filter((v: any) => v.avg_retention_percent).reduce((s: number, v: any) => s + (v.avg_retention_percent || 0), 0) / Math.max(videoPerf.data.filter((v: any) => v.avg_retention_percent).length, 1);
+        const avgCtr = videoPerf.data.filter((v: any) => v.ctr_percent).reduce((s: number, v: any) => s + (v.ctr_percent || 0), 0) / Math.max(videoPerf.data.filter((v: any) => v.ctr_percent).length, 1);
+        const topByViews = [...videoPerf.data].sort((a: any, b: any) => (b.views_current || 0) - (a.views_current || 0)).slice(0, 5);
+        blocks.push(`### 📈 Performance Real dos Vídeos (${videoPerf.data.length} últimos):\n` +
+          `- Retenção média: ${avgRetention.toFixed(1)}%\n` +
+          `- CTR médio: ${avgCtr.toFixed(1)}%\n` +
+          `- Top vídeos:\n` +
+          topByViews.map((v: any) => `  - "${v.title}" — ${(v.views_current || 0).toLocaleString()} views, ${v.avg_retention_percent || '?'}% retenção, ${v.ctr_percent || '?'}% CTR, hook: ${v.hook_type || '?'}, grade: ${v.performance_grade || '?'}`).join('\n') +
+          `\n- Velocity (views dia 1):\n` +
+          videoPerf.data.filter((v: any) => v.views_day1).slice(0, 5).map((v: any) => `  - "${v.title?.slice(0, 40)}": D1=${v.views_day1}, D3=${v.views_day3 || '?'}, D7=${v.views_day7 || '?'}`).join('\n'));
+      }
+      if (scriptPrefs.data?.length) {
+        blocks.push(`### 🧠 Preferências Aprendidas (cross-projeto):\n` +
+          scriptPrefs.data.map((p: any) => `- **${p.niche}** (${p.total_scripts || 0} roteiros): POV=${p.preferred_pov || '?'}, duração ideal=${p.preferred_duration_min || '?'}min, hooks preferidos=${(p.preferred_hook_styles || []).join(', ') || '?'}, retenção média=${p.avg_retention || '?'}%`).join('\n'));
+      }
       if (blocks.length > 0) {
         userProfileContext = `\n## 👤 PERFIL DO USUÁRIO (USE ESTES DADOS PARA PERSONALIZAR TUDO)\n${blocks.join('\n\n')}`;
       }
