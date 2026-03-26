@@ -2207,6 +2207,71 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_performance: {
+        Row: {
+          camera_angle: string | null
+          coherence_rating: number | null
+          color_grading: string | null
+          created_at: string | null
+          id: string
+          lighting: string | null
+          niche: string | null
+          project_id: string | null
+          prompt_text: string
+          quality_rating: number | null
+          scene_index: number
+          tags: string[] | null
+          updated_at: string | null
+          user_feedback: string | null
+          user_id: string
+          visual_style: string | null
+        }
+        Insert: {
+          camera_angle?: string | null
+          coherence_rating?: number | null
+          color_grading?: string | null
+          created_at?: string | null
+          id?: string
+          lighting?: string | null
+          niche?: string | null
+          project_id?: string | null
+          prompt_text: string
+          quality_rating?: number | null
+          scene_index: number
+          tags?: string[] | null
+          updated_at?: string | null
+          user_feedback?: string | null
+          user_id: string
+          visual_style?: string | null
+        }
+        Update: {
+          camera_angle?: string | null
+          coherence_rating?: number | null
+          color_grading?: string | null
+          created_at?: string | null
+          id?: string
+          lighting?: string | null
+          niche?: string | null
+          project_id?: string | null
+          prompt_text?: string
+          quality_rating?: number | null
+          scene_index?: number
+          tags?: string[] | null
+          updated_at?: string | null
+          user_feedback?: string | null
+          user_id?: string
+          visual_style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_performance_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prompts: {
         Row: {
           ai_model: string | null

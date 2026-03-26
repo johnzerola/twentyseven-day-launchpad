@@ -10,6 +10,21 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback only
 
 // ═══════════════════════════════════════════════════════════════
+// YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
+// ═══════════════════════════════════════════════════════════════
+const YPP_2025_REFINE_DIRECTIVE = `
+🛡️ YPP 2025 — DURANTE A EDIÇÃO, VERIFIQUE E CORRIJA:
+
+1. VALOR HUMANO: Se o texto soa como "resumo de Wikipedia", INJETE opinião, ironia ou análise profunda.
+2. REGRA 30s: Se os primeiros 30s não entregam a PROMESSA do vídeo, REESCREVA para entregar.
+3. TEORIA DO JENGA: Verifique que há uma QUEBRA DE PADRÃO a cada ~50-75 palavras (mudança de tom,
+   pergunta ao espectador, dado chocante, pausa dramática, mudança de perspectiva).
+   Se encontrar trechos de 100+ palavras sem quebra → INSIRA uma.
+4. DIFERENCIAÇÃO: Se o roteiro parece que qualquer IA geraria, ADICIONE insight original,
+   conexão inesperada ou detalhe que só um humano apaixonado pelo tema traria.
+`;
+
+// ═══════════════════════════════════════════════════════════════
 // ANTI-AI-SLOP DETECTOR — Run BEFORE refinement to flag problems
 // ═══════════════════════════════════════════════════════════════
 const SLOP_PATTERNS = [
@@ -318,6 +333,8 @@ ${pastRejectionBlock}
 ⚠️ FORMATO DE SAÍDA:
 RETORNE APENAS o roteiro COMPLETO com suas edições integradas.
 APENAS texto de narração pura. ZERO anotações, ZERO marcações, ZERO comentários. Valores em $.
+
+${YPP_2025_REFINE_DIRECTIVE}
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 

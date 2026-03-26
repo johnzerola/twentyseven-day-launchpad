@@ -13,6 +13,51 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
 
 // ═══════════════════════════════════════════════════════════════
+// YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
+// ═══════════════════════════════════════════════════════════════
+const YPP_2025_DIRECTIVE = `
+🛡️ CONFORMIDADE YPP 2025 — ANTI-DEMONETIZAÇÃO (OBRIGATÓRIO):
+
+O YouTube atualizou severamente as políticas de monetização em 2025. Conteúdo "inautêntico",
+repetitivo ou gerado em massa por IA será BANIDO ou NÃO MONETIZADO. Seu roteiro DEVE:
+
+1. VALOR HUMANO OBRIGATÓRIO — Injete em CADA roteiro:
+   • Opinião FORTE e específica do narrador (não genérica — algo que um humano real defenderia)
+   • Humor natural ou ironia situacional (pelo menos 2-3 momentos)
+   • Análise PROFUNDA que vai além do "resumo da Wikipedia" — conecte fatos a implicações pessoais
+   • Experiência ou perspectiva PESSOAL do narrador (mesmo que ficcional, deve parecer vivida)
+   • NUNCA gere conteúdo que pareça "compilação de fatos" — cada informação deve ser TRANSFORMADA em narrativa
+
+2. REGRA DOS 30 SEGUNDOS (YouTube Data — 70% de retenção no primeiro meio minuto):
+   • A PROMESSA do vídeo deve ser entregue nos primeiros 10-30 segundos
+   • O espectador deve saber EXATAMENTE o que vai ganhar ficando
+   • Hook → Promessa → Mini-prova (dado, cena ou revelação) em ≤30s
+   • Se nos primeiros 30s não há razão IRRESISTÍVEL para ficar, o vídeo MORRE
+
+3. TEORIA DO JENGA — QUEBRAS DE PADRÃO A CADA 20-30 SEGUNDOS:
+   • O cérebro humano "normaliza" qualquer estímulo após ~20s de exposição contínua
+   • A cada 20-30 segundos de narração, insira um MARCADOR DE EDIÇÃO implícito:
+     - Mudança BRUSCA de tom/ritmo na narração
+     - Pergunta DIRETA ao espectador que exige reflexão
+     - Dado CHOCANTE que interrompe o fluxo narrativo
+     - Momento de silêncio/pausa dramática
+     - Mudança de perspectiva (1ª pessoa → 3ª pessoa → direta ao espectador)
+   • Estes marcadores servem como "pontos de zoom/corte" para o editor no CapCut/Premiere
+   • PADRÃO: a cada ~50-75 palavras, deve haver um "ponto de quebra" natural
+
+4. DIFERENCIAÇÃO — O roteiro DEVE ter:
+   • Pelo menos 1 INSIGHT ORIGINAL que o espectador não encontra em outro canal
+   • Conexões INESPERADAS entre o tema e algo aparentemente não relacionado
+   • Uma "voz autoral" que seria RECONHECÍVEL se o espectador ouvisse em outro vídeo
+   • Tratamento do tema que ADICIONA VALOR vs apenas reorganiza informação pública
+
+⚠️ DETECTOR DE CONTEÚDO REPETITIVO (YouTube 2025):
+Se o roteiro parecer que poderia ser gerado por qualquer IA com o mesmo prompt,
+ele será flagado como "conteúdo de baixo esforço" e NÃO será monetizado.
+O TESTE: "Este roteiro tem algo que SOMENTE este narrador/canal poderia dizer?"
+`;
+
+// ═══════════════════════════════════════════════════════════════
 // ANTI-AI-SLOP ENGINE — Escaped YouTube anti-spam penalties
 // ═══════════════════════════════════════════════════════════════
 const ANTI_SLOP_DIRECTIVE = `
@@ -846,6 +891,8 @@ ${referenceBlock}
 ${rejectionLearningsBlock}
 ${skillScoreBlock}
 ${userPrefsBlock}
+
+${YPP_2025_DIRECTIVE}
 
 ${ANTI_SLOP_DIRECTIVE}
 
