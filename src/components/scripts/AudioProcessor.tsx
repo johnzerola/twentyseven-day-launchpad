@@ -101,6 +101,32 @@ export const AudioProcessor = ({
     onReferenceImagesChange?.(current.filter((_, i) => i !== index));
   };
 
+  const pollForResult = async (jobId: string): Promise<any> => {
+    const maxPolls = 120; // 4 minutes max
+    for (let i = 0; i < maxPolls; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      
+      const { data, error } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+        body: { action: 'poll', job_id: jobId },
+      });
+      
+      if (error) throw new Error('Erro ao verificar status');
+      if (!data) continue;
+
+      // Update UI with current step
+      if (data.current_step) {
+        const pct = data.progress || 0;
+        if (pct < 35) setPhase('transcribing');
+        else if (pct < 85) setPhase('generating');
+        else setPhase('analyzing');
+      }
+      
+      if (data.status === 'completed') return data.result_data;
+      if (data.status === 'failed') throw new Error(data.error_message || 'Processamento falhou');
+    }
+    throw new Error('Timeout: processamento demorou demais');
+  };
+
   const generateSyncedScenes = async () => {
     if (!audioFile) { toast.error('Selecione um arquivo de áudio'); return; }
     const cleanScript = getCleanNarration();
@@ -108,7 +134,7 @@ export const AudioProcessor = ({
 
     setPhase('uploading');
     try {
-      // Upload audio to storage instead of sending base64 (avoids memory limit)
+      // Upload audio to storage
       const mimeType = audioFile.type || 'audio/mp3';
       const ext = audioFile.name.split('.').pop() || 'mp3';
       const storagePath = `audio-uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
@@ -124,6 +150,7 @@ export const AudioProcessor = ({
 
       setPhase('transcribing');
 
+      // Start async job
       const { data, error } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
         body: {
           audioUrl,
@@ -139,14 +166,14 @@ export const AudioProcessor = ({
         },
       });
 
-      if (error) {
-        const status = (error as any)?.context?.status;
-        if (status === 504) throw new Error('Tempo limite no processamento do áudio. Tente novamente.');
-        throw error;
-      }
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data?.job_id) throw new Error('Falha ao iniciar processamento');
 
-      const scenes = (Array.isArray(data?.scenes) ? data.scenes : [])
+      // Poll for completion
+      const result = await pollForResult(data.job_id);
+
+      const scenes = (Array.isArray(result?.scenes) ? result.scenes : [])
         .filter((scene: any) => scene && typeof scene.visualPrompt === 'string' && scene.visualPrompt.trim().length > 0)
         .map((scene: any, index: number) => ({
           ...scene,
@@ -166,8 +193,8 @@ export const AudioProcessor = ({
       setPhase('done');
       toast.success(`${scenes.length} cenas sincronizadas com o áudio!`);
 
-      if (data?.metadata?.fallbackUsed) {
-        toast.message('Alguns blocos foram recuperados em modo de segurança para garantir o retorno dos prompts.');
+      if (result?.metadata?.fallbackUsed) {
+        toast.message('Alguns blocos foram recuperados em modo de segurança.');
       }
 
       setTimeout(() => setPhase('idle'), 3000);
@@ -175,8 +202,8 @@ export const AudioProcessor = ({
       setPhase('idle');
       if (err?.message?.includes('402')) toast.error('Créditos insuficientes.');
       else if (err?.message?.includes('429')) toast.error('Rate limit. Tente novamente.');
-      else if (err?.message?.toLowerCase?.().includes('timeout') || err?.message?.includes('Tempo limite')) {
-        toast.error('A geração demorou demais. Tente novamente que agora está otimizado para áudio longo.');
+      else if (err?.message?.toLowerCase?.().includes('timeout')) {
+        toast.error('A geração demorou demais. Tente novamente.');
       }
       else toast.error(err.message || 'Erro ao processar áudio');
     }
