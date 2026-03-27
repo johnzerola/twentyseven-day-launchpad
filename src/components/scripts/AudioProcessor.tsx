@@ -101,32 +101,6 @@ export const AudioProcessor = ({
     onReferenceImagesChange?.(current.filter((_, i) => i !== index));
   };
 
-  const pollForResult = async (jobId: string): Promise<any> => {
-    const maxPolls = 120; // 4 minutes max
-    for (let i = 0; i < maxPolls; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      
-      const { data, error } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
-        body: { action: 'poll', job_id: jobId },
-      });
-      
-      if (error) throw new Error('Erro ao verificar status');
-      if (!data) continue;
-
-      // Update UI with current step
-      if (data.current_step) {
-        const pct = data.progress || 0;
-        if (pct < 35) setPhase('transcribing');
-        else if (pct < 85) setPhase('generating');
-        else setPhase('analyzing');
-      }
-      
-      if (data.status === 'completed') return data.result_data;
-      if (data.status === 'failed') throw new Error(data.error_message || 'Processamento falhou');
-    }
-    throw new Error('Timeout: processamento demorou demais');
-  };
-
   const generateSyncedScenes = async () => {
     if (!audioFile) { toast.error('Selecione um arquivo de áudio'); return; }
     const cleanScript = getCleanNarration();
@@ -148,11 +122,12 @@ export const AudioProcessor = ({
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
       const audioUrl = urlData.publicUrl;
 
+      // STEP 1: Transcribe (returns chunks info)
       setPhase('transcribing');
 
-      // Start async job
-      const { data, error } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+      const { data: startData, error: startError } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
         body: {
+          action: 'start',
           audioUrl,
           audioMimeType: mimeType,
           script: cleanScript,
@@ -166,14 +141,53 @@ export const AudioProcessor = ({
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (!data?.job_id) throw new Error('Falha ao iniciar processamento');
+      if (startError) throw startError;
+      if (startData?.error) throw new Error(startData.error);
+      if (!startData?.job_id) throw new Error('Falha ao iniciar processamento');
 
-      // Poll for completion
-      const result = await pollForResult(data.job_id);
+      const { job_id, totalChunks } = startData;
 
-      const scenes = (Array.isArray(result?.scenes) ? result.scenes : [])
+      // STEP 2: Generate scenes chunk by chunk (each is a lightweight request)
+      setPhase('generating');
+      const allScenes: any[] = [];
+
+      for (let ci = 0; ci < totalChunks; ci++) {
+        const { data: chunkData, error: chunkError } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+          body: { action: 'generate_chunk', job_id, chunk_index: ci },
+        });
+
+        if (chunkError) {
+          console.error(`Chunk ${ci} error:`, chunkError);
+          continue;
+        }
+        if (chunkData?.error) {
+          if (chunkData.error.includes('Créditos')) throw new Error('Créditos insuficientes.');
+          console.error(`Chunk ${ci}:`, chunkData.error);
+          continue;
+        }
+
+        if (chunkData?.scenes) {
+          allScenes.push(...chunkData.scenes);
+        }
+
+        toast.loading(`Gerando cenas... ${ci + 1}/${totalChunks}`, { id: 'chunk-progress' });
+      }
+
+      toast.dismiss('chunk-progress');
+
+      if (allScenes.length === 0) throw new Error('Nenhuma cena válida gerada.');
+
+      // STEP 3: Finalize (post-process, sanitize, fill gaps)
+      setPhase('analyzing');
+
+      const { data: finalData, error: finalError } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+        body: { action: 'finalize', job_id, all_scenes: allScenes },
+      });
+
+      if (finalError) throw finalError;
+      if (finalData?.error) throw new Error(finalData.error);
+
+      const scenes = (Array.isArray(finalData?.scenes) ? finalData.scenes : [])
         .filter((scene: any) => scene && typeof scene.visualPrompt === 'string' && scene.visualPrompt.trim().length > 0)
         .map((scene: any, index: number) => ({
           ...scene,
@@ -182,18 +196,13 @@ export const AudioProcessor = ({
           endTime: Number(scene.endTime) || (Number(scene.startTime) || 0) + 6,
         }));
 
-      if (scenes.length === 0) {
-        throw new Error('Nenhuma cena válida foi retornada. Gere novamente com este mesmo áudio.');
-      }
-
-      setPhase('generating');
-      await new Promise(r => setTimeout(r, 500));
+      if (scenes.length === 0) throw new Error('Nenhuma cena válida foi retornada.');
 
       setSyncedScenes(scenes);
       setPhase('done');
       toast.success(`${scenes.length} cenas sincronizadas com o áudio!`);
 
-      if (result?.metadata?.fallbackUsed) {
+      if (finalData?.metadata?.fallbackUsed) {
         toast.message('Alguns blocos foram recuperados em modo de segurança.');
       }
 
