@@ -1130,7 +1130,8 @@ const Scripts = () => {
                         </div>
                       )}
                     </>
-                  )}
+                   )}
+                  <StepNavButtons currentStep="prompts" onNavigate={setActiveStep} />
                 </motion.div>
               )}
 
