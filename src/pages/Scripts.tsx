@@ -1058,11 +1058,13 @@ const Scripts = () => {
 
                   {/* Custom Style Notes */}
                   <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Descrição do estilo visual (opcional)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">Descrição do estilo visual (opcional)</label>
                     <textarea value={customStyleNotes} onChange={e => setCustomStyleNotes(e.target.value)}
                       placeholder="Descreva seu estilo: Ex: tons escuros, cinematográfico noir, personagens em silhueta, iluminação dramática com sombras..."
-                      className="w-full min-h-[60px] bg-muted/20 border border-border rounded-md p-2 text-xs resize-none" />
+                      className="w-full min-h-[60px] bg-muted/20 border border-border rounded-md p-2 text-sm resize-none" />
                   </div>
+
+                  <StepNavButtons currentStep="style" onNavigate={setActiveStep} />
                 </motion.div>
               )}
 
