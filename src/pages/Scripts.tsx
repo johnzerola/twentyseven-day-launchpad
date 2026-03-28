@@ -29,6 +29,8 @@ import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 import { ViralThemeWizard } from '@/components/scripts/ViralThemeWizard';
 import { ThumbnailGenerator } from '@/components/scripts/ThumbnailGenerator';
 import { ScriptPerformanceTracker } from '@/components/dashboard/ScriptPerformanceTracker';
+import { PipelineStepper, type PipelineStep } from '@/components/scripts/PipelineStepper';
+import { StepNavButtons } from '@/components/scripts/StepNavButtons';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
