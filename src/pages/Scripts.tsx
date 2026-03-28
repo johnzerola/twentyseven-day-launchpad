@@ -915,14 +915,9 @@ const Scripts = () => {
               {activeStep === 'style' && script && (
                 <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm flex items-center gap-2"><Film className="w-4 h-4 text-accent" /> Estilo Visual do Vídeo</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">Escolha um estilo padrão ou use o estilo personalizado do seu canal</p>
-                    </div>
-                    <Button size="sm" onClick={() => setActiveStep('characters')} className="gap-1 h-7 text-xs">
-                      Próximo <Users className="w-3 h-3" />
-                    </Button>
+                  <div>
+                    <h3 className="font-semibold text-base flex items-center gap-2"><Film className="w-5 h-5 text-accent" /> Estilo Visual do Vídeo</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Escolha um estilo padrão ou use o estilo personalizado do seu canal</p>
                   </div>
 
                   {/* Channel Visual Profile Detected */}
