@@ -690,12 +690,12 @@ const Scripts = () => {
             {intelligenceBriefing && (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <button onClick={() => setShowIntelligence(!showIntelligence)}
-                  className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                  className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-primary" />
-                    <span className="font-semibold text-xs">📊 Análise de Inteligência</span>
-                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
-                      {intelligenceBriefing.metadata?.channelsAnalyzed || 0} canais + {intelligenceBriefing.metadata?.youtubeVideosFound || 0} vídeos
+                    <span className="font-semibold text-sm">📊 Análise de Inteligência</span>
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
+                      {intelligenceBriefing.metadata?.channelsAnalyzed || 0} canais
                     </Badge>
                   </div>
                   {showIntelligence ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -703,35 +703,35 @@ const Scripts = () => {
                 <AnimatePresence>
                   {showIntelligence && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                      <div className="px-3 pb-3 space-y-3 border-t border-border/30 pt-2 max-h-[400px] overflow-y-auto">
+                      <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3 max-h-[400px] overflow-y-auto">
                         {intelligenceBriefing.briefing?.competitive_analysis && (
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Análise Competitiva</p>
-                            <div className="grid grid-cols-2 gap-1.5">
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase">Análise Competitiva</p>
+                            <div className="grid grid-cols-2 gap-2">
                               {(intelligenceBriefing.briefing.competitive_analysis.what_works || []).slice(0, 3).map((w: string, i: number) => (
-                                <div key={i} className="bg-primary/5 rounded px-2 py-1 text-[10px]">✅ {w}</div>
+                                <div key={i} className="bg-primary/5 rounded-lg px-3 py-2 text-xs">✅ {w}</div>
                               ))}
                               {(intelligenceBriefing.briefing.competitive_analysis.what_to_avoid || []).slice(0, 2).map((w: string, i: number) => (
-                                <div key={i} className="bg-destructive/5 rounded px-2 py-1 text-[10px]">❌ {w}</div>
+                                <div key={i} className="bg-destructive/5 rounded-lg px-3 py-2 text-xs">❌ {w}</div>
                               ))}
                             </div>
                           </div>
                         )}
                         {intelligenceBriefing.briefing?.recommended_hooks?.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Hooks Recomendados</p>
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase">Hooks Recomendados</p>
                             {intelligenceBriefing.briefing.recommended_hooks.slice(0, 3).map((h: any, i: number) => (
-                              <div key={i} className="bg-muted/30 rounded-lg p-2 text-[10px]">
+                              <div key={i} className="bg-muted/30 rounded-lg p-3 text-xs">
                                 <p className="font-medium">🎣 "{h.hook_text}"</p>
-                                <p className="text-muted-foreground">{h.why_it_works}</p>
+                                <p className="text-muted-foreground mt-1">{h.why_it_works}</p>
                               </div>
                             ))}
                           </div>
                         )}
                         {intelligenceBriefing.briefing?.visual_blueprint && (
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Blueprint Visual</p>
-                            <div className="bg-muted/30 rounded-lg p-2 text-[10px] space-y-0.5">
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase">Blueprint Visual</p>
+                            <div className="bg-muted/30 rounded-lg p-3 text-xs space-y-1">
                               <p>🎨 Estilo: {intelligenceBriefing.briefing.visual_blueprint.recommended_style}</p>
                               <p>💡 Iluminação: {intelligenceBriefing.briefing.visual_blueprint.lighting_mood}</p>
                               <p>🎬 Hook Visual: {intelligenceBriefing.briefing.visual_blueprint.hook_visual_suggestion}</p>
@@ -739,11 +739,11 @@ const Scripts = () => {
                           </div>
                         )}
                         {intelligenceBriefing.metadata?.topChannelNames?.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Canais Referência</p>
-                            <div className="flex flex-wrap gap-1">
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase">Canais Referência</p>
+                            <div className="flex flex-wrap gap-1.5">
                               {intelligenceBriefing.metadata.topChannelNames.map((name: string, i: number) => (
-                                <Badge key={i} variant="outline" className="text-[9px]">{name}</Badge>
+                                <Badge key={i} variant="outline" className="text-xs">{name}</Badge>
                               ))}
                             </div>
                           </div>
@@ -758,24 +758,24 @@ const Scripts = () => {
             {/* Templates Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <button onClick={() => setShowTemplates(!showTemplates)}
-                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-2">
                   <LayoutTemplate className="w-4 h-4 text-primary" />
-                  <span className="font-semibold text-xs">Templates de Roteiro</span>
-                  <Badge variant="secondary" className="text-[10px]">{templates.length}</Badge>
+                  <span className="font-semibold text-sm">Templates de Roteiro</span>
+                  <Badge variant="secondary" className="text-xs">{templates.length}</Badge>
                 </div>
                 {showTemplates ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </button>
               {showTemplates && (
-                <div className="px-3 pb-3 space-y-1.5 border-t border-border/30 pt-2 max-h-[300px] overflow-y-auto">
+                <div className="px-4 pb-4 space-y-2 border-t border-border/30 pt-3 max-h-[300px] overflow-y-auto">
                   {loadingTemplates ? (
                     <div className="flex items-center justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
                   ) : templates.map((tmpl: any) => (
                     <button key={tmpl.id} onClick={() => applyTemplate(tmpl)}
-                      className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                      className="w-full text-left p-3 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all group">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-xs">{tmpl.title}</span>
-                        <ArrowRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="font-medium text-sm">{tmpl.title}</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </button>
                   ))}
@@ -808,12 +808,12 @@ const Scripts = () => {
             {/* ═══ 1-Click Short Templates ═══ */}
             {videoType === 'short' && (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
                     <Zap className="w-4 h-4 text-chart-4" />
-                    <span className="font-semibold text-xs">1-Click Short — Templates por Nicho</span>
+                    <span className="font-semibold text-sm">1-Click Short — Templates por Nicho</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       { emoji: '🐾', name: 'Animal Survival', topic: 'Animal selvagem fugindo de predador em perseguição intensa', niche: 'animal_survival', style: 'dopaminérgico', vStyle: 'animal_chase', dur: '25' },
                       { emoji: '👻', name: 'Horror/Terror', topic: 'Lugar abandonado com eventos inexplicáveis e final chocante', niche: 'horror', style: 'narração', vStyle: 'dark', dur: '35' },
@@ -829,11 +829,11 @@ const Scripts = () => {
                         setVideoStyle(t.vStyle); setDuration(t.dur);
                         toast.success(`Template "${t.name}" aplicado! Clique "Gerar Roteiro"`);
                       }}
-                        className="flex items-center gap-2 p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all text-left">
-                        <span className="text-lg">{t.emoji}</span>
+                        className="flex items-center gap-2.5 p-3 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all text-left">
+                        <span className="text-xl">{t.emoji}</span>
                         <div>
-                          <p className="text-[10px] font-medium">{t.name}</p>
-                          <p className="text-[9px] text-muted-foreground">{t.dur}s • {t.style}</p>
+                          <p className="text-xs font-medium">{t.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{t.dur}s • {t.style}</p>
                         </div>
                       </button>
                     ))}
@@ -845,57 +845,57 @@ const Scripts = () => {
             {/* Viral Database Panel */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <button onClick={() => setShowViralPanel(!showViralPanel)}
-                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-orange-400" />
-                  <span className="font-semibold text-xs">Viral Database</span>
-                  {viralCount > 0 && <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">{viralCount}</Badge>}
+                  <Flame className="w-4 h-4 text-destructive" />
+                  <span className="font-semibold text-sm">Viral Database</span>
+                  {viralCount > 0 && <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">{viralCount}</Badge>}
                 </div>
                 {showViralPanel ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </button>
               {showViralPanel && (
-                <div className="px-3 pb-3 space-y-3 border-t border-border/30 pt-2">
+                <div className="px-4 pb-4 space-y-4 border-t border-border/30 pt-3">
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[10px] font-medium flex items-center gap-1"><Zap className="w-3 h-3 text-primary" /> Hook (5s)</label>
-                      {selectedHook && <button onClick={() => setSelectedHook(null)} className="text-[9px] text-muted-foreground hover:text-destructive">✕</button>}
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-primary" /> Hook (5s)</label>
+                      {selectedHook && <button onClick={() => setSelectedHook(null)} className="text-xs text-muted-foreground hover:text-destructive">✕ Limpar</button>}
                     </div>
-                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                       {VIRAL_HOOKS.slice(0, 8).map(h => (
                         <button key={h.id} onClick={() => setSelectedHook(selectedHook === h.id ? null : h.id)}
-                          className={`w-full text-left p-1.5 rounded text-[10px] border transition-all ${
+                          className={`w-full text-left p-2.5 rounded-lg text-xs border transition-all ${
                             selectedHook === h.id ? 'border-primary bg-primary/10 text-primary' : 'border-border/30 hover:border-primary/30 text-muted-foreground'
                           }`}>
-                          <span className="line-clamp-1">{h.text}</span>
+                          <span className="line-clamp-2">{h.text}</span>
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[10px] font-medium flex items-center gap-1"><Target className="w-3 h-3 text-primary" /> CTA</label>
-                      {selectedCTA && <button onClick={() => setSelectedCTA(null)} className="text-[9px] text-muted-foreground hover:text-destructive">✕</button>}
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-primary" /> CTA</label>
+                      {selectedCTA && <button onClick={() => setSelectedCTA(null)} className="text-xs text-muted-foreground hover:text-destructive">✕ Limpar</button>}
                     </div>
-                    <div className="space-y-1 max-h-[100px] overflow-y-auto">
+                    <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
                       {VIRAL_CTAS.slice(0, 6).map(c => (
                         <button key={c.id} onClick={() => setSelectedCTA(selectedCTA === c.id ? null : c.id)}
-                          className={`w-full text-left p-1.5 rounded text-[10px] border transition-all ${
+                          className={`w-full text-left p-2.5 rounded-lg text-xs border transition-all ${
                             selectedCTA === c.id ? 'border-primary bg-primary/10 text-primary' : 'border-border/30 hover:border-primary/30 text-muted-foreground'
                           }`}>
-                          <span className="line-clamp-1">{c.text}</span>
+                          <span className="line-clamp-2">{c.text}</span>
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[10px] font-medium flex items-center gap-1"><BookOpen className="w-3 h-3 text-primary" /> Estrutura</label>
-                      {selectedStructure && <button onClick={() => setSelectedStructure(null)} className="text-[9px] text-muted-foreground hover:text-destructive">✕</button>}
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-primary" /> Estrutura</label>
+                      {selectedStructure && <button onClick={() => setSelectedStructure(null)} className="text-xs text-muted-foreground hover:text-destructive">✕ Limpar</button>}
                     </div>
-                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                       {STORY_STRUCTURES.map(s => (
                         <button key={s.id} onClick={() => setSelectedStructure(selectedStructure === s.id ? null : s.id)}
-                          className={`w-full text-left p-1.5 rounded text-[10px] border transition-all ${
+                          className={`w-full text-left p-2.5 rounded-lg text-xs border transition-all ${
                             selectedStructure === s.id ? 'border-primary bg-primary/10 text-primary' : 'border-border/30 hover:border-primary/30 text-muted-foreground'
                           }`}>
                           <span className="font-medium">{s.name}</span>
