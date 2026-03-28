@@ -1139,16 +1139,15 @@ const Scripts = () => {
               {activeStep === 'titles' && script && (
                 <motion.div key="titles" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-400" /> Títulos Virais & SEO</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">Títulos otimizados com base no roteiro, cenas e estilo do vídeo</p>
-                    </div>
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-base flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" /> Títulos Virais & SEO</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Títulos otimizados com base no roteiro, cenas e estilo do vídeo</p>
                   </div>
                   <TitleSEOStep
                     topic={topic} niche={niche} language={language}
                     script={script} videoStyle={videoStyle} syncedScenes={syncedScenes}
                   />
+                  <StepNavButtons currentStep="titles" onNavigate={setActiveStep} />
                 </motion.div>
               )}
 
