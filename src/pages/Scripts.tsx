@@ -598,13 +598,13 @@ const Scripts = () => {
 
   const viralCount = [selectedHook, selectedCTA, selectedStructure].filter(Boolean).length;
 
-  const pipelineSteps = [
-    { key: 'script', label: '1. Roteiro', icon: FileText, done: !!script },
-    { key: 'style', label: '2. Estilo Visual', icon: Film, done: !!videoStyle && activeStep !== 'script' },
-    { key: 'characters', label: '3. Personagens', icon: Users, done: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles' },
-    { key: 'prompts', label: '4. Cenas', icon: Image, done: syncedScenes.length > 0 },
-    { key: 'titles', label: '5. Títulos & SEO', icon: Sparkles, done: false },
-  ] as const;
+  const completedSteps: Record<PipelineStep, boolean> = {
+    script: !!script,
+    style: !!videoStyle && (activeStep !== 'script'),
+    characters: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles',
+    prompts: syncedScenes.length > 0,
+    titles: false,
+  };
 
   return (
     <DashboardLayout>
@@ -617,7 +617,7 @@ const Scripts = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold font-['Space_Grotesk']">{t('dash.scripts')}</h1>
-              <p className="text-sm text-muted-foreground">Roteiro → Estilo → Personagens → Prompts Sincronizados</p>
+              <p className="text-sm text-muted-foreground">Pipeline completo: Roteiro → Estilo → Personagens → Cenas → SEO</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -632,16 +632,19 @@ const Scripts = () => {
 
         {/* History */}
         {showHistory && scriptsPag.items.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-4 space-y-1.5">
-            <div className="max-h-48 overflow-y-auto space-y-1.5">
+          <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+              <History className="w-4 h-4 text-primary" /> Roteiros Salvos
+            </h3>
+            <div className="max-h-60 overflow-y-auto space-y-1.5">
               {scriptsPag.items.map((s: any) => (
-                <div key={s.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5">
+                <div key={s.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-3 hover:bg-muted/50 transition-colors">
                   <button onClick={() => { setScript(s.script_content); setTopic(s.topic); setShowHistory(false); setActiveStep('style'); }}
-                    className="text-sm text-left flex-1 truncate hover:text-primary transition-colors">
-                    {s.topic} ({s.duration}min)
+                    className="text-sm text-left flex-1 truncate hover:text-primary transition-colors font-medium">
+                    {s.topic} <span className="text-muted-foreground font-normal">({s.duration}min)</span>
                   </button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteScript(s.id)}>
-                    <Trash2 className="w-3 h-3" />
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive shrink-0" onClick={() => deleteScript(s.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               ))}
@@ -658,31 +661,13 @@ const Scripts = () => {
           </div>
         )}
 
-        {/* Pipeline Progress — always visible */}
-        <div className="bg-card border border-border rounded-xl p-2 space-y-2">
-          <div className="flex items-center gap-1">
-            {pipelineSteps.map((step, i) => (
-              <button key={step.key} onClick={() => script ? setActiveStep(step.key as any) : null}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                  !script ? 'text-muted-foreground/40 cursor-not-allowed'
-                  : activeStep === step.key ? 'bg-primary text-primary-foreground'
-                    : step.done ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/30'
-                }`}>
-                <step.icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{step.label}</span>
-                {step.done && activeStep !== step.key && <Check className="w-3 h-3" />}
-              </button>
-            ))}
-          </div>
-          {script && (
-            <div className="flex items-center gap-2 px-2">
-              <Progress value={(pipelineSteps.filter(s => s.done).length / pipelineSteps.length) * 100} className="h-1.5 flex-1" />
-              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                {pipelineSteps.filter(s => s.done).length}/{pipelineSteps.length} — Faltam {pipelineSteps.filter(s => !s.done).length} passos
-              </span>
-            </div>
-          )}
-        </div>
+        {/* Pipeline Stepper — sticky navigation */}
+        <PipelineStepper
+          activeStep={activeStep}
+          onStepClick={(step) => script ? setActiveStep(step) : null}
+          hasScript={!!script}
+          completedSteps={completedSteps}
+        />
 
         <div className="grid lg:grid-cols-3 gap-4">
           {/* Left: Config + Panels */}
