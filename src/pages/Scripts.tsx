@@ -72,7 +72,9 @@ const Scripts = () => {
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
 
   // Pipeline
-  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts' | 'titles'>('script');
+  const [activeStep, setActiveStep] = useState<PipelineStep>('script');
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
+  const [generatedAudioBlob, setGeneratedAudioBlob] = useState<Blob | null>(null);
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
