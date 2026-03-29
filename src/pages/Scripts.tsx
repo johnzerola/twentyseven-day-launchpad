@@ -1196,16 +1196,18 @@ const Scripts = () => {
                 <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
                   Preencha o tópico, nicho e estilo ao lado, depois clique em "Gerar Roteiro" para começar o pipeline de produção.
                 </p>
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70 flex-wrap">
                   <Badge variant="outline" className="text-[10px]">1. Roteiro</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">2. Estilo</Badge>
+                  <Badge variant="outline" className="text-[10px]">2. Voz</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">3. Personagens</Badge>
+                  <Badge variant="outline" className="text-[10px]">3. Estilo</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">4. Cenas</Badge>
+                  <Badge variant="outline" className="text-[10px]">4. Personagens</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">5. SEO</Badge>
+                  <Badge variant="outline" className="text-[10px]">5. Cenas</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">6. SEO</Badge>
                 </div>
               </div>
             )}
