@@ -25,6 +25,7 @@ import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
+import { VoiceGeneratorStep } from '@/components/scripts/VoiceGeneratorStep';
 import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 import { ViralThemeWizard } from '@/components/scripts/ViralThemeWizard';
 import { ThumbnailGenerator } from '@/components/scripts/ThumbnailGenerator';
@@ -72,7 +73,9 @@ const Scripts = () => {
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
 
   // Pipeline
-  const [activeStep, setActiveStep] = useState<'script' | 'style' | 'characters' | 'prompts' | 'titles'>('script');
+  const [activeStep, setActiveStep] = useState<PipelineStep>('script');
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
+  const [generatedAudioBlob, setGeneratedAudioBlob] = useState<Blob | null>(null);
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -600,7 +603,8 @@ const Scripts = () => {
 
   const completedSteps: Record<PipelineStep, boolean> = {
     script: !!script,
-    style: !!videoStyle && (activeStep !== 'script'),
+    voice: !!generatedAudioUrl || activeStep === 'style' || activeStep === 'characters' || activeStep === 'prompts' || activeStep === 'titles',
+    style: !!videoStyle && (activeStep !== 'script' && activeStep !== 'voice'),
     characters: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles',
     prompts: syncedScenes.length > 0,
     titles: false,
@@ -911,7 +915,21 @@ const Scripts = () => {
           {/* Right: Content Area */}
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence mode="wait">
-              {/* Step 2: Video Style */}
+              {/* Step 2: Voice / Narration */}
+              {activeStep === 'voice' && script && (
+                <VoiceGeneratorStep
+                  script={script}
+                  language={language}
+                  onAudioGenerated={(blob, url) => {
+                    setGeneratedAudioBlob(blob);
+                    setGeneratedAudioUrl(url);
+                  }}
+                  onNavigate={setActiveStep}
+                  existingAudioUrl={generatedAudioUrl}
+                />
+              )}
+
+              {/* Step 3: Video Style */}
               {activeStep === 'style' && script && (
                 <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -1178,16 +1196,18 @@ const Scripts = () => {
                 <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
                   Preencha o tópico, nicho e estilo ao lado, depois clique em "Gerar Roteiro" para começar o pipeline de produção.
                 </p>
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70 flex-wrap">
                   <Badge variant="outline" className="text-[10px]">1. Roteiro</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">2. Estilo</Badge>
+                  <Badge variant="outline" className="text-[10px]">2. Voz</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">3. Personagens</Badge>
+                  <Badge variant="outline" className="text-[10px]">3. Estilo</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">4. Cenas</Badge>
+                  <Badge variant="outline" className="text-[10px]">4. Personagens</Badge>
                   <ArrowRight className="w-3 h-3" />
-                  <Badge variant="outline" className="text-[10px]">5. SEO</Badge>
+                  <Badge variant="outline" className="text-[10px]">5. Cenas</Badge>
+                  <ArrowRight className="w-3 h-3" />
+                  <Badge variant="outline" className="text-[10px]">6. SEO</Badge>
                 </div>
               </div>
             )}
