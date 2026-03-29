@@ -25,6 +25,7 @@ import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
+import { VoiceGeneratorStep } from '@/components/scripts/VoiceGeneratorStep';
 import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 import { ViralThemeWizard } from '@/components/scripts/ViralThemeWizard';
 import { ThumbnailGenerator } from '@/components/scripts/ThumbnailGenerator';
