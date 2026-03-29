@@ -915,7 +915,21 @@ const Scripts = () => {
           {/* Right: Content Area */}
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence mode="wait">
-              {/* Step 2: Video Style */}
+              {/* Step 2: Voice / Narration */}
+              {activeStep === 'voice' && script && (
+                <VoiceGeneratorStep
+                  script={script}
+                  language={language}
+                  onAudioGenerated={(blob, url) => {
+                    setGeneratedAudioBlob(blob);
+                    setGeneratedAudioUrl(url);
+                  }}
+                  onNavigate={setActiveStep}
+                  existingAudioUrl={generatedAudioUrl}
+                />
+              )}
+
+              {/* Step 3: Video Style */}
               {activeStep === 'style' && script && (
                 <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5 space-y-4">
