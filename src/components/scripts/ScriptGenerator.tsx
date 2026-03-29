@@ -985,9 +985,9 @@ export const ScriptGenerator = ({
                         setPasteMode(null);
                         setWizardStep(3);
                         setDualScore({ approved: true, combinedScore: 0, gpt_score: 0, gemini_score: 0, gpt_details: null, gemini_details: null, strengths: [], weaknesses: [], improvements: [] });
-                        setActiveStep('style');
+                        setActiveStep('voice');
                         onScriptGenerated?.();
-                        toast.success('Roteiro aceito! Configure o estilo visual e imagens de referência.');
+                        toast.success('Roteiro aceito! Agora gere a narração com IA.');
                       }}>
                         <Film className="w-4 h-4 text-accent shrink-0" />
                         <div className="text-left">
