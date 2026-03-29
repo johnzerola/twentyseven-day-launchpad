@@ -3,14 +3,15 @@ import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight } from 'luc
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-export type PipelineStep = 'script' | 'style' | 'characters' | 'prompts' | 'titles';
+export type PipelineStep = 'script' | 'voice' | 'style' | 'characters' | 'prompts' | 'titles';
 
 const STEPS: { key: PipelineStep; label: string; shortLabel: string; icon: any; desc: string }[] = [
   { key: 'script', label: 'Roteiro', shortLabel: '1', icon: FileText, desc: 'Gere o roteiro com IA' },
-  { key: 'style', label: 'Estilo Visual', shortLabel: '2', icon: Film, desc: 'Escolha a identidade visual' },
-  { key: 'characters', label: 'Personagens', shortLabel: '3', icon: Users, desc: 'Defina personagens visuais' },
-  { key: 'prompts', label: 'Cenas', shortLabel: '4', icon: Image, desc: 'Prompts visuais sincronizados' },
-  { key: 'titles', label: 'Títulos & SEO', shortLabel: '5', icon: Sparkles, desc: 'Otimização para YouTube' },
+  { key: 'voice', label: 'Voz', shortLabel: '2', icon: Film, desc: 'Gere a narração com IA' },
+  { key: 'style', label: 'Estilo Visual', shortLabel: '3', icon: Film, desc: 'Escolha a identidade visual' },
+  { key: 'characters', label: 'Personagens', shortLabel: '4', icon: Users, desc: 'Defina personagens visuais' },
+  { key: 'prompts', label: 'Cenas', shortLabel: '5', icon: Image, desc: 'Prompts visuais sincronizados' },
+  { key: 'titles', label: 'Títulos & SEO', shortLabel: '6', icon: Sparkles, desc: 'Otimização para YouTube' },
 ];
 
 interface PipelineStepperProps {
