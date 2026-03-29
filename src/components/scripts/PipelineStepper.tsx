@@ -7,7 +7,7 @@ export type PipelineStep = 'script' | 'voice' | 'style' | 'characters' | 'prompt
 
 const STEPS: { key: PipelineStep; label: string; shortLabel: string; icon: any; desc: string }[] = [
   { key: 'script', label: 'Roteiro', shortLabel: '1', icon: FileText, desc: 'Gere o roteiro com IA' },
-  { key: 'voice', label: 'Voz', shortLabel: '2', icon: Film, desc: 'Gere a narração com IA' },
+  { key: 'voice', label: 'Voz', shortLabel: '2', icon: Mic, desc: 'Gere a narração com IA' },
   { key: 'style', label: 'Estilo Visual', shortLabel: '3', icon: Film, desc: 'Escolha a identidade visual' },
   { key: 'characters', label: 'Personagens', shortLabel: '4', icon: Users, desc: 'Defina personagens visuais' },
   { key: 'prompts', label: 'Cenas', shortLabel: '5', icon: Image, desc: 'Prompts visuais sincronizados' },
