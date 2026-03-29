@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight } from 'lucide-react';
+import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 

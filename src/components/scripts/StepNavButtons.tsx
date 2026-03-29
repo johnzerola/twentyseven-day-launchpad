@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { PipelineStep } from './PipelineStepper';
 
-const STEP_ORDER: PipelineStep[] = ['script', 'style', 'characters', 'prompts', 'titles'];
+const STEP_ORDER: PipelineStep[] = ['script', 'voice', 'style', 'characters', 'prompts', 'titles'];
 
 const STEP_LABELS: Record<PipelineStep, string> = {
   script: 'Roteiro',
+  voice: 'Voz / Narração',
   style: 'Estilo Visual',
   characters: 'Personagens',
   prompts: 'Cenas',
