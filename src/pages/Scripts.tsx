@@ -602,7 +602,8 @@ const Scripts = () => {
 
   const completedSteps: Record<PipelineStep, boolean> = {
     script: !!script,
-    style: !!videoStyle && (activeStep !== 'script'),
+    voice: !!generatedAudioUrl || activeStep === 'style' || activeStep === 'characters' || activeStep === 'prompts' || activeStep === 'titles',
+    style: !!videoStyle && (activeStep !== 'script' && activeStep !== 'voice'),
     characters: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles',
     prompts: syncedScenes.length > 0,
     titles: false,
