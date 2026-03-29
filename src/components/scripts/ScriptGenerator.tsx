@@ -1312,8 +1312,8 @@ export const ScriptGenerator = ({
                     <Button variant="ghost" size="sm" onClick={resetWizard} className="gap-1 text-xs">
                       <RotateCcw className="w-3 h-3" /> Novo roteiro
                     </Button>
-                    <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-2 text-xs">
-                      Próxima Etapa: Estilo Visual <Film className="w-4 h-4" />
+                    <Button size="sm" variant="default" onClick={() => setActiveStep('voice')} className="gap-2 text-xs">
+                      Próxima Etapa: Gerar Voz 🎙️ <Mic className="w-4 h-4" />
                     </Button>
                   </>
                 ) : (
