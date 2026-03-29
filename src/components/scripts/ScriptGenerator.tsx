@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { getAuthHeaders } from '@/lib/auth-fetch';
-import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle, RefreshCw, Smartphone, Monitor, Lightbulb, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Sparkles, Copy, Check, Save, Edit3, Eye, ClipboardPaste, Loader2, Zap, Film, Brain, Wand2, Shield, CheckCircle2, ArrowRight, ArrowLeft, RotateCcw, AlertTriangle, RefreshCw, Smartphone, Monitor, Lightbulb, Trash2, ChevronDown, ChevronUp, Mic } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +62,7 @@ interface ScriptGeneratorProps {
   setLoading: (v: boolean) => void;
   scorecard: { hook: number; retention: number; emotion: number; flow: number; payoff: number } | null;
   setScorecard: (v: any) => void;
-  setActiveStep: (v: 'script' | 'style' | 'characters' | 'prompts' | 'titles') => void;
+  setActiveStep: (v: 'script' | 'voice' | 'style' | 'characters' | 'prompts' | 'titles') => void;
   getViralContext: () => string;
   getOrCreateProject: () => Promise<string>;
   intelligenceBriefing: any;
@@ -985,9 +985,9 @@ export const ScriptGenerator = ({
                         setPasteMode(null);
                         setWizardStep(3);
                         setDualScore({ approved: true, combinedScore: 0, gpt_score: 0, gemini_score: 0, gpt_details: null, gemini_details: null, strengths: [], weaknesses: [], improvements: [] });
-                        setActiveStep('style');
+                        setActiveStep('voice');
                         onScriptGenerated?.();
-                        toast.success('Roteiro aceito! Configure o estilo visual e imagens de referência.');
+                        toast.success('Roteiro aceito! Agora gere a narração com IA.');
                       }}>
                         <Film className="w-4 h-4 text-accent shrink-0" />
                         <div className="text-left">
@@ -1312,8 +1312,8 @@ export const ScriptGenerator = ({
                     <Button variant="ghost" size="sm" onClick={resetWizard} className="gap-1 text-xs">
                       <RotateCcw className="w-3 h-3" /> Novo roteiro
                     </Button>
-                    <Button size="sm" variant="default" onClick={() => setActiveStep('style')} className="gap-2 text-xs">
-                      Próxima Etapa: Estilo Visual <Film className="w-4 h-4" />
+                    <Button size="sm" variant="default" onClick={() => setActiveStep('voice')} className="gap-2 text-xs">
+                      Próxima Etapa: Gerar Voz 🎙️ <Mic className="w-4 h-4" />
                     </Button>
                   </>
                 ) : (
