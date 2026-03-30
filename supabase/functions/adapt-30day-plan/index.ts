@@ -30,7 +30,15 @@ serve(async (req) => {
     } else {
       const { data, error } = await sb.from("monetization_30day_plans")
         .select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).single();
-      if (error || !data) throw new Error("No plan found for user");
+      if (error || !data) {
+        return new Response(JSON.stringify({ 
+          error: "no_plan", 
+          message: "Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker." 
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       plan = data;
     }
 
