@@ -299,6 +299,10 @@ export const DailyPlanner = () => {
       });
 
       if (error) throw error;
+      if (result?.error === 'no_plan') {
+        toast.info('Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+        return;
+      }
       if (result?.success) {
         const todayKey = getTodayKey();
         setAdaptationData(result);
@@ -328,7 +332,7 @@ export const DailyPlanner = () => {
       }
     } catch (e: any) {
       console.error('Adaptation error:', e);
-      toast.error('Sem plano de 30 dias ativo para adaptar');
+      toast.error('Erro ao adaptar plano. Tente novamente.');
     } finally {
       setAdapting(false);
     }
