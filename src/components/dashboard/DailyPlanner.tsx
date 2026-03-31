@@ -299,11 +299,20 @@ export const DailyPlanner = () => {
         body: { userId: session.user.id },
       });
 
-      if (error) throw error;
+      if (error) {
+        const errorPayload = await getEdgeFunctionErrorPayload(error);
+        if (errorPayload?.error === 'no_plan') {
+          toast.info(errorPayload.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+          return;
+        }
+        throw error;
+      }
+
       if (result?.error === 'no_plan') {
-        toast.info('Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+        toast.info(result.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
         return;
       }
+
       if (result?.success) {
         const todayKey = getTodayKey();
         setAdaptationData(result);
