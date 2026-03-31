@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { getEdgeFunctionErrorPayload } from '@/lib/edge-function-errors';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { 

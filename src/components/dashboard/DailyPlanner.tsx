@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { getEdgeFunctionErrorPayload } from '@/lib/edge-function-errors';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
