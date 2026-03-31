@@ -33,7 +33,7 @@ const PipelineStepper = memo(({ activeStep, onStepClick, hasScript, completedSte
         {STEPS.map((step, i) => {
           const isActive = activeStep === step.key;
           const isDone = completedSteps[step.key];
-          const isClickable = hasScript || step.key === 'script';
+          const isClickable = true;
           const Icon = step.icon;
 
           return (
