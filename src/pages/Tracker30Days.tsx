@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { getEdgeFunctionErrorPayload } from '@/lib/edge-function-errors';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -289,7 +290,15 @@ export default function Tracker30Days() {
       const { data, error } = await supabase.functions.invoke('adapt-30day-plan', {
         body: { planId: plan.id },
       });
-      if (error) throw error;
+
+      if (error) {
+        const errorPayload = await getEdgeFunctionErrorPayload(error);
+        if (errorPayload?.error === 'no_plan') {
+          toast.info(errorPayload.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+          return;
+        }
+        throw error;
+      }
       
       if (data?.adaptation) {
         const a = data.adaptation;

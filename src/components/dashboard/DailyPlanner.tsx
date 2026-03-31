@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { getEdgeFunctionErrorPayload } from '@/lib/edge-function-errors';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -298,11 +299,20 @@ export const DailyPlanner = () => {
         body: { userId: session.user.id },
       });
 
-      if (error) throw error;
+      if (error) {
+        const errorPayload = await getEdgeFunctionErrorPayload(error);
+        if (errorPayload?.error === 'no_plan') {
+          toast.info(errorPayload.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+          return;
+        }
+        throw error;
+      }
+
       if (result?.error === 'no_plan') {
-        toast.info('Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+        toast.info(result.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
         return;
       }
+
       if (result?.success) {
         const todayKey = getTodayKey();
         setAdaptationData(result);
