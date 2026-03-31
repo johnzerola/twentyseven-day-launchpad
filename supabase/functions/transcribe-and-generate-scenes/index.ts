@@ -45,52 +45,129 @@ serve(async (req) => {
 
       const cleanScript = (script || "").slice(0, 30000);
       const resolvedMime = audioMimeType || "audio/mp3";
+      const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
       const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
-      // Transcribe
+      // Transcribe — Strategy: ElevenLabs STT (best, handles any size) → Gemini (small files) → script fallback
       let transcribeData: any = null;
 
-      if (GOOGLE_AI_KEY && audioUrl) {
+      // ── METHOD 1: ElevenLabs Scribe v2 (preferred — real word-level timestamps) ──
+      if (ELEVENLABS_API_KEY && audioUrl) {
         try {
-          console.log("Downloading audio for transcription...");
-          // Download audio and convert to base64 (fileUri only works with Google Files API URIs)
+          console.log("Downloading audio for ElevenLabs STT...");
+          const audioFetchCtrl = new AbortController();
+          const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 60000);
+          const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
+          clearTimeout(audioTimeout);
+          if (!audioResp.ok) throw new Error(`Failed to download audio: ${audioResp.status}`);
+
+          const audioBlob = await audioResp.blob();
+          console.log(`Audio downloaded: ${(audioBlob.size / 1024 / 1024).toFixed(1)}MB, sending to ElevenLabs...`);
+
+          const langMap: Record<string, string> = {
+            'português': 'por', 'inglês': 'eng', 'english': 'eng',
+            'espanhol': 'spa', 'alemão': 'deu', 'turco': 'tur',
+            'japonês': 'jpn', 'polonês': 'pol',
+          };
+          const sttLang = langMap[(language || '').toLowerCase()] || '';
+
+          const sttFormData = new FormData();
+          sttFormData.append("file", audioBlob, "audio.mp3");
+          sttFormData.append("model_id", "scribe_v2");
+          sttFormData.append("tag_audio_events", "true");
+          sttFormData.append("diarize", "false");
+          if (sttLang) sttFormData.append("language_code", sttLang);
+
+          const sttCtrl = new AbortController();
+          const sttTimeout = setTimeout(() => sttCtrl.abort(), 120000);
+          const sttResponse = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+            method: "POST",
+            headers: { "xi-api-key": ELEVENLABS_API_KEY },
+            body: sttFormData,
+            signal: sttCtrl.signal,
+          });
+          clearTimeout(sttTimeout);
+
+          if (sttResponse.ok) {
+            const sttResult = await sttResponse.json();
+            const words = sttResult.words || [];
+            const fullText = sttResult.text || "";
+
+            if (fullText.trim() && words.length > 0) {
+              // Build sentence-level blocks from word timestamps
+              const blocks: { start: number; end: number; text: string }[] = [];
+              let currentWords: any[] = [];
+              let blockStart = 0;
+
+              for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                if (currentWords.length === 0) blockStart = word.start;
+                currentWords.push(word);
+
+                const isEnd = /[.!?]$/.test(word.text);
+                const hasPause = i < words.length - 1 && (words[i + 1].start - word.end) > 0.5;
+                const tooLong = currentWords.length >= 15;
+
+                if (isEnd || hasPause || tooLong || i === words.length - 1) {
+                  blocks.push({
+                    start: +blockStart.toFixed(1),
+                    end: +word.end.toFixed(1),
+                    text: currentWords.map((w: any) => w.text).join(" "),
+                  });
+                  currentWords = [];
+                }
+              }
+
+              // Format as expected by the rest of the pipeline
+              const jsonContent = JSON.stringify(blocks);
+              transcribeData = { choices: [{ message: { content: jsonContent } }] };
+              console.log(`ElevenLabs STT success: ${words.length} words, ${blocks.length} blocks, ${words[words.length - 1].end.toFixed(1)}s`);
+            } else {
+              console.warn("ElevenLabs returned empty transcription");
+            }
+          } else {
+            const errText = await sttResponse.text();
+            console.warn("ElevenLabs STT failed:", sttResponse.status, errText.slice(0, 200));
+          }
+        } catch (e: any) {
+          console.warn("ElevenLabs STT error:", e.message);
+        }
+      }
+
+      // ── METHOD 2: Gemini (for small files <20MB only) ──
+      if (!transcribeData && GOOGLE_AI_KEY && audioUrl) {
+        try {
+          console.log("Trying Gemini transcription...");
           const audioFetchCtrl = new AbortController();
           const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 30000);
           const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
           clearTimeout(audioTimeout);
-          
           if (!audioResp.ok) throw new Error(`Failed to download audio: ${audioResp.status}`);
-          
+
           const audioBuffer = await audioResp.arrayBuffer();
           const audioBytes = new Uint8Array(audioBuffer);
-          
-          // Check size limit for inline data (max ~20MB for Gemini inline)
+
           if (audioBytes.length > 20 * 1024 * 1024) {
-            console.warn("Audio too large for inline Gemini, falling back to script-based transcription");
-            throw new Error("Audio too large for inline transcription");
-          }
-          
-          // Convert to base64
-          let base64Audio = "";
-          const CHUNK_SIZE = 8192;
-          for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
-            base64Audio += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK_SIZE));
-          }
-          base64Audio = btoa(base64Audio);
-          
-          console.log(`Audio downloaded: ${(audioBytes.length / 1024 / 1024).toFixed(1)}MB, sending to Gemini...`);
-          
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
-          const geminiCtrl = new AbortController();
-          const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 120000); // 2 min timeout
-          
-          const geminiResp = await fetch(geminiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: geminiCtrl.signal,
-            body: JSON.stringify({
-              contents: [{ parts: [
-                { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+            console.warn("Audio too large for Gemini inline, skipping");
+          } else {
+            let base64Audio = "";
+            const CHUNK_SIZE = 8192;
+            for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+              base64Audio += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK_SIZE));
+            }
+            base64Audio = btoa(base64Audio);
+
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+            const geminiCtrl = new AbortController();
+            const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 120000);
+
+            const geminiResp = await fetch(geminiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: geminiCtrl.signal,
+              body: JSON.stringify({
+                contents: [{ parts: [
+                  { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
 
 OUTPUT FORMAT (strict JSON array):
 [{"start": 0.0, "end": 3.5, "text": "First sentence here."}, ...]
@@ -100,30 +177,32 @@ RULES:
 - Estimate timestamps accurately per sentence
 - Sequential, non-overlapping
 - Return ONLY the JSON array` },
-                { inlineData: { mimeType: resolvedMime, data: base64Audio } }
-              ]}],
-              generationConfig: { temperature: 0.1 },
-            }),
-          });
-          clearTimeout(geminiTimeout);
-          
-          if (geminiResp.ok) {
-            const gData = await geminiResp.json();
-            const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            transcribeData = { choices: [{ message: { content: text } }] };
-            console.log("Gemini transcription successful");
-          } else {
-            const errText = await geminiResp.text();
-            console.warn("Gemini transcription failed:", geminiResp.status, errText.slice(0, 200));
+                  { inlineData: { mimeType: resolvedMime, data: base64Audio } }
+                ]}],
+                generationConfig: { temperature: 0.1 },
+              }),
+            });
+            clearTimeout(geminiTimeout);
+
+            if (geminiResp.ok) {
+              const gData = await geminiResp.json();
+              const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+              transcribeData = { choices: [{ message: { content: text } }] };
+              console.log("Gemini transcription successful");
+            } else {
+              const errText = await geminiResp.text();
+              console.warn("Gemini transcription failed:", geminiResp.status, errText.slice(0, 200));
+            }
           }
         } catch (e: any) {
-          console.warn("Google AI transcription error:", e.message);
+          console.warn("Gemini transcription error:", e.message);
         }
       }
 
-      // Fallback: script-based
+      // ── METHOD 3: Script-based fallback (no real audio timestamps) ──
       if (!transcribeData) {
         if (!cleanScript.trim()) throw new Error("Transcrição falhou e nenhum roteiro disponível.");
+        console.log("Using script-based fallback transcription");
         const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
