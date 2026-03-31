@@ -22,8 +22,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
+    const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_KEY) throw new Error("GOOGLE_AI_API_KEY não configurado.");
 
     const body = await req.json();
     const action = body.action || "start";
