@@ -287,27 +287,28 @@ RULES:
         }
       }
 
-      // ── METHOD 3: Script-based fallback (no real audio timestamps) ──
+      // ── METHOD 3: Script-based fallback via Gemini direct (no real audio timestamps) ──
       if (!transcribeData) {
         if (!cleanScript.trim()) throw new Error("Transcrição falhou e nenhum roteiro disponível.");
-        console.log("Using script-based fallback transcription");
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        console.log("Using script-based fallback transcription via Gemini direct");
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+        const resp = await fetch(geminiUrl, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return JSON array: [{"start":0.0,"end":3.5,"text":"..."}]` },
-              { role: "user", content: cleanScript },
-            ],
+            contents: [{ parts: [
+              { text: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return ONLY a JSON array: [{"start":0.0,"end":3.5,"text":"..."}]\n\nSCRIPT:\n${cleanScript}` },
+            ]}],
+            generationConfig: { temperature: 0.1 },
           }),
         });
         if (!resp.ok) {
-          if (resp.status === 429) throw new Error("Rate limit. Tente novamente.");
-          if (resp.status === 402) throw new Error("Créditos insuficientes.");
-          throw new Error(`Erro na transcrição: ${resp.status}`);
+          const errText = await resp.text();
+          throw new Error(`Gemini fallback error: ${resp.status} - ${errText.slice(0, 200)}`);
         }
-        transcribeData = await resp.json();
+        const gData = await resp.json();
+        const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        transcribeData = { choices: [{ message: { content: text } }] };
       }
 
       // Parse transcript
