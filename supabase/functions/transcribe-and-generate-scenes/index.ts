@@ -519,35 +519,42 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
       let fallbackUsed = true;
 
       try {
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        // Use Gemini direct API with function calling equivalent via structured output
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+        const resp = await fetch(geminiUrl, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            tools: [toolDef],
-            tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
-            messages: [
-              { role: "system", content: systemPrompt },
-              {
-                role: "user",
-                content: `AUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.`
-              },
+            contents: [
+              { role: "user", parts: [{ text: `${systemPrompt}\n\nAUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.\n\nRespond with a JSON object: {"scenes": [...]}` }] },
             ],
+            generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
+            tools: [{
+              functionDeclarations: [toolDef.function],
+            }],
           }),
         });
 
         if (resp.ok) {
           const data = await resp.json();
-          const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
+          // Try function call response first
+          const functionCall = data?.candidates?.[0]?.content?.parts?.[0]?.functionCall;
           let parsedScenes: any[] = [];
-          try {
-            const parsed = JSON.parse(args);
-            parsedScenes = Array.isArray(parsed?.scenes) ? parsed.scenes : [];
-          } catch {
-            const arrStart = args.indexOf('[');
-            const arrEnd = args.lastIndexOf(']');
-            if (arrStart !== -1 && arrEnd > arrStart) {
-              try { parsedScenes = JSON.parse(args.slice(arrStart, arrEnd + 1)); } catch {}
+
+          if (functionCall?.args?.scenes) {
+            parsedScenes = Array.isArray(functionCall.args.scenes) ? functionCall.args.scenes : [];
+          } else {
+            // Fallback: try parsing text content as JSON
+            const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            try {
+              const parsed = JSON.parse(textContent);
+              parsedScenes = Array.isArray(parsed?.scenes) ? parsed.scenes : (Array.isArray(parsed) ? parsed : []);
+            } catch {
+              const arrStart = textContent.indexOf('[');
+              const arrEnd = textContent.lastIndexOf(']');
+              if (arrStart !== -1 && arrEnd > arrStart) {
+                try { parsedScenes = JSON.parse(textContent.slice(arrStart, arrEnd + 1)); } catch {}
+              }
             }
           }
 
@@ -557,11 +564,11 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
               coerceSceneToWindow(parsedScenes[idx], window, fallbackScenes[idx])
             );
           }
-        } else if (resp.status === 402) {
-          return errResp("Créditos insuficientes.", 402);
+        } else {
+          const errText = await resp.text();
+          console.warn(`Gemini scene generation failed: ${resp.status}`, errText.slice(0, 200));
         }
       } catch (err: any) {
-        if (err?.message?.includes("Créditos")) return errResp("Créditos insuficientes.", 402);
         console.error(`Chunk ${chunk_index} generation error:`, err.message);
       }
 
