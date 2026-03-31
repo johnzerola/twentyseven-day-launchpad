@@ -245,26 +245,8 @@ RULES:
       const audioDuration = transcriptBlocks[transcriptBlocks.length - 1].end;
       const fullText = transcriptBlocks.map((b: any) => b.text).join(" ");
 
-      // Build chunks
       const CHUNK_SECONDS = audioDuration > 600 ? 90 : 120;
-      const chunks: { blocks: any[]; startTime: number; endTime: number }[] = [];
-      if (audioDuration <= CHUNK_SECONDS) {
-        chunks.push({ blocks: transcriptBlocks, startTime: 0, endTime: audioDuration });
-      } else {
-        let currentChunkBlocks: any[] = [];
-        let chunkStart = 0;
-        for (const block of transcriptBlocks) {
-          if (currentChunkBlocks.length > 0 && block.start - chunkStart >= CHUNK_SECONDS) {
-            chunks.push({ blocks: currentChunkBlocks, startTime: chunkStart, endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end });
-            currentChunkBlocks = [];
-            chunkStart = block.start;
-          }
-          currentChunkBlocks.push(block);
-        }
-        if (currentChunkBlocks.length > 0) {
-          chunks.push({ blocks: currentChunkBlocks, startTime: chunkStart, endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end });
-        }
-      }
+      const chunks = buildTranscriptChunks(transcriptBlocks, audioDuration, CHUNK_SECONDS);
 
       // Store job with chunks for frontend to iterate
       const authHeader = req.headers.get("Authorization");
@@ -282,11 +264,22 @@ RULES:
         current_step: "Transcrição concluída",
         input_data: { videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript },
         result_data: {
-          transcription: { fullText, wordCount: fullText.split(/\s+/).length, audioDuration, blocks: transcriptBlocks.slice(0, 300) },
+          transcription: {
+            fullText,
+            wordCount: fullText.split(/\s+/).filter(Boolean).length,
+            audioDuration,
+            blocks: transcriptBlocks,
+          },
           chunks: chunks.map((c, i) => ({ index: i, startTime: c.startTime, endTime: c.endTime, blockCount: c.blocks.length })),
           chunksData: chunks,
           scenes: [],
-          metadata: { totalChunks: chunks.length, videoStyle, audioDuration },
+          metadata: {
+            totalChunks: chunks.length,
+            videoStyle,
+            audioDuration,
+            targetSceneSeconds: 8,
+            transcriptBlocks: transcriptBlocks.length,
+          },
         },
       }).select().single();
 
@@ -317,14 +310,12 @@ RULES:
       if (!chunksData || chunk_index >= chunksData.length) return errResp("Chunk inválido", 400);
 
       const chunk = chunksData[chunk_index];
-      const audioDuration = resultData.transcription.audioDuration;
       const totalChunks = chunksData.length;
-      const { videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = inputData;
+      const { videoStyle, customStyleNotes, referenceImageUrls, characters, language, sceneBlueprintFromScript } = inputData;
 
       const TARGET_SCENE_SECONDS = 8;
-      const chunkDuration = chunk.endTime - chunk.startTime;
-      const expectedScenes = Math.max(2, Math.ceil(chunkDuration / TARGET_SCENE_SECONDS));
-      const minimumScenes = Math.ceil(audioDuration / 8);
+      const sceneWindows = buildSceneWindows(chunk.blocks || [], chunk.startTime, chunk.endTime, TARGET_SCENE_SECONDS);
+      const expectedScenes = sceneWindows.length;
 
       // Build style context
       const styleGuides: Record<string, string> = {
@@ -360,7 +351,8 @@ RULES:
         return {
           name: c.name || "Personagem",
           visualDescription: `${a.skin_color || 'pele média'}, ${a.hair_color || 'cabelo escuro'} ${a.hair_style || 'curto'}, olhos ${ff.eye_color || a.eye_color || 'escuros'}`,
-          action: "em cena", expression: "neutra",
+          action: "em cena",
+          expression: "neutra",
         };
       });
       const fallbackCharacterText = fallbackCharacters.map((c: any) => `${c.name}: ${c.visualDescription}`).join(" | ");
@@ -406,11 +398,19 @@ RULES:
         },
       };
 
-      const systemPrompt = `You are a VISUAL DIRECTOR creating video scenes from narrated audio.
+      const systemPrompt = `You are a VISUAL DIRECTOR creating scene prompts from narrated audio.
 MANDATORY ART STYLE: ${selectedStyleGuide}${extraStyle}${refImgContext}
 
-⚠️ TIMING: Veo3 clips = 8 seconds. Generate EXACTLY ${expectedScenes} scenes for this chunk.
-PROMPT FORMAT: [SHOT + CAMERA], [LENS]. [FULL CHARACTER DESC]. [ACTION]. [ENVIRONMENT]. [LIGHTING]. [COLOR]. Style: ${videoStyle}. (no subtitles, no text)
+CRITICAL SYNCHRONIZATION RULES:
+- Create EXACTLY one scene for each provided time window
+- Each scene MUST illustrate ONLY what is spoken in that exact time window
+- NEVER merge windows, skip windows, or extend a scene beyond its assigned timestamps
+- Preserve the same ordering as the input windows
+- If the narration changes, the visual must change with it
+- visualPrompt must be specific to the narration, never generic filler
+- Every prompt must end with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+
+PROMPT FORMAT: [SHOT + CAMERA], [LENS]. [FULL CHARACTER DESC]. [ACTION matching narration]. [ENVIRONMENT matching narration]. [LIGHTING]. [COLOR]. Style: ${videoStyle}. (no subtitles, no text)
 
 CHARACTER RULES: NEVER use just names. ALWAYS full appearance description every time.
 ${characterBlock}
@@ -418,33 +418,13 @@ ${characterBlock}
 SYNC: Each visual MUST match what narrator says at THAT timestamp.
 ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprintFromScript).slice(0, 1500)}` : ''}`;
 
-      const chunkTranscript = chunk.blocks.map((b: any) => `[${b.start.toFixed(1)}s-${b.end.toFixed(1)}s] ${b.text}`).join("\n");
+      const chunkTimeline = sceneWindows
+        .map((window) => `[SCENE ${window.index}] [${window.startTime.toFixed(1)}s-${window.endTime.toFixed(1)}s] ${window.text}`)
+        .join("\n");
 
-      // Build fallback scenes
-      const cameraAngles = ["wide establishing shot", "medium shot", "close-up", "low-angle shot", "over-the-shoulder shot", "tracking shot"];
-      const moods = ["dramático", "tenso", "cinematográfico", "misterioso", "épico", "emocional"];
-      const sceneSpan = Math.max(5, chunkDuration / expectedScenes);
-      const fallbackScenes = Array.from({ length: expectedScenes }).map((_, i) => {
-        const st = +(chunk.startTime + i * sceneSpan).toFixed(1);
-        const et = +Math.min(chunk.endTime, chunk.startTime + (i + 1) * sceneSpan).toFixed(1);
-        const overlapping = chunk.blocks.filter((b: any) => b.start < et && b.end > st);
-        const narrativeText = overlapping.map((b: any) => b.text).join(" ").trim() || "Continuação da narração.";
-        const cameraAngle = cameraAngles[(i + chunk_index) % cameraAngles.length];
-        const mood = moods[(i + chunk_index) % moods.length];
-        return {
-          sceneIndex: i + 1, sceneDurationSeconds: Math.max(5, Math.min(10, Math.round(et - st))),
-          startTime: st, endTime: et, narrativeText,
-          narrativeSummary: narrativeText.split(/\s+/).slice(0, 18).join(" "),
-          visualPrompt: `${cameraAngle}, 35mm cinematic. ${narrativeText}. ${fallbackCharacterText ? `Characters: ${fallbackCharacterText}. ` : ''}cinematic soft light. teal-orange. Style: ${videoStyle}. (no subtitles, no text)`,
-          negativePrompt: "no subtitles, no text, no logos",
-          cameraAngle, lensSpec: "35mm", lightingSetup: "cinematic soft key light",
-          colorGrading: "teal-orange", audioDirection: "sync", mood,
-          emotionalBeat: "narrative progression",
-          charactersInScene: fallbackCharacters,
-          environmentDetails: "Ambiente coerente com a narração",
-          transitionNote: "Corte limpo",
-        };
-      });
+      const fallbackScenes = sceneWindows.map((window, i) =>
+        buildFallbackScene(window, i + 1, chunk_index + i, fallbackCharacterText, fallbackCharacters, videoStyle)
+      );
 
       let scenes = fallbackScenes;
       let fallbackUsed = true;
@@ -459,7 +439,10 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
             tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
             messages: [
               { role: "system", content: systemPrompt },
-              { role: "user", content: `TRANSCRIPTION (${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s):\n${chunkTranscript}\n\nGenerate EXACTLY ${expectedScenes} scenes (8s each). Style: ${videoStyle}. Language: ${language}.` },
+              {
+                role: "user",
+                content: `AUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.`
+              },
             ],
           }),
         });
@@ -480,20 +463,10 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
           }
 
           if (parsedScenes.length > 0) {
-            fallbackUsed = false;
-            scenes = parsedScenes.slice(0, expectedScenes).map((s: any, idx: number) => {
-              const fb = fallbackScenes[Math.min(idx, fallbackScenes.length - 1)];
-              const st = Number.isFinite(Number(s.startTime)) ? Number(s.startTime) : fb.startTime;
-              const etRaw = Number.isFinite(Number(s.endTime)) ? Number(s.endTime) : fb.endTime;
-              const et = etRaw > st ? etRaw : fb.endTime;
-              return {
-                ...fb, ...s, startTime: st, endTime: et,
-                visualPrompt: s.visualPrompt?.trim() || fb.visualPrompt,
-                charactersInScene: Array.isArray(s.charactersInScene) && s.charactersInScene.length > 0 ? s.charactersInScene : fb.charactersInScene,
-                sceneDurationSeconds: Math.max(5, Math.min(10, Math.round(et - st))),
-              };
-            });
-            while (scenes.length < expectedScenes) scenes.push(fallbackScenes[scenes.length]);
+            fallbackUsed = parsedScenes.length !== expectedScenes;
+            scenes = sceneWindows.map((window, idx) =>
+              coerceSceneToWindow(parsedScenes[idx], window, fallbackScenes[idx])
+            );
           }
         } else if (resp.status === 402) {
           return errResp("Créditos insuficientes.", 402);
@@ -516,6 +489,7 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
         chunk_index,
         fallbackUsed,
         progress: pct,
+        expectedScenes,
       });
     }
 
@@ -531,11 +505,10 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
 
       const resultData = job.result_data as any;
       const inputData = job.input_data as any;
-      const audioDuration = resultData.transcription.audioDuration;
-      const transcriptBlocks = resultData.transcription.blocks;
+      const audioDuration = Number(resultData.transcription.audioDuration) || 0;
+      const transcriptBlocks = Array.isArray(resultData.transcription.blocks) ? resultData.transcription.blocks : [];
       const videoStyle = inputData.videoStyle;
 
-      // Post-process
       const TRIGGER_FIX: Record<string, string> = {
         'gun': 'defensive stance', 'weapon': 'tactical equipment', 'knife': 'sharp tool',
         'blood': 'dark stain', 'dead': 'covered shape', 'corpse': 'white sheet form',
@@ -543,75 +516,80 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
       };
       const ANTI_TEXT = "(no subtitles, no text, no titles, no captions, no logos, no watermarks)";
 
-      const sanitizedScenes = all_scenes
+      const normalizedSourceScenes = (Array.isArray(all_scenes) ? all_scenes : [])
         .filter((s: any) => typeof s?.visualPrompt === "string" && s.visualPrompt.trim().length > 0)
+        .map((scene: any) => sanitizeScene(scene, ANTI_TEXT, TRIGGER_FIX))
         .map((scene: any) => {
-          if (typeof scene.visualPrompt === 'string') {
-            for (const [tw, repl] of Object.entries(TRIGGER_FIX)) {
-              scene.visualPrompt = scene.visualPrompt.replace(new RegExp(`\\b${tw}\\b`, 'gi'), repl);
-            }
-            if (!scene.visualPrompt.includes("no subtitles")) scene.visualPrompt += ` ${ANTI_TEXT}`;
-            scene.visualPrompt = scene.visualPrompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '');
-          }
-          return scene;
-        });
+          const start = Number(scene.startTime) || 0;
+          const end = Number(scene.endTime) || start + 8;
+          return {
+            ...scene,
+            startTime: start,
+            endTime: end > start ? end : start + 8,
+            sceneDurationSeconds: +Math.max(0.1, end > start ? end - start : 8).toFixed(1),
+          };
+        })
+        .sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
 
-      sanitizedScenes.sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
-
-      for (const s of sanitizedScenes) {
-        const start = Number(s.startTime) || 0;
-        const end = Number(s.endTime) || start + 8;
-        s.startTime = start;
-        s.endTime = end > start ? end : start + 8;
-        s.sceneDurationSeconds = Math.max(5, Math.min(10, Math.round(s.endTime - s.startTime)));
-      }
-      sanitizedScenes.forEach((s: any, i: number) => { s.sceneIndex = i + 1; });
-
-      // Fill gaps
-      const minimumRequiredScenes = Math.ceil(audioDuration / 8);
-      const styleGuides: Record<string, string> = {
-        'cinematográfico': 'Netflix/Disney premium.',
-        'dark': 'Dark noir. Crushed blacks.',
-      };
-      const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || 'Cinematic premium.';
-
+      const timelineWindows = buildSceneWindows(transcriptBlocks, 0, audioDuration, 8);
       const fallbackCharacters = (inputData.characters || []).slice(0, 5).map((c: any) => {
         const a = c.appearance || {}; const ff = c.facial_features || {};
-        return { name: c.name || "Personagem", visualDescription: `${a.skin_color || 'pele média'}, ${a.hair_color || 'cabelo escuro'}`, action: "em cena", expression: "neutra" };
+        return {
+          name: c.name || "Personagem",
+          visualDescription: `${a.skin_color || 'pele média'}, ${a.hair_color || 'cabelo escuro'} ${a.hair_style || 'curto'}, olhos ${ff.eye_color || a.eye_color || 'escuros'}`,
+          action: "em cena",
+          expression: "neutra",
+        };
       });
+      const fallbackCharacterText = fallbackCharacters.map((c: any) => `${c.name}: ${c.visualDescription}`).join(" | ");
 
-      if (sanitizedScenes.length < minimumRequiredScenes) {
-        const lastEnd = sanitizedScenes.length > 0 ? sanitizedScenes[sanitizedScenes.length - 1].endTime : 0;
-        if (lastEnd < audioDuration - 2) {
-          const gapScenes = Math.ceil((audioDuration - lastEnd) / 8);
-          for (let g = 0; g < gapScenes; g++) {
-            const gStart = lastEnd + g * 8;
-            const gEnd = Math.min(lastEnd + (g + 1) * 8, audioDuration);
-            const overlapping = transcriptBlocks.filter((b: any) => b.start < gEnd && b.end > gStart);
-            const gapText = overlapping.map((b: any) => b.text).join(' ').trim() || 'Continuação.';
-            sanitizedScenes.push({
-              sceneIndex: sanitizedScenes.length + 1, sceneDurationSeconds: 8,
-              startTime: +gStart.toFixed(1), endTime: +gEnd.toFixed(1),
-              narrativeText: gapText, narrativeSummary: gapText.split(/\s+/).slice(0, 15).join(' '),
-              visualPrompt: `Cinematic wide shot: ${gapText.slice(0, 200)}. ${selectedStyleGuide} ${ANTI_TEXT}`,
-              negativePrompt: "no subtitles", cameraAngle: "wide establishing shot",
-              mood: "cinematográfico", charactersInScene: fallbackCharacters,
-            });
+      const usedSceneIndexes = new Set<number>();
+      const alignedScenes = timelineWindows.map((window, idx) => {
+        let bestSceneIndex = -1;
+        let bestOverlap = 0;
+
+        for (let i = 0; i < normalizedSourceScenes.length; i++) {
+          if (usedSceneIndexes.has(i)) continue;
+          const candidate = normalizedSourceScenes[i];
+          const overlap = overlapSeconds(window.startTime, window.endTime, candidate.startTime, candidate.endTime);
+          if (overlap > bestOverlap) {
+            bestOverlap = overlap;
+            bestSceneIndex = i;
           }
         }
-      }
 
-      if (sanitizedScenes.length === 0) return errResp("Nenhuma cena gerada.", 500);
+        const fallbackScene = buildFallbackScene(window, idx + 1, idx, fallbackCharacterText, fallbackCharacters, videoStyle);
+        const minAcceptableOverlap = Math.max(1, (window.endTime - window.startTime) * 0.35);
+
+        if (bestSceneIndex !== -1 && bestOverlap >= minAcceptableOverlap) {
+          usedSceneIndexes.add(bestSceneIndex);
+          return sanitizeScene(
+            coerceSceneToWindow(normalizedSourceScenes[bestSceneIndex], window, fallbackScene),
+            ANTI_TEXT,
+            TRIGGER_FIX,
+          );
+        }
+
+        return sanitizeScene(fallbackScene, ANTI_TEXT, TRIGGER_FIX);
+      });
+
+      if (alignedScenes.length === 0) return errResp("Nenhuma cena gerada.", 500);
+
+      alignedScenes.forEach((scene: any, index: number) => {
+        scene.sceneIndex = index + 1;
+      });
 
       const finalResult = {
         ...resultData,
-        scenes: sanitizedScenes,
+        scenes: alignedScenes,
         chunksData: undefined,
         metadata: {
           ...resultData.metadata,
-          totalScenes: sanitizedScenes.length,
-          minimumRequiredScenes,
-          method: "frontend-orchestrated-v5",
+          totalScenes: alignedScenes.length,
+          minimumRequiredScenes: timelineWindows.length,
+          coveredDuration: audioDuration,
+          method: "timeline-windowed-v6",
+          targetSceneSeconds: 8,
         },
       };
 
@@ -623,7 +601,7 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
         completed_at: new Date().toISOString(),
       }).eq("id", job_id);
 
-      return jsonResp({ scenes: sanitizedScenes, metadata: finalResult.metadata });
+      return jsonResp({ scenes: alignedScenes, metadata: finalResult.metadata });
     }
 
     return errResp("Ação desconhecida: " + action, 400);
@@ -632,6 +610,175 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
     return errResp(e.message || "Erro desconhecido", 500);
   }
 });
+
+// ═══ HELPERS ═══
+type TranscriptChunk = { blocks: any[]; startTime: number; endTime: number };
+type SceneWindow = { index: number; startTime: number; endTime: number; text: string; summary: string; blocks: any[] };
+
+function buildTranscriptChunks(blocks: any[], audioDuration: number, chunkSeconds: number): TranscriptChunk[] {
+  if (!Array.isArray(blocks) || blocks.length === 0) return [];
+
+  const chunks: TranscriptChunk[] = [];
+  if (audioDuration <= chunkSeconds) {
+    chunks.push({ blocks, startTime: 0, endTime: audioDuration });
+    return chunks;
+  }
+
+  let currentChunkBlocks: any[] = [];
+  let chunkStart = 0;
+
+  for (const block of blocks) {
+    if (currentChunkBlocks.length > 0 && block.start - chunkStart >= chunkSeconds) {
+      chunks.push({
+        blocks: currentChunkBlocks,
+        startTime: chunkStart,
+        endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end,
+      });
+      currentChunkBlocks = [];
+      chunkStart = block.start;
+    }
+    currentChunkBlocks.push(block);
+  }
+
+  if (currentChunkBlocks.length > 0) {
+    chunks.push({
+      blocks: currentChunkBlocks,
+      startTime: chunkStart,
+      endTime: currentChunkBlocks[currentChunkBlocks.length - 1].end,
+    });
+  }
+
+  return chunks;
+}
+
+function buildSceneWindows(blocks: any[], rangeStart: number, rangeEnd: number, targetSeconds: number): SceneWindow[] {
+  const windows: SceneWindow[] = [];
+  const safeEnd = Math.max(rangeEnd, rangeStart + 0.1);
+  let cursor = rangeStart;
+  let index = 1;
+
+  while (cursor < safeEnd - 0.05) {
+    const windowEnd = Math.min(cursor + targetSeconds, safeEnd);
+    const overlapping = (blocks || []).filter((b: any) => Number(b.start) < windowEnd && Number(b.end) > cursor);
+    const text = overlapping.map((b: any) => b.text).join(" ").replace(/\s+/g, " ").trim() || "Continuação da narração.";
+
+    windows.push({
+      index,
+      startTime: +cursor.toFixed(1),
+      endTime: +windowEnd.toFixed(1),
+      text,
+      summary: summarizeText(text, 18),
+      blocks: overlapping,
+    });
+
+    cursor = windowEnd;
+    index += 1;
+  }
+
+  if (windows.length === 0) {
+    windows.push({
+      index: 1,
+      startTime: +rangeStart.toFixed(1),
+      endTime: +safeEnd.toFixed(1),
+      text: "Continuação da narração.",
+      summary: "Continuação da narração.",
+      blocks: [],
+    });
+  }
+
+  return windows;
+}
+
+function summarizeText(text: string, words = 18): string {
+  return text.split(/\s+/).filter(Boolean).slice(0, words).join(" ");
+}
+
+function buildFallbackScene(
+  window: SceneWindow,
+  sceneIndex: number,
+  variationSeed: number,
+  fallbackCharacterText: string,
+  fallbackCharacters: any[],
+  videoStyle: string,
+) {
+  const cameraAngles = ["wide establishing shot", "medium shot", "close-up", "low-angle shot", "over-the-shoulder shot", "tracking shot"];
+  const moods = ["dramático", "tenso", "cinematográfico", "misterioso", "épico", "emocional"];
+  const cameraAngle = cameraAngles[Math.abs(variationSeed) % cameraAngles.length];
+  const mood = moods[Math.abs(variationSeed) % moods.length];
+  const duration = +(window.endTime - window.startTime).toFixed(1);
+  const narration = window.text || "Continuação da narração.";
+
+  return {
+    sceneIndex,
+    sceneDurationSeconds: duration,
+    startTime: window.startTime,
+    endTime: window.endTime,
+    narrativeText: narration,
+    narrativeSummary: window.summary || summarizeText(narration, 18),
+    visualPrompt: `${cameraAngle}, 35mm cinematic. Visualize exactly what is narrated here: ${narration}. ${fallbackCharacterText ? `Characters: ${fallbackCharacterText}. ` : ''}Rich environmental detail, cinematic lighting, action synchronized to narration. Style: ${videoStyle}. (no subtitles, no text, no titles, no captions, no logos, no watermarks)`,
+    negativePrompt: "no subtitles, no text, no titles, no captions, no logos, no watermarks",
+    cameraAngle,
+    lensSpec: "35mm",
+    lightingSetup: "cinematic soft key light",
+    colorGrading: "teal-orange",
+    audioDirection: `Sync exactly to narration from ${window.startTime.toFixed(1)}s to ${window.endTime.toFixed(1)}s.`,
+    mood,
+    emotionalBeat: "narrative progression",
+    charactersInScene: fallbackCharacters,
+    environmentDetails: "Ambiente coerente com a narração deste trecho",
+    transitionNote: "Corte limpo",
+  };
+}
+
+function coerceSceneToWindow(scene: any, window: SceneWindow, fallbackScene: any) {
+  const duration = +(window.endTime - window.startTime).toFixed(1);
+  return {
+    ...fallbackScene,
+    ...(scene || {}),
+    sceneIndex: fallbackScene.sceneIndex,
+    startTime: window.startTime,
+    endTime: window.endTime,
+    sceneDurationSeconds: duration,
+    narrativeText: window.text || fallbackScene.narrativeText,
+    narrativeSummary: scene?.narrativeSummary?.trim?.() || window.summary || fallbackScene.narrativeSummary,
+    visualPrompt: scene?.visualPrompt?.trim?.() || fallbackScene.visualPrompt,
+    negativePrompt: scene?.negativePrompt?.trim?.() || fallbackScene.negativePrompt,
+    cameraAngle: scene?.cameraAngle?.trim?.() || fallbackScene.cameraAngle,
+    lensSpec: scene?.lensSpec?.trim?.() || fallbackScene.lensSpec,
+    lightingSetup: scene?.lightingSetup?.trim?.() || fallbackScene.lightingSetup,
+    colorGrading: scene?.colorGrading?.trim?.() || fallbackScene.colorGrading,
+    audioDirection: scene?.audioDirection?.trim?.() || fallbackScene.audioDirection,
+    mood: scene?.mood?.trim?.() || fallbackScene.mood,
+    emotionalBeat: scene?.emotionalBeat?.trim?.() || fallbackScene.emotionalBeat,
+    charactersInScene: Array.isArray(scene?.charactersInScene) && scene.charactersInScene.length > 0
+      ? scene.charactersInScene
+      : fallbackScene.charactersInScene,
+    environmentDetails: scene?.environmentDetails?.trim?.() || fallbackScene.environmentDetails,
+    transitionNote: scene?.transitionNote?.trim?.() || fallbackScene.transitionNote,
+  };
+}
+
+function overlapSeconds(startA: number, endA: number, startB: number, endB: number): number {
+  return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
+}
+
+function sanitizeScene(scene: any, antiText: string, triggerFix: Record<string, string>) {
+  const sanitized = { ...scene };
+  let prompt = typeof sanitized.visualPrompt === 'string' ? sanitized.visualPrompt.trim() : '';
+
+  for (const [triggerWord, replacement] of Object.entries(triggerFix)) {
+    prompt = prompt.replace(new RegExp(`\\b${triggerWord}\\b`, 'gi'), replacement);
+  }
+
+  prompt = prompt.replace(/^(Scene|Cena|Prompt)\s*\d+\s*[:—-]\s*/i, '').trim();
+  if (!/no subtitles|no text|no titles|no captions|no logos|no watermarks/i.test(prompt)) {
+    prompt = `${prompt} ${antiText}`.trim();
+  }
+
+  sanitized.visualPrompt = prompt || antiText;
+  sanitized.negativePrompt = sanitized.negativePrompt || "no subtitles, no text, no logos, no watermarks";
+  return sanitized;
+}
 
 // ═══ JSON REPAIR HELPER ═══
 function repairAndParseJsonArray(raw: string): any[] {
