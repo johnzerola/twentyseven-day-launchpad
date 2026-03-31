@@ -35,7 +35,7 @@ const StepNavButtons = memo(({ currentStep, onNavigate, nextDisabled, nextLabel 
         </Button>
       ) : <div />}
       {nextStep ? (
-        <Button size="sm" onClick={() => onNavigate(nextStep)} disabled={nextDisabled} className="gap-2 h-9">
+        <Button size="sm" onClick={() => onNavigate(nextStep)} className="gap-2 h-9">
           {nextLabel || STEP_LABELS[nextStep]}
           <ArrowRight className="w-4 h-4" />
         </Button>
