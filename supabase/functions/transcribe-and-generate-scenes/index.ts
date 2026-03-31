@@ -22,8 +22,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
+    const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_KEY) throw new Error("GOOGLE_AI_API_KEY não configurado.");
 
     const body = await req.json();
     const action = body.action || "start";
@@ -46,7 +46,6 @@ serve(async (req) => {
       const cleanScript = (script || "").slice(0, 30000);
       const resolvedMime = audioMimeType || "audio/mp3";
       const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-      const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
       // Transcribe — Strategy: ElevenLabs STT (best, handles any size) → Gemini (small files) → script fallback
       let transcribeData: any = null;
@@ -288,27 +287,28 @@ RULES:
         }
       }
 
-      // ── METHOD 3: Script-based fallback (no real audio timestamps) ──
+      // ── METHOD 3: Script-based fallback via Gemini direct (no real audio timestamps) ──
       if (!transcribeData) {
         if (!cleanScript.trim()) throw new Error("Transcrição falhou e nenhum roteiro disponível.");
-        console.log("Using script-based fallback transcription");
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        console.log("Using script-based fallback transcription via Gemini direct");
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+        const resp = await fetch(geminiUrl, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return JSON array: [{"start":0.0,"end":3.5,"text":"..."}]` },
-              { role: "user", content: cleanScript },
-            ],
+            contents: [{ parts: [
+              { text: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return ONLY a JSON array: [{"start":0.0,"end":3.5,"text":"..."}]\n\nSCRIPT:\n${cleanScript}` },
+            ]}],
+            generationConfig: { temperature: 0.1 },
           }),
         });
         if (!resp.ok) {
-          if (resp.status === 429) throw new Error("Rate limit. Tente novamente.");
-          if (resp.status === 402) throw new Error("Créditos insuficientes.");
-          throw new Error(`Erro na transcrição: ${resp.status}`);
+          const errText = await resp.text();
+          throw new Error(`Gemini fallback error: ${resp.status} - ${errText.slice(0, 200)}`);
         }
-        transcribeData = await resp.json();
+        const gData = await resp.json();
+        const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        transcribeData = { choices: [{ message: { content: text } }] };
       }
 
       // Parse transcript
@@ -519,35 +519,42 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
       let fallbackUsed = true;
 
       try {
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        // Use Gemini direct API with function calling equivalent via structured output
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+        const resp = await fetch(geminiUrl, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            tools: [toolDef],
-            tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
-            messages: [
-              { role: "system", content: systemPrompt },
-              {
-                role: "user",
-                content: `AUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.`
-              },
+            contents: [
+              { role: "user", parts: [{ text: `${systemPrompt}\n\nAUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.\n\nRespond with a JSON object: {"scenes": [...]}` }] },
             ],
+            generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
+            tools: [{
+              functionDeclarations: [toolDef.function],
+            }],
           }),
         });
 
         if (resp.ok) {
           const data = await resp.json();
-          const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '';
+          // Try function call response first
+          const functionCall = data?.candidates?.[0]?.content?.parts?.[0]?.functionCall;
           let parsedScenes: any[] = [];
-          try {
-            const parsed = JSON.parse(args);
-            parsedScenes = Array.isArray(parsed?.scenes) ? parsed.scenes : [];
-          } catch {
-            const arrStart = args.indexOf('[');
-            const arrEnd = args.lastIndexOf(']');
-            if (arrStart !== -1 && arrEnd > arrStart) {
-              try { parsedScenes = JSON.parse(args.slice(arrStart, arrEnd + 1)); } catch {}
+
+          if (functionCall?.args?.scenes) {
+            parsedScenes = Array.isArray(functionCall.args.scenes) ? functionCall.args.scenes : [];
+          } else {
+            // Fallback: try parsing text content as JSON
+            const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            try {
+              const parsed = JSON.parse(textContent);
+              parsedScenes = Array.isArray(parsed?.scenes) ? parsed.scenes : (Array.isArray(parsed) ? parsed : []);
+            } catch {
+              const arrStart = textContent.indexOf('[');
+              const arrEnd = textContent.lastIndexOf(']');
+              if (arrStart !== -1 && arrEnd > arrStart) {
+                try { parsedScenes = JSON.parse(textContent.slice(arrStart, arrEnd + 1)); } catch {}
+              }
             }
           }
 
@@ -557,11 +564,11 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
               coerceSceneToWindow(parsedScenes[idx], window, fallbackScenes[idx])
             );
           }
-        } else if (resp.status === 402) {
-          return errResp("Créditos insuficientes.", 402);
+        } else {
+          const errText = await resp.text();
+          console.warn(`Gemini scene generation failed: ${resp.status}`, errText.slice(0, 200));
         }
       } catch (err: any) {
-        if (err?.message?.includes("Créditos")) return errResp("Créditos insuficientes.", 402);
         console.error(`Chunk ${chunk_index} generation error:`, err.message);
       }
 
