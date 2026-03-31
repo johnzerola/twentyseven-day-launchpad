@@ -52,10 +52,42 @@ serve(async (req) => {
 
       if (GOOGLE_AI_KEY && audioUrl) {
         try {
+          console.log("Downloading audio for transcription...");
+          // Download audio and convert to base64 (fileUri only works with Google Files API URIs)
+          const audioFetchCtrl = new AbortController();
+          const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 30000);
+          const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
+          clearTimeout(audioTimeout);
+          
+          if (!audioResp.ok) throw new Error(`Failed to download audio: ${audioResp.status}`);
+          
+          const audioBuffer = await audioResp.arrayBuffer();
+          const audioBytes = new Uint8Array(audioBuffer);
+          
+          // Check size limit for inline data (max ~20MB for Gemini inline)
+          if (audioBytes.length > 20 * 1024 * 1024) {
+            console.warn("Audio too large for inline Gemini, falling back to script-based transcription");
+            throw new Error("Audio too large for inline transcription");
+          }
+          
+          // Convert to base64
+          let base64Audio = "";
+          const CHUNK_SIZE = 8192;
+          for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+            base64Audio += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK_SIZE));
+          }
+          base64Audio = btoa(base64Audio);
+          
+          console.log(`Audio downloaded: ${(audioBytes.length / 1024 / 1024).toFixed(1)}MB, sending to Gemini...`);
+          
           const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+          const geminiCtrl = new AbortController();
+          const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 120000); // 2 min timeout
+          
           const geminiResp = await fetch(geminiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            signal: geminiCtrl.signal,
             body: JSON.stringify({
               contents: [{ parts: [
                 { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
@@ -68,18 +100,24 @@ RULES:
 - Estimate timestamps accurately per sentence
 - Sequential, non-overlapping
 - Return ONLY the JSON array` },
-                { fileData: { mimeType: resolvedMime, fileUri: audioUrl } }
+                { inlineData: { mimeType: resolvedMime, data: base64Audio } }
               ]}],
               generationConfig: { temperature: 0.1 },
             }),
           });
+          clearTimeout(geminiTimeout);
+          
           if (geminiResp.ok) {
             const gData = await geminiResp.json();
             const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
             transcribeData = { choices: [{ message: { content: text } }] };
+            console.log("Gemini transcription successful");
+          } else {
+            const errText = await geminiResp.text();
+            console.warn("Gemini transcription failed:", geminiResp.status, errText.slice(0, 200));
           }
         } catch (e: any) {
-          console.warn("Google AI error:", e.message);
+          console.warn("Google AI transcription error:", e.message);
         }
       }
 
