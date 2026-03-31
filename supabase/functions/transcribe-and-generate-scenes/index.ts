@@ -46,7 +46,6 @@ serve(async (req) => {
       const cleanScript = (script || "").slice(0, 30000);
       const resolvedMime = audioMimeType || "audio/mp3";
       const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-      const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
       // Transcribe — Strategy: ElevenLabs STT (best, handles any size) → Gemini (small files) → script fallback
       let transcribeData: any = null;
