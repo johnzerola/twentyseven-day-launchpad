@@ -107,6 +107,10 @@ interface PlanAdaptation {
   adaptation?: AdaptationData;
 }
 
+interface RunAdaptationOptions {
+  silentNoPlan?: boolean;
+}
+
 const CATEGORY_CONFIG = {
   research: { label: 'Pesquisa', color: 'text-chart-4' },
   create: { label: 'Criar', color: 'text-chart-2' },
@@ -289,28 +293,53 @@ export const DailyPlanner = () => {
     setLoading(false);
   }, []);
 
-  const runAdaptation = useCallback(async () => {
+  const runAdaptation = useCallback(async ({ silentNoPlan = false }: RunAdaptationOptions = {}) => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) return false;
+
+    const { data: latestPlan, error: planLookupError } = await supabase
+      .from('monetization_30day_plans')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (planLookupError) {
+      console.error('Plan lookup error:', planLookupError);
+      toast.error('Erro ao verificar seu plano de 30 dias.');
+      return false;
+    }
+
+    if (!latestPlan?.id) {
+      if (!silentNoPlan) {
+        toast.info('Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+      }
+      return false;
+    }
 
     setAdapting(true);
     try {
       const { data: result, error } = await supabase.functions.invoke('adapt-30day-plan', {
-        body: { userId: session.user.id },
+        body: { planId: latestPlan.id },
       });
 
       if (error) {
         const errorPayload = await getEdgeFunctionErrorPayload(error);
         if (errorPayload?.error === 'no_plan') {
-          toast.info(errorPayload.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
-          return;
+          if (!silentNoPlan) {
+            toast.info(errorPayload.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+          }
+          return false;
         }
         throw error;
       }
 
       if (result?.error === 'no_plan') {
-        toast.info(result.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
-        return;
+        if (!silentNoPlan) {
+          toast.info(result.message || 'Nenhum plano de 30 dias encontrado. Crie um plano primeiro na aba Tracker.');
+        }
+        return false;
       }
 
       if (result?.success) {
@@ -339,13 +368,19 @@ export const DailyPlanner = () => {
         } else {
           toast.success('Plano adaptado com dados reais!');
         }
+
+        localStorage.setItem('last_adaptation_date', todayKey);
+        return true;
       }
     } catch (e: any) {
       console.error('Adaptation error:', e);
       toast.error('Erro ao adaptar plano. Tente novamente.');
+      return false;
     } finally {
       setAdapting(false);
     }
+
+    return false;
   }, []);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
@@ -357,8 +392,7 @@ export const DailyPlanner = () => {
     if (lastAdapt !== todayKey && tasks.length > 0) {
       // Only auto-adapt if we haven't today
       const timer = setTimeout(() => {
-        localStorage.setItem('last_adaptation_date', todayKey);
-        runAdaptation();
+        void runAdaptation({ silentNoPlan: true });
       }, 3000); // 3s after load
       return () => clearTimeout(timer);
     }
