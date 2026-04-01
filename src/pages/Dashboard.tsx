@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
+import { ViralDiagnosisPanel } from '@/components/dashboard/ViralDiagnosisPanel';
 import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
 import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashboard';
 import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
