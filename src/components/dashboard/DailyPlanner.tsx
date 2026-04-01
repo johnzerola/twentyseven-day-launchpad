@@ -600,7 +600,7 @@ export const DailyPlanner = () => {
                   {progress === 100 ? '🎉 Tudo concluído! Excelente dia de trabalho.' : `Restam ${tasks.length - completedCount} tarefas`}
                 </p>
                 <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" className="text-[10px] h-6 gap-1" onClick={runAdaptation} disabled={adapting}>
+                  <Button size="sm" variant="ghost" className="text-[10px] h-6 gap-1" onClick={() => void runAdaptation()} disabled={adapting}>
                     {adapting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                     {adapting ? 'Adaptando...' : 'Adaptar com IA'}
                   </Button>
