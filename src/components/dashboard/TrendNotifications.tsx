@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Flame, X, ExternalLink, Bell } from 'lucide-react';
+import { TrendingUp, Flame, X, ExternalLink, Bell, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface TrendAlert {
   id: string;
@@ -18,6 +19,7 @@ interface TrendAlert {
 }
 
 export const TrendNotifications = () => {
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState<TrendAlert[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -73,6 +75,29 @@ export const TrendNotifications = () => {
         }
       });
 
+      // Load breakout videos from emerging_videos for script suggestions
+      const { data: breakoutData } = await supabase
+        .from('emerging_videos')
+        .select('title, video_id, channel_name, views, niche, velocity_score, pre_viral_score')
+        .gte('pre_viral_score', 70)
+        .order('pre_viral_score', { ascending: false })
+        .limit(3);
+
+      (breakoutData || []).forEach(v => {
+        if (v.niche && userNiches.has(v.niche.toLowerCase())) {
+          newAlerts.push({
+            id: `breakout-${v.video_id}`,
+            type: 'niche_trending',
+            title: `🚀 Breakout: "${v.title}"`,
+            description: `${v.channel_name} • ${(v.views || 0).toLocaleString()} views • Score pré-viral ${v.pre_viral_score}. Tema quente para replicar agora!`,
+            niche: v.niche || undefined,
+            score: v.pre_viral_score || undefined,
+            actionPath: `/scripts?topic=${encodeURIComponent(v.title || '')}&source=breakout`,
+            actionLabel: 'Gerar Roteiro',
+          });
+        }
+      });
+
       // Load dismissed from localStorage
       try {
         const stored = localStorage.getItem('dismissed_trends');
@@ -114,11 +139,23 @@ export const TrendNotifications = () => {
               <p className="text-sm font-semibold">{alert.title}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">{alert.description}</p>
               {alert.actionPath && (
-                <Link to={alert.actionPath}>
-                  <Button size="sm" variant="outline" className="mt-2 text-xs gap-1 h-7">
-                    <ExternalLink className="w-3 h-3" /> {alert.actionLabel}
-                  </Button>
-                </Link>
+                <div className="flex gap-1.5 mt-2">
+                  <Link to={alert.actionPath}>
+                    <Button size="sm" variant="outline" className="text-xs gap-1 h-7">
+                      <ExternalLink className="w-3 h-3" /> {alert.actionLabel}
+                    </Button>
+                  </Link>
+                  {alert.niche && (
+                    <Button size="sm" variant="outline" className="text-xs gap-1 h-7 border-accent/30 text-accent hover:bg-accent/10"
+                      onClick={() => {
+                        sessionStorage.setItem('dotti_script_topic', `${alert.title} — ${alert.description}`);
+                        navigate('/scripts?source=trend');
+                        toast.success('✍️ Tema da tendência enviado ao Gerador!');
+                      }}>
+                      <FileText className="w-3 h-3" /> Roteiro
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             <button onClick={() => dismiss(alert.id)} className="text-muted-foreground hover:text-foreground p-0.5 shrink-0">

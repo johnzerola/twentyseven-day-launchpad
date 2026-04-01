@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Trash2, HelpCircle, ArrowRight, SkipForward, ImagePlus, Youtube, Save, History, Bookmark, Edit3, Check } from 'lucide-react';
+import { Bot, X, Send, Loader2, Trash2, HelpCircle, ArrowRight, SkipForward, ImagePlus, Youtube, Save, History, Bookmark, Edit3, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getAuthHeaders } from '@/lib/auth-fetch';
@@ -53,6 +53,7 @@ export { PAGE_TOOLTIPS };
 
 export const ChatbotWidget = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [onboarding, setOnboarding] = useState<OnboardingState>({ step: 'idle' });
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
@@ -745,14 +746,29 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                         {msg.content.length > 50 && i > 0 && !loading && (
-                          <button
-                            onClick={() => saveSuggestion(msg.content, i)}
-                            className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-                            title="Salvar esta sugestão para usar em Roteiros"
-                          >
-                            {savingIdx === i ? <Check className="w-3 h-3 text-emerald-400" /> : <Bookmark className="w-3 h-3" />}
-                            {savingIdx === i ? 'Salvo!' : 'Salvar sugestão'}
-                          </button>
+                          <div className="mt-1.5 flex items-center gap-3">
+                            <button
+                              onClick={() => saveSuggestion(msg.content, i)}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                              title="Salvar esta sugestão para usar em Roteiros"
+                            >
+                              {savingIdx === i ? <Check className="w-3 h-3 text-emerald-400" /> : <Bookmark className="w-3 h-3" />}
+                              {savingIdx === i ? 'Salvo!' : 'Salvar sugestão'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                const firstLine = msg.content.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
+                                const topicText = firstLine.slice(0, 120) || 'Tema sugerido pelo Dotti';
+                                sessionStorage.setItem('dotti_script_topic', topicText);
+                                navigate('/scripts?source=dotti');
+                                toast.success('✍️ Tema enviado ao Gerador de Roteiros!');
+                              }}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-accent transition-colors"
+                              title="Gerar roteiro a partir deste tema"
+                            >
+                              <FileText className="w-3 h-3" /> Gerar roteiro
+                            </button>
+                          </div>
                         )}
                       </>
                     ) : msg.content}
