@@ -1488,6 +1488,63 @@ export type Database = {
         }
         Relationships: []
       }
+      global_characters: {
+        Row: {
+          age: number | null
+          appearance: Json | null
+          clothing: Json | null
+          created_at: string | null
+          facial_features: Json | null
+          gender: string | null
+          id: string
+          is_main_character: boolean | null
+          name: string
+          personality: string[] | null
+          photo_url: string | null
+          role: string | null
+          updated_at: string | null
+          usage_count: number | null
+          user_id: string
+          visual_description: string | null
+        }
+        Insert: {
+          age?: number | null
+          appearance?: Json | null
+          clothing?: Json | null
+          created_at?: string | null
+          facial_features?: Json | null
+          gender?: string | null
+          id?: string
+          is_main_character?: boolean | null
+          name: string
+          personality?: string[] | null
+          photo_url?: string | null
+          role?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          user_id: string
+          visual_description?: string | null
+        }
+        Update: {
+          age?: number | null
+          appearance?: Json | null
+          clothing?: Json | null
+          created_at?: string | null
+          facial_features?: Json | null
+          gender?: string | null
+          id?: string
+          is_main_character?: boolean | null
+          name?: string
+          personality?: string[] | null
+          photo_url?: string | null
+          role?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          user_id?: string
+          visual_description?: string | null
+        }
+        Relationships: []
+      }
       hook_library: {
         Row: {
           created_at: string | null
