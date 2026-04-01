@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, Play, Pause, Download, Loader2, Volume2, RefreshCw, Upload, ChevronDown } from 'lucide-react';
+import { Mic, Play, Pause, Download, Loader2, Volume2, RefreshCw, Upload, ChevronDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
