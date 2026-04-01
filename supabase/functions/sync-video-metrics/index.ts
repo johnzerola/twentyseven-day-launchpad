@@ -120,12 +120,21 @@ serve(async (req) => {
           update.performance_grade = ratio >= 3 ? "S" : ratio >= 2 ? "A" : ratio >= 1.2 ? "B" : ratio >= 0.8 ? "C" : ratio >= 0.5 ? "D" : "F";
         }
 
-        // Also update duration_seconds in video_performance if available
-        if (vd.durationSeconds && link.youtube_video_id) {
-          await sb.from("video_performance")
-            .update({ duration_seconds: vd.durationSeconds })
-            .eq("user_id", link.user_id)
-            .eq("video_id", link.youtube_video_id);
+        // Also update duration_seconds and watch_time_hours in video_performance
+        if (link.youtube_video_id) {
+          const vpUpdate: any = {};
+          if (vd.durationSeconds && vd.durationSeconds > 0) {
+            vpUpdate.duration_seconds = vd.durationSeconds;
+            // Calculate estimated watch_time_hours: views * duration * est_retention / 3600
+            const estRetention = 0.5; // 50% default retention estimate
+            vpUpdate.watch_time_hours = Math.round((vd.views * vd.durationSeconds * estRetention / 3600) * 100) / 100;
+          }
+          if (Object.keys(vpUpdate).length > 0) {
+            await sb.from("video_performance")
+              .update(vpUpdate)
+              .eq("user_id", link.user_id)
+              .eq("video_id", link.youtube_video_id);
+          }
         }
 
         const { error } = await sb.from("script_performance_link").update(update).eq("id", link.id);
