@@ -169,6 +169,18 @@ export const VoiceGeneratorStep = ({
     a.click();
   };
 
+  const downloadTranscript = () => {
+    const text = getCleanText();
+    if (!text) { return; }
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcricao-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const charCount = getCleanText().length;
   const estimatedMinutes = Math.ceil(charCount / 900); // ~900 chars/min for narration
 
