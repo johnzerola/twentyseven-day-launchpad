@@ -120,6 +120,14 @@ serve(async (req) => {
           update.performance_grade = ratio >= 3 ? "S" : ratio >= 2 ? "A" : ratio >= 1.2 ? "B" : ratio >= 0.8 ? "C" : ratio >= 0.5 ? "D" : "F";
         }
 
+        // Also update duration_seconds in video_performance if available
+        if (vd.durationSeconds && link.youtube_video_id) {
+          await sb.from("video_performance")
+            .update({ duration_seconds: vd.durationSeconds })
+            .eq("user_id", link.user_id)
+            .eq("video_id", link.youtube_video_id);
+        }
+
         const { error } = await sb.from("script_performance_link").update(update).eq("id", link.id);
         if (error) { errors++; } else { synced++; }
       }
