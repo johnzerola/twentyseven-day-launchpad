@@ -52,18 +52,28 @@ serve(async (req) => {
       for (const key of ytKeys) {
         try {
           const resp = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${batch.join(",")}&key=${key}`
+            `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${batch.join(",")}&key=${key}`
           );
           const data = await resp.json();
           if (data.error?.errors?.[0]?.reason === "quotaExceeded") continue;
 
           for (const item of (data.items || [])) {
+            // Parse ISO 8601 duration (PT#H#M#S) to seconds
+            let durationSeconds: number | null = null;
+            const dur = item.contentDetails?.duration;
+            if (dur) {
+              const match = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+              if (match) {
+                durationSeconds = (parseInt(match[1] || "0") * 3600) + (parseInt(match[2] || "0") * 60) + parseInt(match[3] || "0");
+              }
+            }
             videoData[item.id] = {
               views: parseInt(item.statistics?.viewCount || "0"),
               likes: parseInt(item.statistics?.likeCount || "0"),
               comments: parseInt(item.statistics?.commentCount || "0"),
               title: item.snippet?.title,
               publishedAt: item.snippet?.publishedAt,
+              durationSeconds,
             };
           }
           break; // Success, stop key rotation
@@ -108,6 +118,14 @@ serve(async (req) => {
           const ratio = avg > 0 ? vd.views / avg : 1;
           update.beat_channel_average = ratio > 1;
           update.performance_grade = ratio >= 3 ? "S" : ratio >= 2 ? "A" : ratio >= 1.2 ? "B" : ratio >= 0.8 ? "C" : ratio >= 0.5 ? "D" : "F";
+        }
+
+        // Also update duration_seconds in video_performance if available
+        if (vd.durationSeconds && link.youtube_video_id) {
+          await sb.from("video_performance")
+            .update({ duration_seconds: vd.durationSeconds })
+            .eq("user_id", link.user_id)
+            .eq("video_id", link.youtube_video_id);
         }
 
         const { error } = await sb.from("script_performance_link").update(update).eq("id", link.id);

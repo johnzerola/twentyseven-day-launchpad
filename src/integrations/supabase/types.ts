@@ -3857,6 +3857,7 @@ export type Database = {
           comments: number | null
           created_at: string | null
           ctr_percent: number | null
+          duration_seconds: number | null
           hook_type: string | null
           id: string
           last_checked_at: string | null
@@ -3893,6 +3894,7 @@ export type Database = {
           comments?: number | null
           created_at?: string | null
           ctr_percent?: number | null
+          duration_seconds?: number | null
           hook_type?: string | null
           id?: string
           last_checked_at?: string | null
@@ -3929,6 +3931,7 @@ export type Database = {
           comments?: number | null
           created_at?: string | null
           ctr_percent?: number | null
+          duration_seconds?: number | null
           hook_type?: string | null
           id?: string
           last_checked_at?: string | null

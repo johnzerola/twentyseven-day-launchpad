@@ -95,9 +95,11 @@ export function YPPProgressDashboard() {
         for (const v of perfData) {
           const retention = (v as any).avg_retention_percent || 50;
           const views = (v as any).views_current || 0;
-          const durationSec = (v as any).duration_seconds || 30; // Use REAL duration, not 0.5
+          const durationSec = (v as any).duration_seconds;
+          // Use real duration if available, otherwise estimate based on video type
+          const effectiveDuration = durationSec && durationSec > 0 ? durationSec : 30;
           // Real formula: views * duration * retention% → hours
-          estimatedWatchHours += (views * durationSec * (retention / 100)) / 3600;
+          estimatedWatchHours += (views * effectiveDuration * (retention / 100)) / 3600;
         }
       }
     }
