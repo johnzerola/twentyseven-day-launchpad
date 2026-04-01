@@ -58,12 +58,22 @@ serve(async (req) => {
           if (data.error?.errors?.[0]?.reason === "quotaExceeded") continue;
 
           for (const item of (data.items || [])) {
+            // Parse ISO 8601 duration (PT#H#M#S) to seconds
+            let durationSeconds: number | null = null;
+            const dur = item.contentDetails?.duration;
+            if (dur) {
+              const match = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+              if (match) {
+                durationSeconds = (parseInt(match[1] || "0") * 3600) + (parseInt(match[2] || "0") * 60) + parseInt(match[3] || "0");
+              }
+            }
             videoData[item.id] = {
               views: parseInt(item.statistics?.viewCount || "0"),
               likes: parseInt(item.statistics?.likeCount || "0"),
               comments: parseInt(item.statistics?.commentCount || "0"),
               title: item.snippet?.title,
               publishedAt: item.snippet?.publishedAt,
+              durationSeconds,
             };
           }
           break; // Success, stop key rotation
