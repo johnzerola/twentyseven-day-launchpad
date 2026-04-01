@@ -345,7 +345,10 @@ export const VoiceGeneratorStep = ({
                 {isPlaying ? 'Pausar' : 'Ouvir'}
               </Button>
               <Button variant="ghost" size="sm" onClick={downloadAudio} className="gap-1.5">
-                <Download className="w-4 h-4" /> Baixar
+                <Download className="w-4 h-4" /> Baixar MP3
+              </Button>
+              <Button variant="ghost" size="sm" onClick={downloadTranscript} className="gap-1.5">
+                <FileText className="w-4 h-4" /> Baixar TXT
               </Button>
               <Button variant="ghost" size="sm" onClick={generateAudio} className="gap-1.5" disabled={generating}>
                 <RefreshCw className="w-4 h-4" /> Refazer
