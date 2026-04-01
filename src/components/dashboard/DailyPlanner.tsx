@@ -300,13 +300,32 @@ export const DailyPlanner = () => {
       }
     } catch {}
 
-    const { data: plan } = await supabase
-      .from('onboarding_plans')
-      .select('plan_json, niche, time_per_day')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [planResult, dnaResult] = await Promise.all([
+      supabase
+        .from('onboarding_plans')
+        .select('plan_json, niche, time_per_day')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('user_content_memory')
+        .select('best_performing_style, avg_retention_pct, best_performing_duration, ai_identified_patterns')
+        .eq('user_id', session.user.id)
+        .maybeSingle(),
+    ]);
+
+    const plan = planResult.data;
+    const userDna: UserDNA | null = dnaResult.data ? {
+      best_performing_style: (dnaResult.data as any).best_performing_style,
+      avg_retention_pct: (dnaResult.data as any).avg_retention_pct,
+      best_performing_duration: (dnaResult.data as any).best_performing_duration,
+      ai_identified_patterns: (dnaResult.data as any).ai_identified_patterns,
+    } : null;
+
+    if (userDna) {
+      localStorage.setItem(DNA_KEY, JSON.stringify({ date: todayKey, dna: userDna }));
+    }
 
     // Try to use cached adaptation for task generation
     let cachedAdapt: AdaptationData | undefined;
@@ -315,7 +334,7 @@ export const DailyPlanner = () => {
       if (s) { const p = JSON.parse(s); if (p.date === todayKey) cachedAdapt = p.data?.adaptation; }
     } catch {}
 
-    const generated = generateTasksFromPlan(plan, plan?.niche || undefined, plan?.time_per_day || undefined, cachedAdapt);
+    const generated = generateTasksFromPlan(plan, plan?.niche || undefined, plan?.time_per_day || undefined, cachedAdapt, userDna);
     setTasks(generated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayKey, tasks: generated }));
     setLoading(false);
