@@ -52,7 +52,7 @@ serve(async (req) => {
       for (const key of ytKeys) {
         try {
           const resp = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${batch.join(",")}&key=${key}`
+            `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${batch.join(",")}&key=${key}`
           );
           const data = await resp.json();
           if (data.error?.errors?.[0]?.reason === "quotaExceeded") continue;
