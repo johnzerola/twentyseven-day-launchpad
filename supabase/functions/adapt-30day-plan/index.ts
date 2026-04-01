@@ -56,7 +56,7 @@ serve(async (req) => {
     // REAL PERFORMANCE DATA — retention, views, CTR from YouTube
     // ═══════════════════════════════════════════════════════════
     const { data: perfData } = await sb.from("video_performance")
-      .select("*")
+      .select("*, duration_seconds, watch_time_hours")
       .eq("user_id", effectiveUserId)
       .order("created_at", { ascending: false })
       .limit(30);
