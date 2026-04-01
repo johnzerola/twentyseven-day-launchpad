@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, niche, style, language, duration, videoType } = await req.json();
+    const { topic, niche, style, language, duration, videoType, script, returnCurve } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -79,6 +79,9 @@ serve(async (req) => {
       attentionTechniques: (attRes.data || []).slice(0, 5).map((a: any) => a.pattern_name),
     };
 
+    // Determine if we need a full curve
+    const wantCurve = returnCurve && script && script.length >= 100;
+
     // AI prediction
     const predRes = await fetch(AI_URL, {
       method: "POST", headers: aiHeaders,
@@ -86,7 +89,36 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash-lite",
         messages: [
           {
-            role: "system", content: `Você é um modelo de predição de performance de vídeos YouTube.
+            role: "system", content: wantCurve
+              ? `You are a YouTube retention curve predictor. Analyze the script provided and generate a timestamp-by-timestamp retention curve.
+
+Return ONLY valid JSON:
+{
+  "curve": {
+    "points": [{"second": 0, "label": "Hook", "attention": 0.95}, ...],
+    "avgRetention": 65,
+    "dropOffs": [{"timestamp": "1:30", "from": 70, "to": 52, "drop": 18, "fix": "Add pattern interrupt or revelation here"}],
+    "bestMoment": {"second": 15, "label": "Hook Payoff", "attention": 0.92},
+    "worstMoment": {"second": 300, "label": "Valley", "attention": 0.45}
+  },
+  "prediction": {
+    "estimated_ctr": N, "estimated_retention": N, "viral_probability": N,
+    "attention_score": N, "curiosity_score": N, "dopamine_score": N,
+    "retention_prediction": {"first_30s": N, "mid_video": N, "last_30s": N},
+    "recommended_content_model": "string", "recommended_hook_type": "string",
+    "risk_factors": ["string"], "optimization_tips": ["string"], "confidence": N
+  }
+}
+
+Rules for curve generation:
+- Generate 10-20 points spread across the video duration
+- Include labels for each point (Hook, Setup, Context, Development, Midpoint Twist, Climax Build, Climax, Resolution, CTA, End)
+- Attention values are 0.0 to 1.0 (1.0 = 100% viewers still watching)
+- Always start at 1.0 (or 0.95+)
+- Identify drop-offs: any drop > 10% between consecutive points
+- For each drop-off, provide a specific actionable fix
+- Base predictions on the actual script content, style, and niche data provided`
+              : `Você é um modelo de predição de performance de vídeos YouTube.
 Analise os dados fornecidos e preveja métricas de performance.
 
 Retorne APENAS um JSON válido:
@@ -112,7 +144,9 @@ Retorne APENAS um JSON válido:
 Base suas predições nos dados reais fornecidos (viral titles, hooks, attention patterns, niche averages).`
           },
           {
-            role: "user", content: `Preveja a performance deste vídeo:\n${JSON.stringify(context, null, 2)}\n\nRetorne APENAS o JSON.`
+            role: "user", content: wantCurve
+              ? `Analyze this script and generate a retention curve:\n\nScript (first 3000 chars):\n${script.slice(0, 3000)}\n\nContext:\n${JSON.stringify(context, null, 2)}\n\nDuration: ${duration} ${isShort ? 'seconds' : 'minutes'}\nReturn ONLY the JSON.`
+              : `Preveja a performance deste vídeo:\n${JSON.stringify(context, null, 2)}\n\nRetorne APENAS o JSON.`
           }
         ],
         stream: false,
@@ -120,12 +154,21 @@ Base suas predições nos dados reais fornecidos (viral titles, hooks, attention
     });
 
     let prediction: any = {};
+    let curve: any = null;
     if (predRes.ok) {
       const d = await predRes.json();
       const content = d.choices?.[0]?.message?.content || '';
       try {
         const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) prediction = JSON.parse(jsonMatch[0]);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (wantCurve && parsed.curve) {
+            curve = parsed.curve;
+            prediction = parsed.prediction || {};
+          } else {
+            prediction = parsed;
+          }
+        }
       } catch { /* fallback */ }
     }
 
@@ -150,6 +193,7 @@ Base suas predições nos dados reais fornecidos (viral titles, hooks, attention
 
     return new Response(JSON.stringify({
       prediction,
+      curve: curve || null,
       context: {
         matchingViralTitles: matchingTitles.length,
         avgViralViews,

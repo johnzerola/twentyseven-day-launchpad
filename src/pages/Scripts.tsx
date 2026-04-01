@@ -29,6 +29,7 @@ import { VoiceGeneratorStep } from '@/components/scripts/VoiceGeneratorStep';
 import { ScriptComparator } from '@/components/scripts/ScriptComparator';
 import { ViralThemeWizard } from '@/components/scripts/ViralThemeWizard';
 import { ThumbnailGenerator } from '@/components/scripts/ThumbnailGenerator';
+import { RetentionCurveAnalyzer } from '@/components/scripts/RetentionCurveAnalyzer';
 import { ScriptPerformanceTracker } from '@/components/dashboard/ScriptPerformanceTracker';
 import { PipelineStepper, type PipelineStep } from '@/components/scripts/PipelineStepper';
 import { StepNavButtons } from '@/components/scripts/StepNavButtons';
@@ -826,6 +827,21 @@ const Scripts = () => {
 
             {/* Theme Suggestions — Wizard */}
             <ViralThemeWizard
+
+            {/* ═══ Retention Curve Analyzer ═══ */}
+            <RetentionCurveAnalyzer
+              script={script}
+              topic={topic}
+              niche={niche}
+              style={style}
+              duration={duration}
+              videoType={videoType}
+              language={language}
+            />
+
+            {/* Theme Suggestions — Wizard */}
+            {/* Moved ViralThemeWizard below retention analyzer */}
+            {false && <ViralThemeWizard
               onSelectTheme={(theme) => {
                 setTopic(theme.title);
                 if (theme.estimated_duration) {
@@ -845,6 +861,7 @@ const Scripts = () => {
               }}
               userChannels={userChannels}
             />
+            />}
 
             {/* ═══ 1-Click Short Templates ═══ */}
             {videoType === 'short' && (
