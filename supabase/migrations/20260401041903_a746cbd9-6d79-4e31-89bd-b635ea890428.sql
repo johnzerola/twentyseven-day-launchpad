@@ -1,0 +1,1 @@
+ALTER TABLE public.video_performance ADD COLUMN IF NOT EXISTS duration_seconds integer DEFAULT NULL;
