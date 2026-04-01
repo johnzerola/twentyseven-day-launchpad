@@ -172,6 +172,43 @@ const Scripts = () => {
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
 
+    // Load from Dotti or Trend suggestion
+    const dottiTopic = sessionStorage.getItem('dotti_script_topic');
+    if (dottiTopic) {
+      setTopic(dottiTopic);
+      sessionStorage.removeItem('dotti_script_topic');
+      setActiveStep('script');
+      toast.success('💡 Tema do Dotti carregado! Configure e gere o roteiro.');
+    }
+
+    // Load from Outlier Replicate (full reverse engineering context)
+    const replicateRaw = sessionStorage.getItem('replicate_video');
+    if (replicateRaw) {
+      try {
+        const rep = JSON.parse(replicateRaw);
+        sessionStorage.removeItem('replicate_video');
+        const topicText = `[REPLICAR] ${rep.videoTitle} (${(rep.views || 0).toLocaleString()} views, ${rep.multiplier}x viral, canal: ${rep.channelName})`;
+        setTopic(topicText);
+        if (rep.niche) setNiche(rep.niche);
+        if (rep.dna) {
+          const parts: string[] = [];
+          parts.push(`🔄 ENGENHARIA REVERSA: ${rep.videoTitle}`);
+          parts.push(`Canal: ${rep.channelName} | Views: ${(rep.views || 0).toLocaleString()} | Gold Score: ${rep.goldScore}`);
+          if (rep.dna.hook_type) parts.push(`\n🎣 Hook: ${rep.dna.hook_type}`);
+          if (rep.dna.story_structure) parts.push(`📖 Estrutura: ${rep.dna.story_structure}`);
+          if (rep.dna.emotion_primary) parts.push(`💭 Emoção: ${rep.dna.emotion_primary}${rep.dna.emotion_secondary ? ` + ${rep.dna.emotion_secondary}` : ''}`);
+          if (rep.dna.visual_style) parts.push(`🎨 Visual: ${rep.dna.visual_style}`);
+          if (rep.dna.why_viral) parts.push(`\n🔥 Por que viralizou: ${rep.dna.why_viral}`);
+          if (rep.dna.replication_template) parts.push(`\n💡 Template de replicação:\n${rep.dna.replication_template}`);
+          setScript(parts.join('\n'));
+        }
+        setActiveStep('script');
+        toast.success('🔄 Engenharia reversa carregada! Gere o roteiro baseado no DNA extraído.');
+      } catch (e) {
+        console.error('Failed to parse replicate data:', e);
+      }
+    }
+
     // Load from Video Clone Engine (TubySpy "Modelar Vídeo")
     const cloneRaw = sessionStorage.getItem('clone_full_data');
     if (cloneRaw) {
