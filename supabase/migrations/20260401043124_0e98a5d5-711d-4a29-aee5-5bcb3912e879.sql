@@ -1,0 +1,1 @@
+ALTER TABLE public.video_performance ADD COLUMN IF NOT EXISTS watch_time_hours double precision DEFAULT NULL;
