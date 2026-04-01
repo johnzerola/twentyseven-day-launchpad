@@ -118,13 +118,22 @@ serve(async (req) => {
       
       if (channel) {
         const subsRemaining = Math.max(0, 1000 - ((channel as any).subscribers || 0));
-        // Estimate watch hours from perf data
+        // Use watch_time_hours if available, else calculate from duration_seconds
         let estimatedWatchHours = 0;
         for (const v of (perfData || [])) {
-          const views = (v as any).views_current || 0;
-          const ret = (v as any).avg_retention_percent || 50;
-          const dur = (v as any).duration_seconds || 30;
-          estimatedWatchHours += (views * dur * (ret / 100)) / 3600;
+          const wth = (v as any).watch_time_hours;
+          if (wth && wth > 0) {
+            // Real watch time from YouTube Analytics
+            estimatedWatchHours += wth;
+          } else {
+            // Fallback: estimate from views * duration * retention
+            const views = (v as any).views_current || 0;
+            const ret = (v as any).avg_retention_percent || 50;
+            const dur = (v as any).duration_seconds;
+            // Smart fallback: if no duration, estimate by video type (shorts ~30s, longs ~600s)
+            const effectiveDur = dur && dur > 0 ? dur : (views > 0 ? 300 : 30);
+            estimatedWatchHours += (views * effectiveDur * (ret / 100)) / 3600;
+          }
         }
         const watchRemaining = Math.max(0, 4000 - estimatedWatchHours);
 
