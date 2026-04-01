@@ -120,12 +120,20 @@ const CATEGORY_CONFIG = {
 
 const STORAGE_KEY = 'daily_planner_data';
 const ADAPTATION_KEY = 'daily_planner_adaptation';
+const DNA_KEY = 'daily_planner_user_dna';
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function generateTasksFromPlan(plan: any, niche?: string, hoursPerDay?: string, adaptation?: AdaptationData): DailyTask[] {
+interface UserDNA {
+  best_performing_style?: string;
+  avg_retention_pct?: number;
+  best_performing_duration?: string;
+  ai_identified_patterns?: string[];
+}
+
+function generateTasksFromPlan(plan: any, niche?: string, hoursPerDay?: string, adaptation?: AdaptationData, dna?: UserDNA | null): DailyTask[] {
   const hours = parseFloat(hoursPerDay || '2') || 2;
   const tasks: DailyTask[] = [];
   const viralMode = adaptation?.virality_mode_active;
@@ -163,6 +171,26 @@ function generateTasksFromPlan(plan: any, niche?: string, hoursPerDay?: string, 
       description: 'Faça engenharia reversa de um vídeo que viralizou no seu nicho',
       duration: '20min', path: '/viral-db', category: 'research', completed: false,
     });
+  }
+
+  // Inject DNA-based personalized tasks
+  if (dna && !viralMode) {
+    if (dna.best_performing_style) {
+      tasks.push({
+        id: 'dna-best-style',
+        title: `⭐ Criar no estilo "${dna.best_performing_style}"`,
+        description: `Seu estilo de maior retenção (${dna.avg_retention_pct || '?'}%). Priorize este formato.`,
+        duration: '30min', path: '/scripts', category: 'create', completed: false, priority: 'high',
+      });
+    }
+    if (dna.ai_identified_patterns?.length) {
+      tasks.push({
+        id: 'dna-pattern-apply',
+        title: '🧬 Aplicar padrão de sucesso do canal',
+        description: `Padrão detectado: "${dna.ai_identified_patterns[0]}"`,
+        duration: '15min', path: '/scripts', category: 'optimize', completed: false, priority: 'medium',
+      });
+    }
   }
 
   // Duration-adaptive tasks based on AI recommendation

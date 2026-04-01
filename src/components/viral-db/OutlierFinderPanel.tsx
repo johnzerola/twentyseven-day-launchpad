@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Loader2, TrendingUp, Users, Eye, ExternalLink, Zap, Trophy, Filter, Sparkles, Dna, ThumbsUp, MessageSquare, Star } from 'lucide-react';
+import { Search, Loader2, TrendingUp, Users, Eye, ExternalLink, Zap, Trophy, Filter, Sparkles, Dna, ThumbsUp, MessageSquare, Star, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -293,6 +293,27 @@ export const OutlierFinderPanel = () => {
                           toast.success('Referência enviada ao Script Engine!');
                         }}>
                         <Sparkles className="w-3 h-3" /> Clonar DNA
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-accent/30 text-accent hover:bg-accent/10"
+                        onClick={() => {
+                          const dna = contentDNA.find(d => d.title === o.video_title);
+                          sessionStorage.setItem('replicate_video', JSON.stringify({
+                            videoTitle: o.video_title,
+                            videoUrl: o.video_url,
+                            videoId: o.video_id,
+                            channelName: o.channel_name,
+                            views: o.views,
+                            multiplier: o.multiplier,
+                            goldScore: o.gold_score,
+                            niche: o.niche,
+                            duration: o.duration,
+                            engagementRate: o.engagement_rate,
+                            dna: dna || null,
+                          }));
+                          navigate('/scripts?action=replicate');
+                          toast.success('🔄 Engenharia reversa iniciada!');
+                        }}>
+                        <FileText className="w-3 h-3" /> Replicar
                       </Button>
                       <a href={o.video_url} target="_blank" rel="noopener noreferrer">
                         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
