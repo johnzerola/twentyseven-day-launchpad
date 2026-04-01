@@ -404,8 +404,15 @@ export const DailyPlanner = () => {
           .maybeSingle();
 
         const newTasks = generateTasksFromPlan(plan, plan?.niche, plan?.time_per_day, result.adaptation);
-        setTasks(newTasks);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayKey, tasks: newTasks }));
+        // Retrieve cached DNA
+        let cachedDna: UserDNA | null = null;
+        try {
+          const d = localStorage.getItem(DNA_KEY);
+          if (d) cachedDna = JSON.parse(d).dna || null;
+        } catch {}
+        const newTasksWithDna = generateTasksFromPlan(plan, plan?.niche, plan?.time_per_day, result.adaptation, cachedDna);
+        setTasks(newTasksWithDna);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayKey, tasks: newTasksWithDna }));
 
         if (result.viralityMode) {
           toast.warning('🔥 Modo Viralidade ATIVADO — canal próximo do YPP!', {
