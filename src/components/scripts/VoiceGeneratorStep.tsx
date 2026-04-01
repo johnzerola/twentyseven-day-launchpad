@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, Play, Pause, Download, Loader2, Volume2, RefreshCw, Upload, ChevronDown } from 'lucide-react';
+import { Mic, Play, Pause, Download, Loader2, Volume2, RefreshCw, Upload, ChevronDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -169,6 +169,18 @@ export const VoiceGeneratorStep = ({
     a.click();
   };
 
+  const downloadTranscript = () => {
+    const text = getCleanText();
+    if (!text) { return; }
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcricao-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const charCount = getCleanText().length;
   const estimatedMinutes = Math.ceil(charCount / 900); // ~900 chars/min for narration
 
@@ -333,7 +345,10 @@ export const VoiceGeneratorStep = ({
                 {isPlaying ? 'Pausar' : 'Ouvir'}
               </Button>
               <Button variant="ghost" size="sm" onClick={downloadAudio} className="gap-1.5">
-                <Download className="w-4 h-4" /> Baixar
+                <Download className="w-4 h-4" /> Baixar MP3
+              </Button>
+              <Button variant="ghost" size="sm" onClick={downloadTranscript} className="gap-1.5">
+                <FileText className="w-4 h-4" /> Baixar TXT
               </Button>
               <Button variant="ghost" size="sm" onClick={generateAudio} className="gap-1.5" disabled={generating}>
                 <RefreshCw className="w-4 h-4" /> Refazer
