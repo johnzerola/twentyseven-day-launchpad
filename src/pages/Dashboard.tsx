@@ -173,6 +173,9 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* Viral Diagnosis */}
+        <ViralDiagnosisPanel />
+
         {/* YPP Proximity Alert */}
         <YPPProximityAlert />
 
