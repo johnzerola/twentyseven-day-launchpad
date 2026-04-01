@@ -862,7 +862,7 @@ const Scripts = () => {
               userChannels={userChannels}
             />
             />}
-            {/* ═══ Retention Curve Analyzer ═══ */}
+            {/* ═══ Retention Curve ═══ */}
             <RetentionCurveAnalyzer
               script={script}
               topic={topic}
