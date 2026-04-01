@@ -3882,6 +3882,7 @@ export type Database = {
           views_day3: number | null
           views_day30: number | null
           views_day7: number | null
+          watch_time_hours: number | null
           youtube_video_id: string
         }
         Insert: {
@@ -3919,6 +3920,7 @@ export type Database = {
           views_day3?: number | null
           views_day30?: number | null
           views_day7?: number | null
+          watch_time_hours?: number | null
           youtube_video_id: string
         }
         Update: {
@@ -3956,6 +3958,7 @@ export type Database = {
           views_day3?: number | null
           views_day30?: number | null
           views_day7?: number | null
+          watch_time_hours?: number | null
           youtube_video_id?: string
         }
         Relationships: [
