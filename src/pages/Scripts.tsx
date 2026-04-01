@@ -825,44 +825,7 @@ const Scripts = () => {
               )}
             </div>
 
-            {/* Theme Suggestions — Wizard */}
-            <ViralThemeWizard
-
             {/* ═══ Retention Curve Analyzer ═══ */}
-            <RetentionCurveAnalyzer
-              script={script}
-              topic={topic}
-              niche={niche}
-              style={style}
-              duration={duration}
-              videoType={videoType}
-              language={language}
-            />
-
-            {/* Theme Suggestions — Wizard */}
-            {/* Moved ViralThemeWizard below retention analyzer */}
-            {false && <ViralThemeWizard
-              onSelectTheme={(theme) => {
-                setTopic(theme.title);
-                if (theme.estimated_duration) {
-                  const dur = parseInt(theme.estimated_duration);
-                  if (dur) setDuration(String(dur));
-                }
-                if (theme.videoFormat === 'short') setVideoType('short');
-                const styleMap: Record<string, string> = {
-                  'documentário': 'documentário', 'listicle': 'listicle', 'tutorial': 'tutorial',
-                  'true crime': 'narração', 'motivacional': 'storytelling', 'storytelling': 'storytelling',
-                  'educativo': 'educativo', 'horror': 'narração', 'shorts': 'dopaminérgico',
-                  'narração': 'narração', 'cinematográfico': 'cinematográfico', 'dopaminérgico': 'dopaminérgico',
-                };
-                if (theme.style && styleMap[theme.style]) setStyle(styleMap[theme.style]);
-                if (theme.niche_tags?.length) setNiche(theme.niche_tags[0]);
-                toast.success('Tema aplicado! Configure detalhes e gere o roteiro.');
-              }}
-              userChannels={userChannels}
-            />
-            />}
-            {/* ═══ Retention Curve ═══ */}
             <RetentionCurveAnalyzer
               script={script}
               topic={topic}
