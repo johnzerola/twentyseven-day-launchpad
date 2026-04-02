@@ -364,15 +364,12 @@ serve(async (req) => {
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
 
-    // ═══ CLAUDE API KEY (primary) ═══
-    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
-    if (!CLAUDE_API_KEY) throw new Error("CLAUDE_API_KEY not configured — required for script generation");
-
-    // Lovable AI key for fallback hook generation only
+    // ═══ GEMINI (PRIMARY) via Lovable AI Gateway ═══
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured — required for script generation");
 
     const runId = phaseId || crypto.randomUUID();
-    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min ENGINE=CLAUDE`);
+    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min ENGINE=GEMINI`);
 
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
