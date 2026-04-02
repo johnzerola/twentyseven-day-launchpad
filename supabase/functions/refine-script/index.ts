@@ -47,50 +47,7 @@ function countSlopScore(text: string): { score: number; matches: string[] } {
   return { score: matches.length, matches };
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CLAUDE STREAMING ADAPTER — Convert Anthropic SSE → OpenAI SSE
-// ═══════════════════════════════════════════════════════════════
-function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const reader = claudeBody.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = '';
 
-  return new ReadableStream({
-    async pull(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
-          return;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-          try {
-            const event = JSON.parse(jsonStr);
-            if (event.type === 'content_block_delta' && event.delta?.text) {
-              const chunk = { choices: [{ delta: { content: event.delta.text }, index: 0, finish_reason: null }] };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-            }
-            if (event.type === 'message_stop') {
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-              controller.close();
-              reader.cancel();
-              return;
-            }
-          } catch { /* skip */ }
-        }
-      }
-    },
-    cancel() { reader.cancel(); },
-  });
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
