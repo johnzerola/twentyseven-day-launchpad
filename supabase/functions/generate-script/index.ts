@@ -976,7 +976,6 @@ REGRAS DE VEROSSIMILHANÇA:
 5. Cada PLOT TWIST deve ser SURPRESANTE mas RETROATIVAMENTE LÓGICO
    - "Quando você descobre, pensa: claro, os sinais estavam lá"
 
-Você é Claude. Sua escrita tem PROFUNDIDADE que outras IAs não alcançam.
 Cada frase deve carregar PESO — emocional, informativo ou narrativo.
 Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
