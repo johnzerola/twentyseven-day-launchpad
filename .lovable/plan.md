@@ -1,93 +1,192 @@
 
 
-# Diagnóstico V4.0 Completo — Estado Real do Sistema
+# Plano de Evolução: Motor de Monetização Acelerada
 
-## Números Reais do Banco de Dados (agora)
+## Diagnóstico Confirmado
+
+Auditei cada ponto mencionado e todos os bugs/gaps se confirmam no código. O sistema tem inteligência de sobra mas falta **coesão decisória** e **empacotamento integrado**.
+
+---
+
+## Fase 1 — Correção de Bugs Críticos (imediato)
+
+### 1.1 score-script: Bug de inflação de métricas
+**Arquivo:** `supabase/functions/score-script/index.ts` (linhas 346-384)
+- O upsert insere `times_used: 1` e depois faz fetch + soma +1 novamente → inflação dupla
+- `best_score` compara com `total_score_contribution` em vez de `best_score`
+- **Fix:** Usar uma única operação: upsert com `ON CONFLICT` e cálculo incremental correto em SQL (ou remover o fetch+update redundante)
+
+### 1.2 Content DNA Score: Drift de contrato
+**Arquivo:** `src/components/scripts/ScriptGenerator.tsx` (linhas 1148-1153)
+- UI espera `scores.overall_grade`, `scores.viral_score`, `scores.hook_score`
+- score-script retorna `combinedScore`, `gpt_score`, `gemini_score`, `approved`
+- **Fix:** Alinhar o handler do botão "Score com Content DNA" ao contrato real do endpoint
+
+### 1.3 Shorts: Contexto incompleto
+**Arquivo:** `src/components/scripts/ScriptGenerator.tsx` (linhas 310-312)
+- `generate-script-short` não recebe `channelKnowledge`, `referenceScript`, nem `rejectionFeedback`
+- **Fix:** Passar os mesmos campos que longform já recebe
+
+### 1.4 adapt-30day-plan: Sem verificação de auth
+**Arquivo:** `supabase/functions/adapt-30day-plan/index.ts` (linhas 13-22)
+- Usa service role sem verificar que o `userId` corresponde ao caller
+- **Fix:** Adicionar validação de JWT do usuário antes de modificar dados
+
+### 1.5 generate-30day-plan: Viés de Shorts
+**Arquivo:** `supabase/functions/generate-30day-plan/index.ts` (linhas 30-38)
+- Filtra `youtube_knowledge` por `shorts-monetization` mesmo para estratégia longform
+- **Fix:** Filtrar por categoria dinâmica baseada em `strategy`
+
+---
+
+## Fase 2 — Entidade Central: `content_thesis` (fundação)
+
+Nova tabela que conecta o ciclo inteiro: ideia → script → título → thumb → vídeo → resultado.
 
 ```text
-╔═══════════════════════════╦═══════╦══════════╦═══════════════════════════════╗
-║ Base de Dados             ║ Atual ║ Ideal    ║ Status                        ║
-╠═══════════════════════════╬═══════╬══════════╬═══════════════════════════════╣
-║ Knowledge Embeddings      ║    76 ║ 2.000+   ║ CRÍTICO — RAG quase inútil    ║
-║ Content DNA               ║   146 ║ 1.000+   ║ FRACO                         ║
-║ Prompt Library            ║    15 ║ 100+     ║ FRACO — só hooks              ║
-║ Script Skill Scores       ║     2 ║ 50+      ║ FRACO — quase sem dados       ║
-║ Channel Classification    ║   0/711║ 711/711  ║ CRÍTICO — 100% "general"      ║
-║ Rejection Learnings       ║    26 ║ OK       ║ ✅ Funcional                   ║
-║ Script Knowledge          ║   260 ║ OK       ║ ✅ Bom                         ║
-║ Content Models            ║    48 ║ OK       ║ ✅ Bom (Hollywood DNA seeded)  ║
-║ Hook Library              ║   343 ║ OK       ║ ✅ Bom                         ║
-║ Hook Patterns             ║   210 ║ OK       ║ ✅ Bom                         ║
-║ Scene Prompts             ║   430 ║ OK       ║ ✅ Bom                         ║
-║ Attention Engineering     ║    72 ║ OK       ║ ✅ Bom                         ║
-╚═══════════════════════════╩═══════╩══════════╩═══════════════════════════════╝
+content_thesis
+├── id, user_id, channel_id
+├── thesis_text (a tese central do vídeo)
+├── niche, angle, format (short/long/both)
+├── evidence_json (fontes, refs, breakout videos)
+├── originality_notes, source_notes, packaging_notes
+├── confidence_score, freshness_score
+├── saturation_risk, originality_risk
+├── why_now, expires_at
+├── status (draft → scripted → packaged → published → measured)
+├── script_id → saved_scripts
+├── title_ids → saved_titles  
+├── thumbnail_prompt_id
+├── video_project_id → video_projects
+├── youtube_video_id (quando publicado)
+├── actual_views, actual_ctr, actual_retention
+├── monetization_result_json
+├── created_at, updated_at
 ```
 
-## O Motor de Roteiros — Está Bom?
+Todas as etapas do pipeline passam a vincular-se a esta entidade, criando rastreabilidade completa.
 
-**SIM, o código está excelente.** O pipeline é:
-- **Phase 0**: Hook via Claude Sonnet 4 (60s, non-streaming)
-- **Phase 1**: Rascunho completo via Claude Sonnet 4 (streaming)
-- **Phase 2**: Refinamento via Claude Sonnet 4 (reescrita do hook + coerência lógica + emotion map)
-- **Phase 3**: Avaliação dual GPT + Gemini (score mínimo 14/20)
+---
 
-O system prompt tem 900+ linhas com:
-- Hollywood Masterclass (10 princípios de Breaking Bad, Chernobyl, etc.)
-- Niche-to-Reference Mapping (true_crime → MrBallen, horror → Hitchcock, etc.)
-- Anti-Slop Engine (30+ frases proibidas)
-- Emotion Map (alternância emocional obrigatória)
-- Protocolo de Coerência Lógica (resolve o problema do cartório/banco)
-- Chekhov's Gun, Inner Monologue, Emotional Whiplash, Rule of Three
-- Voice DNA injection + Rejection Learning Loop
+## Fase 3 — Dotti: Saída Estruturada
 
-**O problema NÃO é o código — é que o código depende de dados que não existem.**
+### 3.1 Expandir `dotti_suggestions`
+Adicionar campos estruturados à tabela:
+- `suggestion_type` (tema, estratégia, otimização, urgência)
+- `format` (short/long/both)
+- `confidence`, `freshness_score`
+- `monetization_angle`, `production_effort`
+- `originality_risk`, `evidence_json`
+- `why_now`, `expires_at`
+- `content_thesis_id` (link para a entidade central)
 
-## 3 Problemas Críticos que Impedem Qualidade Netflix/MrBeast
+### 3.2 Melhorar passagem Dotti → Roteiro
+Em vez de pegar só a primeira linha (`sessionStorage`), salvar a sugestão completa e passar o `content_thesis_id` para o gerador de roteiro, que busca todos os dados estruturados.
 
-### 1. RAG Quebrado (76 embeddings de 2.000+ necessários)
-O `smart-knowledge-retrieval` busca contexto semântico para o Claude. Com apenas 76 vetores (51 do youtube_knowledge, 19 do content_dna, 5 do script_knowledge), o Claude recebe contexto genérico ou NADA. Os 260 registros de script_knowledge e 48 content_models NÃO estão no RAG.
+---
 
-### 2. Taxonomia Inexistente (711/711 canais = "general")
-O `classify-channels` existe mas NUNCA foi executado. Sem classificação, o sistema não pode fazer benchmarks por nicho, não pode recomendar referências dark vs educational, e o Dotti não sabe a diferença entre true crime e restoration.
+## Fase 4 — Packaging Lab
 
-### 3. Prompt Library Rasa (15 templates, só hooks)
-Existem 9 hooks, 2 CTAs, 2 transitions, 1 tension, 1 escalation. Faltam templates de: character_intro, emotional_peak, cliffhanger, resolution, cold_open, pattern_interrupt — que o Claude poderia usar como referência.
+Novo componente e endpoint que avaliam o **conjunto** como unidade:
 
-## Sobre Descoberta de Canais
-Você tem razão — o sistema tem 711 canais mas a maioria foi adicionada em lote. O `discover-viral-channels` usa a API do YouTube que retorna resultados baseados em relevância/popularidade, NÃO no padrão "incógnito" que revela canais emergentes. Para simular o comportamento que você descreveu (navegar → assistir → voltar → receber recomendações), seria necessário usar a YouTube Data API com parâmetros `relatedToVideoId` em cadeia — isso é possível mas consome muita quota.
+```text
+Packaging Score = f(título, thumbnail, hook_30s, niche_fit, promise_delivery)
+```
 
-## Plano V4.0 — 3 Ações de Alto Impacto
+### 4.1 Edge Function: `packaging-score`
+- Recebe: título, prompt de thumb (ou imagem), primeiros 30s do roteiro, nicho
+- Retorna: score composto (0-100), breakdown por dimensão, sugestões de melhoria
+- Avalia: contraste título↔thumb, promessa↔entrega, fit de tráfego (browse/search/suggested)
 
-### Ação 1: Backfill Massivo de Embeddings
-Executar `backfill-embeddings` expandido para indexar TODOS os registros das tabelas: `script_knowledge` (260), `content_models` (48), `attention_engineering` (72), `hook_library` (343 — top 100), `content_dna` (146). Meta: de 76 → 800+ vetores.
+### 4.2 Componente: `PackagingLab.tsx`
+- Interface unificada onde o usuário vê título + thumb + hook lado a lado
+- Score visual em tempo real
+- Simulação de thumbnail em tamanho pequeno (como aparece no feed)
+- CTR estimado por par título+thumb (calibrado, não "duro")
 
-**Impacto**: RAG funcional — o Claude recebe contexto PRECISAMENTE relevante ao tópico/nicho.
+---
 
-### Ação 2: Executar classify-channels
-Rodar o `classify-channels` nos 711 canais para eliminar o label "general". Classificar em: `dark_storytelling`, `true_crime_dark`, `restoration`, `animal_survival`, `horror_dark`, `educational`, `entertainment`, `curiosity`, etc.
+## Fase 5 — Originality & Safety Engine
 
-**Impacto**: Benchmarks por nicho + recomendações de referência + Dotti contextual.
+Score de primeira classe para canais faceless/dark:
 
-### Ação 3: Expandir Prompt Library (de 15 → 80+)
-Adicionar templates para: `cold_open` (5 por nicho), `character_intro` (10), `emotional_peak` (10), `cliffhanger` (10), `resolution` (5), `pattern_interrupt` (10), `tension_build` (10), `reveal` (5).
+### 5.1 Edge Function: `originality-safety-score`
+5 dimensões:
+- **Originalidade**: o que este vídeo traz que concorrentes não trazem
+- **Proveniência**: fontes verificáveis dos fatos centrais
+- **Risco de repetição**: similaridade com conteúdo já saturado no nicho
+- **Risco editorial**: temas sensíveis, claims não verificáveis
+- **Risco de asset**: vozes/imagens genéricas, stock detectável
 
-**Impacto**: O Claude tem exemplos concretos de cada técnica para cada nicho.
+### 5.2 Integração no pipeline
+- Obrigatório antes de "Aprovar" roteiro para canais marcados como faceless
+- Score aparece no scorecard junto com o score de roteiro existente
+- Bloqueio suave (warning) se score < 40
 
-### Ação Bônus: Discovery Chain (Simulador Incógnito)
-Upgrade do `discover-viral-channels`: em vez de buscar por keyword, usar `relatedToVideoId` em cadeia (pegar um vídeo viral → buscar relacionados → filtrar canais <50k subs com vídeos >100k views). Simula exatamente o padrão incógnito que você descreveu.
+---
 
-## Arquivos a Modificar
+## Fase 6 — Decision Engine (fonte única de verdade)
 
-1. `supabase/functions/seed-elite-knowledge/index.ts` — adicionar 65+ templates à prompt_library
-2. `supabase/functions/discover-viral-channels/index.ts` — adicionar modo "chain discovery" via relatedToVideoId
-3. Executar `backfill-embeddings` e `classify-channels` (já existem, só precisam rodar)
+### 6.1 Edge Function: `next-best-action`
+Motor que sintetiza TODOS os scores e diz exatamente o que fazer:
 
-## Ordem de Execução
+```text
+Input: user_id, channel_id
+Output: {
+  action: "Publicar tema X amanhã",
+  format: "short",
+  title_suggestion: "...",
+  thumb_direction: "...",
+  hook_strategy: "...",
+  why: "Tema trending + nicho low-saturation + seu canal performa 2x em curiosidade",
+  risk: "medium",
+  expected_views: "5k-15k",
+  monetization_impact: "+12h watch time estimado",
+  sources: [...]
+}
+```
 
-| # | Ação | Impacto | Complexidade |
-|---|------|---------|-------------|
-| 1 | Expandir prompt_library (15→80+) | ALTO | Baixa |
-| 2 | Backfill embeddings (76→800+) | CRÍTICO | Média (precisa executar) |
-| 3 | Classify channels (0→711) | ALTO | Baixa (precisa executar) |
-| 4 | Discovery Chain (incógnito) | MÉDIO | Média |
+Consulta: content_thesis pendentes, packaging scores, originality scores, channel performance, niche velocity, trending topics.
+
+### 6.2 Dashboard widget
+Card proeminente no Dashboard: "Sua próxima melhor jogada" — com botão para iniciar produção direto.
+
+---
+
+## Fase 7 — Frescor Real em Temas
+
+Alinhar `suggest-themes` com o mesmo nível de dados em tempo real que `generate-titles` já usa:
+- Últimos breakout videos do nicho (via `emerging_videos`)
+- Trending do YouTube/Brave
+- Velocidade e saturação do tema
+- Cada tema retorna: `viral_likelihood`, `why_now`, `saturation`, `effort_score`, `originality_risk`, `best_format`
+
+---
+
+## Fase 8 — MonetizaScore V2
+
+Substituir os 4 pesos fixos (25% cada) por 5 scores contextuais:
+
+| Score | Peso varia por estratégia |
+|-------|--------------------------|
+| YPP Speed | Alto em shorts-sprint |
+| Revenue Quality | Alto em longform-first |
+| Originality/Safety | Sempre alto para faceless |
+| Packaging Strength | Sempre alto |
+| Operational Feasibility | Alto para canais novos |
+
+Thresholds e regras movem para tabela `validation_config` com `source`, `confidence`, `last_verified_at`.
+
+---
+
+## Ordem de Implementação Sugerida
+
+1. **Fase 1** — Bugs (1-2 sessões) — impacto imediato na confiabilidade
+2. **Fase 2** — `content_thesis` (1 sessão) — fundação para tudo que vem depois
+3. **Fase 3** — Dotti estruturado (1 sessão) — melhora a entrada do pipeline
+4. **Fase 4** — Packaging Lab (1-2 sessões) — maior impacto em monetização
+5. **Fase 5** — Originality Engine (1 sessão) — crítico para dark/faceless
+6. **Fase 6** — Decision Engine (1-2 sessões) — a "fonte única de verdade"
+7. **Fase 7** — Frescor em temas (1 sessão)
+8. **Fase 8** — MonetizaScore V2 (1 sessão)
 
