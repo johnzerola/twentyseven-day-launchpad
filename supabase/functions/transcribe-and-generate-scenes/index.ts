@@ -311,26 +311,14 @@ RULES:
       }
 
       // ── METHOD 3: Script-based fallback via Gemini direct (no real audio timestamps) ──
+      // ── METHOD 3: Script-based fallback via AI Gateway ──
       if (!transcribeData) {
         if (!cleanScript.trim()) throw new Error("Transcrição falhou e nenhum roteiro disponível.");
-        console.log("Using script-based fallback transcription via Gemini direct");
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
-        const resp = await fetch(geminiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [
-              { text: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return ONLY a JSON array: [{"start":0.0,"end":3.5,"text":"..."}]\n\nSCRIPT:\n${cleanScript}` },
-            ]}],
-            generationConfig: { temperature: 0.1 },
-          }),
-        });
-        if (!resp.ok) {
-          const errText = await resp.text();
-          throw new Error(`Gemini fallback error: ${resp.status} - ${errText.slice(0, 200)}`);
-        }
-        const gData = await resp.json();
-        const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        console.log("Using script-based fallback transcription via AI Gateway");
+        const aiResult = await callAI([
+          { role: "user", content: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return ONLY a JSON array: [{"start":0.0,"end":3.5,"text":"..."}]\n\nSCRIPT:\n${cleanScript}` },
+        ], { temperature: 0.1 });
+        const text = aiResult.choices?.[0]?.message?.content || "";
         transcribeData = { choices: [{ message: { content: text } }] };
       }
 
