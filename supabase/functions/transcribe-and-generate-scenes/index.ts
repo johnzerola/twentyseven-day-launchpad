@@ -425,7 +425,7 @@ RULES:
         'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain.',
       };
       const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
-      const extraStyle = customStyleNotes ? `\nUSER STYLE: ${customStyleNotes}` : '';
+
       const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES: ${referenceImageUrls.length} uploaded. Match that art style.` : '';
 
       const characterBlock = characters?.length > 0
