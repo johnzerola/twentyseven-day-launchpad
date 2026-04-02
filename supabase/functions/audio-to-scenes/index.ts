@@ -12,11 +12,79 @@ function errResp(msg: string, status: number) {
   });
 }
 
+interface TranscriptBlock { text: string; startTime: number; endTime: number; }
+interface Chunk { index: number; startTime: number; endTime: number; blocks: TranscriptBlock[]; }
+
+// ========== AI CALL WITH RETRY + FALLBACK ==========
+async function callAI(
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string,
+  toolDef: any,
+  attempt = 0,
+): Promise<any[]> {
+  const models = ["google/gemini-2.5-flash", "google/gemini-2.5-pro"];
+  const model = attempt >= 2 ? models[1] : models[0];
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_completion_tokens: 16384,
+        tools: [toolDef],
+        tool_choice: { type: "function", function: { name: "set_audio_scenes" } },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const t = await response.text();
+      console.error(`AI error (${model}, attempt ${attempt}): ${response.status}`, t.slice(0, 300));
+      if (attempt < 3) return callAI(apiKey, systemPrompt, userPrompt, toolDef, attempt + 1);
+      return [];
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) {
+      console.error(`No tool call in response (${model}, attempt ${attempt})`);
+      if (attempt < 3) return callAI(apiKey, systemPrompt, userPrompt, toolDef, attempt + 1);
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      const scenes = parsed.scenes || [];
+      if (scenes.length === 0 && attempt < 3) {
+        console.warn(`Empty scenes, retrying (attempt ${attempt})`);
+        return callAI(apiKey, systemPrompt, userPrompt, toolDef, attempt + 1);
+      }
+      return scenes;
+    } catch (parseErr) {
+      console.error(`JSON parse error (attempt ${attempt}):`, (parseErr as Error).message);
+      if (attempt < 3) return callAI(apiKey, systemPrompt, userPrompt, toolDef, attempt + 1);
+      return [];
+    }
+  } catch (err) {
+    console.error(`Network error (attempt ${attempt}):`, err);
+    if (attempt < 3) return callAI(apiKey, systemPrompt, userPrompt, toolDef, attempt + 1);
+    return [];
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    console.log("audio-to-scenes v4 — chunked processing");
+    console.log("audio-to-scenes v5 — small chunks, max_tokens fix");
     const formData = await req.formData();
     const audioFile = formData.get("audio") as File;
     const script = (formData.get("script") as string || "").slice(0, 3000);
@@ -42,7 +110,7 @@ serve(async (req) => {
         return rest;
       });
     } catch { /* ignore */ }
-    console.log(`Input: script=${script.length}c, chars=${characters.length}, audio=${audioFile.size}b`);
+    console.log(`Input: script=${script.length}c, chars=${characters.length}, audio=${audioFile.size}b, sceneDur=${sceneDuration}s`);
 
     // ========== STEP 1: Transcribe ==========
     console.log("Step 1: Transcribing...");
@@ -83,7 +151,6 @@ serve(async (req) => {
     console.log(`Transcribed: ${words.length} words, ${audioDuration.toFixed(1)}s`);
 
     // ========== STEP 2: Build transcript blocks ==========
-    interface TranscriptBlock { text: string; startTime: number; endTime: number; }
     const blocks: TranscriptBlock[] = [];
     let currentBlock: any[] = [];
     let blockStart = 0;
@@ -111,35 +178,35 @@ serve(async (req) => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: sceneKnowledge } = await sb.from("scene_prompt_knowledge")
       .select("category,title,prompt_template,tags")
-      .order("viral_score", { ascending: false }).limit(8);
+      .order("viral_score", { ascending: false }).limit(5);
 
     const knowledgeBlock = (sceneKnowledge || []).map((r: any) =>
-      `[${r.category.toUpperCase()}] ${r.title}: ${r.prompt_template.slice(0, 200)}`
-    ).join("\n").slice(0, 2000);
+      `[${r.category.toUpperCase()}] ${r.title}: ${r.prompt_template.slice(0, 120)}`
+    ).join("\n").slice(0, 800);
 
     // ========== STEP 4: Build style & character blocks ==========
     const styleGuides: Record<string, string> = {
-      'cinematográfico': 'Netflix/Disney premium. ARRI ALEXA 65, Cooke Anamorphic. ACES color, Kodak Vision3. Shallow DOF f/1.4-2.8. Volumetric rays.',
-      '2d': 'Kurzgesagt meets Studio Trigger. Vibrant flat colors, clean vector, parallax depth, smooth 24fps.',
-      '3d': 'Pixar/DreamWorks 3D. Subsurface scattering, PBR materials, global illumination, 8K textures.',
-      'anime': 'Ufotable/MAPPA. Sakuga poses, Shinkai backgrounds, cel-shading, rim lighting.',
+      'cinematográfico': 'Netflix premium. ARRI ALEXA 65, Cooke Anamorphic. Shallow DOF f/1.4. Volumetric rays.',
+      '2d': 'Kurzgesagt style. Vibrant flat colors, clean vector, parallax depth, smooth 24fps.',
+      '3d': 'Pixar 3D. Subsurface scattering, PBR materials, global illumination.',
+      'anime': 'Ufotable/MAPPA. Sakuga poses, Shinkai backgrounds, cel-shading.',
       'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM, 8K, natural light.',
       'dark': 'Dark noir. Crushed blacks, neon accents. Blade Runner 2049 meets Se7en.',
-      'comic': 'Premium graphic novel. Bold ink, halftone, dynamic panels, saturated colors.',
+      'comic': 'Premium graphic novel. Bold ink, halftone, dynamic panels.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
 
     const characterBlock = characters.length > 0
-      ? `\nCHARACTERS:\n${characters.slice(0, 5).map((c: any, i: number) => {
+      ? `\nCHARACTERS:\n${characters.slice(0, 5).map((c: any) => {
           const a = c.appearance || {};
           const cl = c.clothing || {};
-          return `"${c.name}": ${c.gender||'?'}, ${c.age||'?'}y, ${a.body_type||'average'}, ${a.skin_color||'medium'} skin, ${a.hair_color||'dark'} ${a.hair_style||'short'} hair, ${a.eye_color||'brown'} eyes, ${cl.shirt||'casual'}, ${cl.pants||'jeans'}`;
+          return `"${c.name}": ${c.gender||'?'}, ${c.age||'?'}y, ${a.body_type||'average'}, ${a.skin_color||'medium'} skin, ${a.hair_color||'dark'} ${a.hair_style||'short'} hair, ${cl.shirt||'casual'}`;
         }).join('\n')}\n`
       : '';
 
-    // ========== STEP 5: Chunk transcript into ~90s segments ==========
-    const CHUNK_DURATION = 90; // seconds per chunk
-    interface Chunk { index: number; startTime: number; endTime: number; blocks: TranscriptBlock[]; }
+    // ========== STEP 5: Chunk transcript into SMALL ~40s segments ==========
+    // CRITICAL: smaller chunks = more scenes per chunk = better coverage
+    const CHUNK_DURATION = isShort ? 30 : 40; // seconds per chunk (smaller = more reliable)
     const chunks: Chunk[] = [];
     let chunkBlocks: TranscriptBlock[] = [];
     let chunkStart = 0;
@@ -166,14 +233,15 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Split into ${chunks.length} chunks for ${audioDuration.toFixed(1)}s audio`);
+    const expectedTotalScenes = Math.ceil(audioDuration / sceneDuration);
+    console.log(`Split into ${chunks.length} chunks for ${audioDuration.toFixed(1)}s audio. Expected ~${expectedTotalScenes} total scenes.`);
 
-    // ========== STEP 6: Process each chunk with AI ==========
+    // ========== STEP 6: Simplified tool definition (less tokens per scene) ==========
     const toolDef = {
       type: "function" as const,
       function: {
         name: "set_audio_scenes",
-        description: "Divide audio chunk into scenes with contextual visual prompts",
+        description: "Generate scenes for this audio chunk",
         parameters: {
           type: "object",
           properties: {
@@ -186,182 +254,114 @@ serve(async (req) => {
                   sceneDurationSeconds: { type: "number" },
                   startTime: { type: "number" },
                   endTime: { type: "number" },
-                  narrativeText: { type: "string" },
-                  narrativeSummary: { type: "string" },
-                  visualPrompt: { type: "string" },
+                  narrativeText: { type: "string", description: "Exact transcript text for this scene" },
+                  narrativeSummary: { type: "string", description: "1-line summary" },
+                  visualPrompt: { type: "string", description: "150-250 word visual prompt" },
                   negativePrompt: { type: "string" },
                   cameraAngle: { type: "string" },
                   lensSpec: { type: "string" },
                   lightingSetup: { type: "string" },
-                  audioDirection: { type: "string" },
                   mood: { type: "string" },
                   emotionalBeat: { type: "string" },
+                  audioDirection: { type: "string" },
                   charactersInScene: { type: "array", items: { type: "string" } },
                   transitionNote: { type: "string" },
                   environment: {
                     type: "object",
-                    description: "ENVIRONMENT IDENTITY SHEET for visual consistency",
                     properties: {
                       locationName: { type: "string" },
                       locationType: { type: "string" },
                       timeOfDay: { type: "string" },
                       weather: { type: "string" },
                       lightSource: { type: "string" },
-                      shadowDirection: { type: "string" },
-                      shadowIntensity: { type: "string" },
                       colorTemperature: { type: "string" },
                       dominantColors: { type: "array", items: { type: "string" } },
                       atmosphericElements: { type: "string" },
-                      surfaceTextures: { type: "string" },
-                      depthLayers: { type: "string" },
                       framingComposition: { type: "string" },
-                      architecturalDetails: { type: "string" },
-                      natureLandscape: { type: "string" },
-                      propsDressing: { type: "string" },
-                      continuityNotes: { type: "string" },
                     },
-                    required: ["locationName", "locationType", "timeOfDay", "weather", "lightSource", "shadowDirection", "shadowIntensity", "colorTemperature", "dominantColors", "atmosphericElements", "surfaceTextures", "depthLayers", "framingComposition"],
-                    additionalProperties: false,
+                    required: ["locationName", "locationType", "timeOfDay", "colorTemperature", "dominantColors", "framingComposition"],
                   },
                 },
-                required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "narrativeSummary", "visualPrompt", "negativePrompt", "cameraAngle", "lensSpec", "lightingSetup", "mood", "emotionalBeat"],
-                additionalProperties: false,
+                required: ["sceneIndex", "sceneDurationSeconds", "startTime", "endTime", "narrativeText", "visualPrompt", "cameraAngle", "mood"],
               },
             },
           },
           required: ["scenes"],
-          additionalProperties: false,
         },
       },
     };
 
-    const shortsTimingRules = `SHORTS TIMING RULES (CRITICAL):
-- Each scene MUST be between 2 and 4 seconds long. NEVER longer than 4s.
-- Target approximately ${sceneDuration} seconds per scene (2-3s ideal for Shorts)
-- Generate AT LEAST one scene every 2-3 seconds of audio. MORE scenes = BETTER.
-- For a 15s audio, generate 5-7 scenes. For 30s, generate 8-12 scenes.
-- RAPID FIRE cuts. Every cut = new visual, new angle, new context.
-- Scene 1 (0-2s) = SCROLL-STOPPING HOOK — most visually spectacular shot`;
+    // ========== STEP 7: Build system prompt (compact) ==========
+    const shortsTimingRules = `SHORTS TIMING (CRITICAL):
+- Each scene: 2-4 seconds. NEVER longer than 4s.
+- Generate AT LEAST one scene every 2-3s of audio.
+- Scene 1 = SCROLL-STOPPING HOOK.`;
 
-    const longTimingRules = `TIMING RULES:
-- Each scene MUST be between 5 and 10 seconds long. NEVER shorter than 5s or longer than 10s.
-- Target approximately ${sceneDuration} seconds per scene, but adjust between 5-10s based on narrative pacing
-- You MUST generate ONE scene for approximately every ${sceneDuration} seconds of audio.`;
+    const longTimingRules = `TIMING (CRITICAL):
+- Each scene MUST be ${sceneDuration}s (range: 5-10s). NEVER shorter than 5s or longer than 10s.
+- Generate EXACTLY ONE scene per ${sceneDuration} seconds of audio. THIS IS MANDATORY.
+- For a 40s chunk you MUST generate ${Math.ceil(40 / sceneDuration)} scenes. NO EXCEPTIONS.`;
 
-    const semanticMappingBlock = isShort ? `
-SEMANTIC VISUAL MAPPING — CRITICAL FOR SHORTS:
-EVERY scene MUST visually represent EXACTLY what the narrator says at that moment.
-DO NOT create generic shots. MAP narration to CONCRETE visuals:
-- If narrator says "Egypt" → show pyramids, hieroglyphics, pharaohs, archaeological digs
-- If narrator says "school" → show classroom, students, textbooks
-- If narrator says "documentary" → show person watching TV, screen glow on face
-- Each scene = a DIFFERENT visual context. Mix: landscapes, close-ups, people reacting, dramatic reveals.
-- NEVER repeat similar angles in consecutive scenes.` : '';
-
-    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating ${isShort ? 'VIRAL SHORT-FORM (9:16)' : 'Netflix-grade'} video scenes from narrated audio.
+    const systemPrompt = `You are a WORLD-CLASS VISUAL DIRECTOR creating ${isShort ? 'VIRAL SHORT-FORM (9:16)' : 'Netflix-grade'} video scenes.
 
 ${isShort ? shortsTimingRules : longTimingRules}
-- Cover the ENTIRE transcript chunk — from first word to last word
-- startTime and endTime MUST match actual transcript timestamps precisely
 
-VISUAL RULES:
-- EVERY visual prompt MUST directly illustrate what the narrator says at that moment
-- NEVER create generic prompts — be DEEPLY SPECIFIC to the narration
-- End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
-- Use 5+ different camera angles — never repeat consecutively
-${semanticMappingBlock}
+ABSOLUTE RULES:
+1. Cover the ENTIRE transcript — from first word to last word. NO GAPS.
+2. startTime/endTime MUST match actual transcript timestamps.
+3. Every visual prompt MUST directly illustrate what the narrator says.
+4. End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
+5. Use 5+ different camera angles — never repeat consecutively.
 
-VISUAL STYLE: ${selectedStyleGuide}
+STYLE: ${selectedStyleGuide}
 ${characterBlock}
-KNOWLEDGE: ${knowledgeBlock}
+${knowledgeBlock ? `KNOWLEDGE:\n${knowledgeBlock}` : ''}
 
-PROMPT FORMULA: [Cinematography] + [Subject matching narration] + [Action] + [Environment] + [Style] + anti-text block
-Quality: masterpiece, award-winning, 8K UHD, photorealistic
+PROMPT FORMULA: [Camera+Lens] + [Subject matching narration] + [Action] + [Environment] + [Lighting] + anti-text block
+Quality keywords: masterpiece, award-winning, 8K UHD`;
 
-═══ ENVIRONMENT IDENTITY SHEET — MANDATORY FOR EVERY SCENE ═══
-Generate a complete "environment" object for EACH scene with:
-- locationName: SPECIFIC place (not generic), e.g. "dimly lit medieval dungeon with iron chains"
-- locationType: interior/exterior/underwater/aerial/underground/space
-- timeOfDay: PRECISE ("golden hour 6:30pm", "midnight", "overcast noon")
-- weather: atmospheric conditions ("light rain with mist", "dense fog", "clear starry sky")
-- lightSource: primary light with direction ("low sun from west", "single candle from below")
-- shadowDirection & shadowIntensity: where/how shadows fall
-- colorTemperature: Kelvin + feeling ("2700K warm amber", "7500K cold blue")
-- dominantColors: 3-5 colors defining the palette
-- atmosphericElements: particles/effects ("dust motes in beams", "embers floating")
-- surfaceTextures: key textures ("wet cobblestone", "mossy stone walls")
-- depthLayers: Z-depth ("FG: blur | MID: sharp subject | BG: haze")
-- framingComposition: composition rule ("rule of thirds left", "centered symmetry")
-- continuityNotes: how this connects to adjacent scenes visually
+    // ========== STEP 8: Process chunks SEQUENTIALLY (avoid rate limits) ==========
+    // Process in batches of 3 parallel requests
+    const BATCH_SIZE = 3;
+    const allScenes: any[] = [];
 
-⚠️ CONTINUITY: Same location across scenes = IDENTICAL environment fields. Track time/shadow/light changes progressively.`;
+    for (let batchStart = 0; batchStart < chunks.length; batchStart += BATCH_SIZE) {
+      const batch = chunks.slice(batchStart, batchStart + BATCH_SIZE);
+      console.log(`Processing batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)} (chunks ${batchStart + 1}-${batchStart + batch.length})`);
 
-    // ========== Process ALL chunks in PARALLEL to avoid timeout ==========
-    const chunkPromises = chunks.map(async (chunk) => {
-      const chunkTranscript = chunk.blocks
-        .map(b => `[${b.startTime.toFixed(1)}s-${b.endTime.toFixed(1)}s] ${b.text}`)
-        .join("\n").slice(0, 30000);
+      const batchPromises = batch.map(async (chunk) => {
+        const chunkTranscript = chunk.blocks
+          .map(b => `[${b.startTime.toFixed(1)}s-${b.endTime.toFixed(1)}s] ${b.text}`)
+          .join("\n").slice(0, 15000);
 
-      const chunkDuration = chunk.endTime - chunk.startTime;
-      const expectedScenes = Math.max(2, Math.ceil(chunkDuration / sceneDuration));
+        const chunkDuration = chunk.endTime - chunk.startTime;
+        const expectedScenes = Math.max(2, Math.ceil(chunkDuration / sceneDuration));
 
-      console.log(`Processing chunk ${chunk.index + 1}/${chunks.length}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s (${chunkDuration.toFixed(1)}s, expect ~${expectedScenes} scenes)`);
+        console.log(`  Chunk ${chunk.index + 1}: ${chunk.startTime.toFixed(1)}s-${chunk.endTime.toFixed(1)}s (${chunkDuration.toFixed(1)}s, expect ${expectedScenes} scenes)`);
 
-      try {
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            tools: [toolDef],
-            tool_choice: { type: "function", function: { name: "set_audio_scenes" } },
-            messages: [
-              { role: "system", content: systemPrompt },
-              {
-                role: "user",
-                content: `CHUNK ${chunk.index + 1} of ${chunks.length} — Audio segment [${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s]:
+        const userPrompt = `CHUNK ${chunk.index + 1} of ${chunks.length} — Audio [${chunk.startTime.toFixed(1)}s to ${chunk.endTime.toFixed(1)}s] (${chunkDuration.toFixed(1)}s):
 
 ${chunkTranscript}
 
-Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover ALL text above. Scene startTime/endTime must match transcript timestamps. Style: ${videoStyle}.`
-              }
-            ],
-          }),
-        });
+YOU MUST generate EXACTLY ${expectedScenes} scenes. Each scene ~${sceneDuration}s. Cover ALL text. Style: ${videoStyle}.
+IMPORTANT: If you generate fewer than ${expectedScenes} scenes, the video will have visual gaps. Generate ALL ${expectedScenes}.`;
 
-        if (!response.ok) {
-          const t = await response.text();
-          console.error(`Chunk ${chunk.index + 1} AI error: ${response.status}`, t.slice(0, 200));
-          return [];
-        }
+        const scenes = await callAI(LOVABLE_API_KEY!, systemPrompt, userPrompt, toolDef);
+        console.log(`  Chunk ${chunk.index + 1}: got ${scenes.length} scenes (expected ${expectedScenes})`);
+        return scenes;
+      });
 
-        const data = await response.json();
-        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-        if (toolCall) {
-          const parsed = JSON.parse(toolCall.function.arguments);
-          const scenes = parsed.scenes || [];
-          console.log(`Chunk ${chunk.index + 1}: generated ${scenes.length} scenes`);
-          return scenes;
-        }
-        return [];
-      } catch (err) {
-        console.error(`Chunk ${chunk.index + 1} failed:`, err);
-        return [];
+      const batchResults = await Promise.all(batchPromises);
+      for (const scenes of batchResults) {
+        allScenes.push(...scenes);
       }
-    });
+    }
 
-    const chunkResults = await Promise.all(chunkPromises);
-    const allScenes: any[] = chunkResults.flat();
-
-    // ========== STEP 7: Merge, validate timing & re-index ==========
+    // ========== STEP 9: Validate, fix timing & re-index ==========
     allScenes.sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
     const minDur = isShort ? 1.5 : 5;
     const maxDur = isShort ? 4 : 10;
-    for (let i = 0; i < allScenes.length; i++) {
-      const s = allScenes[i];
+    for (const s of allScenes) {
       const dur = (s.endTime || 0) - (s.startTime || 0);
       if (dur < minDur) s.sceneDurationSeconds = minDur;
       else if (dur > maxDur) s.sceneDurationSeconds = maxDur;
@@ -369,7 +369,13 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
     }
     allScenes.forEach((s, i) => { s.sceneIndex = i + 1; });
 
-    console.log(`TOTAL: ${allScenes.length} scenes covering ${audioDuration.toFixed(1)}s`);
+    // Check coverage — if we're missing more than 20% of expected scenes, log warning
+    const coverageRatio = allScenes.length / expectedTotalScenes;
+    if (coverageRatio < 0.8) {
+      console.warn(`⚠️ LOW COVERAGE: got ${allScenes.length} scenes, expected ~${expectedTotalScenes} (${(coverageRatio * 100).toFixed(0)}%)`);
+    }
+
+    console.log(`✅ TOTAL: ${allScenes.length} scenes covering ${audioDuration.toFixed(1)}s (expected ~${expectedTotalScenes})`);
 
     return new Response(JSON.stringify({
       transcription: {
@@ -381,11 +387,13 @@ Generate EXACTLY ${expectedScenes} scenes (one every ~${sceneDuration}s). Cover 
       scenes: allScenes,
       metadata: {
         totalScenes: allScenes.length,
+        expectedScenes: expectedTotalScenes,
         totalDuration: audioDuration,
         videoStyle,
         charactersCount: characters.length,
         chunksProcessed: chunks.length,
-        method: "chunked-semantic-analysis",
+        coveragePercent: Math.round(coverageRatio * 100),
+        method: "v5-small-chunks-max-tokens",
         veo3Optimized: true,
       },
     }), {
