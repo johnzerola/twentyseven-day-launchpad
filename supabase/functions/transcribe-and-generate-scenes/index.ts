@@ -24,7 +24,7 @@ serve(async (req) => {
   try {
     const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
-    const GATEWAY_URL = "https://ai-gateway.lovable.dev/v1/chat/completions";
+    const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
     if (!LOVABLE_API_KEY && !GOOGLE_AI_KEY) throw new Error("Nenhuma API key configurada (LOVABLE_API_KEY ou GOOGLE_AI_API_KEY).");
 
     // Helper: call Lovable AI Gateway (preferred) with Gemini direct fallback
