@@ -23,6 +23,7 @@ import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
 import { SceneViewer } from '@/components/scripts/SceneViewer';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
+import { PackagingLab } from '@/components/scripts/PackagingLab';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
 import { VoiceGeneratorStep } from '@/components/scripts/VoiceGeneratorStep';
@@ -1222,6 +1223,20 @@ const Scripts = () => {
                 <motion.div key="thumbnail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5 mt-4">
                   <ThumbnailGenerator videoTitle={topic} niche={niche} />
+                </motion.div>
+              )}
+
+              {/* Packaging Lab — score título + thumb + hook como unidade */}
+              {activeStep === 'titles' && script && (
+                <motion.div key="packaging" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="mt-4">
+                  <PackagingLab
+                    title={topic}
+                    hookText={script.slice(0, 500)}
+                    niche={niche}
+                    videoType={videoType}
+                    language={language}
+                  />
                 </motion.div>
               )}
 

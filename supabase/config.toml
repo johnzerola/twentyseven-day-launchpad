@@ -174,3 +174,12 @@ verify_jwt = false
 [functions.sync-video-metrics]
 verify_jwt = false
 
+[functions.packaging-score]
+verify_jwt = false
+
+[functions.originality-safety-score]
+verify_jwt = false
+
+[functions.next-best-action]
+verify_jwt = false
+
