@@ -1226,6 +1226,20 @@ const Scripts = () => {
                 </motion.div>
               )}
 
+              {/* Packaging Lab — score título + thumb + hook como unidade */}
+              {activeStep === 'titles' && script && (
+                <motion.div key="packaging" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="mt-4">
+                  <PackagingLab
+                    title={topic}
+                    hookText={script.slice(0, 500)}
+                    niche={niche}
+                    videoType={videoType}
+                    language={language}
+                  />
+                </motion.div>
+              )}
+
               {/* Script Performance Tracker - always visible when script exists */}
               {script && (
                 <motion.div key="perf-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
