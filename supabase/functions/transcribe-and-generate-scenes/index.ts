@@ -964,3 +964,32 @@ function repairAndParseJsonArray(raw: string): any[] {
   }
   return [];
 }
+
+function normalizeTranscriptBlocksToDuration(blocks: any[], targetDuration: number) {
+  if (!Array.isArray(blocks) || blocks.length === 0 || !Number.isFinite(targetDuration) || targetDuration <= 0) {
+    return blocks;
+  }
+
+  const currentDuration = Number(blocks[blocks.length - 1]?.end) || 0;
+  if (currentDuration <= 0) {
+    const segmentDuration = targetDuration / blocks.length;
+    return blocks.map((block: any, index: number) => ({
+      ...block,
+      start: +(index * segmentDuration).toFixed(1),
+      end: +Math.min(targetDuration, (index + 1) * segmentDuration).toFixed(1),
+    }));
+  }
+
+  const scale = targetDuration / currentDuration;
+  return blocks.map((block: any, index: number) => {
+    const scaledStart = +(Math.max(0, (Number(block.start) || 0) * scale)).toFixed(1);
+    const rawEnd = (Number(block.end) || Number(block.start) || 0) * scale;
+    const scaledEnd = +Math.min(targetDuration, Math.max(rawEnd, scaledStart + 0.1)).toFixed(1);
+
+    return {
+      ...block,
+      start: scaledStart,
+      end: index === blocks.length - 1 ? +targetDuration.toFixed(1) : scaledEnd,
+    };
+  });
+}
