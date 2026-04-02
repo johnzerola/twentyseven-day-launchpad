@@ -174,6 +174,9 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* 🚀 Next Best Action — Decision Engine */}
+        <NextBestActionWidget />
+
         {/* Viral Diagnosis */}
         <ViralDiagnosisPanel />
 
