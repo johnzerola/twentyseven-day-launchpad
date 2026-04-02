@@ -115,14 +115,13 @@ serve(async (req) => {
 
     const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
     
-    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
-    if (!CLAUDE_API_KEY && !LOVABLE_API_KEY) throw new Error("No AI API key configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!draft_script) throw new Error("draft_script is required");
 
     const runId = phaseId || crypto.randomUUID();
-    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars ENGINE=${CLAUDE_API_KEY ? 'CLAUDE' : 'GEMINI_FALLBACK'}`);
+    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars ENGINE=GEMINI`);
 
     // Pre-flight: detect AI slop in the draft
     const slopCheck = countSlopScore(draft_script);
