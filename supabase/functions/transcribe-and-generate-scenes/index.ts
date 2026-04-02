@@ -538,54 +538,50 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
       let fallbackUsed = true;
 
       try {
-        // Use Gemini direct API with function calling equivalent via structured output
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
-        const resp = await fetch(geminiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              { role: "user", parts: [{ text: `${systemPrompt}\n\nAUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.\n\nRespond with a JSON object: {"scenes": [...]}` }] },
-            ],
-            generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
-            tools: [{
-              functionDeclarations: [toolDef.function],
-            }],
-          }),
-        });
+        // Use Lovable AI Gateway (with Gemini direct fallback via callAI)
+        const userPrompt = `${systemPrompt}\n\nAUDIO CHUNK ${chunk_index + 1}/${totalChunks}\n\nTIME WINDOWS:\n${chunkTimeline}\n\nReturn EXACTLY ${expectedScenes} scenes in the SAME order as the windows above. Keep timestamps aligned to each window.\n\nRespond with a JSON object: {"scenes": [...]}`;
+        
+        const aiResult = await callAI(
+          [{ role: "user", content: userPrompt }],
+          {
+            temperature: 0.7,
+            max_tokens: 16384,
+            tools: [toolDef],
+            tool_choice: { type: "function", function: { name: "set_synced_scenes" } },
+          }
+        );
 
-        if (resp.ok) {
-          const data = await resp.json();
-          // Try function call response first
-          const functionCall = data?.candidates?.[0]?.content?.parts?.[0]?.functionCall;
-          let parsedScenes: any[] = [];
+        let parsedScenes: any[] = [];
+        const choice = aiResult.choices?.[0]?.message;
 
-          if (functionCall?.args?.scenes) {
-            parsedScenes = Array.isArray(functionCall.args.scenes) ? functionCall.args.scenes : [];
-          } else {
-            // Fallback: try parsing text content as JSON
-            const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            try {
-              const parsed = JSON.parse(textContent);
-              parsedScenes = Array.isArray(parsed?.scenes) ? parsed.scenes : (Array.isArray(parsed) ? parsed : []);
-            } catch {
-              const arrStart = textContent.indexOf('[');
-              const arrEnd = textContent.lastIndexOf(']');
-              if (arrStart !== -1 && arrEnd > arrStart) {
-                try { parsedScenes = JSON.parse(textContent.slice(arrStart, arrEnd + 1)); } catch {}
-              }
+        // Try tool_calls (OpenAI format from gateway)
+        if (choice?.tool_calls?.[0]?.function?.arguments) {
+          try {
+            const args = JSON.parse(choice.tool_calls[0].function.arguments);
+            parsedScenes = Array.isArray(args?.scenes) ? args.scenes : [];
+          } catch {}
+        }
+
+        // Fallback: try content as JSON
+        if (parsedScenes.length === 0 && choice?.content) {
+          try {
+            const parsed = JSON.parse(choice.content);
+            parsedScenes = Array.isArray(parsed?.scenes) ? parsed.scenes : (Array.isArray(parsed) ? parsed : []);
+          } catch {
+            const text = choice.content;
+            const arrStart = text.indexOf('[');
+            const arrEnd = text.lastIndexOf(']');
+            if (arrStart !== -1 && arrEnd > arrStart) {
+              try { parsedScenes = JSON.parse(text.slice(arrStart, arrEnd + 1)); } catch {}
             }
           }
+        }
 
-          if (parsedScenes.length > 0) {
-            fallbackUsed = parsedScenes.length !== expectedScenes;
-            scenes = sceneWindows.map((window, idx) =>
-              coerceSceneToWindow(parsedScenes[idx], window, fallbackScenes[idx])
-            );
-          }
-        } else {
-          const errText = await resp.text();
-          console.warn(`Gemini scene generation failed: ${resp.status}`, errText.slice(0, 200));
+        if (parsedScenes.length > 0) {
+          fallbackUsed = parsedScenes.length !== expectedScenes;
+          scenes = sceneWindows.map((window, idx) =>
+            coerceSceneToWindow(parsedScenes[idx], window, fallbackScenes[idx])
+          );
         }
       } catch (err: any) {
         console.error(`Chunk ${chunk_index} generation error:`, err.message);
