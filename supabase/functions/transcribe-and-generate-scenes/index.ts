@@ -22,8 +22,62 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_KEY) throw new Error("GOOGLE_AI_API_KEY não configurado.");
+    const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+    const GATEWAY_URL = "https://ai-gateway.lovable.dev/v1/chat/completions";
+    if (!LOVABLE_API_KEY && !GOOGLE_AI_KEY) throw new Error("Nenhuma API key configurada (LOVABLE_API_KEY ou GOOGLE_AI_API_KEY).");
+
+    // Helper: call Lovable AI Gateway (preferred) with Gemini direct fallback
+    async function callAI(messages: {role: string; content: string}[], options: { tools?: any[]; tool_choice?: any; temperature?: number; max_tokens?: number } = {}): Promise<any> {
+      const model = "google/gemini-2.5-flash";
+      // Try Lovable Gateway first
+      if (LOVABLE_API_KEY) {
+        try {
+          const resp = await fetch(GATEWAY_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
+            body: JSON.stringify({
+              model,
+              messages,
+              temperature: options.temperature ?? 0.7,
+              max_completion_tokens: options.max_tokens || 16384,
+              ...(options.tools ? { tools: options.tools, tool_choice: options.tool_choice || "auto" } : {}),
+            }),
+          });
+          if (resp.ok) return await resp.json();
+          const errText = await resp.text();
+          console.warn(`Gateway failed (${resp.status}):`, errText.slice(0, 200));
+          if (resp.status === 402) throw new Error("Créditos insuficientes no gateway.");
+        } catch (e: any) {
+          if (e.message?.includes("Créditos")) throw e;
+          console.warn("Gateway error:", e.message);
+        }
+      }
+      // Fallback: Gemini direct
+      if (!GOOGLE_AI_KEY) throw new Error("Gateway indisponível e GOOGLE_AI_API_KEY não configurada.");
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+      const resp = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+          generationConfig: { temperature: options.temperature ?? 0.7, ...(options.tools ? { responseMimeType: "application/json" } : {}) },
+          ...(options.tools ? { tools: [{ functionDeclarations: options.tools.map((t: any) => t.function) }] } : {}),
+        }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`Gemini direct error: ${resp.status} - ${errText.slice(0, 200)}`);
+      }
+      const data = await resp.json();
+      // Convert Gemini response to OpenAI-compatible format
+      const candidate = data.candidates?.[0];
+      const part = candidate?.content?.parts?.[0];
+      if (part?.functionCall) {
+        return { choices: [{ message: { tool_calls: [{ function: { name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args) } }] } }] };
+      }
+      return { choices: [{ message: { content: part?.text || "" } }] };
+    }
 
     const body = await req.json();
     const action = body.action || "start";
