@@ -425,7 +425,7 @@ RULES:
         'aquarela': 'Watercolor painting. Soft translucent washes, visible paper grain.',
       };
       const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
-      const extraStyle = customStyleNotes ? `\nUSER STYLE: ${customStyleNotes}` : '';
+
       const refImgContext = referenceImageUrls?.length ? `\nREFERENCE IMAGES: ${referenceImageUrls.length} uploaded. Match that art style.` : '';
 
       const characterBlock = characters?.length > 0
@@ -487,8 +487,16 @@ RULES:
         },
       };
 
+      const userStyleBlock = customStyleNotes ? `\n\n🎨 CREATOR'S VISUAL STYLE DESCRIPTION (HIGHEST PRIORITY — OVERRIDE EVERYTHING ELSE):\n"${customStyleNotes}"\nYou MUST follow these instructions literally. Every visualPrompt MUST start with this style description verbatim before any scene details.` : '';
+      
       const systemPrompt = `You are a VISUAL DIRECTOR creating scene prompts from narrated audio.
-MANDATORY ART STYLE: ${selectedStyleGuide}${extraStyle}${refImgContext}
+
+═══ ART STYLE (MANDATORY IN EVERY PROMPT) ═══
+Base style: ${selectedStyleGuide}
+${userStyleBlock}${refImgContext}
+
+CRITICAL: Every single visualPrompt MUST begin with the art style description. Example:
+"${customStyleNotes || selectedStyleGuide} — [then scene details...]"
 
 CRITICAL SYNCHRONIZATION RULES:
 - Create EXACTLY one scene for each provided time window
@@ -499,7 +507,7 @@ CRITICAL SYNCHRONIZATION RULES:
 - visualPrompt must be specific to the narration, never generic filler
 - Every prompt must end with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 
-PROMPT FORMAT: [SHOT + CAMERA], [LENS]. [FULL CHARACTER DESC]. [ACTION matching narration]. [ENVIRONMENT matching narration]. [LIGHTING]. [COLOR]. Style: ${videoStyle}. (no subtitles, no text)
+PROMPT FORMAT: [ART STYLE FIRST], [SHOT + CAMERA], [LENS]. [FULL CHARACTER DESC]. [ACTION matching narration]. [ENVIRONMENT matching narration]. [LIGHTING]. [COLOR]. (no subtitles, no text)
 
 CHARACTER RULES: NEVER use just names. ALWAYS full appearance description every time.
 ${characterBlock}
