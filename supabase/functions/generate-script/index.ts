@@ -699,7 +699,7 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     // ═══════════════════════════════════════════════════════
     // PHASE 0: Hook Generation (Claude non-streaming, fast)
     // ═══════════════════════════════════════════════════════
-    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via CLAUDE...`);
+    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via GEMINI...`);
     let hookText = phaseCache['phase0'] || '';
     if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
@@ -715,51 +715,43 @@ ${viralInjection}${intelBlock}${creativeWarning}
 ${ANTI_SLOP_DIRECTIVE}
 
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
-Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.
-IMPORTANTE: Você é Claude — use sua força natural de escrita criativa, nuance emocional e voz humana autêntica.`;
+Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
 
-        hookText = await callClaudeNonStreaming(
-          CLAUDE_API_KEY,
-          hookSystemPrompt,
-          `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
-          2000
-        );
-        console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via CLAUDE`);
+        const hookRes = await fetch(AI_URL, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            messages: [
+              { role: "system", content: hookSystemPrompt },
+              { role: "user", content: `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.` }
+            ],
+            stream: false,
+          }),
+        });
+        if (hookRes.ok) {
+          const d = await hookRes.json();
+          hookText = d.choices?.[0]?.message?.content || '';
+          console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via GEMINI`);
+        } else {
+          const errT = await hookRes.text();
+          console.warn(`[PHASE-0 HOOK] runId=${runId} Gemini error: ${hookRes.status}`, errT);
+        }
 
         // Cache the hook
-        try {
-          await sb.from("research_cache").upsert({
-            cache_key: `script_phase0:${runId}`,
-            source: "generate-script",
-            result_json: { hook: hookText },
-            expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
-            query: `phase0:${topic?.slice(0, 50)}`,
-          }, { onConflict: "cache_key" });
-        } catch { /* non-blocking cache */ }
-      } catch (e) {
-        console.warn(`[PHASE-0 HOOK] runId=${runId} Claude error, trying fallback:`, e);
-        // Fallback to Lovable AI if Claude fails for hook
-        if (LOVABLE_API_KEY) {
+        if (hookText) {
           try {
-            const fallbackRes = await fetch(AI_URL, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                model: "openai/gpt-5-mini",
-                messages: [
-                  { role: "system", content: `Crie hook de 60s para YouTube. Idioma: ${language}. Estilo: ${style}. APENAS texto falado.` },
-                  { role: "user", content: `Hook para: "${topic}"` }
-                ],
-                stream: false,
-              }),
-            });
-            if (fallbackRes.ok) {
-              const d = await fallbackRes.json();
-              hookText = d.choices?.[0]?.message?.content || '';
-              console.log(`[PHASE-0 HOOK] runId=${runId} Fallback OK: ${hookText.length} chars`);
-            }
-          } catch (fe) { console.warn("[PHASE-0 HOOK] Fallback also failed:", fe); }
+            await sb.from("research_cache").upsert({
+              cache_key: `script_phase0:${runId}`,
+              source: "generate-script",
+              result_json: { hook: hookText },
+              expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
+              query: `phase0:${topic?.slice(0, 50)}`,
+            }, { onConflict: "cache_key" });
+          } catch { /* non-blocking cache */ }
         }
+      } catch (e) {
+        console.warn(`[PHASE-0 HOOK] runId=${runId} Hook generation failed:`, e);
       }
     }
 
