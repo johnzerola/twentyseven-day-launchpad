@@ -309,6 +309,9 @@ export const ScriptGenerator = ({
 
         const rawDraft = await streamFromFunction('generate-script-short', {
           topic, durationSeconds: parseInt(duration), style, niche, language, viralContext,
+          channelKnowledge: channelKnowledge || undefined,
+          referenceScript: referenceScript.trim() || undefined,
+          rejectionFeedback: rejectionFeedback || undefined,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
