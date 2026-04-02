@@ -6,8 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback only
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
@@ -235,73 +234,6 @@ const GENRE_DIRECTIONS: Record<string, string> = {
   'documentario': '🎭 GÊNERO DOCUMENTÁRIO PREMIUM: Estilo Netflix/BBC/NatGeo. Dados com fonte → múltiplas perspectivas → revelações como camadas de cebola. Frio e preciso COM momentos de genuína perplexidade humana. Emoção e retenção através de REVELAÇÃO, não grito.',
 };
 
-// ═══════════════════════════════════════════════════════════════
-// CLAUDE STREAMING ADAPTER — Convert Anthropic SSE → OpenAI SSE
-// So the frontend doesn't need any changes
-// ═══════════════════════════════════════════════════════════════
-function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const reader = claudeBody.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = '';
-
-  return new ReadableStream({
-    async pull(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          // Send [DONE] marker like OpenAI
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
-          return;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-
-          try {
-            const event = JSON.parse(jsonStr);
-
-            // Claude content_block_delta → OpenAI chunk format
-            if (event.type === 'content_block_delta' && event.delta?.text) {
-              const openAIChunk = {
-                choices: [{
-                  delta: { content: event.delta.text },
-                  index: 0,
-                  finish_reason: null,
-                }],
-              };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(openAIChunk)}\n\n`));
-            }
-
-            // Claude message_stop → signal done
-            if (event.type === 'message_stop') {
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-              controller.close();
-              reader.cancel();
-              return;
-            }
-          } catch {
-            // skip malformed JSON
-          }
-        }
-      }
-    },
-    cancel() {
-      reader.cancel();
-    },
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CLAUDE API HELPERS
-// ═══════════════════════════════════════════════════════════════
 // Sanitize strings to remove broken Unicode surrogate pairs that cause JSON.stringify to fail
 function sanitizeUnicode(text: string): string {
   // Remove lone surrogates (unpaired high/low surrogates)
@@ -309,35 +241,106 @@ function sanitizeUnicode(text: string): string {
              .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
 }
 
-async function callClaude(apiKey: string, system: string, userMessage: string, stream: boolean, maxTokens = 16000) {
+async function callAiGateway(
+  apiKey: string,
+  system: string,
+  userMessage: string,
+  options: {
+    model: string;
+    stream: boolean;
+    maxTokens?: number;
+  },
+) {
   const cleanSystem = sanitizeUnicode(system);
   const cleanUser = sanitizeUnicode(userMessage);
-  return fetch(CLAUDE_API_URL, {
+
+  return fetch(AI_URL, {
     method: "POST",
     headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: maxTokens,
-      system: cleanSystem,
-      messages: [{ role: "user", content: cleanUser }],
-      stream,
+      model: options.model,
+      stream: options.stream,
+      ...(options.maxTokens ? { max_completion_tokens: options.maxTokens } : {}),
+      messages: [
+        { role: "system", content: cleanSystem },
+        { role: "user", content: cleanUser },
+      ],
     }),
   });
 }
 
-async function callClaudeNonStreaming(apiKey: string, system: string, userMessage: string, maxTokens = 4000): Promise<string> {
-  const res = await callClaude(apiKey, system, userMessage, false, maxTokens);
-  if (!res.ok) {
-    const t = await res.text();
-    console.error("[CLAUDE] Non-streaming error:", res.status, t);
-    throw new Error(`Claude API error: ${res.status}`);
+async function callAiGatewayNonStreaming(
+  apiKey: string,
+  system: string,
+  userMessage: string,
+  options: {
+    primaryModel: string;
+    fallbackModel?: string;
+    maxTokens?: number;
+    label: string;
+  },
+): Promise<string> {
+  const models = [options.primaryModel, options.fallbackModel].filter(Boolean) as string[];
+
+  for (const model of models) {
+    const res = await callAiGateway(apiKey, system, userMessage, {
+      model,
+      stream: false,
+      maxTokens: options.maxTokens,
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error(`[${options.label}] ${model} error:`, res.status, t);
+      if ((res.status === 429 || res.status === 402) && model === models[models.length - 1]) {
+        throw new Error(`AI gateway error: ${res.status}`);
+      }
+      continue;
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
   }
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
+
+  throw new Error("AI gateway error: all models failed");
+}
+
+async function callAiGatewayStreaming(
+  apiKey: string,
+  system: string,
+  userMessage: string,
+  options: {
+    primaryModel: string;
+    fallbackModel?: string;
+    maxTokens?: number;
+    label: string;
+  },
+) {
+  const models = [options.primaryModel, options.fallbackModel].filter(Boolean) as string[];
+
+  for (const model of models) {
+    const res = await callAiGateway(apiKey, system, userMessage, {
+      model,
+      stream: true,
+      maxTokens: options.maxTokens,
+    });
+
+    if (res.ok) {
+      console.log(`[${options.label}] Streaming with ${model}`);
+      return res;
+    }
+
+    const t = await res.text();
+    console.error(`[${options.label}] ${model} error:`, res.status, t);
+    if ((res.status === 429 || res.status === 402) && model === models[models.length - 1]) {
+      throw new Error(`AI gateway error: ${res.status}`);
+    }
+  }
+
+  throw new Error("AI gateway error: all models failed");
 }
 
 serve(async (req) => {
@@ -697,7 +700,7 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     } catch { /* no cache — fresh run */ }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 0: Hook Generation (Claude non-streaming, fast)
+    // PHASE 0: Hook Generation (Gemini primary, GPT fallback)
     // ═══════════════════════════════════════════════════════
     console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via GEMINI...`);
     let hookText = phaseCache['phase0'] || '';
@@ -717,26 +720,18 @@ ${ANTI_SLOP_DIRECTIVE}
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
 Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
 
-        const hookRes = await fetch(AI_URL, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-pro",
-            messages: [
-              { role: "system", content: hookSystemPrompt },
-              { role: "user", content: `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.` }
-            ],
-            stream: false,
-          }),
-        });
-        if (hookRes.ok) {
-          const d = await hookRes.json();
-          hookText = d.choices?.[0]?.message?.content || '';
-          console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via GEMINI`);
-        } else {
-          const errT = await hookRes.text();
-          console.warn(`[PHASE-0 HOOK] runId=${runId} Gemini error: ${hookRes.status}`, errT);
-        }
+        hookText = await callAiGatewayNonStreaming(
+          LOVABLE_API_KEY,
+          hookSystemPrompt,
+          `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
+          {
+            primaryModel: "google/gemini-2.5-pro",
+            fallbackModel: "openai/gpt-5",
+            maxTokens: 2000,
+            label: `PHASE-0 HOOK runId=${runId}`,
+          },
+        );
+        console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via AI gateway`);
 
         // Cache the hook
         if (hookText) {
@@ -756,8 +751,7 @@ Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA esc
     }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 1: Full Draft via CLAUDE (streaming)
-    // Claude Sonnet 4 — superior creative writing & nuance
+    // PHASE 1: Full Draft via Gemini with GPT fallback (streaming)
     // ═══════════════════════════════════════════════════════
     const hookInjection = hookText ? `\n🎯 HOOK PRÉ-GERADO (USE COMO BASE dos primeiros 60s — você pode melhorar mas NÃO descarte):\n${hookText}\n` : '';
 
@@ -782,7 +776,7 @@ Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA esc
     const nicheReferenceBlock = nicheRefKey ? NICHE_REFERENCE_MAP[nicheRefKey] : '';
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
-Você é Claude — sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.
+Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.
 
 ═══ SEU PAPEL NESTA FASE ═══
 Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do roteiro.
@@ -807,7 +801,7 @@ Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do rot
 ═══ YOUTUBE ELITE DNA ═══
 ${nicheReferenceBlock}
 
-═══ MASTERCLASS CLAUDE — ROTEIROS QUE PRENDEM ═══
+═══ MASTERCLASS DE ROTEIRO — ROTEIROS QUE PRENDEM ═══
 
 🧬 DNA DE UM ROTEIRO VIRAL (anatomia):
 1. GANCHO MAGNÉTICO (0-8s): Uma frase que faz o cérebro dizer "preciso saber mais"
@@ -983,30 +977,26 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
       : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!`;
 
-    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from GEMINI 2.5 PRO...`);
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from AI gateway...`);
 
-    const phase1Res = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    const phase1Res = await callAiGatewayStreaming(
+      LOVABLE_API_KEY,
+      systemPrompt,
+      userMessage,
+      {
+        primaryModel: "google/gemini-2.5-pro",
+        fallbackModel: "openai/gpt-5",
+        maxTokens: 16000,
+        label: `PHASE-1 DRAFT runId=${runId}`,
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        stream: true,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
+    );
 
     if (!phase1Res.ok) {
       const errText = await phase1Res.text();
-      console.error(`[PHASE-1 DRAFT] runId=${runId} Gemini error:`, phase1Res.status, errText);
+      console.error(`[PHASE-1 DRAFT] runId=${runId} AI gateway error:`, phase1Res.status, errText);
       if (phase1Res.status === 429) return errResp("Rate limit. Aguarde alguns segundos.", 429);
       if (phase1Res.status === 402) return errResp("Créditos insuficientes.", 402);
-      throw new Error(`Gemini API error: ${phase1Res.status}`);
+      throw new Error(`AI gateway error: ${phase1Res.status}`);
     }
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client...`);
