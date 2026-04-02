@@ -1100,6 +1100,117 @@ export type Database = {
         }
         Relationships: []
       }
+      content_thesis: {
+        Row: {
+          actual_ctr: number | null
+          actual_retention: number | null
+          actual_views: number | null
+          angle: string | null
+          channel_id: string | null
+          confidence_score: number | null
+          created_at: string
+          evidence_json: Json | null
+          expires_at: string | null
+          format: string | null
+          freshness_score: number | null
+          id: string
+          monetization_result_json: Json | null
+          niche: string | null
+          originality_notes: string | null
+          originality_risk: number | null
+          packaging_notes: string | null
+          saturation_risk: number | null
+          script_id: string | null
+          source_notes: string | null
+          status: string | null
+          thesis_text: string
+          thumbnail_prompt_ids: string[] | null
+          title_ids: string[] | null
+          updated_at: string
+          user_id: string
+          video_project_id: string | null
+          why_now: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          actual_ctr?: number | null
+          actual_retention?: number | null
+          actual_views?: number | null
+          angle?: string | null
+          channel_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          evidence_json?: Json | null
+          expires_at?: string | null
+          format?: string | null
+          freshness_score?: number | null
+          id?: string
+          monetization_result_json?: Json | null
+          niche?: string | null
+          originality_notes?: string | null
+          originality_risk?: number | null
+          packaging_notes?: string | null
+          saturation_risk?: number | null
+          script_id?: string | null
+          source_notes?: string | null
+          status?: string | null
+          thesis_text: string
+          thumbnail_prompt_ids?: string[] | null
+          title_ids?: string[] | null
+          updated_at?: string
+          user_id: string
+          video_project_id?: string | null
+          why_now?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          actual_ctr?: number | null
+          actual_retention?: number | null
+          actual_views?: number | null
+          angle?: string | null
+          channel_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          evidence_json?: Json | null
+          expires_at?: string | null
+          format?: string | null
+          freshness_score?: number | null
+          id?: string
+          monetization_result_json?: Json | null
+          niche?: string | null
+          originality_notes?: string | null
+          originality_risk?: number | null
+          packaging_notes?: string | null
+          saturation_risk?: number | null
+          script_id?: string | null
+          source_notes?: string | null
+          status?: string | null
+          thesis_text?: string
+          thumbnail_prompt_ids?: string[] | null
+          title_ids?: string[] | null
+          updated_at?: string
+          user_id?: string
+          video_project_id?: string | null
+          why_now?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_thesis_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_thesis_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_adaptive_plan: {
         Row: {
           adaptation_reason: string | null
@@ -1237,45 +1348,78 @@ export type Database = {
       dotti_suggestions: {
         Row: {
           channel_id: string | null
+          confidence: number | null
           content: string
+          content_thesis_id: string | null
           created_at: string
+          evidence_json: Json | null
+          expires_at: string | null
+          format: string | null
+          freshness_score: number | null
           id: string
           language: string | null
+          monetization_angle: string | null
           niche: string | null
+          originality_risk: number | null
+          production_effort: string | null
           style: string | null
+          suggestion_type: string | null
           title: string
           topic: string | null
           updated_at: string
           used_count: number | null
           user_id: string
+          why_now: string | null
         }
         Insert: {
           channel_id?: string | null
+          confidence?: number | null
           content: string
+          content_thesis_id?: string | null
           created_at?: string
+          evidence_json?: Json | null
+          expires_at?: string | null
+          format?: string | null
+          freshness_score?: number | null
           id?: string
           language?: string | null
+          monetization_angle?: string | null
           niche?: string | null
+          originality_risk?: number | null
+          production_effort?: string | null
           style?: string | null
+          suggestion_type?: string | null
           title?: string
           topic?: string | null
           updated_at?: string
           used_count?: number | null
           user_id: string
+          why_now?: string | null
         }
         Update: {
           channel_id?: string | null
+          confidence?: number | null
           content?: string
+          content_thesis_id?: string | null
           created_at?: string
+          evidence_json?: Json | null
+          expires_at?: string | null
+          format?: string | null
+          freshness_score?: number | null
           id?: string
           language?: string | null
+          monetization_angle?: string | null
           niche?: string | null
+          originality_risk?: number | null
+          production_effort?: string | null
           style?: string | null
+          suggestion_type?: string | null
           title?: string
           topic?: string | null
           updated_at?: string
           used_count?: number | null
           user_id?: string
+          why_now?: string | null
         }
         Relationships: [
           {
@@ -1283,6 +1427,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dotti_suggestions_content_thesis_id_fkey"
+            columns: ["content_thesis_id"]
+            isOneToOne: false
+            referencedRelation: "content_thesis"
             referencedColumns: ["id"]
           },
         ]

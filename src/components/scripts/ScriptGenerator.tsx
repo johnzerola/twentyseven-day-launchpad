@@ -309,6 +309,9 @@ export const ScriptGenerator = ({
 
         const rawDraft = await streamFromFunction('generate-script-short', {
           topic, durationSeconds: parseInt(duration), style, niche, language, viralContext,
+          channelKnowledge: channelKnowledge || undefined,
+          referenceScript: referenceScript.trim() || undefined,
+          rejectionFeedback: rejectionFeedback || undefined,
         }, (fullText) => {
           setDraftScript(cleanAll(fullText));
         });
@@ -1149,10 +1152,11 @@ export const ScriptGenerator = ({
                         body: { scriptText: script, title: topic, niche, videoType },
                       });
                       if (error) throw error;
-                      const s = scoreResult.scores;
-                      toast.success(`Score DNA: ${s.overall_grade} (Viral: ${s.viral_score}, Hook: ${s.hook_score})`);
-                      if (s.improvement_suggestions?.length) {
-                        s.improvement_suggestions.forEach((tip: string) => toast.info(`💡 ${tip}`, { duration: 8000 }));
+                      // score-script returns: combinedScore, gpt_score, gemini_score, approved, strengths, weaknesses
+                      const grade = scoreResult.approved ? '✅ Aprovado' : '⚠️ Precisa melhorar';
+                      toast.success(`Score DNA: ${grade} (Combinado: ${scoreResult.combinedScore}/20, GPT: ${scoreResult.gpt_score}, Gemini: ${scoreResult.gemini_score})`);
+                      if (scoreResult.weaknesses?.length) {
+                        scoreResult.weaknesses.slice(0, 3).forEach((tip: string) => toast.info(`💡 ${tip}`, { duration: 8000 }));
                       }
                     } catch (e: any) {
                       toast.error(e.message || 'Erro ao avaliar');

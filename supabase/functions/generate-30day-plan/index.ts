@@ -27,9 +27,13 @@ serve(async (req) => {
     if (!user) throw new Error("Not authenticated");
 
     // Fetch knowledge in parallel
+    // Dynamic knowledge category based on strategy (was hardcoded to shorts-monetization)
+    const knowledgeCategory = (strategy === 'longform-first') ? 'longform-growth' 
+      : (strategy === 'hybrid') ? 'monetization-strategy' 
+      : 'shorts-monetization';
     const [monetKnowledge, caseStudies, nicheData, hookPatterns, contentModels] = await Promise.all([
       sb.from("youtube_knowledge").select("title,content")
-        .eq("category", "shorts-monetization").order("priority", { ascending: false }).limit(5),
+        .eq("category", knowledgeCategory).order("priority", { ascending: false }).limit(5),
       sb.from("case_studies").select("*").eq("is_public", true).limit(5),
       sb.from("niche_database").select("*").ilike("name", `%${niche || ''}%`).limit(3),
       sb.from("hook_patterns").select("pattern_name,template,effectiveness_score")

@@ -344,43 +344,45 @@ serve(async (req) => {
             if (style) techniques.push({ name: `Style: ${style}`, score: Math.round(combinedScore / 2) });
 
             for (const tech of techniques) {
-              await sb.from("script_skill_scores").upsert({
-                user_id: userId,
-                technique: tech.name,
-                niche: niche?.toLowerCase() || 'geral',
-                genre: style || null,
-                avg_score: tech.score,
-                times_used: 1,
-                total_score_contribution: tech.score,
-                best_score: tech.score,
-                last_used_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              }, { 
-                onConflict: 'user_id,technique,niche',
-              });
-              
-              // Update avg: re-fetch and recalculate
+              const nicheKey = niche?.toLowerCase() || 'geral';
+              // Fetch existing record first to calculate incremental values
               const { data: existing } = await sb.from("script_skill_scores")
-                .select("times_used, total_score_contribution")
+                .select("times_used, total_score_contribution, best_score")
                 .eq("user_id", userId)
                 .eq("technique", tech.name)
-                .eq("niche", niche?.toLowerCase() || 'geral')
-                .single();
+                .eq("niche", nicheKey)
+                .maybeSingle();
               
               if (existing) {
+                // Incremental update — no double-counting
                 const newTimesUsed = (existing.times_used || 0) + 1;
                 const newTotal = (existing.total_score_contribution || 0) + tech.score;
                 await sb.from("script_skill_scores").update({
                   times_used: newTimesUsed,
                   total_score_contribution: newTotal,
                   avg_score: Math.round((newTotal / newTimesUsed) * 10) / 10,
-                  best_score: Math.max(existing.total_score_contribution || 0, tech.score),
+                  best_score: Math.max(existing.best_score || 0, tech.score),
+                  genre: style || null,
                   last_used_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                 })
                 .eq("user_id", userId)
                 .eq("technique", tech.name)
-                .eq("niche", niche?.toLowerCase() || 'geral');
+                .eq("niche", nicheKey);
+              } else {
+                // First time — insert
+                await sb.from("script_skill_scores").insert({
+                  user_id: userId,
+                  technique: tech.name,
+                  niche: nicheKey,
+                  genre: style || null,
+                  avg_score: tech.score,
+                  times_used: 1,
+                  total_score_contribution: tech.score,
+                  best_score: tech.score,
+                  last_used_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
               }
             }
             
