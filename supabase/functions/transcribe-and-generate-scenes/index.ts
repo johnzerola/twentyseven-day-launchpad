@@ -187,7 +187,7 @@ serve(async (req) => {
         }
       }
 
-      // ── METHOD 2: Gemini via Gateway (preferred) or Files API (large files) ──
+      // ── METHOD 2: Gemini transcription via Lovable AI Gateway (preferred) or direct Gemini ──
       if (!transcribeData && audioUrl) {
         const transcribePrompt = `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
 
@@ -195,15 +195,55 @@ OUTPUT FORMAT (strict JSON array):
 [{"start": 0.0, "end": 3.5, "text": "First sentence here."}, ...]
 
 RULES:
-- Transcribe EVERY spoken word
-- Estimate timestamps accurately per sentence
+- Transcribe EVERY spoken word — do NOT skip or summarize
+- Timestamps must be accurate per sentence
 - Sequential, non-overlapping
-- Return ONLY the JSON array`;
+- Cover the ENTIRE audio duration from start to finish
+- Return ONLY the JSON array, no markdown, no explanation`;
 
-        // For large files with GOOGLE_AI_KEY, use Files API + direct Gemini
-        if (GOOGLE_AI_KEY && audioUrl) {
+        // Try Lovable AI Gateway with audio URL (multimodal)
+        if (LOVABLE_API_KEY) {
           try {
-            console.log("Trying Gemini transcription...");
+            console.log("Trying audio transcription via AI Gateway (multimodal)...");
+            const gatewayResp = await fetch(GATEWAY_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                messages: [{
+                  role: "user",
+                  content: [
+                    { type: "text", text: transcribePrompt },
+                    { type: "image_url", image_url: { url: audioUrl } },
+                  ],
+                }],
+                temperature: 0.1,
+                max_completion_tokens: 32768,
+              }),
+            });
+
+            if (gatewayResp.ok) {
+              const gData = await gatewayResp.json();
+              const text = gData.choices?.[0]?.message?.content || "";
+              if (text.includes('"start"') && text.includes('"end"')) {
+                transcribeData = { choices: [{ message: { content: text } }] };
+                console.log("AI Gateway audio transcription successful");
+              } else {
+                console.warn("AI Gateway returned non-transcript content, trying fallback...");
+              }
+            } else {
+              const errText = await gatewayResp.text();
+              console.warn("AI Gateway audio transcription failed:", gatewayResp.status, errText.slice(0, 300));
+            }
+          } catch (e: any) {
+            console.warn("AI Gateway audio transcription error:", e.message);
+          }
+        }
+
+        // Fallback: direct Gemini with Files API for large audio
+        if (!transcribeData && GOOGLE_AI_KEY && audioUrl) {
+          try {
+            console.log("Trying direct Gemini transcription...");
             const audioFetchCtrl = new AbortController();
             const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 60000);
             const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
@@ -269,7 +309,7 @@ RULES:
 
               geminiRequestBody = {
                 contents: [{ parts: [{ text: transcribePrompt }, { fileData: { mimeType: resolvedMime, fileUri } }] }],
-                generationConfig: { temperature: 0.1 },
+                generationConfig: { temperature: 0.1, maxOutputTokens: 32768 },
               };
             } else {
               let base64Audio = "";
@@ -281,11 +321,10 @@ RULES:
 
               geminiRequestBody = {
                 contents: [{ parts: [{ text: transcribePrompt }, { inlineData: { mimeType: resolvedMime, data: base64Audio } }] }],
-                generationConfig: { temperature: 0.1 },
+                generationConfig: { temperature: 0.1, maxOutputTokens: 32768 },
               };
             }
 
-            // Use direct Gemini for audio (multimodal with file/inline data)
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
             const geminiCtrl = new AbortController();
             const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 180000);
