@@ -23,6 +23,7 @@ import { TimelineSyncLab } from '@/components/scripts/TimelineSyncLab';
 import { SceneViewer } from '@/components/scripts/SceneViewer';
 import { PromptExporter } from '@/components/scripts/PromptExporter';
 import { TitleSEOStep } from '@/components/scripts/TitleSEOStep';
+import { PackagingLab } from '@/components/scripts/PackagingLab';
 import { ShortsSceneBreakdown } from '@/components/scripts/ShortsSceneBreakdown';
 import type { Character, SyncedScene, VideoStyleOption } from '@/components/scripts/types';
 import { VoiceGeneratorStep } from '@/components/scripts/VoiceGeneratorStep';
