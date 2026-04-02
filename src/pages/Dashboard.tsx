@@ -12,6 +12,7 @@ import { YPPProximityAlert } from '@/components/dashboard/YPPProximityAlert';
 import { DashboardSkeleton } from '@/components/PageSkeletons';
 import { VideoPerformanceTracker } from '@/components/dashboard/VideoPerformanceTracker';
 import { ABTestManager } from '@/components/dashboard/ABTestManager';
+import { NextBestActionWidget } from '@/components/dashboard/NextBestActionWidget';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
