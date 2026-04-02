@@ -401,7 +401,7 @@ serve(async (req) => {
     // ═══ ESSENTIAL QUERIES (always needed, small payload) ═══
     const [voiceRes, backtestRes, channelRes, userPrefsRes] = await Promise.all([
       currentUserId
-        ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers")
+        ? sb.from("channel_voice_profiles").select("voice_signature,tone_keywords,style_markers,sample_scripts_analyzed")
             .eq("user_id", currentUserId).order("last_analyzed_at", { ascending: false }).limit(1).maybeSingle()
         : Promise.resolve({ data: null }),
       sb.from("ai_learning").select("insight")
