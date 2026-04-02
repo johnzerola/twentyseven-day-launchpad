@@ -186,13 +186,23 @@ serve(async (req) => {
 
     // ========== STEP 4: Build style & character blocks ==========
     const styleGuides: Record<string, string> = {
-      'cinematográfico': 'Netflix premium. ARRI ALEXA 65, Cooke Anamorphic. Shallow DOF f/1.4. Volumetric rays.',
-      '2d': 'Kurzgesagt style. Vibrant flat colors, clean vector, parallax depth, smooth 24fps.',
-      '3d': 'Pixar 3D. Subsurface scattering, PBR materials, global illumination.',
-      'anime': 'Ufotable/MAPPA. Sakuga poses, Shinkai backgrounds, cel-shading.',
-      'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM, 8K, natural light.',
-      'dark': 'Dark noir. Crushed blacks, neon accents. Blade Runner 2049 meets Se7en.',
-      'comic': 'Premium graphic novel. Bold ink, halftone, dynamic panels.',
+      'cinematográfico': 'Netflix/Disney cinematic. ARRI ALEXA 65, Cooke Anamorphic lenses, Kodak Vision3 500T film emulation, ACES color science. Dramatic lighting, shallow DOF f/1.4-2.8, creamy bokeh. Lifted blacks, subtle halation. Volumetric god rays, atmospheric haze.',
+      '2d': '2D FLAT ANIMATION, Kurzgesagt-style. CRITICAL: This MUST look like a 2D animated cartoon — vibrant flat colors, clean vector shapes, bold outlines, smooth color fills, parallax depth layers, NO photorealism, NO 3D rendering. Characters are simplified 2D illustrated figures with flat shading. Backgrounds are colorful flat-design landscapes. Think motion graphics meets animated infographic. Smooth 24fps cel animation feel.',
+      '3d': '3D CARTOON RENDER, Pixar/Dreamworks style. CRITICAL: This MUST look like a 3D animated movie — stylized cartoon characters with big expressive eyes, smooth plastic-like skin, subsurface scattering, PBR materials, global illumination, strand-based hair, 8K textures. Environments are colorful, stylized 3D worlds. NOT photorealistic — cartoon proportions and colors.',
+      'anime': 'ANIME/MANGA style, Ufotable/MAPPA quality. CRITICAL: This MUST look like Japanese anime — dynamic sakuga action poses, beautiful painted backgrounds (Makoto Shinkai style), cel-shading, rim lighting, volumetric particles, dramatic speed lines, large expressive eyes, sharp linework.',
+      'wojak': 'WOJAK/MEME internet art style. CRITICAL: This MUST look like hand-drawn internet meme art — simple drawn faces with strong emotional expressions (Wojak, Doomer, Bloomer archetypes), flat colors, minimalist backgrounds, internet culture aesthetic. Expressive stick-figure-like characters.',
+      'stickmen': 'STICK FIGURE animation style. CRITICAL: This MUST look like minimalist stick figure drawings — simple black line drawings on white/simple backgrounds, humor through simplicity and timing, clean geometric shapes, hand-drawn feel.',
+      'realista': 'Hyper-photorealistic. Sony A7R V, 85mm f/1.2 GM lens, 8K resolution, natural available light, pore-level skin detail, strand-level hair. Zero AI artifacts. Documentary-grade realism.',
+      'dark': 'Dark noir/cyberpunk aesthetic. Crushed blacks, neon accents (cyan, magenta, amber). Dense volumetric fog. Noir shadow patterns, wet reflective surfaces. Blade Runner 2049 meets Se7en.',
+      'whiteboard': 'WHITEBOARD ANIMATION style. CRITICAL: This MUST look like a whiteboard video — hand-drawn black ink illustrations on a white surface, strategic color highlights, educational clarity, smooth drawing reveal animation. Think RSA Animate / TED-Ed.',
+      'comic': 'COMIC BOOK / GRAPHIC NOVEL style. Bold ink outlines, Ben-Day halftone dots, dynamic panel compositions, saturated colors, dramatic perspective, action lines. Marvel/DC aesthetic.',
+      'lego': 'LEGO WORLD style. CRITICAL: Everything MUST be made of LEGO bricks — characters are LEGO minifigures, environments built from colored LEGO blocks, plastic texture, stop-motion animation feel, bright saturated colors.',
+      'minecraft': 'MINECRAFT STYLE. CRITICAL: Everything MUST be pixelated and blocky — cubic voxel world, 16x16 pixel textures, block-based characters and environments, Minecraft game aesthetic, pixelated sky and terrain.',
+      'disney_toon': 'CLASSIC DISNEY ANIMATION style. CRITICAL: This MUST look like traditional Disney 2D animation — fluid character movement, charismatic expressive characters, warm color palettes, magical sparkle effects, smooth hand-drawn animation quality. Think Aladdin, Lion King, Tangled.',
+      'documentary_bbc': 'BBC/NATIONAL GEOGRAPHIC documentary cinematography. CRITICAL: Sweeping aerial shots, macro close-ups, natural soft lighting, shallow DOF, desaturated earth tones, Canon C500 aesthetic, authoritative visual storytelling.',
+      'gtav': 'GRAND THEFT AUTO V game aesthetic. CRITICAL: GTA art style — high saturation, urban landscapes, action-movie angles, lens flares, HDR-style lighting, street-level camera work, gritty urban environments.',
+      'expressionism': 'EXPRESSIONIST ART style. CRITICAL: Bold brushstrokes, distorted perspectives, vivid non-naturalistic colors, emotional intensity, gallery-quality compositions. Van Gogh meets Munch meets Kandinsky.',
+      'animal_chase': 'HYPER-REALISTIC ANIMAL DOCUMENTARY + HOLLYWOOD ACTION. National Geographic meets Jurassic Park. 120fps slow-motion, extreme close-ups on animal eyes showing reflection, volumetric dust/water particles, dramatic golden hour lighting, cinematic pursuit sequences.',
     };
     const selectedStyleGuide = styleGuides[videoStyle?.toLowerCase()] || styleGuides['cinematográfico'];
 
@@ -313,11 +323,15 @@ ABSOLUTE RULES:
 4. End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 5. Use 5+ different camera angles — never repeat consecutively.
 
-STYLE: ${selectedStyleGuide}
+🎨 MANDATORY ART STYLE (CRITICAL — FOLLOW EXACTLY):
+${selectedStyleGuide}
+
+⚠️ STYLE ENFORCEMENT: START every visual prompt by describing the art style. If the style says "2D flat animation" then EVERY scene must be 2D animated — never photorealistic. If "3D cartoon" then everything is 3D cartoon. NEVER mix styles. NEVER default to photorealistic unless the style explicitly says so.
+
 ${characterBlock}
 ${knowledgeBlock ? `KNOWLEDGE:\n${knowledgeBlock}` : ''}
 
-PROMPT FORMULA: [Camera+Lens] + [Subject matching narration] + [Action] + [Environment] + [Lighting] + anti-text block
+PROMPT FORMULA: [ART STYLE descriptor first] + [Camera+Lens] + [Subject matching narration] + [Action] + [Environment] + [Lighting] + anti-text block
 Quality keywords: masterpiece, award-winning, 8K UHD`;
 
     // ========== STEP 8: Process chunks SEQUENTIALLY (avoid rate limits) ==========
