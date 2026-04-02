@@ -94,12 +94,14 @@ serve(async (req) => {
 
     // ═══ ACTION: start — transcribe only, return chunks ═══
     if (action === "start") {
-      const { audioUrl, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript } = body;
+      const { audioUrl, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript, audioDurationSeconds } = body;
       if (!audioUrl) throw new Error("audioUrl obrigatório.");
 
       const cleanScript = (script || "").slice(0, 30000);
       const resolvedMime = audioMimeType || "audio/mp3";
       const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
+      const requestedAudioDuration = Number(audioDurationSeconds);
+      const hasRequestedAudioDuration = Number.isFinite(requestedAudioDuration) && requestedAudioDuration > 0;
 
       // Transcribe — Strategy: ElevenLabs STT (best, handles any size) → Gemini (small files) → script fallback
       let transcribeData: any = null;
@@ -355,7 +357,7 @@ RULES:
         if (!cleanScript.trim()) throw new Error("Transcrição falhou e nenhum roteiro disponível.");
         console.log("Using script-based fallback transcription via AI Gateway");
         const aiResult = await callAI([
-          { role: "user", content: `Convert narration script to timestamps at ~150 wpm in ${language || 'Portuguese'}. Return ONLY a JSON array: [{"start":0.0,"end":3.5,"text":"..."}]\n\nSCRIPT:\n${cleanScript}` },
+          { role: "user", content: `Convert narration script to timestamps in ${language || 'Portuguese'}. Return ONLY a JSON array: [{"start":0.0,"end":3.5,"text":"..."}].${hasRequestedAudioDuration ? ` The full timeline MUST cover exactly ${requestedAudioDuration.toFixed(1)} seconds from start to finish.` : ' Use natural pacing around 150 wpm.'}\n\nSCRIPT:\n${cleanScript}` },
         ], { temperature: 0.1 });
         const text = aiResult.choices?.[0]?.message?.content || "";
         transcribeData = { choices: [{ message: { content: text } }] };
@@ -381,7 +383,17 @@ RULES:
 
       if (!transcriptBlocks.length) throw new Error("Áudio sem fala detectável.");
 
-      const audioDuration = transcriptBlocks[transcriptBlocks.length - 1].end;
+      const transcriptDuration = Number(transcriptBlocks[transcriptBlocks.length - 1].end) || 0;
+      const shouldNormalizeToRequestedDuration = hasRequestedAudioDuration && (
+        transcriptDuration <= 0 ||
+        Math.abs(requestedAudioDuration - transcriptDuration) > Math.max(12, requestedAudioDuration * 0.08)
+      );
+
+      if (shouldNormalizeToRequestedDuration) {
+        transcriptBlocks = normalizeTranscriptBlocksToDuration(transcriptBlocks, requestedAudioDuration);
+      }
+
+      const audioDuration = shouldNormalizeToRequestedDuration ? requestedAudioDuration : transcriptDuration;
       const fullText = transcriptBlocks.map((b: any) => b.text).join(" ");
 
       const CHUNK_SECONDS = audioDuration > 600 ? 90 : 120;

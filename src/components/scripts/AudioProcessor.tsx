@@ -101,6 +101,32 @@ export const AudioProcessor = ({
     onReferenceImagesChange?.(current.filter((_, i) => i !== index));
   };
 
+  const getAudioDurationSeconds = useCallback((file: File) => {
+    return new Promise<number>((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const audio = document.createElement('audio');
+      audio.preload = 'metadata';
+
+      const cleanup = () => {
+        URL.revokeObjectURL(objectUrl);
+        audio.removeAttribute('src');
+      };
+
+      audio.onloadedmetadata = () => {
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        cleanup();
+        resolve(duration > 0 ? duration : 0);
+      };
+
+      audio.onerror = () => {
+        cleanup();
+        reject(new Error('Não foi possível ler a duração do áudio.'));
+      };
+
+      audio.src = objectUrl;
+    });
+  }, []);
+
   const generateSyncedScenes = async () => {
     if (!audioFile) { toast.error('Selecione um arquivo de áudio'); return; }
     const cleanScript = getCleanNarration();
@@ -108,6 +134,8 @@ export const AudioProcessor = ({
 
     setPhase('uploading');
     try {
+      const audioDurationSeconds = await getAudioDurationSeconds(audioFile);
+
       // Upload audio to storage
       const mimeType = audioFile.type || 'audio/mp3';
       const ext = audioFile.name.split('.').pop() || 'mp3';
@@ -137,6 +165,7 @@ export const AudioProcessor = ({
           characters: characters.length > 0 ? characters : undefined,
           language,
           niche,
+          audioDurationSeconds,
           sceneBlueprintFromScript: sceneBlueprintJson.length > 0 ? sceneBlueprintJson : undefined,
         },
       });
