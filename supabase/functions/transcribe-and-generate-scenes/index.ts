@@ -187,157 +187,126 @@ serve(async (req) => {
         }
       }
 
-      // ── METHOD 2: Gemini (Files API for large, inline for small) ──
-      if (!transcribeData && GOOGLE_AI_KEY && audioUrl) {
-        try {
-          console.log("Trying Gemini transcription...");
-          const audioFetchCtrl = new AbortController();
-          const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 60000);
-          const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
-          clearTimeout(audioTimeout);
-          if (!audioResp.ok) throw new Error(`Failed to download audio: ${audioResp.status}`);
+      // ── METHOD 2: Gemini via Gateway (preferred) or Files API (large files) ──
+      if (!transcribeData && audioUrl) {
+        const transcribePrompt = `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
 
-          const audioBuffer = await audioResp.arrayBuffer();
-          const audioBytes = new Uint8Array(audioBuffer);
-          const fileSizeMB = audioBytes.length / 1024 / 1024;
-          console.log(`Audio downloaded: ${fileSizeMB.toFixed(1)}MB for Gemini`);
+OUTPUT FORMAT (strict JSON array):
+[{"start": 0.0, "end": 3.5, "text": "First sentence here."}, ...]
 
-          let geminiRequestBody: any;
+RULES:
+- Transcribe EVERY spoken word
+- Estimate timestamps accurately per sentence
+- Sequential, non-overlapping
+- Return ONLY the JSON array`;
 
-          if (audioBytes.length > 20 * 1024 * 1024) {
-            // ── LARGE FILE: Use Google AI Files API (resumable upload, supports up to 2GB) ──
-            console.log("Using Google AI Files API for large audio...");
+        // For large files with GOOGLE_AI_KEY, use Files API + direct Gemini
+        if (GOOGLE_AI_KEY && audioUrl) {
+          try {
+            console.log("Trying Gemini transcription...");
+            const audioFetchCtrl = new AbortController();
+            const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 60000);
+            const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
+            clearTimeout(audioTimeout);
+            if (!audioResp.ok) throw new Error(`Failed to download audio: ${audioResp.status}`);
 
-            // Step 1: Start resumable upload
-            const startUploadResp = await fetch(
-              `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GOOGLE_AI_KEY}`,
-              {
+            const audioBuffer = await audioResp.arrayBuffer();
+            const audioBytes = new Uint8Array(audioBuffer);
+            const fileSizeMB = audioBytes.length / 1024 / 1024;
+            console.log(`Audio downloaded: ${fileSizeMB.toFixed(1)}MB for Gemini`);
+
+            let geminiRequestBody: any;
+
+            if (audioBytes.length > 20 * 1024 * 1024) {
+              console.log("Using Google AI Files API for large audio...");
+              const startUploadResp = await fetch(
+                `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GOOGLE_AI_KEY}`,
+                {
+                  method: "POST",
+                  headers: {
+                    "X-Goog-Upload-Protocol": "resumable",
+                    "X-Goog-Upload-Command": "start",
+                    "X-Goog-Upload-Header-Content-Length": String(audioBytes.length),
+                    "X-Goog-Upload-Header-Content-Type": resolvedMime,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ file: { display_name: "audio_transcription" } }),
+                }
+              );
+              if (!startUploadResp.ok) throw new Error(`Files API start failed: ${startUploadResp.status}`);
+
+              const uploadUrl = startUploadResp.headers.get("X-Goog-Upload-URL");
+              if (!uploadUrl) throw new Error("No upload URL returned");
+
+              const uploadResp = await fetch(uploadUrl, {
                 method: "POST",
                 headers: {
-                  "X-Goog-Upload-Protocol": "resumable",
-                  "X-Goog-Upload-Command": "start",
-                  "X-Goog-Upload-Header-Content-Length": String(audioBytes.length),
-                  "X-Goog-Upload-Header-Content-Type": resolvedMime,
-                  "Content-Type": "application/json",
+                  "Content-Length": String(audioBytes.length),
+                  "X-Goog-Upload-Offset": "0",
+                  "X-Goog-Upload-Command": "upload, finalize",
                 },
-                body: JSON.stringify({ file: { display_name: "audio_transcription" } }),
-              }
-            );
+                body: audioBytes,
+              });
+              if (!uploadResp.ok) throw new Error(`Files API upload failed: ${uploadResp.status}`);
 
-            if (!startUploadResp.ok) {
-              const errText = await startUploadResp.text();
-              throw new Error(`Files API start failed: ${startUploadResp.status} ${errText.slice(0, 200)}`);
-            }
+              const fileInfo = await uploadResp.json();
+              const fileUri = fileInfo.file?.uri;
+              if (!fileUri) throw new Error("No file URI returned");
+              console.log(`File uploaded to Files API: ${fileUri}`);
 
-            const uploadUrl = startUploadResp.headers.get("X-Goog-Upload-URL");
-            if (!uploadUrl) throw new Error("No upload URL returned from Files API");
-
-            // Step 2: Upload the file bytes
-            const uploadResp = await fetch(uploadUrl, {
-              method: "POST",
-              headers: {
-                "Content-Length": String(audioBytes.length),
-                "X-Goog-Upload-Offset": "0",
-                "X-Goog-Upload-Command": "upload, finalize",
-              },
-              body: audioBytes,
-            });
-
-            if (!uploadResp.ok) {
-              const errText = await uploadResp.text();
-              throw new Error(`Files API upload failed: ${uploadResp.status} ${errText.slice(0, 200)}`);
-            }
-
-            const fileInfo = await uploadResp.json();
-            const fileUri = fileInfo.file?.uri;
-            if (!fileUri) throw new Error("No file URI returned from Files API");
-            console.log(`File uploaded to Files API: ${fileUri}`);
-
-            // Step 3: Wait for file to be ACTIVE (processing can take a moment)
-            const fileName = fileInfo.file?.name;
-            if (fileName) {
-              for (let attempt = 0; attempt < 12; attempt++) {
-                const statusResp = await fetch(
-                  `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GOOGLE_AI_KEY}`
-                );
-                if (statusResp.ok) {
-                  const statusData = await statusResp.json();
-                  if (statusData.state === "ACTIVE") {
-                    console.log("File is ACTIVE, proceeding with transcription");
-                    break;
+              const fileName = fileInfo.file?.name;
+              if (fileName) {
+                for (let attempt = 0; attempt < 12; attempt++) {
+                  const statusResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GOOGLE_AI_KEY}`);
+                  if (statusResp.ok) {
+                    const statusData = await statusResp.json();
+                    if (statusData.state === "ACTIVE") { console.log("File is ACTIVE"); break; }
+                    console.log(`File state: ${statusData.state}, waiting...`);
                   }
-                  console.log(`File state: ${statusData.state}, waiting...`);
+                  await new Promise(r => setTimeout(r, 5000));
                 }
-                await new Promise(r => setTimeout(r, 5000));
               }
+
+              geminiRequestBody = {
+                contents: [{ parts: [{ text: transcribePrompt }, { fileData: { mimeType: resolvedMime, fileUri } }] }],
+                generationConfig: { temperature: 0.1 },
+              };
+            } else {
+              let base64Audio = "";
+              const CHUNK_SIZE = 8192;
+              for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+                base64Audio += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK_SIZE));
+              }
+              base64Audio = btoa(base64Audio);
+
+              geminiRequestBody = {
+                contents: [{ parts: [{ text: transcribePrompt }, { inlineData: { mimeType: resolvedMime, data: base64Audio } }] }],
+                generationConfig: { temperature: 0.1 },
+              };
             }
 
-            geminiRequestBody = {
-              contents: [{ parts: [
-                { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+            // Use direct Gemini for audio (multimodal with file/inline data)
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+            const geminiCtrl = new AbortController();
+            const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 180000);
+            const geminiResp = await fetch(geminiUrl, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              signal: geminiCtrl.signal, body: JSON.stringify(geminiRequestBody),
+            });
+            clearTimeout(geminiTimeout);
 
-OUTPUT FORMAT (strict JSON array):
-[{"start": 0.0, "end": 3.5, "text": "First sentence here."}, ...]
-
-RULES:
-- Transcribe EVERY spoken word
-- Estimate timestamps accurately per sentence
-- Sequential, non-overlapping
-- Return ONLY the JSON array` },
-                { fileData: { mimeType: resolvedMime, fileUri } }
-              ]}],
-              generationConfig: { temperature: 0.1 },
-            };
-          } else {
-            // ── SMALL FILE: inline base64 ──
-            let base64Audio = "";
-            const CHUNK_SIZE = 8192;
-            for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
-              base64Audio += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK_SIZE));
+            if (geminiResp.ok) {
+              const gData = await geminiResp.json();
+              const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+              transcribeData = { choices: [{ message: { content: text } }] };
+              console.log("Gemini transcription successful");
+            } else {
+              const errText = await geminiResp.text();
+              console.warn("Gemini transcription failed:", geminiResp.status, errText.slice(0, 200));
             }
-            base64Audio = btoa(base64Audio);
-
-            geminiRequestBody = {
-              contents: [{ parts: [
-                { text: `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
-
-OUTPUT FORMAT (strict JSON array):
-[{"start": 0.0, "end": 3.5, "text": "First sentence here."}, ...]
-
-RULES:
-- Transcribe EVERY spoken word
-- Estimate timestamps accurately per sentence
-- Sequential, non-overlapping
-- Return ONLY the JSON array` },
-                { inlineData: { mimeType: resolvedMime, data: base64Audio } }
-              ]}],
-              generationConfig: { temperature: 0.1 },
-            };
+          } catch (e: any) {
+            console.warn("Gemini transcription error:", e.message);
           }
-
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
-          const geminiCtrl = new AbortController();
-          const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 180000); // 3 min for large files
-
-          const geminiResp = await fetch(geminiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: geminiCtrl.signal,
-            body: JSON.stringify(geminiRequestBody),
-          });
-          clearTimeout(geminiTimeout);
-
-          if (geminiResp.ok) {
-            const gData = await geminiResp.json();
-            const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            transcribeData = { choices: [{ message: { content: text } }] };
-            console.log("Gemini transcription successful");
-          } else {
-            const errText = await geminiResp.text();
-            console.warn("Gemini transcription failed:", geminiResp.status, errText.slice(0, 200));
-          }
-        } catch (e: any) {
-          console.warn("Gemini transcription error:", e.message);
         }
       }
 
