@@ -323,11 +323,15 @@ ABSOLUTE RULES:
 4. End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 5. Use 5+ different camera angles — never repeat consecutively.
 
-STYLE: ${selectedStyleGuide}
+🎨 MANDATORY ART STYLE (CRITICAL — FOLLOW EXACTLY):
+${selectedStyleGuide}
+
+⚠️ STYLE ENFORCEMENT: START every visual prompt by describing the art style. If the style says "2D flat animation" then EVERY scene must be 2D animated — never photorealistic. If "3D cartoon" then everything is 3D cartoon. NEVER mix styles. NEVER default to photorealistic unless the style explicitly says so.
+
 ${characterBlock}
 ${knowledgeBlock ? `KNOWLEDGE:\n${knowledgeBlock}` : ''}
 
-PROMPT FORMULA: [Camera+Lens] + [Subject matching narration] + [Action] + [Environment] + [Lighting] + anti-text block
+PROMPT FORMULA: [ART STYLE descriptor first] + [Camera+Lens] + [Subject matching narration] + [Action] + [Environment] + [Lighting] + anti-text block
 Quality keywords: masterpiece, award-winning, 8K UHD`;
 
     // ========== STEP 8: Process chunks SEQUENTIALLY (avoid rate limits) ==========
