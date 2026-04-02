@@ -364,15 +364,12 @@ serve(async (req) => {
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
 
-    // ═══ CLAUDE API KEY (primary) ═══
-    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
-    if (!CLAUDE_API_KEY) throw new Error("CLAUDE_API_KEY not configured — required for script generation");
-
-    // Lovable AI key for fallback hook generation only
+    // ═══ GEMINI (PRIMARY) via Lovable AI Gateway ═══
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured — required for script generation");
 
     const runId = phaseId || crypto.randomUUID();
-    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min ENGINE=CLAUDE`);
+    console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min ENGINE=GEMINI`);
 
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
@@ -702,7 +699,7 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     // ═══════════════════════════════════════════════════════
     // PHASE 0: Hook Generation (Claude non-streaming, fast)
     // ═══════════════════════════════════════════════════════
-    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via CLAUDE...`);
+    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via GEMINI...`);
     let hookText = phaseCache['phase0'] || '';
     if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
@@ -718,51 +715,43 @@ ${viralInjection}${intelBlock}${creativeWarning}
 ${ANTI_SLOP_DIRECTIVE}
 
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
-Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.
-IMPORTANTE: Você é Claude — use sua força natural de escrita criativa, nuance emocional e voz humana autêntica.`;
+Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
 
-        hookText = await callClaudeNonStreaming(
-          CLAUDE_API_KEY,
-          hookSystemPrompt,
-          `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
-          2000
-        );
-        console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via CLAUDE`);
+        const hookRes = await fetch(AI_URL, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            messages: [
+              { role: "system", content: hookSystemPrompt },
+              { role: "user", content: `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.` }
+            ],
+            stream: false,
+          }),
+        });
+        if (hookRes.ok) {
+          const d = await hookRes.json();
+          hookText = d.choices?.[0]?.message?.content || '';
+          console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via GEMINI`);
+        } else {
+          const errT = await hookRes.text();
+          console.warn(`[PHASE-0 HOOK] runId=${runId} Gemini error: ${hookRes.status}`, errT);
+        }
 
         // Cache the hook
-        try {
-          await sb.from("research_cache").upsert({
-            cache_key: `script_phase0:${runId}`,
-            source: "generate-script",
-            result_json: { hook: hookText },
-            expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
-            query: `phase0:${topic?.slice(0, 50)}`,
-          }, { onConflict: "cache_key" });
-        } catch { /* non-blocking cache */ }
-      } catch (e) {
-        console.warn(`[PHASE-0 HOOK] runId=${runId} Claude error, trying fallback:`, e);
-        // Fallback to Lovable AI if Claude fails for hook
-        if (LOVABLE_API_KEY) {
+        if (hookText) {
           try {
-            const fallbackRes = await fetch(AI_URL, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                model: "openai/gpt-5-mini",
-                messages: [
-                  { role: "system", content: `Crie hook de 60s para YouTube. Idioma: ${language}. Estilo: ${style}. APENAS texto falado.` },
-                  { role: "user", content: `Hook para: "${topic}"` }
-                ],
-                stream: false,
-              }),
-            });
-            if (fallbackRes.ok) {
-              const d = await fallbackRes.json();
-              hookText = d.choices?.[0]?.message?.content || '';
-              console.log(`[PHASE-0 HOOK] runId=${runId} Fallback OK: ${hookText.length} chars`);
-            }
-          } catch (fe) { console.warn("[PHASE-0 HOOK] Fallback also failed:", fe); }
+            await sb.from("research_cache").upsert({
+              cache_key: `script_phase0:${runId}`,
+              source: "generate-script",
+              result_json: { hook: hookText },
+              expires_at: new Date(Date.now() + 2 * 3600000).toISOString(),
+              query: `phase0:${topic?.slice(0, 50)}`,
+            }, { onConflict: "cache_key" });
+          } catch { /* non-blocking cache */ }
         }
+      } catch (e) {
+        console.warn(`[PHASE-0 HOOK] runId=${runId} Hook generation failed:`, e);
       }
     }
 
@@ -987,7 +976,6 @@ REGRAS DE VEROSSIMILHANÇA:
 5. Cada PLOT TWIST deve ser SURPRESANTE mas RETROATIVAMENTE LÓGICO
    - "Quando você descobre, pensa: claro, os sinais estavam lá"
 
-Você é Claude. Sua escrita tem PROFUNDIDADE que outras IAs não alcançam.
 Cada frase deve carregar PESO — emocional, informativo ou narrativo.
 Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
@@ -995,59 +983,34 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
       : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!`;
 
-    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from CLAUDE SONNET 4...`);
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from GEMINI 2.5 PRO...`);
 
-    // Calculate max_tokens: PT-BR ~1.5 tokens/word + generous buffer for EXTRAS + SCENE_BLUEPRINT
-    // Added extra 4000 buffer to prevent cut-off endings
-    const maxTokens = Math.max(12000, Math.round(targetWords * 1.8) + 4000);
-
-    const phase1Res = await callClaude(CLAUDE_API_KEY, systemPrompt, userMessage, true, maxTokens);
+    const phase1Res = await fetch(AI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        stream: true,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+      }),
+    });
 
     if (!phase1Res.ok) {
       const errText = await phase1Res.text();
-      console.error(`[PHASE-1 DRAFT] runId=${runId} Claude error:`, phase1Res.status, errText);
-      if (phase1Res.status === 429) return errResp("Rate limit Claude. Tente novamente em alguns segundos.", 429);
-      if (phase1Res.status === 529) return errResp("Claude sobrecarregado. Tente novamente.", 529);
-      
-      // ═══ FALLBACK: Gemini via Lovable AI Gateway when Claude fails ═══
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (LOVABLE_API_KEY) {
-        console.warn(`[PHASE-1 DRAFT] runId=${runId} Claude failed (${phase1Res.status}), falling back to Gemini...`);
-        const geminiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-pro",
-            stream: true,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userMessage },
-            ],
-          }),
-        });
-        if (!geminiRes.ok) {
-          const gemErr = await geminiRes.text();
-          console.error(`[PHASE-1 DRAFT] runId=${runId} Gemini fallback also failed:`, geminiRes.status, gemErr);
-          if (geminiRes.status === 429) return errResp("Rate limit. Aguarde alguns segundos.", 429);
-          if (geminiRes.status === 402) return errResp("Créditos insuficientes.", 402);
-          throw new Error(`All AI engines failed. Claude: ${phase1Res.status}, Gemini: ${geminiRes.status}`);
-        }
-        console.log(`[PHASE-1 DRAFT] runId=${runId} Gemini fallback streaming to client...`);
-        return new Response(geminiRes.body, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
-      }
-      throw new Error(`Claude API error: ${phase1Res.status}`);
+      console.error(`[PHASE-1 DRAFT] runId=${runId} Gemini error:`, phase1Res.status, errText);
+      if (phase1Res.status === 429) return errResp("Rate limit. Aguarde alguns segundos.", 429);
+      if (phase1Res.status === 402) return errResp("Créditos insuficientes.", 402);
+      throw new Error(`Gemini API error: ${phase1Res.status}`);
     }
 
-    // Convert Claude's SSE stream to OpenAI-compatible format (frontend expects OpenAI format)
-    const transformedStream = claudeStreamToOpenAIStream(phase1Res.body!);
-
-    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client (Claude → OpenAI format)...`);
-    return new Response(transformedStream, {
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client...`);
+    return new Response(phase1Res.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
 

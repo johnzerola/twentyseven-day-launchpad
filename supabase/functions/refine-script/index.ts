@@ -6,8 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback only
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ═══════════════════════════════════════════════════════════════
 // YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
@@ -48,50 +47,7 @@ function countSlopScore(text: string): { score: number; matches: string[] } {
   return { score: matches.length, matches };
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CLAUDE STREAMING ADAPTER — Convert Anthropic SSE → OpenAI SSE
-// ═══════════════════════════════════════════════════════════════
-function claudeStreamToOpenAIStream(claudeBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const reader = claudeBody.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = '';
 
-  return new ReadableStream({
-    async pull(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
-          return;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-          try {
-            const event = JSON.parse(jsonStr);
-            if (event.type === 'content_block_delta' && event.delta?.text) {
-              const chunk = { choices: [{ delta: { content: event.delta.text }, index: 0, finish_reason: null }] };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-            }
-            if (event.type === 'message_stop') {
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-              controller.close();
-              reader.cancel();
-              return;
-            }
-          } catch { /* skip */ }
-        }
-      }
-    },
-    cancel() { reader.cancel(); },
-  });
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -115,14 +71,13 @@ serve(async (req) => {
 
     const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
     
-    const CLAUDE_API_KEY = Deno.env.get("CLAUDE_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
-    if (!CLAUDE_API_KEY && !LOVABLE_API_KEY) throw new Error("No AI API key configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
     if (!draft_script) throw new Error("draft_script is required");
 
     const runId = phaseId || crypto.randomUUID();
-    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars ENGINE=${CLAUDE_API_KEY ? 'CLAUDE' : 'GEMINI_FALLBACK'}`);
+    console.log(`[PHASE-2 REFINE] runId=${runId} draft_length=${draft_script.length} chars ENGINE=GEMINI`);
 
     // Pre-flight: detect AI slop in the draft
     const slopCheck = countSlopScore(draft_script);
@@ -356,47 +311,8 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
     const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. Retorne o roteiro COMPLETO.`;
 
-    // ═══ PRIMARY: Claude Sonnet 4 (same engine as generation for voice consistency)
-    if (CLAUDE_API_KEY) {
-      console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from CLAUDE SONNET 4...`);
-      
-      const maxTokens = Math.max(12000, Math.round(tw * 1.8) + 4000);
-      
-      const refineRes = await fetch(CLAUDE_API_URL, {
-        method: "POST",
-        headers: {
-          "x-api-key": CLAUDE_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: maxTokens,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
-          stream: true,
-        }),
-      });
-
-      if (!refineRes.ok) {
-        const errText = await refineRes.text();
-        console.error(`[PHASE-2 REFINE] runId=${runId} Claude error:`, refineRes.status, errText);
-        if (refineRes.status === 429) return errResp("Rate limit Claude. Aguarde.", 429);
-        if (refineRes.status === 529) return errResp("Claude sobrecarregado. Tente novamente.", 529);
-        // Fall through to Gemini fallback below
-        console.warn(`[PHASE-2 REFINE] runId=${runId} Claude failed, trying Gemini fallback...`);
-      } else {
-        const transformedStream = claudeStreamToOpenAIStream(refineRes.body!);
-        return new Response(transformedStream, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
-      }
-    }
-
-    // ═══ FALLBACK: Gemini via Lovable AI Gateway
-    if (!LOVABLE_API_KEY) throw new Error("No fallback API key available");
-    
-    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from Gemini (fallback)...`);
+    // ═══ PRIMARY: Gemini 2.5 Pro via Lovable AI Gateway ═══
+    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from GEMINI 2.5 PRO...`);
     
     const refineRes = await fetch(AI_URL, {
       method: "POST",
@@ -419,7 +335,7 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
       console.error(`[PHASE-2 REFINE] runId=${runId} Gemini error:`, refineRes.status, errText);
       if (refineRes.status === 429) return errResp("Rate limit. Aguarde.", 429);
       if (refineRes.status === 402) return errResp("Créditos insuficientes.", 402);
-      throw new Error(`AI Gateway error: ${refineRes.status}`);
+      throw new Error(`Gemini API error: ${refineRes.status}`);
     }
 
     return new Response(refineRes.body, {
