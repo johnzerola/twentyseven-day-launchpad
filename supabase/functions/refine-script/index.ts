@@ -6,8 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // Fallback only
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ═══════════════════════════════════════════════════════════════
 // YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
