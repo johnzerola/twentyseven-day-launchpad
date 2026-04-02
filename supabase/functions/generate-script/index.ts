@@ -1008,6 +1008,38 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       console.error(`[PHASE-1 DRAFT] runId=${runId} Claude error:`, phase1Res.status, errText);
       if (phase1Res.status === 429) return errResp("Rate limit Claude. Tente novamente em alguns segundos.", 429);
       if (phase1Res.status === 529) return errResp("Claude sobrecarregado. Tente novamente.", 529);
+      
+      // ═══ FALLBACK: Gemini via Lovable AI Gateway when Claude fails ═══
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY) {
+        console.warn(`[PHASE-1 DRAFT] runId=${runId} Claude failed (${phase1Res.status}), falling back to Gemini...`);
+        const geminiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            stream: true,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+          }),
+        });
+        if (!geminiRes.ok) {
+          const gemErr = await geminiRes.text();
+          console.error(`[PHASE-1 DRAFT] runId=${runId} Gemini fallback also failed:`, geminiRes.status, gemErr);
+          if (geminiRes.status === 429) return errResp("Rate limit. Aguarde alguns segundos.", 429);
+          if (geminiRes.status === 402) return errResp("Créditos insuficientes.", 402);
+          throw new Error(`All AI engines failed. Claude: ${phase1Res.status}, Gemini: ${geminiRes.status}`);
+        }
+        console.log(`[PHASE-1 DRAFT] runId=${runId} Gemini fallback streaming to client...`);
+        return new Response(geminiRes.body, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
       throw new Error(`Claude API error: ${phase1Res.status}`);
     }
 
