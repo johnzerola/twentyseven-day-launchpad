@@ -381,6 +381,8 @@ serve(async (req) => {
     // Instead of 13 fixed queries, use semantic search + re-ranking for relevant knowledge
     let smartKnowledgeBlock = '';
     try {
+      const skrAbort = new AbortController();
+      const skrTimeout = setTimeout(() => skrAbort.abort(), 15000); // 15s max
       const skrRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/smart-knowledge-retrieval`, {
         method: "POST",
         headers: {
@@ -388,7 +390,9 @@ serve(async (req) => {
           "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
         },
         body: JSON.stringify({ topic, niche, style, language, limit: 20 }),
+        signal: skrAbort.signal,
       });
+      clearTimeout(skrTimeout);
       if (skrRes.ok) {
         const skrData = await skrRes.json();
         if (skrData.knowledge?.length) {
@@ -396,7 +400,7 @@ serve(async (req) => {
           console.log(`[SMART-RAG] runId=${runId} ${skrData.stats?.final_count} relevant snippets in ${skrData.stats?.duration_ms}ms`);
         }
       }
-    } catch (e) { console.warn("[SMART-RAG] Failed, using fallback:", e); }
+    } catch (e) { console.warn("[SMART-RAG] Failed or timed out, using fallback:", e); }
 
     // ═══ ESSENTIAL QUERIES (always needed, small payload) ═══
     const [voiceRes, backtestRes, channelRes, userPrefsRes] = await Promise.all([
