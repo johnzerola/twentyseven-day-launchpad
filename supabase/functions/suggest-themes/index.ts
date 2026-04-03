@@ -16,22 +16,47 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // ═══ FETCH INTELLIGENCE (parallel) ═══
+    // ═══ FETCH INTELLIGENCE (parallel) — now includes real-time freshness ═══
     const fetchPromises: Promise<any>[] = [
+      // 0: Channel intelligence
       sb.from("channel_intelligence")
         .select("channel_name,niche,style,viral_patterns,top_videos,avg_views,growth_rate")
         .eq("is_faceless", true)
         .order("avg_views", { ascending: false })
         .limit(20),
+      // 1: YouTube knowledge
       sb.from("youtube_knowledge")
         .select("title,content")
         .order("priority", { ascending: false })
         .limit(10),
+      // 2: Content DNA
       sb.from("content_dna")
         .select("video_title,views,hook_pattern,why_viral,niche,video_type")
         .order("views", { ascending: false })
         .limit(10),
+      // 3: ★ EMERGING VIDEOS (real-time breakouts) — Phase 7 addition
+      sb.from("emerging_videos")
+        .select("title,video_id,channel_name,views,subscribers,velocity_score,pre_viral_score,niche,published_at,views_per_hour")
+        .order("pre_viral_score", { ascending: false })
+        .limit(15),
+      // 4: ★ NICHE DATABASE (saturation + RPM) — Phase 7 addition
+      sb.from("niche_database")
+        .select("name,saturation,growth_rate,rpm_estimate,sub_niches,trending_topics")
+        .order("rpm_estimate", { ascending: false })
+        .limit(20),
     ];
+
+    // Niche-filtered emerging videos
+    if (niche) {
+      fetchPromises.push(
+        // 5: Niche-specific emerging videos
+        sb.from("emerging_videos")
+          .select("title,video_id,channel_name,views,velocity_score,pre_viral_score,published_at")
+          .ilike("niche", `%${niche}%`)
+          .order("velocity_score", { ascending: false })
+          .limit(10)
+      );
+    }
 
     // For shorts, fetch ALL shorts-specific intelligence + monetization cases
     if (videoFormat === 'short') {
@@ -47,11 +72,9 @@ serve(async (req) => {
         sb.from("youtube_knowledge").select("title,content")
           .ilike("title", "%shorts%")
           .order("priority", { ascending: false }).limit(5),
-        // Monetization-specific knowledge
         sb.from("youtube_knowledge").select("title,content")
           .eq("category", "shorts-monetization")
           .order("priority", { ascending: false }).limit(5),
-        // Case studies of successful Shorts channels
         sb.from("case_studies" as any).select("channel_name,niche,total_shorts,total_views,days_to_monetization,strategy_used,lessons_learned")
           .not("days_to_monetization", "is", null)
           .order("days_to_monetization", { ascending: true }).limit(5),
@@ -59,16 +82,43 @@ serve(async (req) => {
     }
 
     const results = await Promise.all(fetchPromises);
-    const [channelRes, ytRes, contentDnaRes] = results;
+    const [channelRes, ytRes, contentDnaRes, emergingRes, nicheDbRes] = results;
+    const nicheEmergingRes = niche ? results[5] : null;
 
-    // Shorts-specific data
-    const shortsModels = results[3]?.data || [];
-    const shortsHooks = results[4]?.data || [];
-    const shortsPsych = results[5]?.data || [];
-    const shortsAttention = results[6]?.data || [];
-    const shortsKnowledge = results[7]?.data || [];
-    const monetizationKnowledge = results[8]?.data || [];
-    const caseStudies = results[9]?.data || [];
+    // Shorts-specific data — indices shift by +1 when niche is present
+    const shortsOffset = niche ? 6 : 5;
+    const shortsModels = videoFormat === 'short' ? (results[shortsOffset]?.data || []) : [];
+    const shortsHooks = videoFormat === 'short' ? (results[shortsOffset + 1]?.data || []) : [];
+    const shortsPsych = videoFormat === 'short' ? (results[shortsOffset + 2]?.data || []) : [];
+    const shortsAttention = videoFormat === 'short' ? (results[shortsOffset + 3]?.data || []) : [];
+    const shortsKnowledge = videoFormat === 'short' ? (results[shortsOffset + 4]?.data || []) : [];
+    const monetizationKnowledge = videoFormat === 'short' ? (results[shortsOffset + 5]?.data || []) : [];
+    const caseStudies = videoFormat === 'short' ? (results[shortsOffset + 6]?.data || []) : [];
+
+    // ═══ ★ REAL-TIME FRESHNESS BLOCKS (Phase 7) ═══
+    const emergingVideos = emergingRes?.data || [];
+    const nicheEmerging = nicheEmergingRes?.data || [];
+    const nicheDatabase = nicheDbRes?.data || [];
+
+    const emergingContext = emergingVideos.length > 0
+      ? `\n🔥 BREAKOUT VIDEOS AGORA (últimas 48h - dados em tempo real):\n${emergingVideos.map((v: any) => {
+          const hoursAgo = v.published_at ? Math.round((Date.now() - new Date(v.published_at).getTime()) / 3600000) : '?';
+          return `• "${v.title}" — ${(v.views || 0).toLocaleString()} views em ${hoursAgo}h | ${v.channel_name} (${(v.subscribers || 0).toLocaleString()} subs) | Velocity: ${v.velocity_score || 0}/100 | Pre-viral: ${v.pre_viral_score || 0}/100 | Nicho: ${v.niche || 'N/A'}`;
+        }).join('\n')}`
+      : '';
+
+    const nicheEmergingContext = nicheEmerging.length > 0
+      ? `\n🎯 BREAKOUTS NO SEU NICHO "${niche}":\n${nicheEmerging.map((v: any) => 
+          `• "${v.title}" — ${(v.views || 0).toLocaleString()} views | Velocity: ${v.velocity_score || 0}/100`
+        ).join('\n')}`
+      : '';
+
+    const nicheSaturationContext = nicheDatabase.length > 0
+      ? `\n📊 SATURAÇÃO E RPM POR NICHO:\n${nicheDatabase.map((n: any) => {
+          const topics = Array.isArray(n.trending_topics) ? n.trending_topics.slice(0, 3).join(', ') : '';
+          return `• ${n.name}: Saturação=${n.saturation || 'N/A'} | Crescimento=${n.growth_rate || 'N/A'} | RPM≈$${n.rpm_estimate || '?'}${topics ? ` | Trending: ${topics}` : ''}`;
+        }).join('\n')}`
+      : '';
 
     // ═══ BUILD CONTEXT BLOCKS ═══
     const channelContext = (channelRes.data || []).map((c: any) => {
@@ -117,7 +167,6 @@ serve(async (req) => {
         `${k.title}: ${k.content?.slice(0, 400)}`
       ).join('\n\n');
 
-      // ═══ MONETIZATION INTELLIGENCE ═══
       const monetizationBlock = monetizationKnowledge.map((k: any) =>
         `${k.title}: ${k.content?.slice(0, 500)}`
       ).join('\n\n');
@@ -187,6 +236,9 @@ ${channelContext}
 TENDÊNCIAS YOUTUBE ${year}:
 ${ytContext}
 ${dnaContext}
+${emergingContext}
+${nicheEmergingContext}
+${nicheSaturationContext}
 ${topicContext}
 ${narrativeContext}
 ${subNicheContext}
@@ -203,6 +255,8 @@ Requisitos:
 - NÃO repita temas genéricos. Seja ESPECÍFICO e ATUAL.
 ${topic ? `- TODOS os temas devem estar relacionados ao tópico "${topic}"` : '- Pense em temas que ninguém está cobrindo ainda mas que têm DEMANDA.'}
 - Considere sazonalidade, notícias recentes, tendências emergentes.
+- ★ Use os BREAKOUT VIDEOS em tempo real como sinal de oportunidade — temas adjacentes a vídeos explodindo AGORA têm maior probabilidade de viralizar.
+- ★ Evite nichos com saturação "alta" a menos que o ângulo seja verdadeiramente original.
 ${videoFormat === 'short' ? `- FORMATO SHORTS: Para cada tema, indique a duração ideal (15s, 25s, 30s, 45s ou 60s) baseado na complexidade.
 - Temas simples = 15-25s | Temas com twist = 25-40s | Histórias = 45-60s
 - Cada hook deve ter NO MÁXIMO 8 palavras e ser impossível de scrollar.` : '- Para cada ideia, sugira o estilo de roteiro ideal.'}
@@ -225,7 +279,7 @@ IMPORTANTE: Gere temas que fariam o espectador clicar IMEDIATAMENTE.`;
           type: "function",
           function: {
             name: "suggest_themes",
-            description: "Return video theme suggestions",
+            description: "Return video theme suggestions with freshness signals",
             parameters: {
               type: "object",
               properties: {
@@ -244,8 +298,16 @@ IMPORTANTE: Gere temas que fariam o espectador clicar IMEDIATAMENTE.`;
                       why_viral: { type: "string", description: "1 frase explicando por que esse tema vai viralizar" },
                       duration_category: { type: "string", enum: ["micro", "flash", "story", "longform"], description: "micro=15-25s, flash=25-40s, story=45-60s, longform=5min+" },
                       series_potential: { type: "string", description: "Como esse tema pode virar uma série de 5-10 partes" },
+                      // ★ Phase 7: New freshness fields
+                      viral_likelihood: { type: "string", enum: ["very_high", "high", "medium", "low"], description: "Probabilidade real de viralização baseada nos dados" },
+                      why_now: { type: "string", description: "Por que esse tema é relevante AGORA (trending, sazonal, breakout adjacente)" },
+                      saturation: { type: "string", enum: ["low", "medium", "high"], description: "Nível de saturação deste tema no nicho" },
+                      effort_score: { type: "number", description: "Esforço de produção 1-10 (1=fácil, 10=complexo)" },
+                      originality_risk: { type: "number", description: "Risco de parecer cópia/genérico 1-10 (1=muito original, 10=já saturado)" },
+                      best_format: { type: "string", enum: ["short", "long", "both"], description: "Melhor formato para este tema" },
+                      evidence_refs: { type: "array", items: { type: "string" }, description: "Referências/fontes que sustentam este tema (vídeos breakout, trends)" },
                     },
-                    required: ["title", "hook", "description", "style", "estimated_duration", "viral_score", "niche_tags", "why_viral"],
+                    required: ["title", "hook", "description", "style", "estimated_duration", "viral_score", "niche_tags", "why_viral", "viral_likelihood", "why_now", "saturation", "effort_score", "originality_risk", "best_format"],
                     additionalProperties: false,
                   },
                 },
@@ -277,7 +339,15 @@ IMPORTANTE: Gere temas que fariam o espectador clicar IMEDIATAMENTE.`;
       } catch { /* empty */ }
     }
 
-    return new Response(JSON.stringify({ themes, generated_at: new Date().toISOString() }), {
+    return new Response(JSON.stringify({
+      themes,
+      generated_at: new Date().toISOString(),
+      freshness_signals: {
+        emerging_videos_count: emergingVideos.length,
+        niche_emerging_count: nicheEmerging.length,
+        niches_analyzed: nicheDatabase.length,
+      },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

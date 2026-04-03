@@ -7,116 +7,180 @@ const corsHeaders = {
 };
 
 /**
- * MonetizaScore Engine
- * Composite decision engine: niche(0.25) + channel(0.25) + video(0.25) + script(0.25)
- * Returns 0-100 score with actionable recommendation.
+ * MonetizaScore V2 — Contextual Decision Engine
+ * 
+ * 5 scores with strategy-dependent weights:
+ *   1. YPP Speed        — how fast this accelerates monetization milestones
+ *   2. Revenue Quality   — RPM, watch-time, long-term revenue potential
+ *   3. Originality/Safety — risk for faceless/dark channels
+ *   4. Packaging Strength — title+thumb+hook synergy
+ *   5. Operational Feasibility — effort vs. output for the channel's stage
+ * 
+ * Weights shift based on: strategy, channel maturity, faceless flag.
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { niche, channelId, videoId, scriptScore } = await req.json();
+    const {
+      niche, channelId, videoId, scriptScore,
+      strategy, // 'shorts-sprint' | 'longform-first' | 'hybrid'
+      isFaceless, // boolean
+      packagingScore, // 0-100 from packaging-score engine (optional)
+      originalityScore, // 0-100 from originality-safety-score engine (optional)
+    } = await req.json();
+
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // ========== 1. NICHE SCORE (0-100) ==========
-    let nicheScore = 50; // default
-    let nicheDetails: any = {};
+    // ========== 1. YPP SPEED SCORE (0-100) ==========
+    let yppSpeed = 50;
+    let yppDetails: any = {};
+
+    if (channelId) {
+      const { data: ch } = await sb.from("channel_intelligence")
+        .select("subscribers,avg_views,growth_rate,upload_frequency,is_monetized")
+        .eq("youtube_channel_id", channelId).maybeSingle();
+
+      if (ch) {
+        // Already monetized = max YPP speed
+        if (ch.is_monetized) {
+          yppSpeed = 100;
+          yppDetails.monetized = true;
+        } else {
+          const subProgress = Math.min(100, (ch.subscribers / 1000) * 100);
+          // Estimate watch hours from avg_views (rough: 1 view ≈ 3 min for shorts, 8 min for longs)
+          const avgWatchMin = strategy === 'shorts-sprint' ? 0.5 : 8;
+          const estimatedMonthlyHours = (ch.avg_views * avgWatchMin * 4) / 60; // weekly * 4
+          const watchProgress = Math.min(100, (estimatedMonthlyHours / 4000) * 100);
+
+          const growthMap: Record<string, number> = { explosive: 30, rapid: 20, fast: 15, steady: 5, slow: 0 };
+          const growthBonus = growthMap[(ch.growth_rate || 'steady').toLowerCase()] || 5;
+
+          yppSpeed = Math.min(100, Math.round((subProgress * 0.5 + watchProgress * 0.4) + growthBonus));
+          yppDetails = { subscribers: ch.subscribers, subProgress: Math.round(subProgress), watchProgress: Math.round(watchProgress), growthBonus };
+        }
+      }
+    }
+
+    // ========== 2. REVENUE QUALITY SCORE (0-100) ==========
+    let revenueQuality = 50;
+    let revenueDetails: any = {};
 
     if (niche) {
       const { data: nicheData } = await sb.from("niche_database")
         .select("*").ilike("name", `%${niche}%`).limit(1).maybeSingle();
 
       if (nicheData) {
-        // Growth rate scoring
+        const rpmScore = Math.min(100, ((nicheData.rpm_estimate || 0) / 30) * 100);
         const growthMap: Record<string, number> = { explosive: 95, rapid: 80, fast: 70, steady: 50, slow: 30, declining: 10 };
         const growthScore = growthMap[(nicheData.growth_rate || 'steady').toLowerCase()] || 50;
-
-        // Competition (inverse of saturation)
         const satMap: Record<string, number> = { baixa: 90, low: 90, média: 60, medium: 60, alta: 30, high: 30 };
         const competitionScore = satMap[(nicheData.saturation || 'média').toLowerCase()] || 50;
 
-        // RPM monetization potential
-        const rpmScore = Math.min(100, ((nicheData.rpm_estimate || 0) / 30) * 100);
-
-        nicheScore = Math.round(growthScore * 0.40 + competitionScore * 0.35 + rpmScore * 0.25);
-        nicheDetails = { name: nicheData.name, rpm: nicheData.rpm_estimate, saturation: nicheData.saturation, growthScore, competitionScore, rpmScore };
+        revenueQuality = Math.round(rpmScore * 0.50 + growthScore * 0.30 + competitionScore * 0.20);
+        revenueDetails = { rpm: nicheData.rpm_estimate, saturation: nicheData.saturation, rpmScore, growthScore, competitionScore };
       }
     }
 
-    // ========== 2. CHANNEL SCORE (0-100) ==========
-    let channelScore = 50;
-    let channelDetails: any = {};
+    // ========== 3. ORIGINALITY/SAFETY SCORE (0-100) ==========
+    // Use pre-computed score from originality-safety-score engine if available
+    let origSafety = typeof originalityScore === 'number' ? originalityScore : 60;
+    let origDetails: any = { source: typeof originalityScore === 'number' ? 'engine' : 'default' };
+
+    // ========== 4. PACKAGING STRENGTH SCORE (0-100) ==========
+    // Use pre-computed score from packaging-score engine if available
+    let packaging = typeof packagingScore === 'number' ? packagingScore : 50;
+    let packagingDetails: any = { source: typeof packagingScore === 'number' ? 'engine' : 'default' };
+
+    // ========== 5. OPERATIONAL FEASIBILITY SCORE (0-100) ==========
+    let operational = 50;
+    let operationalDetails: any = {};
 
     if (channelId) {
-      // Check channel_intelligence
       const { data: ch } = await sb.from("channel_intelligence")
-        .select("*").eq("youtube_channel_id", channelId).maybeSingle();
+        .select("upload_frequency,subscribers,avg_views")
+        .eq("youtube_channel_id", channelId).maybeSingle();
 
       if (ch) {
-        const growthMap: Record<string, number> = { explosive: 95, rapid: 80, fast: 70, steady: 50, slow: 30 };
-        const growthScore = growthMap[(ch.growth_rate || 'steady').toLowerCase()] || 50;
-
-        // View velocity: avg_views relative to subscribers
-        const viewVelocity = ch.subscribers > 0 ? Math.min(100, (ch.avg_views / ch.subscribers) * 100) : 50;
-
-        // Upload frequency scoring
-        const freqMap: Record<string, number> = { daily: 95, '2-3x/week': 80, weekly: 65, biweekly: 45, monthly: 25 };
+        // Upload frequency consistency
+        const freqMap: Record<string, number> = { daily: 95, '2-3x/week': 85, weekly: 70, biweekly: 45, monthly: 25 };
         const freqScore = freqMap[(ch.upload_frequency || 'weekly').toLowerCase()] || 50;
 
-        channelScore = Math.round(growthScore * 0.40 + viewVelocity * 0.35 + freqScore * 0.25);
-        channelDetails = { name: ch.channel_name, subscribers: ch.subscribers, avgViews: ch.avg_views, growthScore, viewVelocity, freqScore };
-      }
+        // Channel maturity (bigger channels = more operational capacity)
+        const maturityScore = Math.min(100, Math.log10(Math.max(ch.subscribers, 1)) * 20);
 
-      // Also check emerging_channels for bonus
-      const { data: emerging } = await sb.from("emerging_channels")
-        .select("viral_score").eq("channel_id", channelId).maybeSingle();
-      if (emerging?.viral_score && emerging.viral_score > 70) {
-        channelScore = Math.min(100, channelScore + 15); // Bonus for emerging channel
-        channelDetails.emergingBonus = true;
+        operational = Math.round(freqScore * 0.60 + maturityScore * 0.40);
+        operationalDetails = { uploadFrequency: ch.upload_frequency, freqScore, maturityScore: Math.round(maturityScore) };
       }
     }
 
-    // ========== 3. VIDEO SCORE (0-100) ==========
-    let videoScore = 50;
-    let videoDetails: any = {};
-
+    // Video reference bonus
+    let videoBonus = 0;
     if (videoId) {
       const { data: bp } = await sb.from("video_blueprints")
-        .select("*").eq("video_id", videoId).maybeSingle();
-
+        .select("scores").eq("video_id", videoId).maybeSingle();
       if (bp) {
         const scores = bp.scores as any || {};
-        const virality = scores.virality || 50;
-        const replicability = scores.replicability || 50;
-        const monetization = scores.monetization || 50;
-
-        videoScore = Math.round(virality * 0.40 + replicability * 0.35 + monetization * 0.25);
-        videoDetails = { title: bp.video_title, views: bp.views, virality, replicability, monetization };
-      } else {
-        // Check outlier_channels for video performance
-        const { data: outlier } = await sb.from("outlier_channels")
-          .select("*").ilike("video_url", `%${videoId}%`).maybeSingle();
-        if (outlier) {
-          const multiplier = outlier.multiplier || 1;
-          videoScore = Math.min(100, Math.round(multiplier * 10));
-          videoDetails = { title: outlier.video_title, multiplier, views: outlier.views };
-        }
+        videoBonus = Math.round(((scores.virality || 0) + (scores.replicability || 0)) / 2 * 0.1);
       }
     }
 
-    // ========== 4. SCRIPT SCORE (0-100) ==========
-    // Can be passed directly from score-script engine or default
+    // Script score integration
     const effectiveScriptScore = typeof scriptScore === 'number' ? scriptScore : 50;
 
-    // ========== COMPOSITE MONETIZA SCORE ==========
+    // ========== CONTEXTUAL WEIGHT ENGINE ==========
+    const effectiveStrategy = (strategy || 'hybrid').toLowerCase();
+    const effectiveFaceless = isFaceless !== false; // default true for this product
+
+    let weights: Record<string, number>;
+
+    if (effectiveStrategy === 'shorts-sprint') {
+      weights = {
+        yppSpeed: 0.30,
+        revenueQuality: 0.10,
+        origSafety: effectiveFaceless ? 0.20 : 0.10,
+        packaging: 0.25,
+        operational: effectiveFaceless ? 0.15 : 0.25,
+      };
+    } else if (effectiveStrategy === 'longform-first') {
+      weights = {
+        yppSpeed: 0.10,
+        revenueQuality: 0.30,
+        origSafety: effectiveFaceless ? 0.25 : 0.15,
+        packaging: 0.25,
+        operational: effectiveFaceless ? 0.10 : 0.20,
+      };
+    } else {
+      // hybrid (default)
+      weights = {
+        yppSpeed: 0.20,
+        revenueQuality: 0.20,
+        origSafety: effectiveFaceless ? 0.22 : 0.12,
+        packaging: 0.23,
+        operational: effectiveFaceless ? 0.15 : 0.25,
+      };
+    }
+
+    // Normalize weights to sum = 1.0
+    const wSum = Object.values(weights).reduce((a, b) => a + b, 0);
+    for (const k of Object.keys(weights)) {
+      weights[k] = weights[k] / wSum;
+    }
+
+    // Blend script score into packaging and operational (it contributes to both)
+    const blendedPackaging = Math.round(packaging * 0.6 + effectiveScriptScore * 0.4);
+    const blendedOperational = Math.min(100, operational + videoBonus);
+
+    // ========== COMPOSITE MONETIZA SCORE V2 ==========
     const monetizaScore = Math.round(
-      nicheScore * 0.25 +
-      channelScore * 0.25 +
-      videoScore * 0.25 +
-      effectiveScriptScore * 0.25
+      yppSpeed * weights.yppSpeed +
+      revenueQuality * weights.revenueQuality +
+      origSafety * weights.origSafety +
+      blendedPackaging * weights.packaging +
+      blendedOperational * weights.operational
     );
 
-    // Viral probability estimation
+    // Viral probability
     let viralProbability: string;
     if (monetizaScore >= 85) viralProbability = "very_high";
     else if (monetizaScore >= 70) viralProbability = "high";
@@ -133,26 +197,33 @@ serve(async (req) => {
       recommendedAction = "🔴 DESCARTAR / REFORMULAR — Probabilidade baixa de sucesso. Escolha outro nicho, tópico ou melhore o roteiro.";
     }
 
-    // Identify weakest component for improvement suggestion
+    // Identify weakest components for improvement
     const components = [
-      { name: "Nicho", score: nicheScore },
-      { name: "Canal", score: channelScore },
-      { name: "Vídeo Referência", score: videoScore },
-      { name: "Roteiro", score: effectiveScriptScore },
+      { name: "YPP Speed", score: yppSpeed, key: "yppSpeed" },
+      { name: "Revenue Quality", score: revenueQuality, key: "revenueQuality" },
+      { name: "Originalidade/Segurança", score: origSafety, key: "origSafety" },
+      { name: "Packaging (Título+Thumb+Hook)", score: blendedPackaging, key: "packaging" },
+      { name: "Viabilidade Operacional", score: blendedOperational, key: "operational" },
     ];
-    const weakest = components.sort((a, b) => a.score - b.score)[0];
-    const improvementFocus = `Foco de melhoria: ${weakest.name} (score: ${weakest.score}/100)`;
+    const sorted = [...components].sort((a, b) => a.score - b.score);
+    const weakest = sorted[0];
+    const secondWeakest = sorted[1];
+    const improvementFocus = `Foco primário: ${weakest.name} (${weakest.score}/100). Secundário: ${secondWeakest.name} (${secondWeakest.score}/100).`;
 
     return new Response(JSON.stringify({
       monetizaScore,
+      version: "v2",
+      strategy: effectiveStrategy,
+      isFaceless: effectiveFaceless,
       viralProbability,
       recommendedAction,
       improvementFocus,
       breakdown: {
-        niche: { score: nicheScore, weight: 0.25, details: nicheDetails },
-        channel: { score: channelScore, weight: 0.25, details: channelDetails },
-        video: { score: videoScore, weight: 0.25, details: videoDetails },
-        script: { score: effectiveScriptScore, weight: 0.25 },
+        yppSpeed: { score: yppSpeed, weight: weights.yppSpeed, details: yppDetails },
+        revenueQuality: { score: revenueQuality, weight: weights.revenueQuality, details: revenueDetails },
+        originalitySafety: { score: origSafety, weight: weights.origSafety, details: origDetails },
+        packaging: { score: blendedPackaging, weight: weights.packaging, details: { raw: packaging, scriptBlend: effectiveScriptScore, ...packagingDetails } },
+        operational: { score: blendedOperational, weight: weights.operational, details: { raw: operational, videoBonus, ...operationalDetails } },
       },
       thresholds: {
         produce: "≥ 75",
