@@ -376,8 +376,8 @@ export const VoiceGeneratorStep = ({
       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
         <p className="text-xs font-semibold text-primary">💡 Como funciona</p>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Google Cloud TTS oferece <strong>4 milhões de caracteres/mês grátis</strong></li>
-          <li>Vozes Neural2 são as mais naturais (similares ao ElevenLabs)</li>
+          <li>O sistema tenta Google TTS primeiro e usa fallback automático se indisponível</li>
+          <li>Vozes premium mantêm a geração funcionando mesmo com falha de permissão no Google</li>
           <li>Na próxima etapa (Cenas), você pode usar este áudio ou subir outro</li>
           <li>O áudio gerado será transcrito automaticamente para sincronizar as cenas</li>
         </ul>
