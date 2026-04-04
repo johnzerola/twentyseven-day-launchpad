@@ -1124,6 +1124,21 @@ const Scripts = () => {
                     </div>
                   </div>
 
+                  {/* ASMR Toggle */}
+                  <div className="flex items-center justify-between bg-muted/20 border border-border rounded-lg p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg">🎧</span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Camadas de Som ASMR</p>
+                        <p className="text-[10px] text-muted-foreground">Ativa direção de áudio detalhada com 3 camadas: primária, ambiental e sutil</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={enableASMR} onChange={e => setEnableASMR(e.target.checked)} className="sr-only peer" />
+                      <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-background after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                    </label>
+                  </div>
+
                   {/* Custom Style Notes */}
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Descrição do estilo visual (opcional)</label>
