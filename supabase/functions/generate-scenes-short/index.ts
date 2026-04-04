@@ -297,6 +297,14 @@ CAMERA ANGLE VARIETY (use ALL of these across scenes — NEVER repeat consecutiv
 - Crane up/down for reveal
 - Split diopter for dual focus
 
+${PROMPT_ANATOMY_CHECKLIST}
+
+${CAMERA_SHOT_VARIETY_RULES}
+
+${MULTI_CHARACTER_RULES}
+
+${buildConditionalTraining(script || '')}
+
 EXAMPLE: If narrator says "No Egito antigo foi achado isso, esqueça tudo que aprendeu na escola sobre o Egito":
 - Scene 1 (0-2s): Aerial drone over Egyptian pyramids at sunset, sand particles floating, golden hour
 - Scene 2 (2-4s): Close-up of ancient hieroglyphics being illuminated by torch, dust particles, dark tomb
