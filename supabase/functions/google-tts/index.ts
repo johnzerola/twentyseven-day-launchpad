@@ -309,12 +309,12 @@ serve(async (req) => {
         }
       }
 
-      if (!audioBuffers.length && LOVABLE_API_KEY) {
+      if (!audioBuffers.length && OPENAI_API_KEY) {
         try {
-          audioBuffers = await synthesizeWithLovableTTS(chunks, LOVABLE_API_KEY);
+          audioBuffers = await synthesizeWithOpenAITTS(chunks, OPENAI_API_KEY, fallbackGender);
           engine = 'openai-tts';
-        } catch (lovableError) {
-          console.warn('Lovable TTS fallback failed:', lovableError instanceof Error ? lovableError.message : lovableError);
+        } catch (openaiError) {
+          console.warn('OpenAI TTS fallback failed:', openaiError instanceof Error ? openaiError.message : openaiError);
         }
       }
 
