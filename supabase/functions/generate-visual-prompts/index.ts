@@ -158,10 +158,16 @@ SEGMENTS:\n\n${segmentTexts}`
       }
     }
 
+    // ═══ Video Production Training v2.0: Prompt Anatomy Validation ═══
+    const anatomyWarnings = validatePromptAnatomy(
+      parsed.prompts.map((p: any) => ({ visualPrompt: p.visualPrompt, sceneIndex: p.segmentIndex }))
+    );
+    warnings.push(...anatomyWarnings);
+
     return new Response(JSON.stringify({
       prompts: parsed.prompts,
       metadata: {
-        system: "DarkPlanner Visual Prompts v3",
+        system: "DarkPlanner Visual Prompts v3 + Video Production Training v2.0",
         style: styleKey,
         validationWarnings: warnings,
         autoFixes,

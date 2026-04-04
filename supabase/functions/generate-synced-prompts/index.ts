@@ -487,6 +487,10 @@ SCENES:\n\n${sceneTexts}`
       }
     }
 
+    // ═══ Video Production Training v2.0: Prompt Anatomy Validation ═══
+    const anatomyWarnings = validatePromptAnatomy(parsed.scenes);
+    validationWarnings.push(...anatomyWarnings);
+
     return new Response(JSON.stringify({
       scenes: parsed.scenes,
       metadata: {

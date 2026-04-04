@@ -398,8 +398,9 @@ NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
       dopamineProfile: {
         hookWindow: timing.hookWindow,
         scenePacing: timing.sceneDuration,
-        technique: "Master Prompt Block",
+        technique: "Master Prompt Block + Video Production Training v2.0",
       },
+      validationWarnings,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
