@@ -6,73 +6,144 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const LANG_MAP: Record<string, { code: string; voices: { name: string; label: string; gender: string }[] }> = {
-  'português': {
-    code: 'pt-BR',
-    voices: [
-      { name: 'pt-BR-Neural2-B', label: 'Lucas (Masculino Neural)', gender: 'MALE' },
-      { name: 'pt-BR-Neural2-C', label: 'Ana (Feminino Neural)', gender: 'FEMALE' },
-      { name: 'pt-BR-Neural2-A', label: 'Pedro (Masculino Neural 2)', gender: 'MALE' },
-      { name: 'pt-BR-Wavenet-B', label: 'Rafael (Masculino Wavenet)', gender: 'MALE' },
-      { name: 'pt-BR-Wavenet-C', label: 'Camila (Feminino Wavenet)', gender: 'FEMALE' },
-      { name: 'pt-BR-Standard-B', label: 'Bruno (Masculino Standard)', gender: 'MALE' },
-    ],
-  },
-  'inglês': {
-    code: 'en-US',
-    voices: [
-      { name: 'en-US-Neural2-D', label: 'James (Male Neural)', gender: 'MALE' },
-      { name: 'en-US-Neural2-F', label: 'Sarah (Female Neural)', gender: 'FEMALE' },
-      { name: 'en-US-Neural2-A', label: 'Alex (Male Neural 2)', gender: 'MALE' },
-      { name: 'en-US-Neural2-C', label: 'Emma (Female Neural 2)', gender: 'FEMALE' },
-      { name: 'en-US-Wavenet-D', label: 'David (Male Wavenet)', gender: 'MALE' },
-      { name: 'en-US-Wavenet-F', label: 'Lily (Female Wavenet)', gender: 'FEMALE' },
-    ],
-  },
-  'english': {
-    code: 'en-US',
-    voices: [
-      { name: 'en-US-Neural2-D', label: 'James (Male Neural)', gender: 'MALE' },
-      { name: 'en-US-Neural2-F', label: 'Sarah (Female Neural)', gender: 'FEMALE' },
-    ],
-  },
-  'espanhol': {
-    code: 'es-ES',
-    voices: [
-      { name: 'es-ES-Neural2-B', label: 'Carlos (Masculino Neural)', gender: 'MALE' },
-      { name: 'es-ES-Neural2-A', label: 'María (Feminino Neural)', gender: 'FEMALE' },
-    ],
-  },
-  'alemão': {
-    code: 'de-DE',
-    voices: [
-      { name: 'de-DE-Neural2-B', label: 'Hans (Männlich Neural)', gender: 'MALE' },
-      { name: 'de-DE-Neural2-C', label: 'Anna (Weiblich Neural)', gender: 'FEMALE' },
-    ],
-  },
-  'polonês': {
-    code: 'pl-PL',
-    voices: [
-      { name: 'pl-PL-Wavenet-B', label: 'Jan (Męski Wavenet)', gender: 'MALE' },
-      { name: 'pl-PL-Wavenet-A', label: 'Ewa (Żeński Wavenet)', gender: 'FEMALE' },
-    ],
-  },
-  'turco': {
-    code: 'tr-TR',
-    voices: [
-      { name: 'tr-TR-Wavenet-B', label: 'Mehmet (Erkek Wavenet)', gender: 'MALE' },
-      { name: 'tr-TR-Wavenet-C', label: 'Ayşe (Kadın Wavenet)', gender: 'FEMALE' },
-    ],
-  },
-  'japonês': {
-    code: 'ja-JP',
-    voices: [
-      { name: 'ja-JP-Neural2-C', label: 'Kenji (男性 Neural)', gender: 'MALE' },
-      { name: 'ja-JP-Neural2-B', label: 'Yuki (女性 Neural)', gender: 'FEMALE' },
-    ],
-  },
+// ── Gemini TTS voices (30 prebuilt) ──
+const GEMINI_VOICES: { name: string; label: string; gender: string; style: string }[] = [
+  { name: 'Zephyr', label: 'Zephyr (Bright)', gender: 'FEMALE', style: 'bright' },
+  { name: 'Puck', label: 'Puck (Upbeat)', gender: 'MALE', style: 'upbeat' },
+  { name: 'Charon', label: 'Charon (Informative)', gender: 'MALE', style: 'informative' },
+  { name: 'Kore', label: 'Kore (Firm)', gender: 'FEMALE', style: 'firm' },
+  { name: 'Fenrir', label: 'Fenrir (Excitable)', gender: 'MALE', style: 'excitable' },
+  { name: 'Leda', label: 'Leda (Youthful)', gender: 'FEMALE', style: 'youthful' },
+  { name: 'Orus', label: 'Orus (Firm)', gender: 'MALE', style: 'firm' },
+  { name: 'Aoede', label: 'Aoede (Breezy)', gender: 'FEMALE', style: 'breezy' },
+  { name: 'Callirrhoe', label: 'Callirrhoe (Easy-going)', gender: 'FEMALE', style: 'easy-going' },
+  { name: 'Autonoe', label: 'Autonoe (Bright)', gender: 'FEMALE', style: 'bright' },
+  { name: 'Enceladus', label: 'Enceladus (Breathy)', gender: 'MALE', style: 'breathy' },
+  { name: 'Iapetus', label: 'Iapetus (Clear)', gender: 'MALE', style: 'clear' },
+  { name: 'Umbriel', label: 'Umbriel (Easy-going)', gender: 'MALE', style: 'easy-going' },
+  { name: 'Algieba', label: 'Algieba (Smooth)', gender: 'MALE', style: 'smooth' },
+  { name: 'Despina', label: 'Despina (Smooth)', gender: 'FEMALE', style: 'smooth' },
+  { name: 'Erinome', label: 'Erinome (Clear)', gender: 'FEMALE', style: 'clear' },
+  { name: 'Algenib', label: 'Algenib (Gravelly)', gender: 'MALE', style: 'gravelly' },
+  { name: 'Rasalgethi', label: 'Rasalgethi (Informative)', gender: 'MALE', style: 'informative' },
+  { name: 'Laomedeia', label: 'Laomedeia (Upbeat)', gender: 'FEMALE', style: 'upbeat' },
+  { name: 'Achernar', label: 'Achernar (Soft)', gender: 'FEMALE', style: 'soft' },
+  { name: 'Alnilam', label: 'Alnilam (Firm)', gender: 'MALE', style: 'firm' },
+  { name: 'Schedar', label: 'Schedar (Even)', gender: 'MALE', style: 'even' },
+  { name: 'Gacrux', label: 'Gacrux (Mature)', gender: 'MALE', style: 'mature' },
+  { name: 'Pulcherrima', label: 'Pulcherrima (Forward)', gender: 'FEMALE', style: 'forward' },
+  { name: 'Achird', label: 'Achird (Friendly)', gender: 'MALE', style: 'friendly' },
+  { name: 'Zubenelgenubi', label: 'Zubenelgenubi (Casual)', gender: 'MALE', style: 'casual' },
+  { name: 'Vindemiatrix', label: 'Vindemiatrix (Gentle)', gender: 'FEMALE', style: 'gentle' },
+  { name: 'Sadachbia', label: 'Sadachbia (Lively)', gender: 'FEMALE', style: 'lively' },
+  { name: 'Sadaltager', label: 'Sadaltager (Knowledgeable)', gender: 'MALE', style: 'knowledgeable' },
+  { name: 'Sulafat', label: 'Sulafat (Warm)', gender: 'FEMALE', style: 'warm' },
+];
+
+// Default voice per language for narration style
+const LANG_DEFAULT_VOICE: Record<string, string> = {
+  'português': 'Charon',
+  'inglês': 'Charon',
+  'english': 'Charon',
+  'espanhol': 'Orus',
+  'alemão': 'Schedar',
+  'polonês': 'Rasalgethi',
+  'turco': 'Algieba',
+  'japonês': 'Iapetus',
 };
 
+// ── WAV header creation (PCM s16le → WAV) ──
+function createWavHeader(dataLength: number, sampleRate = 24000, channels = 1, bitsPerSample = 16): Uint8Array {
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
+  const byteRate = sampleRate * channels * (bitsPerSample / 8);
+  const blockAlign = channels * (bitsPerSample / 8);
+
+  // RIFF header
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(view, 8, 'WAVE');
+  // fmt sub-chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); // sub-chunk size
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  // data sub-chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, dataLength, true);
+
+  return new Uint8Array(header);
+}
+
+function writeString(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}
+
+function pcmToWav(pcmBase64: string): Uint8Array {
+  const binaryStr = atob(pcmBase64);
+  const pcmBytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    pcmBytes[i] = binaryStr.charCodeAt(i);
+  }
+  const wavHeader = createWavHeader(pcmBytes.length);
+  const wav = new Uint8Array(wavHeader.length + pcmBytes.length);
+  wav.set(wavHeader, 0);
+  wav.set(pcmBytes, wavHeader.length);
+  return wav;
+}
+
+// ── Gemini TTS via Generative Language API ──
+async function synthesizeWithGeminiTTS(
+  text: string,
+  apiKey: string,
+  voiceName: string,
+  speakingRate: number,
+): Promise<Uint8Array> {
+  // Build style instruction based on speakingRate
+  let stylePrefix = '';
+  if (speakingRate < 0.9) stylePrefix = 'Read slowly and deliberately:\n';
+  else if (speakingRate > 1.15) stylePrefix = 'Read at a brisk, energetic pace:\n';
+
+  const model = 'gemini-2.5-flash-preview-tts';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: `${stylePrefix}${text}` }] }],
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName },
+          },
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('Gemini TTS error:', response.status, errText);
+    throw new Error(`GEMINI_TTS_${response.status}`);
+  }
+
+  const result = await response.json();
+  const audioData = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  if (!audioData) throw new Error('GEMINI_TTS_NO_AUDIO');
+
+  // Convert raw PCM (s16le 24kHz mono) to WAV
+  return pcmToWav(audioData);
+}
+
+// ── ElevenLabs fallback ──
 const ELEVENLABS_FALLBACK_VOICES = {
   MALE: 'onwK4e9ZLuTAKqWW03F9',
   FEMALE: 'EXAVITQu4vr4xnSDxMaL',
@@ -82,173 +153,45 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function splitText(text: string, maxChars = 4500) {
-  if (text.length <= maxChars) return [text];
-
-  const chunks: string[] = [];
-  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-  let current = '';
-
-  for (const sentence of sentences) {
-    if ((current + sentence).length > maxChars) {
-      if (current.trim()) chunks.push(current.trim());
-      current = sentence;
-    } else {
-      current += sentence;
-    }
-  }
-
-  if (current.trim()) chunks.push(current.trim());
-  return chunks;
-}
-
-function decodeBase64Audio(audioContent: string) {
-  const binaryString = atob(audioContent);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
-function mergeAudioBuffers(audioBuffers: ArrayBuffer[]) {
-  let totalLength = 0;
-  for (const buffer of audioBuffers) totalLength += buffer.byteLength;
-
-  const merged = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const buffer of audioBuffers) {
-    merged.set(new Uint8Array(buffer), offset);
-    offset += buffer.byteLength;
-  }
-
-  return merged;
-}
-
-async function synthesizeWithGoogle(
-  chunks: string[],
-  apiKey: string,
-  langCode: string,
-  selectedVoice: string,
-  speakingRate: number,
-  pitch: number,
-) {
-  const audioBuffers: ArrayBuffer[] = [];
-
-  for (const chunk of chunks) {
-    const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: { text: chunk },
-          voice: {
-            languageCode: langCode,
-            name: selectedVoice,
-          },
-          audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate,
-            pitch,
-            sampleRateHertz: 24000,
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Google TTS error:', response.status, errText);
-      if (response.status === 403) throw new Error('GOOGLE_TTS_PERMISSION_DENIED');
-      if (response.status === 429) throw new Error('GOOGLE_TTS_RATE_LIMIT');
-      throw new Error(`GOOGLE_TTS_${response.status}`);
-    }
-
-    const result = await response.json();
-    audioBuffers.push(decodeBase64Audio(result.audioContent));
-  }
-
-  return audioBuffers;
-}
-
 async function synthesizeWithElevenLabs(
-  chunks: string[],
+  text: string,
   apiKey: string,
   speakingRate: number,
   gender: 'MALE' | 'FEMALE',
-) {
-  const audioBuffers: ArrayBuffer[] = [];
+): Promise<{ buffer: ArrayBuffer; mimeType: string }> {
   const voiceId = ELEVENLABS_FALLBACK_VOICES[gender] || ELEVENLABS_FALLBACK_VOICES.MALE;
-
-  for (let i = 0; i < chunks.length; i++) {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: chunks[i],
-          model_id: 'eleven_multilingual_v2',
-          previous_text: i > 0 ? chunks[i - 1].slice(-400) : undefined,
-          next_text: i < chunks.length - 1 ? chunks[i + 1].slice(0, 400) : undefined,
-          voice_settings: {
-            stability: 0.55,
-            similarity_boost: 0.8,
-            style: 0.2,
-            use_speaker_boost: true,
-            speed: clamp(speakingRate || 1, 0.7, 1.2),
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('ElevenLabs TTS error:', response.status, errText);
-      throw new Error(`ELEVENLABS_TTS_${response.status}`);
-    }
-
-    audioBuffers.push(await response.arrayBuffer());
-  }
-
-  return audioBuffers;
-}
-
-async function synthesizeWithOpenAITTS(chunks: string[], apiKey: string, gender: 'MALE' | 'FEMALE') {
-  const audioBuffers: ArrayBuffer[] = [];
-  const voice = gender === 'FEMALE' ? 'nova' : 'onyx';
-
-  for (const chunk of chunks) {
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+    {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        'xi-api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'tts-1',
-        input: chunk,
-        voice,
-        response_format: 'mp3',
+        text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.55,
+          similarity_boost: 0.8,
+          style: 0.2,
+          use_speaker_boost: true,
+          speed: clamp(speakingRate || 1, 0.7, 1.2),
+        },
       }),
-    });
+    },
+  );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('OpenAI TTS error:', response.status, errText);
-      throw new Error(`OPENAI_TTS_${response.status}`);
-    }
-
-    audioBuffers.push(await response.arrayBuffer());
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('ElevenLabs TTS error:', response.status, errText);
+    throw new Error(`ELEVENLABS_TTS_${response.status}`);
   }
 
-  return audioBuffers;
+  return { buffer: await response.arrayBuffer(), mimeType: 'audio/mpeg' };
 }
 
+// ── Main handler ──
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -256,76 +199,67 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // List voices action
     if (action === 'list_voices') {
-      const { language } = body;
-      const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
       return new Response(JSON.stringify({
-        languageCode: langConfig.code,
-        voices: langConfig.voices,
+        languageCode: 'auto',
+        voices: GEMINI_VOICES.map(v => ({ name: v.name, label: v.label, gender: v.gender })),
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { text, language, voiceName, speakingRate = 1.0, pitch = 0 } = body;
+    // Generate audio
+    const { text, language, voiceName, speakingRate = 1.0 } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
-    const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
-    const selectedVoice = voiceName || langConfig.voices[0].name;
-    const selectedVoiceMeta = langConfig.voices.find((voice) => voice.name === selectedVoice);
+    const defaultVoice = LANG_DEFAULT_VOICE[language?.toLowerCase()] || 'Charon';
+    // Map old Google Cloud TTS voice names to Gemini voices
+    const isOldVoiceName = voiceName?.includes('-') && voiceName?.includes('Neural');
+    const selectedVoice = isOldVoiceName ? defaultVoice : (voiceName || defaultVoice);
+    const selectedVoiceMeta = GEMINI_VOICES.find(v => v.name === selectedVoice);
     const fallbackGender = selectedVoiceMeta?.gender === 'FEMALE' ? 'FEMALE' : 'MALE';
-    const chunks = splitText(text);
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
-    console.log(`Google TTS requested: ${chunks.length} chunks, voice=${selectedVoice}, lang=${langConfig.code}`);
+    console.log(`TTS requested: voice=${selectedVoice}, lang=${language}, chars=${text.length}`);
 
-    let audioBuffers: ArrayBuffer[] = [];
-    let engine = 'google-cloud-tts';
+    let audioBase64 = '';
+    let mimeType = 'audio/wav';
+    let engine = 'gemini-tts';
     let fallbackReason: string | null = null;
 
+    // ── Try Gemini TTS (primary) ──
     try {
-      if (!GOOGLE_AI_API_KEY) throw new Error('GOOGLE_TTS_UNAVAILABLE');
-      audioBuffers = await synthesizeWithGoogle(
-        chunks,
-        GOOGLE_AI_API_KEY,
-        langConfig.code,
-        selectedVoice,
-        speakingRate,
-        pitch,
-      );
-    } catch (googleError) {
-      fallbackReason = googleError instanceof Error ? googleError.message : 'GOOGLE_TTS_FAILED';
-      console.warn('Google TTS unavailable, starting fallback chain:', fallbackReason);
+      if (!GOOGLE_AI_API_KEY) throw new Error('GEMINI_TTS_UNAVAILABLE');
+      const wavBytes = await synthesizeWithGeminiTTS(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate);
+      audioBase64 = base64Encode(wavBytes);
+      mimeType = 'audio/wav';
+    } catch (geminiError) {
+      fallbackReason = geminiError instanceof Error ? geminiError.message : 'GEMINI_TTS_FAILED';
+      console.warn('Gemini TTS failed, trying fallback:', fallbackReason);
 
+      // ── ElevenLabs fallback ──
       if (ELEVENLABS_API_KEY) {
         try {
-          audioBuffers = await synthesizeWithElevenLabs(chunks, ELEVENLABS_API_KEY, speakingRate, fallbackGender);
+          const result = await synthesizeWithElevenLabs(text, ELEVENLABS_API_KEY, speakingRate, fallbackGender as 'MALE' | 'FEMALE');
+          audioBase64 = base64Encode(new Uint8Array(result.buffer));
+          mimeType = result.mimeType;
           engine = 'elevenlabs';
         } catch (elevenError) {
           console.warn('ElevenLabs fallback failed:', elevenError instanceof Error ? elevenError.message : elevenError);
         }
       }
 
-      if (!audioBuffers.length && OPENAI_API_KEY) {
-        try {
-          audioBuffers = await synthesizeWithOpenAITTS(chunks, OPENAI_API_KEY, fallbackGender);
-          engine = 'openai-tts';
-        } catch (openaiError) {
-          console.warn('OpenAI TTS fallback failed:', openaiError instanceof Error ? openaiError.message : openaiError);
-        }
-      }
-
-      if (!audioBuffers.length) {
+      // ── Browser synthesis fallback ──
+      if (!audioBase64) {
         return new Response(JSON.stringify({
           use_browser_synthesis: true,
           engine: 'browser-synthesis',
           text,
-          languageCode: langConfig.code,
+          languageCode: 'auto',
           voice: selectedVoice,
-          chunks: chunks.length,
           characterCount: text.length,
           fallbackReason,
         }), {
@@ -334,15 +268,13 @@ serve(async (req) => {
       }
     }
 
-    const audioBase64 = base64Encode(mergeAudioBuffers(audioBuffers));
-
     return new Response(JSON.stringify({
       audioBase64,
-      mimeType: 'audio/mpeg',
+      mimeType,
       engine,
       voice: selectedVoice,
-      languageCode: langConfig.code,
-      chunks: chunks.length,
+      languageCode: 'auto',
+      chunks: 1,
       characterCount: text.length,
       fallbackReason,
     }), {
