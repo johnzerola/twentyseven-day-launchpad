@@ -1,86 +1,105 @@
 
 
-# Plano: Absorver Treinamento de Produção de Vídeo no Pipeline de Cenas
+# Plano de Auditoria e Correção do Pipeline Completo de Roteiros
 
-## Contexto
+## Problema Central Identificado
 
-O documento do usuário é um manual completo de produção de vídeo com IA (V2.0 Professional). O sistema já implementa ~80% desses princípios via DarkPlanner v3. Os elementos **novos e de alto valor** que faltam são:
+**76 edge functions** ainda usam `LOVABLE_API_KEY` via o gateway `ai.gateway.lovable.dev`, que retorna **402 "Créditos insuficientes"**. As funções críticas do pipeline de roteiros — `generate-script`, `generate-synced-prompts`, `generate-visual-prompts`, `predict-retention`, `score-script`, `refine-script` — vão quebrar ao serem chamadas.
 
-1. **Prompt Anatomy Structure** — estrutura explícita de 9 componentes (Shot Type + Action + Characters + Setting + Lighting + Mood + Audio/ASMR + Dialogue + Technical Specs) como checklist formal
-2. **Fixed Description Tags** — sistema `[nome_personagem]` com descrição resumida em cada prompt (atualmente o sistema copia verbatim mas não usa tags de referência curta)
-3. **Scene Coverage Strategy** — regras de "filmagem" (abertura = wide, ação = medium/close, transição = establishing) como padrão automático
-4. **ASMR Layer** — suporte a sons detalhados com categorias primário/secundário/terciário
-5. **Multi-character positioning** — regras de foreground/background e limite de descrição
-6. **Night/Weather/Historical templates** — instruções especializadas para condições difíceis
-7. **Prompt length target** — o doc sugere 60-70 palavras (conflita com DarkPlanner v3 de 150-250). Vamos manter 150-250 para Veo3 mas absorver a estrutura interna
-8. **Camera variety enforcement** — regras de não repetir shots consecutivos (já existe parcialmente)
+Apenas 3 funções foram migradas para o `GOOGLE_AI_API_KEY` direto: `extract-characters`, `generate-scenes-short`, `generate-titles`.
 
-## O que NÃO precisa mudar
+---
 
-- Policy filter (`veo3-policy-filter.ts`) — já cobre copyright/celebrity/brand/trigger
-- Anti-text suffix — já implementado
-- Character identity sheets — já implementado com verbatim copy
-- Environment identity sheets — já implementado com 17 campos
-- Style guides — já tem 19+ estilos
+## Plano em 6 Partes
 
-## Implementação
+### PARTE 1: Migrar Funções Críticas do Pipeline para Gemini Direto
+**Funções a migrar (prioridade máxima — pipeline de roteiros):**
 
-### 1. Criar bloco de conhecimento compartilhado: `_shared/video-production-training.ts`
+| Função | Modelo Atual | Ação |
+|--------|-------------|------|
+| `generate-script` | Gemini 2.5 Pro via Gateway | Migrar para `generativelanguage.googleapis.com` com `GOOGLE_AI_API_KEY`. Manter streaming via SSE. |
+| `refine-script` | Gemini Pro via Gateway | Migrar para Gemini direto. |
+| `score-script` | GPT + Gemini via Gateway | Migrar para Gemini direto (dual score pode usar 2 chamadas Gemini com temperaturas diferentes). |
+| `generate-synced-prompts` | Gemini 2.5 Pro via Gateway | Migrar para Gemini direto. Usar `responseMimeType: "application/json"` em vez de `tool_choice`. |
+| `generate-visual-prompts` | Gemini 2.5 Flash via Gateway | Migrar para Gemini direto. |
+| `predict-retention` | Gemini Flash Lite via Gateway | Migrar para Gemini direto. |
 
-Novo arquivo que exporta constantes reutilizáveis extraídas do treinamento:
+**Abordagem técnica:**
+- Substituir `https://ai.gateway.lovable.dev/v1/chat/completions` por `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=${GOOGLE_AI_API_KEY}`
+- Converter formato OpenAI (`messages[]`) → formato Gemini (`contents[]`)
+- Para `tool_choice`, usar `responseMimeType: "application/json"` com schema no prompt
+- Para streaming (`generate-script`), usar `streamGenerateContent?alt=sse` do Gemini
 
-- `PROMPT_ANATOMY_CHECKLIST` — os 9 componentes obrigatórios como string de instrução
-- `SCENE_COVERAGE_STRATEGY` — regras de cobertura (abertura→wide, ação→medium, emoção→close-up, transição→establishing)
-- `CAMERA_SHOT_VARIETY_RULES` — rotação obrigatória de ângulos, nunca repetir consecutivo
-- `ASMR_SOUND_LAYER_GUIDE` — categorias de som (primary/secondary/tertiary) com exemplos por tipo
-- `NIGHT_WEATHER_HISTORICAL_TEMPLATES` — instruções especializadas para noturno, chuva, neve, neblina, época histórica
-- `MULTI_CHARACTER_RULES` — foreground/background, prioridade visual, limite de descrição
-- `CHARACTER_TAG_FORMAT` — formato `[nome] gênero idade + 2-3 traços visuais + roupa`
-- `TROUBLESHOOTING_RULES` — regras de consistência, movimento natural, iluminação correta
+### PARTE 2: Voz Dopaminérgica e Magnética no TTS
+**Problema:** O Gemini TTS atual só injeta instruções de velocidade ("brisk pace" / "slowly"). Falta a instrução de voz **dopaminérgica, magnética e emocional**.
 
-### 2. Integrar em `generate-synced-prompts/index.ts` (longform)
+**Correção no `google-tts/index.ts`:**
+- Adicionar `stylePrefix` rico ao texto enviado ao Gemini TTS:
+  ```
+  "Read this narration with INTENSE energy and magnetic charisma. 
+   Your voice must captivate — convey wonder, urgency, and emotion. 
+   Vary your pace dramatically: slow down for revelations, speed up for excitement. 
+   Use vocal emphasis on key words. Make the listener FEEL every sentence. 
+   Deliver like a world-class documentary narrator who makes people unable to stop listening:"
+  ```
+- Permitir ao usuário escolher "Estilo de voz" na UI (Energético, Calmo, Misterioso, Dopaminérgico)
+- Mapear cada estilo para instruções específicas no prompt do Gemini TTS
 
-- Importar o novo módulo compartilhado
-- Adicionar ao system prompt: `PROMPT_ANATOMY_CHECKLIST`, `SCENE_COVERAGE_STRATEGY`, `CAMERA_SHOT_VARIETY_RULES`, `MULTI_CHARACTER_RULES`
-- Adicionar `ASMR_SOUND_LAYER_GUIDE` condicionalmente (quando niche inclui ASMR ou o usuário passa `enableASMR: true`)
-- Adicionar `NIGHT_WEATHER_HISTORICAL_TEMPLATES` condicionalmente (quando script contém palavras-chave de noite/chuva/época)
-- Adicionar `CHARACTER_TAG_FORMAT` ao bloco de construção de personagens existente
+### PARTE 3: Consistência de Personagens nas Cenas
+**Estado atual:** O sistema já possui:
+- `CharacterManager` com biblioteca global (`global_characters`) e fotos de referência
+- `generate-synced-prompts` com "Character Identity Sheets" (150-200 palavras, cópia verbatim)
+- Regra de máximo 2 personagens por prompt
 
-### 3. Integrar em `generate-visual-prompts/index.ts` (visual prompts simples)
+**Verificação:** O fluxo está correto. Os personagens são passados como `characters[]` ao gerar cenas, e o prompt exige cópia verbatim das descrições. O `SceneViewer` mostra personagens por cena com detalhes.
 
-- Importar e injetar `PROMPT_ANATOMY_CHECKLIST` e `CAMERA_SHOT_VARIETY_RULES` no system prompt
-- Isso melhora a qualidade dos prompts visuais standalone
+**Melhoria a implementar:**
+- Quando há 3+ personagens numa cena, o sistema deve **automaticamente dividir** em sub-cenas de 8s com 2 personagens cada, em vez de depender apenas da instrução no prompt
+- Garantir que `charactersInScene` no JSON de saída inclua objetos ricos (nome + descrição visual) e não apenas strings
 
-### 4. Integrar em `generate-scenes-short/index.ts` (shorts)
+### PARTE 4: Motor de Cenas — Sincronização e Qualidade Dopaminérgica
+**Estado atual:** `generate-synced-prompts` já implementa:
+- Cenas de 8s (limite Veo3), cobertura 100% do áudio
+- DarkPlanner v3 com trio de movimento obrigatório
+- Environment Identity Sheet (17 parâmetros)
+- Camera variety (rotação obrigatória de ângulos)
+- Dopaminergic visuals formula
 
-- Importar e injetar `PROMPT_ANATOMY_CHECKLIST`, `CAMERA_SHOT_VARIETY_RULES`, `MULTI_CHARACTER_RULES`
-- O shorts já tem dopamine timing — adicionar apenas a estrutura anatômica e variedade de câmera
+**Melhoria:**
+- Adicionar instrução explícita: "Every scene must create a VISCERAL emotional response — the viewer must feel compelled to keep watching. Use dramatic reveals, impossible-to-ignore beauty, and visual tension."
+- Reforçar no prompt que Scene 1 (Hook) precisa ser **visualmente impossível de ignorar** — escala épica + micro-detalhe + movimento de câmera dramático
 
-### 5. Post-processing: Validação de Anatomia de Prompt
+### PARTE 5: Títulos, Thumbnails e SEO
+**Estado atual:** `generate-titles` já foi migrado para Gemini direto. Inclui:
+- Análise de concorrentes via YouTube Data API
+- Busca de tendências via Brave Search
+- Geração de títulos virais + A/B testing + SEO
 
-Em cada edge function, após receber os prompts da IA, adicionar validação:
-- Checar se tem pelo menos 3 dos 9 componentes anatômicos detectáveis (shot type, action verbs, lighting mention)
-- Checar variedade de câmera (flaggar se 3+ prompts consecutivos usam mesmo tipo de shot)
-- Adicionar warnings no metadata de retorno
+**Verificação necessária:** Confirmar que a função está retornando instruções de thumbnail (composição, paleta de cores, emoção-alvo). Se não estiver, adicionar ao prompt.
 
-### 6. Atualizar `SceneViewer.tsx`
+### PARTE 6: Idioma da Voz
+**Estado atual:** O TTS passa o `language` selecionado ao Gemini, mas o Gemini TTS detecta idioma automaticamente pelo texto do roteiro. Se o roteiro é gerado em inglês, a voz sai em inglês.
 
-- Mostrar badge de ASMR quando `audioDirection` contém "ASMR"
-- Mostrar badge de condição especial (noturno/chuva/histórico) baseado nos dados do environment
+**Verificação:** O fluxo `language` → `generate-script` (gera roteiro no idioma) → `google-tts` (narra o texto) funciona corretamente. O idioma é propagado.
 
-## Arquivos afetados
+---
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/_shared/video-production-training.ts` | **Criar** — constantes do treinamento |
-| `supabase/functions/generate-synced-prompts/index.ts` | Editar — importar e injetar no system prompt |
-| `supabase/functions/generate-visual-prompts/index.ts` | Editar — importar e injetar no system prompt |
-| `supabase/functions/generate-scenes-short/index.ts` | Editar — importar e injetar no system prompt |
-| `src/components/scripts/SceneViewer.tsx` | Editar — badges de ASMR/condições |
+## Resumo de Arquivos a Editar
 
-## Notas técnicas
+1. `supabase/functions/generate-script/index.ts` — Migrar de Lovable Gateway para Gemini direto (streaming)
+2. `supabase/functions/refine-script/index.ts` — Migrar para Gemini direto
+3. `supabase/functions/score-script/index.ts` — Migrar para Gemini direto
+4. `supabase/functions/generate-synced-prompts/index.ts` — Migrar para Gemini direto
+5. `supabase/functions/generate-visual-prompts/index.ts` — Migrar para Gemini direto
+6. `supabase/functions/predict-retention/index.ts` — Migrar para Gemini direto
+7. `supabase/functions/google-tts/index.ts` — Adicionar instruções de voz dopaminérgica/magnética
+8. `src/components/scripts/VoiceGeneratorStep.tsx` — Adicionar seletor de "Estilo de voz" (Dopaminérgico, Misterioso, Calmo, Energético)
 
-- O treinamento sugere 60-70 palavras por prompt — isso é para ferramentas genéricas. Para Veo3, mantemos 150-250 palavras (comprovadamente melhor). A estrutura anatômica do doc é absorvida, não o tamanho.
-- O sistema de tags `[nome_personagem]` é complementar ao verbatim copy que já existe — vai reforçar a consistência.
-- Não criamos UI de wizard de configuração (as 6 perguntas do doc) porque o pipeline já tem PipelineStepper com 6 etapas equivalentes.
+## Ordem de Execução
+1. Migrar `generate-script` (core do pipeline — mais crítico)
+2. Migrar `refine-script` + `score-script` (completam o pipeline de roteiro)
+3. Migrar `generate-synced-prompts` + `generate-visual-prompts` (pipeline visual)
+4. Migrar `predict-retention` (analytics)
+5. Atualizar TTS com voz dopaminérgica
+6. Atualizar UI do Voice Step
 
