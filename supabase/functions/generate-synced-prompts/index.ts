@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
+import { PROMPT_ANATOMY_CHECKLIST, SCENE_COVERAGE_STRATEGY, CAMERA_SHOT_VARIETY_RULES, MULTI_CHARACTER_RULES, CHARACTER_TAG_FORMAT, validatePromptAnatomy, buildConditionalTraining } from "../_shared/video-production-training.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
