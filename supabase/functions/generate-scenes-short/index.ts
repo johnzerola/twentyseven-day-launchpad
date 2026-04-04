@@ -386,6 +386,10 @@ NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
       }
     }
 
+    // ═══ Video Production Training v2.0: Prompt Anatomy Validation ═══
+    const anatomyWarnings = validatePromptAnatomy(scenes);
+    const validationWarnings = anatomyWarnings;
+
     return new Response(JSON.stringify({
       scenes,
       sceneCount: scenes.length,
