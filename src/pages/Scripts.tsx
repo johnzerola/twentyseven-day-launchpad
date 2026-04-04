@@ -136,6 +136,7 @@ const Scripts = () => {
         if (state.characters?.length) setCharacters(state.characters);
         if (state.syncedScenes?.length) setSyncedScenes(state.syncedScenes);
         if (state.customStyleNotes) setCustomStyleNotes(state.customStyleNotes);
+        if (state.enableASMR) setEnableASMR(state.enableASMR);
         if (state.selectedChannelId) setSelectedChannelId(state.selectedChannelId);
         if (state.sceneBlueprintJson?.length) setSceneBlueprintJson(state.sceneBlueprintJson);
       }
