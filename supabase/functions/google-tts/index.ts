@@ -104,11 +104,21 @@ async function synthesizeWithGeminiTTS(
   apiKey: string,
   voiceName: string,
   speakingRate: number,
+  voiceStyle?: string,
 ): Promise<Uint8Array> {
-  // Build style instruction based on speakingRate
-  let stylePrefix = '';
-  if (speakingRate < 0.9) stylePrefix = 'Read slowly and deliberately:\n';
-  else if (speakingRate > 1.15) stylePrefix = 'Read at a brisk, energetic pace:\n';
+  // Build style instruction based on voiceStyle and speakingRate
+  const VOICE_STYLE_PROMPTS: Record<string, string> = {
+    'dopaminergico': 'Read this narration with INTENSE energy and magnetic charisma. Your voice must captivate — convey wonder, urgency, and raw emotion. Vary your pace DRAMATICALLY: slow down for revelations, speed up for excitement. Use vocal emphasis on key words. Make the listener FEEL every sentence. Deliver like a world-class documentary narrator who makes people unable to stop listening. Your voice should create DOPAMINE — anticipation, surprise, and reward in every phrase:\n',
+    'misterioso': 'Read this narration with a mysterious, conspiratorial tone. Speak as if sharing secrets. Lower your voice for revelations. Use dramatic pauses before key moments. Create tension and intrigue with every sentence. The listener should feel like they are uncovering hidden truths:\n',
+    'calmo': 'Read this narration with calm authority and warmth. Speak clearly and steadily, with gentle emphasis on important points. Your voice should be soothing yet engaging, like a trusted mentor sharing wisdom. Use measured pacing with thoughtful pauses:\n',
+    'energetico': 'Read this narration with HIGH ENERGY and enthusiasm! Your voice should be dynamic, punchy, and exciting. Vary your tempo — fast for action, brief pauses for impact. Make every sentence feel urgent and important. Channel the energy of the best YouTube creators:\n',
+  };
+
+  let stylePrefix = VOICE_STYLE_PROMPTS[voiceStyle || ''] || '';
+  if (!stylePrefix) {
+    if (speakingRate < 0.9) stylePrefix = 'Read slowly and deliberately:\n';
+    else if (speakingRate > 1.15) stylePrefix = 'Read at a brisk, energetic pace:\n';
+  }
 
   const model = 'gemini-2.5-flash-preview-tts';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
