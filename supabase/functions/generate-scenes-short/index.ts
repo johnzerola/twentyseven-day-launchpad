@@ -359,13 +359,14 @@ NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
     });
 
     if (!res.ok) {
+      const errText = await res.text();
+      console.error("Gemini API error:", res.status, errText);
       if (res.status === 429) return errResp("Rate limit.", 429);
-      if (res.status === 402) return errResp("Créditos insuficientes.", 402);
       throw new Error("Scene generation failed: " + res.status);
     }
 
     const d = await res.json();
-    const content = d.choices?.[0]?.message?.content || '';
+    const content = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
     let scenes: any[] = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
