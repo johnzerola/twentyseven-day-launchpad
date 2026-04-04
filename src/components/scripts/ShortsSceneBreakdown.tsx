@@ -15,6 +15,7 @@ interface ShortsSceneBreakdownProps {
   videoStyle: string;
   characters: any[];
   customStyleNotes?: string;
+  enableASMR?: boolean;
   onScenesGenerated?: (scenes: SyncedScene[]) => void;
 }
 
