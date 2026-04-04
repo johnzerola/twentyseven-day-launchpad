@@ -15,6 +15,7 @@ interface ShortsSceneBreakdownProps {
   videoStyle: string;
   characters: any[];
   customStyleNotes?: string;
+  enableASMR?: boolean;
   onScenesGenerated?: (scenes: SyncedScene[]) => void;
 }
 
@@ -47,7 +48,7 @@ const BEAT_EMOJI: Record<string, string> = {
 };
 
 export const ShortsSceneBreakdown = ({
-  script, durationSeconds, videoStyle, characters, customStyleNotes, onScenesGenerated
+  script, durationSeconds, videoStyle, characters, customStyleNotes, enableASMR, onScenesGenerated
 }: ShortsSceneBreakdownProps) => {
   const [scenes, setScenes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,7 @@ export const ShortsSceneBreakdown = ({
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-scenes-short', {
-        body: { script, durationSeconds, videoStyle, characters, customStyleNotes },
+        body: { script, durationSeconds, videoStyle, characters, customStyleNotes, enableASMR: enableASMR || false },
       });
       if (error) throw error;
       if (data?.scenes) {

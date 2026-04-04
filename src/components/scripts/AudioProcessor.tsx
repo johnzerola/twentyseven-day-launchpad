@@ -24,6 +24,7 @@ interface AudioProcessorProps {
   getCleanNarration: () => string;
   customStyleNotes: string;
   setCustomStyleNotes: (notes: string) => void;
+  enableASMR?: boolean;
   referenceImageUrls?: string[];
   onReferenceImagesChange?: (urls: string[]) => void;
 }
@@ -46,7 +47,7 @@ const PHASE_PROGRESS: Record<ProcessingPhase, number> = {
 export const AudioProcessor = ({
   script, videoStyle, videoStyles, characters, language, niche,
   sceneBlueprintJson, syncedScenes, setSyncedScenes, getCleanNarration,
-  customStyleNotes, setCustomStyleNotes, referenceImageUrls, onReferenceImagesChange,
+  customStyleNotes, setCustomStyleNotes, enableASMR, referenceImageUrls, onReferenceImagesChange,
 }: AudioProcessorProps) => {
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -161,6 +162,7 @@ export const AudioProcessor = ({
           script: cleanScript,
           videoStyle,
           customStyleNotes,
+          enableASMR: enableASMR || false,
           referenceImageUrls: referenceImageUrls?.length ? referenceImageUrls : undefined,
           characters: characters.length > 0 ? characters : undefined,
           language,

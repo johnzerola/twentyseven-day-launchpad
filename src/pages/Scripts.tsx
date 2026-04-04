@@ -84,6 +84,7 @@ const Scripts = () => {
   const [syncedScenes, setSyncedScenes] = useState<SyncedScene[]>([]);
   const [sceneBlueprintJson, setSceneBlueprintJson] = useState<any[]>([]);
   const [customStyleNotes, setCustomStyleNotes] = useState('');
+  const [enableASMR, setEnableASMR] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [userChannels, setUserChannels] = useState<any[]>([]);
   const [channelStyles, setChannelStyles] = useState<any[]>([]);
@@ -135,6 +136,7 @@ const Scripts = () => {
         if (state.characters?.length) setCharacters(state.characters);
         if (state.syncedScenes?.length) setSyncedScenes(state.syncedScenes);
         if (state.customStyleNotes) setCustomStyleNotes(state.customStyleNotes);
+        if (state.enableASMR) setEnableASMR(state.enableASMR);
         if (state.selectedChannelId) setSelectedChannelId(state.selectedChannelId);
         if (state.sceneBlueprintJson?.length) setSceneBlueprintJson(state.sceneBlueprintJson);
       }
@@ -147,7 +149,7 @@ const Scripts = () => {
       try {
         const state = {
           topic, niche, script, videoType, videoStyle, duration, language,
-          activeStep, characters, syncedScenes, customStyleNotes,
+          activeStep, characters, syncedScenes, customStyleNotes, enableASMR,
           selectedChannelId, sceneBlueprintJson,
         };
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
@@ -1123,6 +1125,21 @@ const Scripts = () => {
                     </div>
                   </div>
 
+                  {/* ASMR Toggle */}
+                  <div className="flex items-center justify-between bg-muted/20 border border-border rounded-lg p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg">🎧</span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Camadas de Som ASMR</p>
+                        <p className="text-[10px] text-muted-foreground">Ativa direção de áudio detalhada com 3 camadas: primária, ambiental e sutil</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={enableASMR} onChange={e => setEnableASMR(e.target.checked)} className="sr-only peer" />
+                      <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-background after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                    </label>
+                  </div>
+
                   {/* Custom Style Notes */}
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Descrição do estilo visual (opcional)</label>
@@ -1166,6 +1183,7 @@ const Scripts = () => {
                       videoStyle={videoStyle}
                       characters={characters}
                       customStyleNotes={customStyleNotes}
+                      enableASMR={enableASMR}
                       onScenesGenerated={setSyncedScenes}
                     />
                   ) : (
@@ -1177,6 +1195,7 @@ const Scripts = () => {
                         syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
                         getCleanNarration={getCleanNarration}
                         customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
+                        enableASMR={enableASMR}
                         referenceImageUrls={referenceImages.map(img => img.url)}
                         onReferenceImagesChange={(urls) => setReferenceImages(urls.map(url => ({ url })))}
                       />
