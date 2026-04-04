@@ -1194,6 +1194,7 @@ const Scripts = () => {
                         syncedScenes={syncedScenes} setSyncedScenes={setSyncedScenes}
                         getCleanNarration={getCleanNarration}
                         customStyleNotes={customStyleNotes} setCustomStyleNotes={setCustomStyleNotes}
+                        enableASMR={enableASMR}
                         referenceImageUrls={referenceImages.map(img => img.url)}
                         onReferenceImagesChange={(urls) => setReferenceImages(urls.map(url => ({ url })))}
                       />
