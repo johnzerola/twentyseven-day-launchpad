@@ -1,3 +1,4 @@
+import { callGeminiOpenAICompat, generateEmbedding } from "../_shared/gemini-direct.ts";
 import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -1096,7 +1097,7 @@ async function executeTool(
       }
 
       case "gpt_expert_analysis": {
-        if (!lovableKey) { result = { error: "API key not configured" }; break; }
+        if (!lovableKey) { result = { error: "GOOGLE_AI_API_KEY not configured" }; break; }
         
         const gptStyles: Record<string, string> = {
           "data-driven": "You are a YouTube data scientist. Analyze with precision, find correlations, calculate growth curves, and predict outcomes based on historical patterns.",
@@ -1249,46 +1250,8 @@ async function executeTool(
 }
 
 // Generate query embedding
-async function generateQueryEmbedding(text: string, apiKey: string): Promise<number[] | null> {
-  try {
-    const response = await _ai({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          { role: "system", content: `You are an embedding generator. Given text, output ONLY a JSON array of exactly 768 floating-point numbers between -1 and 1 that represent the semantic meaning of the text. Output ONLY the JSON array, nothing else.` },
-          { role: "user", content: text.slice(0, 1000) }
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "store_embedding",
-            description: "Store a 768-dimensional embedding vector",
-            parameters: {
-              type: "object",
-              properties: { embedding: { type: "array", items: { type: "number" }, description: "768-dimensional embedding vector" } },
-              required: ["embedding"],
-              additionalProperties: false,
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "store_embedding" } },
-      });
-    if (!response.ok) return null;
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) return null;
-    const args = JSON.parse(toolCall.function.arguments);
-    let embedding = args.embedding;
-    if (!Array.isArray(embedding)) return null;
-    if (embedding.length < 768) while (embedding.length < 768) embedding.push(0);
-    else if (embedding.length > 768) embedding = embedding.slice(0, 768);
-    const mag = Math.sqrt(embedding.reduce((s: number, v: number) => s + v * v, 0));
-    if (mag > 0) embedding = embedding.map((v: number) => v / mag);
-    return embedding;
-  } catch (e) {
-    console.error("Query embedding error:", e);
-    return null;
-  }
-}
+// generateQueryEmbedding replaced by shared generateEmbedding from gemini-direct.ts
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -1425,7 +1388,7 @@ serve(async (req) => {
     let semanticContext = '';
     let usedSemantic = false;
 
-    const queryEmbedding = await generateQueryEmbedding(recentContext || latestQuery, LOVABLE_API_KEY);
+    const queryEmbedding = await generateEmbedding(GOOGLE_AI_API_KEY, recentContext || latestQuery);
     if (queryEmbedding) {
       const { data: matches, error: matchError } = await sb.rpc('match_knowledge', {
         query_embedding: `[${queryEmbedding.join(',')}]`,
