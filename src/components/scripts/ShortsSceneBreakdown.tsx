@@ -48,7 +48,7 @@ const BEAT_EMOJI: Record<string, string> = {
 };
 
 export const ShortsSceneBreakdown = ({
-  script, durationSeconds, videoStyle, characters, customStyleNotes, onScenesGenerated
+  script, durationSeconds, videoStyle, characters, customStyleNotes, enableASMR, onScenesGenerated
 }: ShortsSceneBreakdownProps) => {
   const [scenes, setScenes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
