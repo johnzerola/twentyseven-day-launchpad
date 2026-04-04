@@ -70,9 +70,9 @@ serve(async (req) => {
         audioBuffer = await elevenLabsTTS(text, voice, ELEVENLABS_API_KEY);
       } catch (e) {
         console.warn("ElevenLabs failed, trying OpenAI TTS:", (e as Error).message);
-        if (LOVABLE_API_KEY) {
+        if (GOOGLE_AI_API_KEY) {
           try {
-            audioBuffer = await openAITTS(text, LOVABLE_API_KEY);
+            audioBuffer = await openAITTS(text, GOOGLE_AI_API_KEY);
             usedEngine = "openai";
           } catch (e2) {
             console.warn("OpenAI TTS also failed:", (e2 as Error).message);
@@ -86,8 +86,8 @@ serve(async (req) => {
           });
         }
       }
-    } else if (LOVABLE_API_KEY) {
-      audioBuffer = await openAITTS(text, LOVABLE_API_KEY);
+    } else if (GOOGLE_AI_API_KEY) {
+      audioBuffer = await openAITTS(text, GOOGLE_AI_API_KEY);
       usedEngine = "openai";
     } else {
       return new Response(JSON.stringify({ error: "No TTS API keys configured", use_browser_synthesis: true, text }), {

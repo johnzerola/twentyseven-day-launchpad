@@ -20,7 +20,7 @@ serve(async (req) => {
 
   try {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
     const results: any = {
       hooks_evolved: 0,
@@ -106,7 +106,7 @@ serve(async (req) => {
     }
 
     // 5) Generate meta-insight with AI: what patterns are working NOW
-    if (LOVABLE_API_KEY && (topVideos?.length || 0) >= 3) {
+    if (GOOGLE_AI_API_KEY && (topVideos?.length || 0) >= 3) {
       try {
         const topSummary = (topVideos || []).slice(0, 10).map(v => ({
           title: v.title,
@@ -130,7 +130,7 @@ serve(async (req) => {
 
         const aiRes = await fetch(AI_URL, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash-lite",
             messages: [{

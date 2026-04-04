@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -460,16 +459,16 @@ serve(async (req) => {
 
       switch (p) {
         case "content_dna":
-          report.content_dna = await phase1ContentDNA(sb, LOVABLE_API_KEY, channelLimit);
+          report.content_dna = await phase1ContentDNA(sb, GOOGLE_AI_API_KEY, channelLimit);
           break;
         case "viral_patterns":
-          report.viral_patterns = await phase2ViralPatterns(sb, LOVABLE_API_KEY);
+          report.viral_patterns = await phase2ViralPatterns(sb, GOOGLE_AI_API_KEY);
           break;
         case "score_calibration":
           report.score_calibration = await phase3ScoreCalibration(sb);
           break;
         case "embeddings":
-          report.embeddings = await phase4Embeddings(sb, LOVABLE_API_KEY, embeddingLimit);
+          report.embeddings = await phase4Embeddings(sb, GOOGLE_AI_API_KEY, embeddingLimit);
           break;
       }
 

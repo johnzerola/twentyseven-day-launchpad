@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -112,7 +111,7 @@ serve(async (req) => {
       const batchMeta = metadata_list?.slice(i, i + batchSize) || [];
 
       const embeddings = await Promise.all(
-        batch.map((text: string) => generateEmbedding(text, LOVABLE_API_KEY))
+        batch.map((text: string) => generateEmbedding(text, GOOGLE_AI_API_KEY))
       );
 
       // Upsert into knowledge_embeddings

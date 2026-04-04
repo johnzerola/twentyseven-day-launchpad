@@ -667,7 +667,7 @@ serve(async (req) => {
 
     for (const ch of batch) {
       try {
-        const result = await processChannel(ch, ytKeys, LOVABLE_API_KEY, sb);
+        const result = await processChannel(ch, ytKeys, GOOGLE_AI_API_KEY, sb);
         report.push(result);
         processed++;
 

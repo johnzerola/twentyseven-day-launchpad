@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -233,8 +232,8 @@ serve(async (req) => {
     console.log(`DubSpy scan: mode=${mode}, niche="${niche}", country=${country}, lang=${language}`);
 
     // Step 1: Generate multiple search queries using AI for broader coverage
-    const queries = LOVABLE_API_KEY 
-      ? await generateSearchQueries(niche, mode, language, LOVABLE_API_KEY)
+    const queries = GOOGLE_AI_API_KEY 
+      ? await generateSearchQueries(niche, mode, language, GOOGLE_AI_API_KEY)
       : [niche, `${niche} 2026`, `${niche} como fazer`];
 
     console.log(`Generated ${queries.length} search queries:`, queries);
@@ -316,7 +315,7 @@ serve(async (req) => {
 
     // Step 8: AI clustering (cluster/micro-niche-drill modes)
     let clusters: any[] = [];
-    if ((mode === "cluster" || mode === "micro-niche-drill") && LOVABLE_API_KEY && channels.length >= 2) {
+    if ((mode === "cluster" || mode === "micro-niche-drill") && GOOGLE_AI_API_KEY && channels.length >= 2) {
       try {
         const channelSummary = channels.slice(0, 25).map(ch =>
           `ID:${ch.id} | ${ch.name} (${ch.subscribers} subs, ${ch.videoCount} vids, avg ${ch.avgViews} views, viral:${ch.viralScore}, keywords: ${ch.keywords?.slice(0, 100)}). Top: ${ch.videos.slice(0, 2).map((v: any) => `"${v.title}"`).join(", ")}`

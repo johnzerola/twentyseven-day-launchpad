@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX, TRIGGER_REPLACEMENTS } from "../_shared/veo3-policy-filter.ts";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };

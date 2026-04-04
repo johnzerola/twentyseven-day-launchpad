@@ -12,9 +12,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not set");
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -101,11 +101,11 @@ serve(async (req) => {
 
         // Use AI to analyze content_category if missing
         let newCategory = ch.content_category;
-        if ((!newCategory || newCategory === "general") && LOVABLE_API_KEY) {
+        if ((!newCategory || newCategory === "general") && GOOGLE_AI_API_KEY) {
           const aiRes = await fetch(AI_URL, {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              Authorization: `Bearer ${GOOGLE_AI_API_KEY}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({

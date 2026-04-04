@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, Play, Pause, Download, Loader2, Volume2, RefreshCw, Upload, ChevronDown, FileText } from 'lucide-react';
+import { Mic, Play, Pause, Download, Loader2, Volume2, RefreshCw, Upload, ChevronDown, FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -33,12 +33,20 @@ const TTS_LANGUAGES = [
   { value: 'japonês', label: '🇯🇵 日本語', flag: '🇯🇵' },
 ];
 
+const VOICE_STYLES = [
+  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Carisma intenso, variação dramática, urgência narrativa — MrBeast style', color: 'border-primary bg-primary/10' },
+  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Suspense envolvente, pausas calculadas, tom grave e intrigante', color: 'border-chart-4 bg-chart-4/10' },
+  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Alto impacto, ritmo acelerado, entusiasmo contagiante', color: 'border-destructive bg-destructive/10' },
+  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Voz serena, autoritativa e profissional — documentário', color: 'border-chart-2 bg-chart-2/10' },
+];
+
 export const VoiceGeneratorStep = ({
   script, language, onAudioGenerated, onNavigate, existingAudioUrl,
 }: VoiceGeneratorStepProps) => {
   const [ttsLanguage, setTtsLanguage] = useState(language || 'português');
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');
+  const [voiceStyle, setVoiceStyle] = useState('dopaminergico');
   const [speakingRate, setSpeakingRate] = useState(1.0);
   const [pitch, setPitch] = useState(0);
   const [generating, setGenerating] = useState(false);
@@ -74,7 +82,6 @@ export const VoiceGeneratorStep = ({
         setSelectedVoice(data.voices[0]?.name || '');
       }
     } catch {
-      // fallback
       setVoices([]);
     }
   };
@@ -113,6 +120,7 @@ export const VoiceGeneratorStep = ({
             text,
             language: ttsLanguage,
             voiceName: selectedVoice,
+            voiceStyle,
             speakingRate,
             pitch,
           }),
@@ -162,7 +170,8 @@ export const VoiceGeneratorStep = ({
         : data.engine === 'gemini-tts'
           ? 'Gemini TTS'
           : 'TTS';
-      toast.success(`🎙️ Áudio gerado com ${engineLabel}! (${data.characterCount.toLocaleString()} caracteres)`);
+      const styleLabel = VOICE_STYLES.find(s => s.value === voiceStyle)?.label || voiceStyle;
+      toast.success(`🎙️ Áudio gerado com ${engineLabel} (${styleLabel})! (${data.characterCount?.toLocaleString() || '?'} caracteres)`);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar áudio');
     } finally {
@@ -214,7 +223,7 @@ export const VoiceGeneratorStep = ({
   };
 
   const charCount = getCleanText().length;
-  const estimatedMinutes = Math.ceil(charCount / 900); // ~900 chars/min for narration
+  const estimatedMinutes = Math.ceil(charCount / 900);
 
   return (
     <motion.div
@@ -244,6 +253,30 @@ export const VoiceGeneratorStep = ({
         <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 bg-primary/10 text-primary border-primary/20">
           💰 TTS com fallback automático
         </Badge>
+      </div>
+
+      {/* 🎭 Voice Style Selector — NEW */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5" /> Estilo de Voz
+        </label>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {VOICE_STYLES.map(style => (
+            <button
+              key={style.value}
+              onClick={() => setVoiceStyle(style.value)}
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
+                voiceStyle === style.value
+                  ? `${style.color} shadow-md scale-[1.02]`
+                  : 'border-border hover:border-primary/30'
+              }`}
+            >
+              <span className="text-2xl">{style.emoji}</span>
+              <span className="text-xs font-semibold">{style.label}</span>
+              <span className="text-[9px] text-muted-foreground leading-tight">{style.desc}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Language Selection */}
@@ -404,8 +437,8 @@ export const VoiceGeneratorStep = ({
       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
         <p className="text-xs font-semibold text-primary">💡 Como funciona</p>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>O sistema tenta Google TTS primeiro e usa fallback automático se indisponível</li>
-          <li>Vozes premium mantêm a geração funcionando mesmo com falha de permissão no Google</li>
+          <li>Escolha o <strong>Estilo de Voz</strong> para definir a personalidade da narração (dopaminérgico, misterioso, etc.)</li>
+          <li>O sistema usa Gemini TTS com fallback automático para ElevenLabs e voz do navegador</li>
           <li>Na próxima etapa (Cenas), você pode usar este áudio ou subir outro</li>
           <li>O áudio gerado será transcrito automaticamente para sincronizar as cenas</li>
         </ul>

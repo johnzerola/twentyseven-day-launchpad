@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -99,7 +98,7 @@ serve(async (req) => {
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!ELEVENLABS_API_KEY) throw new Error("ElevenLabs não configurado.");
-    if (!GOOGLE_AI_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY não configurado.");
     if (!audioFile) throw new Error("Arquivo de áudio obrigatório.");
 
     const sceneDuration = isShort ? Math.min(parseInt(sceneDurationStr) || 3, 4) : (parseInt(sceneDurationStr) || 8);
@@ -376,7 +375,7 @@ ${chunkTranscript}
 YOU MUST generate EXACTLY ${expectedScenes} scenes. Each scene ~${sceneDuration}s. Cover ALL text. Style: ${videoStyle}.
 IMPORTANT: If you generate fewer than ${expectedScenes} scenes, the video will have visual gaps. Generate ALL ${expectedScenes}.`;
 
-        const scenes = await callAI(LOVABLE_API_KEY!, systemPrompt, userPrompt, toolDef);
+        const scenes = await callAI(GOOGLE_AI_API_KEY!, systemPrompt, userPrompt, toolDef);
         console.log(`  Chunk ${chunk.index + 1}: got ${scenes.length} scenes (expected ${expectedScenes})`);
         return scenes;
       });

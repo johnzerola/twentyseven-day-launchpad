@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -31,19 +30,19 @@ serve(async (req) => {
 
   try {
     const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
     const GATEWAY_URL = "GEMINI_COMPAT_URL";
-    if (!LOVABLE_API_KEY && !GOOGLE_AI_KEY) throw new Error("Nenhuma API key configurada (LOVABLE_API_KEY ou GOOGLE_AI_API_KEY).");
+    if (!GOOGLE_AI_API_KEY && !GOOGLE_AI_KEY) throw new Error("Nenhuma API key configurada (GOOGLE_AI_API_KEY ou GOOGLE_AI_API_KEY).");
 
     // Helper: call Lovable AI Gateway (preferred) with Gemini direct fallback
     async function callAI(messages: {role: string; content: string}[], options: { tools?: any[]; tool_choice?: any; temperature?: number; max_tokens?: number } = {}): Promise<any> {
       const model = "google/gemini-2.5-flash";
       // Try Lovable Gateway first
-      if (LOVABLE_API_KEY) {
+      if (GOOGLE_AI_API_KEY) {
         try {
           const resp = await fetch(GATEWAY_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GOOGLE_AI_API_KEY}` },
             body: JSON.stringify({
               model,
               messages,
@@ -212,12 +211,12 @@ RULES:
 - Return ONLY the JSON array, no markdown, no explanation`;
 
         // Try Lovable AI Gateway with audio URL (multimodal)
-        if (LOVABLE_API_KEY) {
+        if (GOOGLE_AI_API_KEY) {
           try {
             console.log("Trying audio transcription via AI Gateway (multimodal)...");
             const gatewayResp = await fetch(GATEWAY_URL, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GOOGLE_AI_API_KEY}` },
               body: JSON.stringify({
                 model: "google/gemini-2.5-flash",
                 messages: [{

@@ -1,3 +1,4 @@
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -6,7 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  return await callGeminiOpenAICompat(apiKey, body);
+};
 
 /**
  * Originality & Safety Score Engine
@@ -19,8 +23,8 @@ serve(async (req) => {
     const { scriptText, title, niche, videoType, style, language } = await req.json();
     if (!scriptText) throw new Error("scriptText is required");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -72,18 +76,11 @@ Also provide:
 
 Return ONLY valid JSON.`;
 
-    const resp = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.2,
-        max_tokens: 1500,
-      }),
+    const resp = await _ai({
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      max_tokens: 1500,
     });
 
     if (!resp.ok) throw new Error(`AI error: ${resp.status}`);

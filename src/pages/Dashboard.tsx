@@ -132,8 +132,8 @@ const Dashboard = () => {
     { icon: Sparkles, label: 'Títulos Virais', path: '/titles', desc: 'Gerar títulos + SEO' },
     { icon: FileText, label: 'Roteiros', path: '/scripts', desc: 'Criar roteiro com IA' },
     { icon: BarChart3, label: 'Niche Explorer', path: '/niches', desc: 'Explorar nichos lucrativos' },
-    { icon: Rocket, label: 'Growth Center', path: '/branding', desc: 'Revenue + Brand Kit' },
-    { icon: Layout, label: 'Workflow', path: '/workflow', desc: 'Pipeline de produção' },
+    { icon: Rocket, label: 'Growth Tools', path: '/growth-tools', desc: 'Trust Score + Séries' },
+    { icon: Layout, label: 'Tracker 30 Dias', path: '/tracker', desc: 'Plano de crescimento' },
   ];
 
   const nextActions = getNextActions();

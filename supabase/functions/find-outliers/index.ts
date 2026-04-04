@@ -168,7 +168,7 @@ serve(async (req) => {
     let dnaResults: any[] = [];
     if (extractDNA && outliers.length > 0) {
       const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-      if (LOVABLE_API_KEY) {
+      if (GOOGLE_AI_API_KEY) {
         try {
           const topOutliers = outliers.slice(0, 5);
           const outlierSummary = topOutliers.map((o, i) => 
@@ -177,7 +177,7 @@ serve(async (req) => {
 
           const dnaRes = await fetch(AI_URL, {
             method: "POST",
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [

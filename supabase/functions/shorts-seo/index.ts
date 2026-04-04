@@ -27,7 +27,7 @@ serve(async (req) => {
     if (!title) throw new Error("title required");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
     // ═══ SHORTS-SPECIFIC SCORING ═══
     const scores: Record<string, { score: number; weight: number; tip: string }> = {};
@@ -121,10 +121,10 @@ serve(async (req) => {
 
     // AI suggestions for Shorts optimization
     let aiSuggestions: any = null;
-    if (LOVABLE_API_KEY) {
+    if (GOOGLE_AI_API_KEY) {
       const aiRes = await fetch(AI_URL, {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash-lite",
           messages: [{

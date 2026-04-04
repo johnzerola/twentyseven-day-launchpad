@@ -9,23 +9,39 @@ const corsHeaders = {
 // ═══════════════════════════════════════════════════════════════════
 // ECONOMY CONFIG — Prevent runaway costs
 // ═══════════════════════════════════════════════════════════════════
-const MAX_RUNS_PER_DAY = 1;           // Once per day max
-const MAX_CHANNELS_PER_NICHE = 3;     // Was 5
-const MAX_NICHES_PER_RUN = 2;         // Was 4
+const MAX_RUNS_PER_DAY = 3;           // 3x per day for faster scaling
+const MAX_CHANNELS_PER_NICHE = 8;     // 8 channels per niche
+const MAX_NICHES_PER_RUN = 5;         // 5 niches per run = 40 channels/run
 
 const SCAN_CONFIGS = [
+  // English
   { niche: "true crime", style: "horror", language: "en", queries: ["true crime faceless channel", "unsolved mysteries dark", "crime documentary animated"] },
   { niche: "horror", style: "horror", language: "en", queries: ["creepypasta narration new", "scary stories animated", "horror faceless channel 2026"] },
   { niche: "AI/tech", style: "cinematic", language: "en", queries: ["AI news faceless", "tech explained animation", "artificial intelligence channel 2026"] },
   { niche: "finance", style: "cinematic", language: "en", queries: ["finance faceless channel", "money explained animation", "crypto analysis faceless"] },
   { niche: "motivacional", style: "cinematic", language: "en", queries: ["dark motivation channel", "stoic motivation faceless", "motivational speech compilation"] },
   { niche: "space", style: "documentary", language: "en", queries: ["space documentary faceless", "universe explained", "astronomy facts channel"] },
-  { niche: "curiosidades", style: "voce_sabia", language: "pt", queries: ["curiosidades faceless canal", "fatos incríveis canal", "canal dark curiosidades"] },
+  { niche: "psychology", style: "cinematic", language: "en", queries: ["psychology facts faceless", "dark psychology channel", "human behavior explained"] },
+  { niche: "history", style: "documentary", language: "en", queries: ["history documentary faceless", "ancient civilizations channel", "dark history animated"] },
+  { niche: "animals", style: "documentary", language: "en", queries: ["animal facts faceless", "wildlife documentary channel", "nature explained channel"] },
+  { niche: "survival", style: "cinematic", language: "en", queries: ["survival stories faceless", "survival tips channel", "wilderness survival animated"] },
+  { niche: "restoration", style: "asmr", language: "en", queries: ["restoration channel no talking", "satisfying restoration asmr", "tool restoration faceless"] },
+  { niche: "science", style: "cinematic", language: "en", queries: ["science explained faceless", "physics facts channel", "science documentary animated"] },
+  { niche: "conspiracy", style: "horror", language: "en", queries: ["conspiracy theories channel", "unexplained mysteries faceless", "dark theories animated"] },
+  { niche: "gaming-lore", style: "cinematic", language: "en", queries: ["gaming lore faceless", "video game iceberg", "game theory channel dark"] },
   { niche: "monetização-rápida", style: "pov", language: "en", queries: ["new youtube channel viral", "fastest growing faceless channel", "youtube shorts viral 2026"] },
+  // Portuguese
+  { niche: "curiosidades", style: "voce_sabia", language: "pt", queries: ["curiosidades faceless canal", "fatos incríveis canal", "canal dark curiosidades"] },
+  { niche: "terror-br", style: "horror", language: "pt", queries: ["histórias de terror canal", "creepypasta português", "canal dark stories brasil"] },
+  { niche: "finanças-br", style: "cinematic", language: "pt", queries: ["finanças canal faceless", "investimentos canal", "ganhar dinheiro youtube faceless"] },
+  // International
   { niche: "histoire", style: "documentary", language: "fr", queries: ["documentaire faceless chaîne", "histoire sombre animation", "faits incroyables chaîne"] },
   { niche: "wissen", style: "cinematic", language: "de", queries: ["wissen faceless kanal", "fakten animation kanal", "dunkle fakten deutsch"] },
   { niche: "korece", style: "animation", language: "ko", queries: ["한국 팩트 채널", "다크 스토리 애니메이션", "무서운 이야기 채널"] },
   { niche: "türkçe", style: "cinematic", language: "tr", queries: ["karanlık gerçekler kanal", "gizemli hikayeler", "faceless türkçe kanal"] },
+  { niche: "health", style: "cinematic", language: "en", queries: ["health facts faceless", "medical mysteries channel", "body facts animated"] },
+  { niche: "cooking-asmr", style: "asmr", language: "en", queries: ["cooking asmr no talking", "recipe channel faceless", "satisfying cooking channel"] },
+  { niche: "DIY", style: "cinematic", language: "en", queries: ["DIY projects faceless", "craft channel no face", "satisfying DIY compilation"] },
 ];
 
 serve(async (req) => {
@@ -33,12 +49,12 @@ serve(async (req) => {
 
   try {
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
