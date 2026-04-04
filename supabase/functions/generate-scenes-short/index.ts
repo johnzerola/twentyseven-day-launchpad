@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 // ==========================================
 // DOPAMINERGIC MASTER PROMPT BLOCK SYSTEM
@@ -160,11 +160,10 @@ serve(async (req) => {
 
   try {
     const { script, durationSeconds, videoStyle, characters, customStyleNotes, enableASMR } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
 
     const dur = parseInt(durationSeconds) || 45;
     const category = getDurationCategory(dur);
@@ -345,26 +344,29 @@ SCENE 1 IS EVERYTHING. If scene 1 doesn't STOP THE SCROLL, the video FAILS.
 The LAST scene must create an irresistible LOOP back to scene 1.
 NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
 
-    const res = await fetch(AI_URL, {
-      method: "POST", headers: aiHeaders,
+    const res = await fetch(`${GEMINI_BASE}?key=${GOOGLE_AI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate ${sceneCount} DOPAMINERGIC scenes (${category} category, ${dur}s) using Master Prompt Block format for this Short:\n\n${script}\n\nStyle: ${styleKey}\nReturn ONLY the JSON array. Each visualPrompt must be a vivid, timestamped cinematic shot description.` }
+        contents: [
+          { role: "user", parts: [{ text: `${systemPrompt}\n\nGenerate ${sceneCount} DOPAMINERGIC scenes (${category} category, ${dur}s) using Master Prompt Block format for this Short:\n\n${script}\n\nStyle: ${styleKey}\nReturn ONLY the JSON array. Each visualPrompt must be a vivid, timestamped cinematic shot description.` }] },
         ],
-        stream: false,
+        generationConfig: {
+          temperature: 0.8,
+          responseMimeType: "application/json",
+        },
       }),
     });
 
     if (!res.ok) {
+      const errText = await res.text();
+      console.error("Gemini API error:", res.status, errText);
       if (res.status === 429) return errResp("Rate limit.", 429);
-      if (res.status === 402) return errResp("Créditos insuficientes.", 402);
       throw new Error("Scene generation failed: " + res.status);
     }
 
     const d = await res.json();
-    const content = d.choices?.[0]?.message?.content || '';
+    const content = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
     let scenes: any[] = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
