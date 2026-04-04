@@ -1,7 +1,14 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -49,13 +56,7 @@ serve(async (req) => {
       `Scene ${i + 1}: "${s.text}"`
     ).join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const res = await _ai({
         model: "google/gemini-2.5-pro",
         messages: [
           {
@@ -204,8 +205,7 @@ SCENES:\n${sceneTexts}`
           },
         }],
         tool_choice: { type: "function", function: { name: "character_consistent_prompts" } },
-      }),
-    });
+      });
 
     if (!res.ok) {
       if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit excedido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });

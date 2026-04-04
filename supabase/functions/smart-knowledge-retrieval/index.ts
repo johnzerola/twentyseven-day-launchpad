@@ -1,7 +1,15 @@
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -21,8 +29,8 @@ serve(async (req) => {
     const { topic, niche, style, language, limit = 15 } = await req.json();
     if (!topic) throw new Error("topic is required");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -95,22 +103,14 @@ serve(async (req) => {
         const rerankAbort = new AbortController();
         const rerankTimeout = setTimeout(() => rerankAbort.abort(), 8000); // 8s max
         
-        const rerankRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        const rerankRes = await _ai({
             model: "google/gemini-2.5-flash-lite",
             max_completion_tokens: 256,
             messages: [
               { role: "system", content: `Return ONLY a JSON array of the ${limit} most relevant indexes (0-based) for the topic. No explanation.` },
               { role: "user", content: `Topic: "${topic}" (niche: ${niche || 'general'}, style: ${style || 'any'})\n\n${topCandidates.map((c, i) => `${i}: ${c.text.slice(0, 120)}`).join('\n')}` }
             ],
-          }),
-          signal: rerankAbort.signal,
-        });
+          });
         clearTimeout(rerankTimeout);
 
         if (rerankRes.ok) {

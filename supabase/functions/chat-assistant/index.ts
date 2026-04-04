@@ -1,7 +1,15 @@
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -1088,7 +1096,6 @@ async function executeTool(
       }
 
       case "gpt_expert_analysis": {
-        const lovableKey = Deno.env.get("LOVABLE_API_KEY");
         if (!lovableKey) { result = { error: "API key not configured" }; break; }
         
         const gptStyles: Record<string, string> = {
@@ -1099,17 +1106,13 @@ async function executeTool(
         };
         
         try {
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
+          const resp = await _ai({
               model: "openai/gpt-5",
               messages: [
                 { role: "system", content: gptStyles[args.style || 'data-driven'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto e específico." },
                 { role: "user", content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}` },
               ],
-            }),
-          });
+            });
           const data = await resp.json();
           result = { analysis: data.choices?.[0]?.message?.content || "No response", model: "gpt-5" };
         } catch (e: any) {
@@ -1134,20 +1137,15 @@ async function executeTool(
       // ===== NEW V5 TOOLS =====
       case "analyze_thumbnail_ctr": {
         // Use AI to analyze thumbnail from URL
-        const lovKey = Deno.env.get("LOVABLE_API_KEY");
         if (!lovKey) { result = { error: "API key not configured" }; break; }
         try {
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${lovKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
+          const resp = await _ai({
               model: "google/gemini-2.5-flash",
               messages: [
                 { role: "system", content: "You are a YouTube thumbnail CTR expert. Analyze the thumbnail and provide: composition score (1-10), emotional impact (1-10), color analysis, text readability, estimated CTR potential, and 3 specific improvements. Respond in Portuguese brasileiro." },
                 { role: "user", content: `Analyze this YouTube thumbnail for CTR potential.\nImage URL: ${args.image_url}\nVideo title: ${args.video_title || 'Unknown'}\nNiche: ${args.niche || 'general'}\n\nProvide detailed analysis with scores and actionable improvements.` },
               ],
-            }),
-          });
+            });
           const data = await resp.json();
           result = { analysis: data.choices?.[0]?.message?.content || "No analysis", model: "gemini-2.5-flash" };
         } catch (e: any) { result = { error: e.message }; }
@@ -1253,10 +1251,7 @@ async function executeTool(
 // Generate query embedding
 async function generateQueryEmbedding(text: string, apiKey: string): Promise<number[] | null> {
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const response = await _ai({
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: `You are an embedding generator. Given text, output ONLY a JSON array of exactly 768 floating-point numbers between -1 and 1 that represent the semantic meaning of the text. Output ONLY the JSON array, nothing else.` },
@@ -1276,8 +1271,7 @@ async function generateQueryEmbedding(text: string, apiKey: string): Promise<num
           },
         }],
         tool_choice: { type: "function", function: { name: "store_embedding" } },
-      }),
-    });
+      });
     if (!response.ok) return null;
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
@@ -1323,8 +1317,8 @@ serve(async (req) => {
     const currentUserId: string | null = userData.user.id || null;
 
     const { messages, currentPage, mode, onboardingData, conversationId } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     // ===== FETCH USER-SPECIFIC DATA =====
     let userProfileContext = '';
@@ -1548,15 +1542,11 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
 ## FORMATO: Diagnóstico + Semana 1-4 detalhada + Projeção Financeira
 ## REGRAS: Honesto, dados reais, adapte às horas, português brasileiro`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const response = await _ai({
           model: "google/gemini-2.5-flash",
           messages: [{ role: "system", content: onboardingPrompt }, ...messages],
           stream: true,
-        }),
-      });
+        });
       if (!response.ok) {
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1732,16 +1722,12 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
     // First AI call with tools — use fast model for tool selection
     const aiMessages = [{ role: "system", content: systemPrompt }, ...messages];
     
-    const firstResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const firstResponse = await _ai({
         model: "google/gemini-2.5-flash-lite",
         messages: aiMessages,
         tools: DOTTI_TOOLS,
         stream: false,
-      }),
-    });
+      });
 
     if (!firstResponse.ok) {
       if (firstResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1757,15 +1743,11 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
     // If model answered directly (no tools needed), stream it back
     if (!firstChoice?.tool_calls?.length && firstChoice?.content) {
       // Re-stream with the better model for quality response
-      const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const streamResponse = await _ai({
           model: "google/gemini-2.5-flash",
           messages: aiMessages,
           stream: true,
-        }),
-      });
+        });
       if (!streamResponse.ok) throw new Error("Stream error");
       return new Response(streamResponse.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
@@ -1824,16 +1806,12 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
 
       // Check if model wants more tools (non-streaming)
       if (toolRound < MAX_TOOL_ROUNDS) {
-        const nextResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const nextResponse = await _ai({
             model: "google/gemini-2.5-flash",
             messages: currentMessages,
             tools: DOTTI_TOOLS,
             stream: false,
-          }),
-        });
+          });
 
         if (!nextResponse.ok) {
           console.error("Multi-round tool call failed:", nextResponse.status);
@@ -1846,15 +1824,11 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
         // If no more tool calls, this is the final text response
         if (!currentChoice?.tool_calls?.length) {
           // Stream the final response
-          const finalStreamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
+          const finalStreamResponse = await _ai({
               model: "google/gemini-2.5-flash",
               messages: currentMessages,
               stream: true,
-            }),
-          });
+            });
 
           if (!finalStreamResponse.ok) throw new Error("Final stream error");
 
@@ -1867,15 +1841,11 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
 
     // If we exited the loop with tool calls done, stream final response
     if (toolRound > 0) {
-      const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const finalResponse = await _ai({
           model: "google/gemini-2.5-flash",
           messages: currentMessages,
           stream: true,
-        }),
-      });
+        });
 
       if (!finalResponse.ok) throw new Error("Final stream error");
 
@@ -1885,15 +1855,11 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
     }
 
     // No tools called — stream direct response
-    const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const streamResponse = await _ai({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
         stream: true,
-      }),
-    });
+      });
 
     if (!streamResponse.ok) throw new Error("Stream error");
 

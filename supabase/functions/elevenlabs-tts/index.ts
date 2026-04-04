@@ -1,3 +1,4 @@
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
@@ -62,7 +63,7 @@ serve(async (req) => {
     if (!text?.trim()) throw new Error("Text is required");
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const voice = voiceId || "onwK4e9ZLuTAKqWW03F9";
     let audioBuffer: ArrayBuffer;
     let usedEngine = "elevenlabs";

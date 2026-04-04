@@ -1,8 +1,15 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -52,17 +59,13 @@ serve(async (req) => {
     let baseRpm = countryData.rpm;
 
     // === STEP 0: AI generates multiple search queries for deeper discovery ===
-    const queryGenRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const queryGenRes = await _ai({
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: "Generate 4 different YouTube search queries to find channels and videos in a niche. Include the main query, a sub-niche query, a trending angle, and a competitor discovery query. Return JSON array of strings only." },
           { role: "user", content: `Niche: "${niche}", region: ${region}, language: ${lang}. Return 4 search queries as JSON array.` },
         ],
-      }),
-    });
+      });
     
     let searchQueries = [niche];
     if (queryGenRes.ok) {
@@ -287,10 +290,7 @@ serve(async (req) => {
     const monetizedCount = channels.filter((c: any) => c.isMonetized).length;
     const avgSubs = channels.length > 0 ? Math.round(channels.reduce((s: number, c: any) => s + (c as any).subscribers, 0) / channels.length) : 0;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResponse = await _ai({
         model: "google/gemini-2.5-flash",
         messages: [
           {
@@ -514,8 +514,7 @@ Provide intelligence report with REALISTIC monetization projections for ${region
           },
         }],
         tool_choice: { type: "function", function: { name: "niche_intelligence_report" } },
-      }),
-    });
+      });
 
     let analysis = null;
     if (aiResponse.ok) {

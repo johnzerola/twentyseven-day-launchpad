@@ -1,8 +1,15 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -11,13 +18,7 @@ const corsHeaders = {
 // We ask the model to convert text into a normalized numerical representation
 async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
   // Use Google's text-embedding model via the gateway
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const response = await _ai({
       model: "google/gemini-2.5-flash-lite",
       messages: [
         {
@@ -48,8 +49,7 @@ async function generateEmbedding(text: string, apiKey: string): Promise<number[]
         }
       ],
       tool_choice: { type: "function", function: { name: "store_embedding" } }
-    }),
-  });
+    });
 
   if (!response.ok) {
     const errText = await response.text();

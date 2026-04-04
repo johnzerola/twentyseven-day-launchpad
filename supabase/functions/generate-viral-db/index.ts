@@ -1,7 +1,14 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -149,13 +156,7 @@ serve(async (req) => {
     const schema = toolSchemas[type] || toolSchemas.hooks;
     const prompt = prompts[type] || prompts.hooks;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await _ai({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "Você é um especialista em YouTube viral com 25 anos de experiência. Gere conteúdo em português do Brasil. Seja criativo e prático." },
@@ -163,8 +164,7 @@ serve(async (req) => {
         ],
         tools: [{ type: "function", function: schema }],
         tool_choice: { type: "function", function: { name: schema.name } },
-      }),
-    });
+      });
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });

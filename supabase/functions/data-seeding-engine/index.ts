@@ -1,8 +1,15 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -21,11 +28,7 @@ async function aiAnalyze(prompt: string, apiKey: string, toolDef?: any): Promise
     body.tool_choice = { type: "function", function: { name: toolDef.function.name } };
   }
 
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const resp = await _ai(body);
 
   if (!resp.ok) {
     const t = await resp.text();
@@ -124,10 +127,7 @@ const VIRAL_PATTERN_TOOL = {
 
 // ── Embedding generator ──
 async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const resp = await _ai({
       model: "google/gemini-2.5-flash-lite",
       messages: [
         { role: "system", content: "Output ONLY a JSON array of exactly 768 floats between -1 and 1 representing the semantic meaning. No explanation." },
@@ -147,8 +147,7 @@ async function generateEmbedding(text: string, apiKey: string): Promise<number[]
         },
       }],
       tool_choice: { type: "function", function: { name: "store_embedding" } },
-    }),
-  });
+    });
 
   if (!resp.ok) throw new Error(`Embedding ${resp.status}`);
   const data = await resp.json();

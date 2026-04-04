@@ -1,8 +1,15 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
@@ -100,10 +107,7 @@ Adaptation rules:
 
 Generate 3-6 tasks for today. Each task must have: type (script/short/community/publish/analyze/rest), title, description, priority (high/medium/low), estimated_minutes.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResp = await _ai({
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: "You are a YouTube production planner. Output ONLY via the tool call." },
@@ -139,8 +143,7 @@ Generate 3-6 tasks for today. Each task must have: type (script/short/community/
           },
         }],
         tool_choice: { type: "function", function: { name: "create_plan" } },
-      }),
-    });
+      });
 
     if (!aiResp.ok) throw new Error(`AI error: ${aiResp.status}`);
     const aiData = await aiResp.json();

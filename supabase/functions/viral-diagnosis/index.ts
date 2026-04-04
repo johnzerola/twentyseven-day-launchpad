@@ -1,7 +1,15 @@
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
@@ -50,8 +58,8 @@ serve(async (req) => {
 
   try {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     // Auth
     const authHeader = req.headers.get("Authorization") || "";
@@ -221,18 +229,14 @@ RULES:
 - If subs < 100, focus on Shorts strategy for rapid growth
 - All text in Portuguese (PT-BR)`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiRes = await _ai({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "You are a YouTube growth AI. Respond ONLY in valid JSON. No markdown, no explanation." },
           { role: "user", content: diagnosisPrompt },
         ],
         temperature: 0.7,
-      }),
-    });
+      });
 
     if (!aiRes.ok) throw new Error(`AI request failed: ${aiRes.status}`);
 

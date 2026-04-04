@@ -1,8 +1,15 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -69,10 +76,7 @@ serve(async (req) => {
 
       let aiAnalysis: any[] = [];
       try {
-        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const aiRes = await _ai({
             model: "google/gemini-2.5-flash-lite",
             tools: [{
               type: "function",
@@ -108,8 +112,7 @@ serve(async (req) => {
               { role: "system", content: "Analyze viral YouTube titles. Be concise and specific." },
               { role: "user", content: `Niche: ${searchNiche}\n\nTitles:\n${titlesForAnalysis.map((t, i) => `${i}. "${t.title}" (${t.views} views, by ${t.channel})`).join('\n')}` },
             ],
-          }),
-        });
+          });
         if (aiRes.ok) {
           const aiData = await aiRes.json();
           const parsed = JSON.parse(aiData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{}');
