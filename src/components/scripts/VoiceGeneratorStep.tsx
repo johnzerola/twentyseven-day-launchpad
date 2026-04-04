@@ -214,7 +214,7 @@ export const VoiceGeneratorStep = ({
           ⏱️ ~{estimatedMinutes} min de áudio
         </Badge>
         <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 bg-primary/10 text-primary border-primary/20">
-          💰 Google TTS — Gratuito (4M chars/mês)
+          💰 TTS com fallback automático
         </Badge>
       </div>
 
