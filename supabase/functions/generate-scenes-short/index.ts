@@ -303,7 +303,7 @@ ${CAMERA_SHOT_VARIETY_RULES}
 
 ${MULTI_CHARACTER_RULES}
 
-${buildConditionalTraining(script || '')}
+${buildConditionalTraining(script || '', enableASMR)}
 
 EXAMPLE: If narrator says "No Egito antigo foi achado isso, esqueça tudo que aprendeu na escola sobre o Egito":
 - Scene 1 (0-2s): Aerial drone over Egyptian pyramids at sunset, sand particles floating, golden hour
