@@ -129,31 +129,161 @@ MATERIAL SPECIFICITY MATTERS:
  * Night/Weather/Historical templates for challenging conditions
  */
 export const SPECIAL_CONDITIONS_TEMPLATES = `
-═══ SPECIAL CONDITIONS — Templates for Challenging Scenes ═══
+═══ SPECIAL CONDITIONS — Production-Ready Visual Templates ═══
 
-🌙 NIGHT SCENES:
-Always specify artificial light source. Dark scenes are HARD for AI — be extra explicit:
-- "dark night scene" + specific light source (street lamp, moonlight, neon signs, phone screen, flashlight)
-- Areas of shadow vs light clearly described
-- Light color temperature (warm orange street lamp vs cool blue moonlight)
-Example: "Wide shot dark night street, [character] walking illuminated by warm orange street lamp overhead creating pool of light, surrounding areas in deep shadow, distant neon store signs providing colored accent lights"
+Each template below is a COMPLETE block you MUST inject when the condition is detected.
+Copy the relevant descriptors VERBATIM into your prompt, then customize character/location specifics.
 
-🌧️ RAIN:
-"heavy rain falling visible in frame, [character] getting wet, puddles on ground reflecting lights, rain drops on camera lens effect, overcast gray sky, wet surfaces gleaming"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌙 NIGHT SCENES (3 Sub-Templates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-❄️ SNOW:
-"snow falling gently, snowflakes visible against dark background, white snow covering ground, cold atmosphere, breath visible in cold air, frosted surfaces"
+CRITICAL: Dark scenes are the HARDEST for AI video. Be MAXIMALLY explicit about light sources.
 
-🌫️ FOG:
-"thick fog reducing visibility, mysterious atmosphere, soft diffused lighting, silhouettes barely visible through mist, depth obscured"
+NIGHT-URBAN:
+  Lighting: warm orange sodium street lamps creating isolated pools of light on wet asphalt, cool blue moonlight on rooftops, distant neon signs (magenta, cyan, amber) providing colored rim lights, car headlights sweeping intermittent beams
+  Environment: reflective wet pavement mirroring colored lights, steam rising from manhole covers catching light, deep black shadows between lamp pools, lit windows in buildings providing background warmth
+  Technical: lifted shadows to 15%, visible grain, anamorphic lens flares from point light sources, shallow DOF f/1.4
 
-💨 WIND:
-"strong wind blowing, [character] hair and clothing moving dynamically, trees swaying, leaves flying, dust particles in air"
+NIGHT-RURAL:
+  Lighting: bright full moon casting cool blue-silver light, single warm yellow porch light or bonfire as primary, stars visible in sky, fireflies or ambient bioluminescence
+  Environment: silhouetted tree lines against dark blue sky, grass catching moonlight highlights, distant house lights as orange pinpoints, ground texture visible only in lit areas
+  Technical: high ISO grain aesthetic, long exposure feel, deep blacks with blue tint, mist catching moonbeams
 
-📜 HISTORICAL PERIOD:
-Always mention: decade/era, period-accurate clothing, era-specific architecture, authentic props
-Example: "1950s American diner interior, chrome bar stools with red vinyl, checkered floor, jukebox in corner, waitress in period-accurate uniform, vintage posters on walls, warm tungsten lighting"
+NIGHT-INTERIOR:
+  Lighting: practical lamp casting warm pool on desk/table, TV/monitor screen casting cold blue on character face, ambient city light through window creating geometric shadows, candle flame (warm orange, flickering micro-shadows)
+  Environment: most of room in shadow, lit objects hyperdetailed, dark corners suggesting depth, reflective surfaces (glasses, screens, polished wood) catching light points
+  Technical: mixed color temperature (warm practical + cool screen), visible light falloff, intimate shallow DOF
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌧️ RAIN (3 Intensity Levels)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LIGHT-RAIN (Drizzle):
+  Visual: fine misty rain barely visible except against dark backgrounds and light sources, damp surfaces with subtle sheen, occasional droplet on camera lens, overcast flat gray sky diffusing all shadows
+  Sound layer: gentle patter on surfaces, wet footsteps, distant gutter dripping
+  Character: slightly damp hair, collar turned up, unhurried pace
+
+HEAVY-RAIN (Downpour):
+  Visual: thick visible rain streaks catching light, explosive splashing on ground, deep puddles reflecting and distorting lights, rain curtain reducing background visibility by 40%, water streaming down windows and surfaces, soaked clothing clinging to body
+  Sound layer: roaring rain on surfaces, splashing footsteps, thunder rumbles, water rushing in gutters
+  Character: completely soaked, squinting, hair plastered to face, clothes darkened by water
+  Technical: high shutter speed to freeze drops OR low shutter for streak effect, backlit rain against dark background for maximum visibility
+
+STORM:
+  Visual: violent horizontal rain, lightning flashes illuminating entire scene in cold blue-white (0.5s), trees bending, debris in air, extreme puddle splashing, sky dark greenish-gray
+  Sound layer: howling wind, cracking thunder, rain hammering metal surfaces, distant alarm
+  Technical: lightning as dramatic key light (intermittent), handheld camera shake, Dutch angle for instability
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❄️ SNOW (2 Templates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GENTLE-SNOW:
+  Visual: large soft snowflakes drifting slowly, white ground cover reflecting ambient light (scene appears brighter), bare tree branches with snow accumulation, frosted window panes with ice crystal patterns, visible breath condensation
+  Color: desaturated palette, blue-white highlights, warm interior lights contrasting cold exterior
+  Character: bundled in layers, rosy cheeks and nose tip, steaming breath at each exhale, careful footsteps crunching in snow
+  Sound layer: muffled ambient (snow absorbs sound), crisp footstep crunches, wind whisper, distant church bell
+
+BLIZZARD:
+  Visual: dense horizontal snow reducing visibility to 3-5 meters, whiteout conditions, character struggling against wind, snow accumulating on clothing in real-time, ice forming on exposed surfaces
+  Color: near-monochrome white-gray, blue shadows, zero warm tones unless artificial light
+  Technical: shallow DOF to emphasize depth lost in snow, particle density high, wind-driven snow direction consistent frame-to-frame
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌫️ FOG & MIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FOG:
+  Visual: thick volumetric fog reducing visibility progressively — foreground clear, mid-ground hazy, background invisible. Objects fade into white/gray. Light sources create dramatic god rays and halos through fog. Silhouettes emerge gradually.
+  Lighting: diffused omnidirectional (no hard shadows), light sources visible as bright orbs with halos, headlights create cone beams through fog
+  Atmosphere: mysterious, isolating, sounds muffled, claustrophobic despite open space
+  Technical: deep DOF (everything soft anyway), desaturated colors, high key for daylight fog, low key for night fog
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💨 WIND (2 Templates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GENTLE-WIND:
+  Visual: hair flowing softly, light fabric rippling, leaves tumbling lazily, grass swaying in waves, curtains billowing through open window
+  Technical: slow motion 60fps captures subtle movement, backlit particles (dust, pollen) visible in air
+
+STRONG-WIND:
+  Visual: hair whipping violently, coat flapping aggressively, trees bending 20-30 degrees, papers and small debris flying, character bracing and leaning into wind, squinting eyes
+  Sound layer: howling wind, rattling windows, flapping fabric, whistling through gaps
+  Technical: handheld slight shake suggesting wind hitting camera, particles flying past lens
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📜 HISTORICAL PERIODS (5 Era Templates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ANCIENT (Egypt/Greece/Rome, pre-500 AD):
+  Architecture: stone columns, marble floors, terracotta walls, oil lamp niches, open courtyards, mosaic floors
+  Clothing: draped fabric (togas, tunics, linen wraps), sandals, gold jewelry, leather armor
+  Props: clay pots, scrolls, bronze weapons, wax tablets, amphoras, torches
+  Lighting: fire-based only — torches, oil lamps, bonfires, natural sunlight through openings
+  Color: earth tones (ochre, terracotta, olive), gold accents, deep blues for royalty
+  Film aesthetic: Ridley Scott color grade, warm desaturated, grain
+
+MEDIEVAL (500-1500 AD):
+  Architecture: stone castles, thatched-roof villages, Gothic cathedrals, timber frames, cobblestone
+  Clothing: chainmail, tunics, cloaks with clasps, leather boots, head coverings
+  Props: swords, shields, goblets, wooden tables, candelabras, hay, horses
+  Lighting: candlelight (warm flickering), fireplace, narrow window shafts of daylight, torches in sconces
+  Color: muted earth palette, deep reds and golds for nobility, browns and grays for commoners
+  Film aesthetic: desaturated, cool shadows, warm fire highlights, film grain heavy
+
+RENAISSANCE/BAROQUE (1400-1700):
+  Architecture: ornate palaces, domed ceilings with frescoes, marble staircases, grand halls, arched windows
+  Clothing: elaborate gowns, ruffs, doublets, velvet, silk, lace details, feathered hats
+  Props: oil paintings, candelabras, quill and ink, globes, lutes, rich tapestries
+  Lighting: Rembrandt/Caravaggio chiaroscuro — single strong directional light, deep dramatic shadows
+  Color: rich palette (deep red, gold, emerald, royal blue), warm candlelight dominance
+
+VICTORIAN/INDUSTRIAL (1837-1901):
+  Architecture: brick factories, gas-lit streets, ornate parlors, iron railings, cobblestone, fog-shrouded alleys
+  Clothing: top hats, long coats, corsets, high collars, pocket watches, parasols, gloves
+  Props: gas lamps, steam engines, horse carriages, typewriters, leather-bound books, telegraph
+  Lighting: gas lamp warm yellow, overcast daylight through soot-streaked windows, candlelight
+  Color: sepia-warm palette, industrial grays, green-tinted shadows, copper highlights
+  Film aesthetic: period drama color grade, soft diffusion, vignetting
+
+MID-20TH CENTURY (1940s-1960s):
+  Architecture: art deco buildings, chrome diners, suburban houses, neon signs, drive-in theaters
+  Clothing: fedoras, swing dresses, leather jackets, poodle skirts, military uniforms, cat-eye glasses
+  Props: rotary phones, jukeboxes, vintage cars (fins and chrome), tube radios, vinyl records, cigarettes in holders
+  Lighting: warm tungsten interior, neon exterior, dramatic noir shadows for 40s, bright Technicolor for 50s-60s
+  Color: 1940s = noir B&W or desaturated; 1950s = saturated Kodachrome pastels; 1960s = bold pop colors
+  Film aesthetic: era-matched film stock emulation, period-accurate color science
 `;
+
+/**
+ * Exportable individual condition templates for targeted injection
+ */
+export const NIGHT_TEMPLATES = {
+  urban: 'warm orange sodium street lamps creating pools of light on wet asphalt, cool blue moonlight on rooftops, neon signs providing colored rim lights, reflective wet pavement, steam from manholes, deep black shadows, anamorphic lens flares, lifted shadows 15%',
+  rural: 'full moon casting blue-silver light, warm yellow porch light as primary, silhouetted tree lines, stars visible, fireflies, high ISO grain, deep blacks with blue tint, mist catching moonbeams',
+  interior: 'practical lamp warm pool, TV screen cold blue on face, ambient city light through window, candle flickering micro-shadows, most of room in shadow, mixed color temperature, intimate shallow DOF',
+};
+
+export const RAIN_TEMPLATES = {
+  light: 'fine misty rain visible against light sources, damp surfaces with subtle sheen, overcast flat gray sky diffusing shadows, gentle patter',
+  heavy: 'thick rain streaks catching light, explosive ground splashing, deep puddles reflecting lights, rain curtain reducing visibility, soaked clothing clinging, backlit rain for visibility',
+  storm: 'violent horizontal rain, lightning flashes in cold blue-white, trees bending, debris in air, howling wind, handheld camera shake, Dutch angle',
+};
+
+export const SNOW_TEMPLATES = {
+  gentle: 'large soft snowflakes drifting, white ground reflecting light, frosted windows, visible breath condensation, desaturated blue-white palette, muffled ambient sounds, crisp footstep crunches',
+  blizzard: 'dense horizontal snow, visibility 3-5m, whiteout, character struggling against wind, near-monochrome white-gray, zero warm tones unless artificial light',
+};
+
+export const HISTORICAL_ERA_TEMPLATES = {
+  ancient: 'stone columns, marble floors, draped togas/tunics, gold jewelry, clay pots, scrolls, torches and oil lamps only, earth tones (ochre, terracotta, olive), Ridley Scott warm desaturated grade',
+  medieval: 'stone castles, cobblestone, chainmail/tunics/cloaks, swords, candelabras, candlelight flickering, muted earth palette, heavy film grain, cool shadows warm fire highlights',
+  renaissance: 'ornate palaces, domed frescoed ceilings, marble stairs, elaborate gowns, ruffs, velvet, Rembrandt chiaroscuro lighting, rich deep palette (red, gold, emerald)',
+  victorian: 'brick factories, gas-lit foggy streets, top hats, long coats, corsets, gas lamp warm yellow, sepia palette, industrial grays, soft diffusion vignetting',
+  midcentury: 'art deco, chrome diners, neon signs, fedoras, swing dresses, vintage cars, warm tungsten interior, era-matched film stock emulation',
+};
 
 /**
  * Multi-Character Scene Rules
