@@ -617,13 +617,13 @@ ${ANTI_SLOP_DIRECTIVE}
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
 Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
 
-        hookText = await callAiGatewayNonStreaming(
-          LOVABLE_API_KEY,
+        hookText = await callGeminiWithFallback(
+          GOOGLE_AI_API_KEY,
           hookSystemPrompt,
           `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
           {
-            primaryModel: "google/gemini-2.5-pro",
-            fallbackModel: "openai/gpt-5",
+            primaryModel: "gemini-2.5-pro",
+            fallbackModel: "gemini-2.5-flash",
             maxTokens: 2000,
             label: `PHASE-0 HOOK runId=${runId}`,
           },
