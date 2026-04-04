@@ -149,6 +149,7 @@ const Scripts = () => {
       try {
         const state = {
           topic, niche, script, videoType, videoStyle, duration, language,
+          activeStep, characters, syncedScenes, customStyleNotes, enableASMR,
           activeStep, characters, syncedScenes, customStyleNotes,
           selectedChannelId, sceneBlueprintJson,
         };
