@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Compass, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield, TrendingUp, Database, Crosshair } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +13,7 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
-// v2.4: Simplified menu - merged redundant pages
+// v3.0: Consolidated sidebar — 8 items (merged PowerTools→GrowthTools, ShortsTrends→ViralDB, removed KnowledgeAdmin)
 const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'Tracker 30 Dias', icon: Rocket, path: '/tracker' },
@@ -22,12 +22,7 @@ const navItems = [
   { key: 'DubSpy', icon: Search, path: '/search' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
-  { key: 'Niche Explorer', icon: Compass, path: '/niches' },
-  { key: 'Shorts Trends', icon: TrendingUp, path: '/shorts-trends' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
-  { key: 'Power Tools', icon: Crosshair, path: '/power-tools' },
-  { key: 'Multichannel', icon: Layers, path: '/multichannel' },
-  { key: 'Knowledge Admin', icon: Database, path: '/knowledge' },
 ];
 
 const TIER_COLORS: Record<string, string> = {
