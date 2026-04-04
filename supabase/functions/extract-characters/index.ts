@@ -10,22 +10,11 @@ serve(async (req) => {
 
   try {
     const { script, language } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!script?.trim()) throw new Error("Script is required");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert character designer for cinematic video production. Extract ALL characters/people mentioned or implied in a video script. For each character, provide EXTREMELY detailed visual descriptions in structured JSON format suitable for AI image generation consistency across multiple scenes.
+    const systemPrompt = `You are an expert character designer for cinematic video production. Extract ALL characters/people mentioned or implied in a video script. For each character, provide EXTREMELY detailed visual descriptions suitable for AI image generation consistency across multiple scenes.
 
 Rules:
 - If a character's appearance isn't explicitly described, infer reasonable details from context
@@ -33,97 +22,71 @@ Rules:
 - Be very specific about facial features, body type, clothing items
 - Include personality traits that affect visual portrayal
 - Language for name/description fields: ${language || 'português'}
-- Physical descriptions MUST be in English for AI image generation consistency`,
+- Physical descriptions MUST be in English for AI image generation consistency
+
+Respond ONLY in valid JSON with this exact structure:
+{
+  "characters": [
+    {
+      "name": "string",
+      "gender": "male|female|non-binary",
+      "age": number,
+      "role": "string (e.g. Protagonista, Narrador, Vilão, Mentor)",
+      "appearance": {
+        "skin_color": "string",
+        "hair_color": "string",
+        "hair_style": "string",
+        "eye_color": "string",
+        "body_type": "string",
+        "height": "string"
+      },
+      "facial_features": {
+        "eyebrows": "string",
+        "nose": "string",
+        "mouth": "string",
+        "ears": "string",
+        "face_shape": "string"
+      },
+      "clothing": {
+        "shirt": "string",
+        "pants": "string",
+        "shoes": "string",
+        "accessories": "string"
+      },
+      "personality": ["trait1", "trait2", "trait3"]
+    }
+  ]
+}`;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            { role: "user", parts: [{ text: `${systemPrompt}\n\nExtract all characters from this script with full visual detail.\n\nSCRIPT:\n${script.slice(0, 10000)}` }] },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            responseMimeType: "application/json",
           },
-          {
-            role: "user",
-            content: `Extract all characters from this script with full visual detail.\n\nSCRIPT:\n${script.slice(0, 10000)}`,
-          },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "extracted_characters",
-            description: "Return the list of characters found in the script with detailed visual attributes",
-            parameters: {
-              type: "object",
-              properties: {
-                characters: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string", description: "Character name or role" },
-                      gender: { type: "string", enum: ["male", "female", "non-binary"], description: "Character gender" },
-                      age: { type: "number", description: "Character age" },
-                      role: { type: "string", description: "Role in the story (e.g. Protagonista, Narrador, Vilão, Mentor)" },
-                      appearance: {
-                        type: "object",
-                        properties: {
-                          skin_color: { type: "string", description: "e.g. light, tan, olive, brown, dark brown, pale" },
-                          hair_color: { type: "string", description: "e.g. dark brown, black, blonde, red, gray, white" },
-                          hair_style: { type: "string", description: "e.g. short cropped, long wavy, buzz cut, braided, slicked back" },
-                          eye_color: { type: "string", description: "e.g. brown, blue, green, hazel, dark brown" },
-                          body_type: { type: "string", description: "e.g. athletic, slim, muscular, stocky, average" },
-                          height: { type: "string", description: "e.g. 1.75m, tall, short, average height" },
-                        },
-                        required: ["skin_color", "hair_color", "hair_style", "eye_color", "body_type", "height"],
-                        additionalProperties: false,
-                      },
-                      facial_features: {
-                        type: "object",
-                        properties: {
-                          eyebrows: { type: "string", description: "e.g. thick arched, thin straight, bushy" },
-                          nose: { type: "string", description: "e.g. straight medium, wide, pointed, Roman" },
-                          mouth: { type: "string", description: "e.g. thin lips, full lips, medium" },
-                          ears: { type: "string", description: "e.g. normal size, small, slightly protruding" },
-                          face_shape: { type: "string", description: "e.g. angular jaw, round, oval, square, heart-shaped" },
-                        },
-                        required: ["eyebrows", "nose", "mouth", "ears", "face_shape"],
-                        additionalProperties: false,
-                      },
-                      clothing: {
-                        type: "object",
-                        properties: {
-                          shirt: { type: "string", description: "e.g. dark green military jacket, white dress shirt" },
-                          pants: { type: "string", description: "e.g. black jeans, khaki trousers, dark suit pants" },
-                          shoes: { type: "string", description: "e.g. brown leather boots, white sneakers, black dress shoes" },
-                          accessories: { type: "string", description: "e.g. silver watch, round glasses, gold chain, none" },
-                        },
-                        required: ["shirt", "pants", "shoes", "accessories"],
-                        additionalProperties: false,
-                      },
-                      personality: {
-                        type: "array",
-                        items: { type: "string" },
-                        description: "3-5 personality traits e.g. brave, curious, determined, mysterious, calm",
-                      },
-                    },
-                    required: ["name", "gender", "age", "role", "appearance", "facial_features", "clothing", "personality"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["characters"],
-              additionalProperties: false,
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "extracted_characters" } },
-      }),
-    });
+        }),
+      }
+    );
 
     if (!res.ok) {
+      const errText = await res.text();
+      console.error("Gemini API error:", res.status, errText);
       if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (res.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`AI error: ${res.status}`);
+      throw new Error(`Gemini API error: ${res.status}`);
     }
 
     const data = await res.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call response");
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) throw new Error("No content in Gemini response");
 
-    const result = JSON.parse(toolCall.function.arguments);
+    const result = JSON.parse(content);
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
