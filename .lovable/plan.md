@@ -1,105 +1,157 @@
 
 
-# Plano de Auditoria e Correção do Pipeline Completo de Roteiros
+# Auditoria Completa + Plano de Escala do Sistema
 
-## Problema Central Identificado
+## Diagnóstico Atual
 
-**76 edge functions** ainda usam `LOVABLE_API_KEY` via o gateway `ai.gateway.lovable.dev`, que retorna **402 "Créditos insuficientes"**. As funções críticas do pipeline de roteiros — `generate-script`, `generate-synced-prompts`, `generate-visual-prompts`, `predict-retention`, `score-script`, `refine-script` — vão quebrar ao serem chamadas.
+### Dados na Base (PROBLEMA CRITICO: Volume Baixo)
+| Recurso | Atual | Meta |
+|---------|-------|------|
+| Canais analisados | 715 | 5.000+ |
+| Títulos virais | 2.142 | 50.000+ |
+| Hooks | 375 | 5.000+ |
+| Padrões virais | 34 | 500+ |
+| Content DNA | 146 | 2.000+ |
+| Keywords SEO | 25 | 10.000+ |
+| Thumbnails patterns | 15 | 500+ |
+| Scene patterns | 0 | 300+ |
+| Ref channels | 12 | 200+ |
+| Calibração scores | 92 | 500+ |
 
-Apenas 3 funções foram migradas para o `GOOGLE_AI_API_KEY` direto: `extract-characters`, `generate-scenes-short`, `generate-titles`.
+### 402 "Créditos Insuficientes" — 69 funções ainda quebradas
+**69 edge functions** ainda usam `ai.gateway.lovable.dev` com `LOVABLE_API_KEY`. Isso inclui funções críticas como `chat-assistant` (Dotti), `find-competitors`, `emulate-channel`, `reverse-engineer-video`, `extract-content-dna`, `self-learning-engine`, e mais. Todas vão retornar **402** ao serem chamadas.
+
+### Sidebar Sobrecarregada (13 itens)
+O menu lateral tem 13 itens incluindo "Knowledge Admin" (técnico demais para usuários), rotas redundantes (Growth Tools vs Power Tools), e funcionalidades que poderiam ser consolidadas.
+
+### Voz sem Seletor de Estilo na UI
+O backend do TTS já suporta `voiceStyle` (dopaminergico, misterioso, energetico, calmo), mas a UI do `VoiceGeneratorStep` **não envia** esse parâmetro — a voz sempre sai no modo padrão.
 
 ---
 
-## Plano em 6 Partes
+## PLANO DE EXECUÇÃO (8 Partes)
 
-### PARTE 1: Migrar Funções Críticas do Pipeline para Gemini Direto
-**Funções a migrar (prioridade máxima — pipeline de roteiros):**
+### PARTE 1: Migrar as 69 Funções Restantes para Gemini Direto
+**Prioridade: CRITICA — tudo quebra sem isso**
 
-| Função | Modelo Atual | Ação |
-|--------|-------------|------|
-| `generate-script` | Gemini 2.5 Pro via Gateway | Migrar para `generativelanguage.googleapis.com` com `GOOGLE_AI_API_KEY`. Manter streaming via SSE. |
-| `refine-script` | Gemini Pro via Gateway | Migrar para Gemini direto. |
-| `score-script` | GPT + Gemini via Gateway | Migrar para Gemini direto (dual score pode usar 2 chamadas Gemini com temperaturas diferentes). |
-| `generate-synced-prompts` | Gemini 2.5 Pro via Gateway | Migrar para Gemini direto. Usar `responseMimeType: "application/json"` em vez de `tool_choice`. |
-| `generate-visual-prompts` | Gemini 2.5 Flash via Gateway | Migrar para Gemini direto. |
-| `predict-retention` | Gemini Flash Lite via Gateway | Migrar para Gemini direto. |
+Criar um helper reutilizável `_shared/gemini-direct.ts` (já existe parcialmente) e migrar em lotes:
 
-**Abordagem técnica:**
-- Substituir `https://ai.gateway.lovable.dev/v1/chat/completions` por `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=${GOOGLE_AI_API_KEY}`
-- Converter formato OpenAI (`messages[]`) → formato Gemini (`contents[]`)
-- Para `tool_choice`, usar `responseMimeType: "application/json"` com schema no prompt
-- Para streaming (`generate-script`), usar `streamGenerateContent?alt=sse` do Gemini
+**Lote A — Funções do Usuário (mais usadas):**
+- `chat-assistant` (Dotti) — maior e mais complexa, ~1900 linhas
+- `find-competitors`, `find-competitors-ai`
+- `emulate-channel`
+- `reverse-engineer-video`
+- `packaging-score`
 
-### PARTE 2: Voz Dopaminérgica e Magnética no TTS
-**Problema:** O Gemini TTS atual só injeta instruções de velocidade ("brisk pace" / "slowly"). Falta a instrução de voz **dopaminérgica, magnética e emocional**.
+**Lote B — Motores de Inteligência:**
+- `extract-content-dna`, `self-learning-engine`
+- `channel-intelligence`, `learn-channel-voice`
+- `viral-diagnosis`, `monetization-coach`
+- `next-best-action`, `audience-psychology-engine`
 
-**Correção no `google-tts/index.ts`:**
-- Adicionar `stylePrefix` rico ao texto enviado ao Gemini TTS:
-  ```
-  "Read this narration with INTENSE energy and magnetic charisma. 
-   Your voice must captivate — convey wonder, urgency, and emotion. 
-   Vary your pace dramatically: slow down for revelations, speed up for excitement. 
-   Use vocal emphasis on key words. Make the listener FEEL every sentence. 
-   Deliver like a world-class documentary narrator who makes people unable to stop listening:"
-  ```
-- Permitir ao usuário escolher "Estilo de voz" na UI (Energético, Calmo, Misterioso, Dopaminérgico)
-- Mapear cada estilo para instruções específicas no prompt do Gemini TTS
+**Lote C — Crons e Workers:**
+- `auto-scan-channels`, `analyze-viral-channels`
+- `viral-score-worker`, `evolve-patterns`
+- `data-seeding-engine`, `seed-elite-knowledge`
+- Todas as demais 50+ funções
 
-### PARTE 3: Consistência de Personagens nas Cenas
-**Estado atual:** O sistema já possui:
-- `CharacterManager` com biblioteca global (`global_characters`) e fotos de referência
-- `generate-synced-prompts` com "Character Identity Sheets" (150-200 palavras, cópia verbatim)
-- Regra de máximo 2 personagens por prompt
+**Abordagem:** Substituição mecânica — trocar URL + headers + formato de mensagem em cada função. Usar `responseMimeType: "application/json"` onde `tool_choice` era usado.
 
-**Verificação:** O fluxo está correto. Os personagens são passados como `characters[]` ao gerar cenas, e o prompt exige cópia verbatim das descrições. O `SceneViewer` mostra personagens por cena com detalhes.
+### PARTE 2: Escalar Base de Dados (de 715 canais para 5.000+)
+**Problema:** O auto-scan está limitado a 1 execução/dia, 2 nichos, 3 canais/nicho = máximo 6 canais/dia.
 
-**Melhoria a implementar:**
-- Quando há 3+ personagens numa cena, o sistema deve **automaticamente dividir** em sub-cenas de 8s com 2 personagens cada, em vez de depender apenas da instrução no prompt
-- Garantir que `charactersInScene` no JSON de saída inclua objetos ricos (nome + descrição visual) e não apenas strings
+**Solução:**
+1. Aumentar `MAX_RUNS_PER_DAY` de 1 → 3
+2. Aumentar `MAX_NICHES_PER_RUN` de 2 → 5
+3. Aumentar `MAX_CHANNELS_PER_NICHE` de 3 → 8
+4. Expandir `SCAN_CONFIGS` de 12 → 25 nichos (adicionar: psychology, history, animals, survival, restoration, ASMR, gaming lore, conspiracy, ancient civilizations, science, health, cooking, DIY, relationship)
+5. Criar uma função `bulk-data-seeder` que pode ser chamada manualmente para popular a base com 500+ canais de uma vez via queries especializadas
+6. Alimentar automaticamente `viral_titles_db`, `hook_library`, `scene_patterns` e `youtube_keywords` a partir de cada canal analisado
 
-### PARTE 4: Motor de Cenas — Sincronização e Qualidade Dopaminérgica
-**Estado atual:** `generate-synced-prompts` já implementa:
-- Cenas de 8s (limite Veo3), cobertura 100% do áudio
-- DarkPlanner v3 com trio de movimento obrigatório
-- Environment Identity Sheet (17 parâmetros)
-- Camera variety (rotação obrigatória de ângulos)
-- Dopaminergic visuals formula
+### PARTE 3: Simplificar a Sidebar (de 13 → 8 itens)
+**Consolidações:**
+- Fundir **Power Tools** dentro de **Growth Tools** como aba extra
+- Fundir **Shorts Trends** dentro de **Viral Database**
+- Remover **Knowledge Admin** do menu (mover para settings ou acesso via Dotti)
+- Resultado: Dashboard, Tracker, Roteiros, Títulos, DubSpy, Canais, Viral DB, Growth Tools
+
+### PARTE 4: Conectar Seletor de Estilo de Voz na UI
+**Bug atual:** `VoiceGeneratorStep` não passa `voiceStyle` ao chamar `google-tts`.
+
+**Correção:**
+1. Adicionar seletor de cards com 4 estilos (Dopaminérgico, Misterioso, Calmo, Energético) no componente
+2. Cada card com ícone, nome e descrição curta do tom
+3. Enviar `voiceStyle` no body da request ao gerar áudio
+4. Adicionar botão "Preview 5s" que gera amostra curta da voz no estilo selecionado
+
+### PARTE 5: Melhorar Qualidade do Áudio (Nível Adobe Podcast)
+**Estado atual:** O `AudioMasteringPanel` já tem um pipeline de 12 estágios (noise gate, EQ, compressor, limiter, LUFS). Mas:
+- O processamento é **client-side** com Web Audio API — funcional mas limitado
+- Falta **auto-apply** após gerar voz — o usuário tem que manualmente ir para o painel
 
 **Melhoria:**
-- Adicionar instrução explícita: "Every scene must create a VISCERAL emotional response — the viewer must feel compelled to keep watching. Use dramatic reveals, impossible-to-ignore beauty, and visual tension."
-- Reforçar no prompt que Scene 1 (Hook) precisa ser **visualmente impossível de ignorar** — escala épica + micro-detalhe + movimento de câmera dramático
+1. Após gerar voz no TTS, automaticamente aplicar preset "YouTube Narration" do mastering
+2. Adicionar preset "Adobe Podcast Style" (agressivo de-noise + clarity boost + warmth)
+3. Mostrar waveform antes/depois inline no VoiceGeneratorStep
+4. Integrar o de-noise como primeiro passo automático pós-geração
 
-### PARTE 5: Títulos, Thumbnails e SEO
-**Estado atual:** `generate-titles` já foi migrado para Gemini direto. Inclui:
-- Análise de concorrentes via YouTube Data API
-- Busca de tendências via Brave Search
-- Geração de títulos virais + A/B testing + SEO
+### PARTE 6: Consolidar Rotas Redundantes e Corrigir Links Mortos
+**Problemas encontrados:**
+- Dashboard tem "Quick Action" apontando para `/branding` que redireciona para `/growth-tools` (link indireto)
+- Dashboard tem "Quick Action" para `/workflow` que redireciona para `/tracker` (link indireto)
+- `PowerTools` mostra resultados como JSON bruto (`<pre>`) — precisa de formatação visual
 
-**Verificação necessária:** Confirmar que a função está retornando instruções de thumbnail (composição, paleta de cores, emoção-alvo). Se não estiver, adicionar ao prompt.
+**Correções:**
+- Atualizar QUICK_ACTIONS para apontar diretamente às rotas certas
+- Criar `ResultDisplay` formatado para cada tool do PowerTools (cards, badges, scores visuais)
 
-### PARTE 6: Idioma da Voz
-**Estado atual:** O TTS passa o `language` selecionado ao Gemini, mas o Gemini TTS detecta idioma automaticamente pelo texto do roteiro. Se o roteiro é gerado em inglês, a voz sai em inglês.
+### PARTE 7: Otimizar o Dotti (Chat Assistant)
+**Problemas:**
+- Usa `ai.gateway.lovable.dev` em ~10 pontos do código (vai dar 402)
+- Arquivo com ~1900 linhas — monolítico, difícil de manter
+- Função `generateQueryEmbedding` usa o gateway para embeddings
 
-**Verificação:** O fluxo `language` → `generate-script` (gera roteiro no idioma) → `google-tts` (narra o texto) funciona corretamente. O idioma é propagado.
+**Solução:**
+- Migrar todas as chamadas para Gemini direto
+- Para embeddings, usar `text-embedding-004` do Google diretamente
+- Manter streaming via SSE com formato OpenAI-compatible para o frontend
+
+### PARTE 8: Criar Pipeline de Enriquecimento Massivo
+**Para atingir as metas de volume (50k títulos, 5k hooks, 10k keywords):**
+
+1. Criar `mass-enrichment-pipeline` edge function que:
+   - Recebe uma lista de video IDs do YouTube
+   - Extrai títulos, tags, descrições, thumbnails
+   - Classifica com Gemini Flash-lite (barato e rápido)
+   - Popula `viral_titles_db`, `hook_library`, `youtube_keywords`, `thumbnail_patterns`
+
+2. Criar um "botão de admin" no dashboard para disparar enriquecimento manual por nicho
+
+3. Expandir o cron `auto-scan-channels` para também extrair dados dos vídeos top de cada canal (não apenas metadata do canal)
 
 ---
 
 ## Resumo de Arquivos a Editar
 
-1. `supabase/functions/generate-script/index.ts` — Migrar de Lovable Gateway para Gemini direto (streaming)
-2. `supabase/functions/refine-script/index.ts` — Migrar para Gemini direto
-3. `supabase/functions/score-script/index.ts` — Migrar para Gemini direto
-4. `supabase/functions/generate-synced-prompts/index.ts` — Migrar para Gemini direto
-5. `supabase/functions/generate-visual-prompts/index.ts` — Migrar para Gemini direto
-6. `supabase/functions/predict-retention/index.ts` — Migrar para Gemini direto
-7. `supabase/functions/google-tts/index.ts` — Adicionar instruções de voz dopaminérgica/magnética
-8. `src/components/scripts/VoiceGeneratorStep.tsx` — Adicionar seletor de "Estilo de voz" (Dopaminérgico, Misterioso, Calmo, Energético)
+**Backend (69+ edge functions):**
+- Todas as 69 funções listadas no grep `ai.gateway.lovable.dev` — migrar para Gemini direto
+- Criar `mass-enrichment-pipeline/index.ts`
+- Atualizar `auto-scan-channels/index.ts` (limites + nichos)
+
+**Frontend:**
+- `src/components/dashboard/DashboardLayout.tsx` — Simplificar sidebar de 13 → 8
+- `src/components/scripts/VoiceGeneratorStep.tsx` — Adicionar seletor de estilo de voz + auto-mastering
+- `src/pages/Dashboard.tsx` — Corrigir links mortos em QUICK_ACTIONS
+- `src/pages/PowerTools.tsx` — Mover conteúdo para dentro de GrowthTools
+- `src/pages/GrowthTools.tsx` — Absorver Power Tools como aba
+- `src/pages/ShortsTrends.tsx` — Mover para dentro de ViralDatabase
+- `src/App.tsx` — Atualizar rotas e redirects
 
 ## Ordem de Execução
-1. Migrar `generate-script` (core do pipeline — mais crítico)
-2. Migrar `refine-script` + `score-script` (completam o pipeline de roteiro)
-3. Migrar `generate-synced-prompts` + `generate-visual-prompts` (pipeline visual)
-4. Migrar `predict-retention` (analytics)
-5. Atualizar TTS com voz dopaminérgica
-6. Atualizar UI do Voice Step
+1. Migrar Dotti + funções mais usadas (elimina 402)
+2. Conectar seletor de voz na UI (quick win)
+3. Simplificar sidebar + corrigir links
+4. Escalar auto-scan + criar enriquecimento massivo
+5. Melhorar pipeline de áudio
+6. Migrar funções restantes em lotes
 
