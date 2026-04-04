@@ -484,48 +484,28 @@ IMPORTANTE: Os capítulos (timestamps) aumentam MUITO o SEO e CTR. ${hasTimestam
 O YouTube usa as primeiras 2-3 linhas da descrição para ranking — otimize com keywords de alto volume.
 Formato profissional, 250-500 palavras.`;
 
-      const response = await fetch(AI_URL, {
+      const response = await fetch(geminiUrl, {
         method: "POST",
-        headers,
+        headers: geminiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: "Você é um especialista em YouTube SEO com conhecimento profundo do algoritmo 2025-2026. Gere descrições que maximizam alcance, impressões e ranking. Use keywords de alto volume de busca e otimize cada linha para o algoritmo." },
-            { role: "user", content: prompt },
+          contents: [
+            { role: "user", parts: [{ text: `SYSTEM: Você é um especialista em YouTube SEO com conhecimento profundo do algoritmo 2025-2026. Gere descrições que maximizam alcance, impressões e ranking. Use keywords de alto volume de busca e otimize cada linha para o algoritmo.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"description": "string", "hashtags": ["string"], "keywords": ["string"], "seo_score": number, "keyword_density_note": "string"}` }] },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "return_seo_description",
-              description: "Return SEO optimized description with enhanced data",
-              parameters: {
-                type: "object",
-                properties: {
-                  description: { type: "string" },
-                  hashtags: { type: "array", items: { type: "string" } },
-                  keywords: { type: "array", items: { type: "string" } },
-                  seo_score: { type: "number", description: "Overall SEO score 1-10" },
-                  keyword_density_note: { type: "string", description: "Note about keyword density and placement" },
-                },
-                required: ["description", "hashtags", "keywords", "seo_score", "keyword_density_note"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "return_seo_description" } },
+          generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
         }),
       });
 
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini SEO error:", response.status, errText);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         throw new Error(`AI error: ${response.status}`);
       }
 
       const result = await response.json();
-      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call response");
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("No content in response");
+      const parsed = JSON.parse(content);
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
