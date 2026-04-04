@@ -149,7 +149,8 @@ export const VoiceGeneratorStep = ({
         return;
       }
 
-      const url = `data:audio/mpeg;base64,${data.audioBase64}`;
+      const mime = data.mimeType || 'audio/mpeg';
+      const url = `data:${mime};base64,${data.audioBase64}`;
       const res = await fetch(url);
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -158,10 +159,10 @@ export const VoiceGeneratorStep = ({
       onAudioGenerated(blob, objectUrl);
       const engineLabel = data.engine === 'elevenlabs'
         ? 'ElevenLabs'
-        : data.engine === 'openai-tts'
-          ? 'TTS secundário'
-          : 'Google TTS';
-      toast.success(`🎙️ Áudio gerado com ${engineLabel}! (${data.characterCount.toLocaleString()} caracteres, ${data.chunks} partes)`);
+        : data.engine === 'gemini-tts'
+          ? 'Gemini TTS'
+          : 'TTS';
+      toast.success(`🎙️ Áudio gerado com ${engineLabel}! (${data.characterCount.toLocaleString()} caracteres)`);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar áudio');
     } finally {
