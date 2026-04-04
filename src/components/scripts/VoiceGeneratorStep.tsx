@@ -201,7 +201,7 @@ export const VoiceGeneratorStep = ({
           <Mic className="w-5 h-5 text-primary" /> Gerar Voz / Narração
         </h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Gere a narração com Google Cloud TTS (gratuito) ou suba seu próprio áudio
+          Gere a narração com fallback automático de voz ou suba seu próprio áudio
         </p>
       </div>
 
