@@ -218,11 +218,12 @@ async function synthesizeWithElevenLabs(
   return audioBuffers;
 }
 
-async function synthesizeWithLovableTTS(chunks: string[], apiKey: string) {
+async function synthesizeWithOpenAITTS(chunks: string[], apiKey: string, gender: 'MALE' | 'FEMALE') {
   const audioBuffers: ArrayBuffer[] = [];
+  const voice = gender === 'FEMALE' ? 'nova' : 'onyx';
 
   for (const chunk of chunks) {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/speech', {
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -231,15 +232,15 @@ async function synthesizeWithLovableTTS(chunks: string[], apiKey: string) {
       body: JSON.stringify({
         model: 'tts-1',
         input: chunk,
-        voice: 'onyx',
+        voice,
         response_format: 'mp3',
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Lovable TTS gateway error:', response.status, errText);
-      throw new Error(`LOVABLE_TTS_${response.status}`);
+      console.error('OpenAI TTS error:', response.status, errText);
+      throw new Error(`OPENAI_TTS_${response.status}`);
     }
 
     audioBuffers.push(await response.arrayBuffer());
@@ -277,7 +278,7 @@ serve(async (req) => {
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
     console.log(`Google TTS requested: ${chunks.length} chunks, voice=${selectedVoice}, lang=${langConfig.code}`);
 
@@ -308,12 +309,12 @@ serve(async (req) => {
         }
       }
 
-      if (!audioBuffers.length && LOVABLE_API_KEY) {
+      if (!audioBuffers.length && OPENAI_API_KEY) {
         try {
-          audioBuffers = await synthesizeWithLovableTTS(chunks, LOVABLE_API_KEY);
+          audioBuffers = await synthesizeWithOpenAITTS(chunks, OPENAI_API_KEY, fallbackGender);
           engine = 'openai-tts';
-        } catch (lovableError) {
-          console.warn('Lovable TTS fallback failed:', lovableError instanceof Error ? lovableError.message : lovableError);
+        } catch (openaiError) {
+          console.warn('OpenAI TTS fallback failed:', openaiError instanceof Error ? openaiError.message : openaiError);
         }
       }
 
