@@ -394,70 +394,28 @@ Título B: "${titleB}"${langNote}${competitorContext}
 
 Analise com profundidade: CTR estimado (5-30%), gatilhos emocionais, SEO score (1-10), score de comprimento (1-10, ideal 50-65 chars), curiosity gap score (1-10), e uma análise comparativa detalhada de 3-4 frases. Compare com os títulos top de referência.`;
 
-      const response = await fetch(AI_URL, {
+      const response = await fetch(geminiUrl, {
         method: "POST",
-        headers,
+        headers: geminiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: "Você é um especialista em YouTube analytics, CTR optimization e psicologia de cliques. Analise com dados reais e padrões comprovados." },
-            { role: "user", content: prompt },
+          contents: [
+            { role: "user", parts: [{ text: `SYSTEM: Você é um especialista em YouTube analytics, CTR optimization e psicologia de cliques. Analise com dados reais e padrões comprovados.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"winner": "A" ou "B", "titleA": {"ctr": number, "emotionalTriggers": ["string"], "seoScore": number, "lengthScore": number, "curiosityGapScore": number}, "titleB": {"ctr": number, "emotionalTriggers": ["string"], "seoScore": number, "lengthScore": number, "curiosityGapScore": number}, "analysis": "string", "improvement_suggestion": "string"}` }] },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "return_ab_result",
-              description: "Return A/B test comparison",
-              parameters: {
-                type: "object",
-                properties: {
-                  winner: { type: "string", enum: ["A", "B"] },
-                  titleA: {
-                    type: "object",
-                    properties: {
-                      ctr: { type: "number" },
-                      emotionalTriggers: { type: "array", items: { type: "string" } },
-                      seoScore: { type: "number" },
-                      lengthScore: { type: "number" },
-                      curiosityGapScore: { type: "number" },
-                    },
-                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore", "curiosityGapScore"],
-                    additionalProperties: false,
-                  },
-                  titleB: {
-                    type: "object",
-                    properties: {
-                      ctr: { type: "number" },
-                      emotionalTriggers: { type: "array", items: { type: "string" } },
-                      seoScore: { type: "number" },
-                      lengthScore: { type: "number" },
-                      curiosityGapScore: { type: "number" },
-                    },
-                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore", "curiosityGapScore"],
-                    additionalProperties: false,
-                  },
-                  analysis: { type: "string" },
-                  improvement_suggestion: { type: "string", description: "Suggestion to create an even better title combining the best of both" },
-                },
-                required: ["winner", "titleA", "titleB", "analysis", "improvement_suggestion"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "return_ab_result" } },
+          generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
         }),
       });
 
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini AB error:", response.status, errText);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         throw new Error(`AI error: ${response.status}`);
       }
 
       const result = await response.json();
-      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call response");
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("No content in response");
+      const parsed = JSON.parse(content);
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
