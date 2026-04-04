@@ -46,6 +46,8 @@ serve(async (req) => {
     const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
     const selectedStyle = styleGuides[styleKey] || styleGuides['cinematográfico'];
     const segmentTexts = segments.map((s: any, i: number) => `Segment ${i + 1}: "${s.text}"`).join("\n");
+    const allSegmentText = segments.map((s: any) => s.text || '').join(' ');
+    const conditionalTraining = buildConditionalTraining(allSegmentText);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
