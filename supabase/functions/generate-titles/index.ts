@@ -150,13 +150,11 @@ serve(async (req) => {
 
     const body = await req.json();
     const { type = "generate" } = body;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
-    const headers = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    };
+    const geminiUrl = `${GEMINI_URL}?key=${GOOGLE_AI_API_KEY}`;
+    const geminiHeaders = { "Content-Type": "application/json" };
 
     // ========== SAVE LEARNING (feedback loop) ==========
     if (type === "learn") {
