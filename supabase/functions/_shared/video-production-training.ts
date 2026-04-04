@@ -409,30 +409,93 @@ export function validatePromptAnatomy(prompts: Array<{ visualPrompt: string; cam
 }
 
 /**
- * Detects if script content involves special conditions
+ * Detects special conditions with granular sub-types
  */
-export function detectSpecialConditions(scriptText: string): { hasNight: boolean; hasWeather: boolean; hasHistorical: boolean; hasASMR: boolean } {
-  const text = scriptText.toLowerCase();
+export interface SpecialConditions {
+  hasNight: boolean;
+  nightType: 'urban' | 'rural' | 'interior' | null;
+  hasRain: boolean;
+  rainIntensity: 'light' | 'heavy' | 'storm' | null;
+  hasSnow: boolean;
+  snowIntensity: 'gentle' | 'blizzard' | null;
+  hasFog: boolean;
+  hasWind: boolean;
+  windIntensity: 'gentle' | 'strong' | null;
+  hasHistorical: boolean;
+  historicalEra: 'ancient' | 'medieval' | 'renaissance' | 'victorian' | 'midcentury' | null;
+  hasASMR: boolean;
+}
+
+export function detectSpecialConditions(scriptText: string): SpecialConditions {
+  const t = scriptText.toLowerCase();
+  
+  const hasNight = /noite|night|escuro|dark|midnight|meia-noite|madrugada|lua|moon/i.test(t);
+  const nightType = hasNight
+    ? (/cidade|city|urban|rua|street|neon/i.test(t) ? 'urban'
+      : /interior|quarto|room|casa|house|escritório|office/i.test(t) ? 'interior'
+      : 'rural') as const
+    : null;
+
+  const hasRain = /chuva|rain|aguaceir/i.test(t);
+  const rainIntensity = hasRain
+    ? (/tempestade|storm|trovão|thunder|relâmpago|lightning/i.test(t) ? 'storm'
+      : /forte|heavy|torrencial|downpour/i.test(t) ? 'heavy'
+      : 'light') as const
+    : null;
+
+  const hasSnow = /neve|snow/i.test(t);
+  const snowIntensity = hasSnow
+    ? (/nevasca|blizzard|tempestade de neve/i.test(t) ? 'blizzard' : 'gentle') as const
+    : null;
+
+  const hasFog = /neblina|fog|névoa|mist|nevoeiro/i.test(t);
+  const hasWind = /vento|wind/i.test(t);
+  const windIntensity = hasWind
+    ? (/forte|strong|violento|tempestade/i.test(t) ? 'strong' : 'gentle') as const
+    : null;
+
+  const hasHistorical = /século|century|antigo|ancient|medieval|renascen|renaissance|império|empire|1\d{3}s|19\d{2}|18\d{2}|era |época|victorian|vitorian/i.test(t);
+  const historicalEra = hasHistorical
+    ? (/egíp|egypt|gre[gc]|rome|roma|antigo|ancient/i.test(t) ? 'ancient'
+      : /medieval|idade média|middle age|castelo|castle/i.test(t) ? 'medieval'
+      : /renascen|renaissance|barroc|baroque/i.test(t) ? 'renaissance'
+      : /vitorian|victorian|industrial|séc.*19|18\d{2}|19th/i.test(t) ? 'victorian'
+      : /19[4-6]\d|anos 50|anos 60|1950|1960|mid.?century|art deco/i.test(t) ? 'midcentury'
+      : null) as const
+    : null;
+
   return {
-    hasNight: /noite|night|escuro|dark|midnight|meia-noite|madrugada|lua|moon/i.test(text),
-    hasWeather: /chuva|rain|neve|snow|neblina|fog|tempestade|storm|vento|wind|trovão|thunder/i.test(text),
-    hasHistorical: /século|century|antigo|ancient|medieval|renascen|renaissance|império|empire|1\d{3}s|19\d{2}|18\d{2}|era |época/i.test(text),
-    hasASMR: /asmr|sons? detalhad|sound design|foley|immersive audio/i.test(text),
+    hasNight, nightType,
+    hasRain, rainIntensity,
+    hasSnow, snowIntensity,
+    hasFog, hasWind, windIntensity,
+    hasHistorical, historicalEra,
+    hasASMR: /asmr|sons? detalhad|sound design|foley|immersive audio/i.test(t),
   };
 }
 
 /**
- * Build conditional training blocks based on content analysis
+ * Build conditional training blocks — injects FULL template + targeted quick-reference
  */
 export function buildConditionalTraining(scriptText: string, enableASMR?: boolean): string {
-  const conditions = detectSpecialConditions(scriptText);
+  const c = detectSpecialConditions(scriptText);
   let block = '';
+  const hasAnyCondition = c.hasNight || c.hasRain || c.hasSnow || c.hasFog || c.hasWind || c.hasHistorical;
   
-  if (conditions.hasNight || conditions.hasWeather || conditions.hasHistorical) {
+  if (hasAnyCondition) {
     block += SPECIAL_CONDITIONS_TEMPLATES;
+    
+    // Add targeted quick-inject for the AI to prioritize
+    block += '\n\n═══ ACTIVE CONDITIONS FOR THIS SCRIPT ═══\n';
+    if (c.hasNight && c.nightType) block += `🌙 NIGHT (${c.nightType}): ${NIGHT_TEMPLATES[c.nightType]}\n\n`;
+    if (c.hasRain && c.rainIntensity) block += `🌧️ RAIN (${c.rainIntensity}): ${RAIN_TEMPLATES[c.rainIntensity]}\n\n`;
+    if (c.hasSnow && c.snowIntensity) block += `❄️ SNOW (${c.snowIntensity}): ${SNOW_TEMPLATES[c.snowIntensity]}\n\n`;
+    if (c.hasFog) block += `🌫️ FOG: thick volumetric fog, progressive visibility reduction, diffused light, silhouettes, god rays through mist\n\n`;
+    if (c.hasWind && c.windIntensity) block += `💨 WIND (${c.windIntensity}): hair/clothing movement, environmental particles, ${c.windIntensity === 'strong' ? 'trees bending, debris flying, handheld shake' : 'soft fabric ripple, leaves tumbling, 60fps slow motion'}\n\n`;
+    if (c.hasHistorical && c.historicalEra) block += `📜 ERA (${c.historicalEra}): ${HISTORICAL_ERA_TEMPLATES[c.historicalEra]}\n\n`;
   }
   
-  if (conditions.hasASMR || enableASMR) {
+  if (c.hasASMR || enableASMR) {
     block += '\n' + ASMR_SOUND_LAYER_GUIDE;
   }
   
