@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
 import { verifyAuth, isAuthError, corsHeaders } from "../_shared/auth.ts";
+import { PROMPT_ANATOMY_CHECKLIST, CAMERA_SHOT_VARIETY_RULES, SCENE_COVERAGE_STRATEGY, buildConditionalTraining, validatePromptAnatomy } from "../_shared/video-production-training.ts";
 
 // ═══════════════════════════════════════════════════════════════
 // DARKPLANNER v3 — Visual Prompts Engine (Full Training + Veo3 Policy)
