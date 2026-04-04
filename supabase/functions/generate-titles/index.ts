@@ -323,61 +323,28 @@ REGRAS PARA CTR MÁXIMO:
 
 Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
 
-      // Use Gemini Pro for title generation (higher quality)
-      const response = await fetch(AI_URL, {
+      const response = await fetch(geminiUrl, {
         method: "POST",
-        headers,
+        headers: geminiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: "Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados." },
-            { role: "user", content: prompt },
+          contents: [
+            { role: "user", parts: [{ text: `SYSTEM: Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}` }] },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "return_titles",
-              description: "Return viral title suggestions with competitive analysis",
-              parameters: {
-                type: "object",
-                properties: {
-                  competitor_analysis: { type: "string", description: "Brief analysis of what competitors are doing right/wrong with their titles" },
-                  titles: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        style: { type: "string", description: "Dynamic style/pattern name" },
-                        estimatedCTR: { type: "number", description: "Estimated CTR between 5 and 30" },
-                        hook_used: { type: "string", description: "Which hook technique was applied" },
-                        psychological_trigger: { type: "string", description: "Primary psychological trigger used" },
-                        differentiation: { type: "string", description: "How this title differentiates from competitors" },
-                      },
-                      required: ["title", "style", "estimatedCTR", "hook_used", "psychological_trigger", "differentiation"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["competitor_analysis", "titles"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "return_titles" } },
+          generationConfig: { temperature: 0.9, responseMimeType: "application/json" },
         }),
       });
 
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini error:", response.status, errText);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         throw new Error(`AI error: ${response.status}`);
       }
 
       const result = await response.json();
-      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call response");
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("No content in response");
+      const parsed = JSON.parse(content);
 
       // Log execution for monitoring
       try { await sb.from('execution_logs').insert({
