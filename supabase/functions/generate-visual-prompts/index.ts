@@ -39,8 +39,8 @@ serve(async (req) => {
     if (isAuthError(auth)) return auth;
 
     const { segments, videoStyle, customStyleNotes } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!segments?.length) throw new Error("Segments array required");
 
     const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
@@ -49,45 +49,7 @@ serve(async (req) => {
     const allSegmentText = segments.map((s: any) => s.text || '').join(' ');
     const conditionalTraining = buildConditionalTraining(allSegmentText);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        tools: [{
-          type: "function",
-          function: {
-            name: "set_visual_prompts",
-            description: "Set visual prompts for each script segment (DarkPlanner v3 format)",
-            parameters: {
-              type: "object",
-              properties: {
-                prompts: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      segmentIndex: { type: "number" },
-                      visualPrompt: { type: "string", description: "150-250 word visual prompt. DarkPlanner v3: movement trio, environment detail, style modifiers, anti-text suffix. NO numbering/titles." }
-                    },
-                    required: ["segmentIndex", "visualPrompt"],
-                    additionalProperties: false
-                  }
-                }
-              },
-              required: ["prompts"],
-              additionalProperties: false
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "set_visual_prompts" } },
-        messages: [
-          {
-            role: "system",
-            content: `You are a WORLD-CLASS visual director trained on the DarkPlanner Professional System v3.
+    const systemPrompt = `You are a WORLD-CLASS visual director trained on the DarkPlanner Professional System v3.
 
 🎨 MANDATORY ART STYLE: ${selectedStyle}
 ${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : ''}
@@ -97,31 +59,42 @@ ${customStyleNotes ? `✨ CREATOR'S EXTRA INSTRUCTIONS: ${customStyleNotes}` : '
 ${VEO3_POLICY_PROMPT}
 
 ═══ DARKPLANNER v3 RULES ═══
-
-1. PROMPT LENGTH: 150-250 words (MINIMUM 150). Detailed = better generation.
-2. STYLE FIDELITY: START every prompt with the art style descriptor. Match exactly.
+1. PROMPT LENGTH: 150-250 words (MINIMUM 150).
+2. STYLE FIDELITY: START every prompt with the art style descriptor.
 3. MANDATORY MOVEMENT TRIO — Every prompt:
    🎭 CHARACTER: walking, turning, reaching, trembling, breathing heavily
    🎥 CAMERA: pushing in, pulling back, panning, circling, tracking, crane
-   🌿 ENVIRONMENT: wind blowing, leaves falling, water flowing, smoke rising, dust floating
-4. ENVIRONMENT DETAIL — PREVENT WHITE BACKGROUNDS:
-   - Specific location with MATERIALS/TEXTURES
-   - VISIBLE SURROUNDINGS
-   - LIGHT SOURCE + DIRECTION
-   - ATMOSPHERIC ELEMENTS
-   - SMALL PROPS for realism
+   🌿 ENVIRONMENT: wind blowing, leaves falling, water flowing, smoke rising
+4. ENVIRONMENT DETAIL — PREVENT WHITE BACKGROUNDS.
 5. Style modifiers + anti-text at END of every prompt.
 6. ALL PROMPTS IN ENGLISH.
-7. FORMAT: NO numbering, NO scene titles. Just raw prompt text.`
-          },
-          {
-            role: "user",
-            content: `Generate visual prompts in "${styleKey}" style for ${segments.length} segments.
+7. FORMAT: NO numbering, NO scene titles. Just raw prompt text.
+
+${PROMPT_ANATOMY_CHECKLIST}
+${CAMERA_SHOT_VARIETY_RULES}
+${SCENE_COVERAGE_STRATEGY}
+${conditionalTraining}`;
+
+    const userPrompt = `Generate visual prompts in "${styleKey}" style for ${segments.length} segments.
 Each prompt = 150-250 words. Movement trio mandatory. No numbering/titles.
 
-SEGMENTS:\n\n${segmentTexts}`
-          }
-        ],
+SEGMENTS:
+
+${segmentTexts}
+
+Respond with ONLY valid JSON: {"prompts":[{"segmentIndex":0,"visualPrompt":"detailed prompt text"}]}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 16384,
+          responseMimeType: "application/json",
+        },
       }),
     });
 
@@ -135,9 +108,9 @@ SEGMENTS:\n\n${segmentTexts}`
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in response");
-    const parsed = JSON.parse(toolCall.function.arguments);
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawContent) throw new Error("No content in Gemini response");
+    const parsed = JSON.parse(rawContent);
 
     // ═══ DarkPlanner v3 Auto-Validation + Veo3 Policy Filter ═══
     const warnings: string[] = [];

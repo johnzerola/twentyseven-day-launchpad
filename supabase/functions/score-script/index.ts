@@ -1,12 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { callGemini } from "../_shared/gemini-direct.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ═══════════════════════════════════════════════════════════════
 // AI SLOP DETECTION — Pre-score automated check
@@ -107,8 +106,8 @@ serve(async (req) => {
 
   try {
     const { script, niche, style, language, topic, phaseId } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!script?.trim()) throw new Error("Script text is required");
 
     // ═══ ORCHESTRATION CONTRACT ═══
@@ -127,7 +126,6 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const scriptText = script.slice(0, 12000);
-    const aiHeaders = { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" };
 
     // ═══ Fetch calibration data from real results ═══
     let calibrationContext = '';
@@ -170,90 +168,48 @@ serve(async (req) => {
       ? `\n⚠️ NOTA PRÉ-AVALIAÇÃO: O detector automático encontrou ${slopResult.slopScore} padrões de AI-slop: ${slopResult.details.join(', ')}. Considere isso na sua avaliação de originalidade.\n`
       : '';
 
-    const toolDef = {
-      type: "function" as const,
-      function: {
-        name: "score_script",
-        description: "Score a YouTube script 1-10 with detailed feedback",
-        parameters: {
-          type: "object",
-          properties: {
-            score: { type: "number", description: "Overall score 1-10 (integer)" },
-            hook_score: { type: "number", description: "Hook quality 1-10" },
-            retention_score: { type: "number", description: "Retention techniques 1-10" },
-            emotion_score: { type: "number", description: "Emotional impact 1-10" },
-            flow_score: { type: "number", description: "Flow and pacing 1-10" },
-            payoff_score: { type: "number", description: "Ending quality 1-10" },
-            originality_score: { type: "number", description: "Originality and human voice 1-10 (penalize AI-sounding text)" },
-            ypp_monetizable: { type: "boolean", description: "True if the script would pass YPP 2025 review (has human value, not repetitive/mass-generated)" },
-            jenga_score: { type: "number", description: "Pattern break frequency 1-10 (10=perfect breaks every 20-30s, 1=monotone)" },
-            ai_slop_detected: { type: "boolean", description: "True if the text sounds like generic AI output" },
-            strengths: { type: "array", items: { type: "string" }, description: "Top 3 strengths" },
-            weaknesses: { type: "array", items: { type: "string" }, description: "Top 3 weaknesses" },
-            improvements: { type: "array", items: { type: "string" }, description: "Top 3 specific improvements needed" },
-            verdict: { type: "string", description: "One-line verdict in Portuguese" },
-          },
-          required: ["score", "hook_score", "retention_score", "emotion_score", "flow_score", "payoff_score", "originality_score", "ai_slop_detected", "strengths", "weaknesses", "improvements", "verdict"],
-          additionalProperties: false,
-        },
-      },
-    };
+    const jsonSchema = `Respond with ONLY valid JSON matching this EXACT structure:
+{
+  "score": number (1-10 integer),
+  "hook_score": number (1-10),
+  "retention_score": number (1-10),
+  "emotion_score": number (1-10),
+  "flow_score": number (1-10),
+  "payoff_score": number (1-10),
+  "originality_score": number (1-10),
+  "ypp_monetizable": boolean,
+  "jenga_score": number (1-10),
+  "ai_slop_detected": boolean,
+  "strengths": ["string", "string", "string"],
+  "weaknesses": ["string", "string", "string"],
+  "improvements": ["string", "string", "string"],
+  "verdict": "one-line verdict in Portuguese"
+}`;
 
-    // Run BOTH evaluations in parallel: GPT-5-nano + Gemini Flash
-    console.log(`[PHASE-3 SCORE] runId=${runId} Dual scoring: GPT-5-nano + Gemini Flash...`);
-    const [gptRes, geminiRes] = await Promise.all([
-      fetch(AI_URL, {
-        method: "POST", headers: aiHeaders,
-        body: JSON.stringify({
-          model: "openai/gpt-5-nano",
-          messages: [
-            { role: "system", content: SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR GPT. Seja independente. NÃO INFLACIONE notas." },
-            { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
-          ],
-          tools: [toolDef],
-          tool_choice: { type: "function", function: { name: "score_script" } },
-        }),
-      }),
-      fetch(AI_URL, {
-        method: "POST", headers: aiHeaders,
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR GEMINI. Seja independente. NÃO INFLACIONE notas." },
-            { role: "user", content: `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}` },
-          ],
-          tools: [toolDef],
-          tool_choice: { type: "function", function: { name: "score_script" } },
-        }),
-      }),
+    // Run BOTH evaluations in parallel: Gemini Flash (strict) + Gemini Flash (creative)
+    console.log(`[PHASE-3 SCORE] runId=${runId} Dual scoring: Gemini Flash (strict) + Gemini Flash (creative)...`);
+    
+    const scorePromptA = SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR A. Seja independente e RIGOROSO. NÃO INFLACIONE notas.\n\n" + jsonSchema;
+    const scorePromptB = SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR B. Seja independente e CRITERIOSO. NÃO INFLACIONE notas.\n\n" + jsonSchema;
+    const userScoreMsg = `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}`;
+
+    const [gptResult, geminiResult] = await Promise.allSettled([
+      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 2048 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 2048 }),
     ]);
 
-    for (const [name, res] of [["GPT", gptRes], ["Gemini", geminiRes]] as const) {
-      if (!res.ok) {
-        const t = await res.text();
-        console.error(`[PHASE-3 SCORE] ${name} error:`, res.status, t);
-        if (res.status === 429) return errResp("Rate limit. Tente novamente.", 429);
-        if (res.status === 402) return errResp("Créditos insuficientes.", 402);
-      }
-    }
-
-    const parseScore = async (res: Response, name: string) => {
+    const parseScore = (result: PromiseSettledResult<string>, name: string) => {
       try {
-        if (!res.ok) return null;
-        const data = await res.json();
-        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-        if (!toolCall) return null;
-        return JSON.parse(toolCall.function.arguments);
+        if (result.status === 'rejected') { console.error(`[PHASE-3 SCORE] ${name} rejected:`, result.reason); return null; }
+        return JSON.parse(result.value);
       } catch (e) {
         console.error(`[PHASE-3 SCORE] Parse ${name} error:`, e);
         return null;
       }
     };
 
-    const [gptScore, geminiScore] = await Promise.all([
-      parseScore(gptRes, "GPT"),
-      parseScore(geminiRes, "Gemini"),
-    ]);
+    const gptScore = parseScore(gptResult, "EvalA");
+    const geminiScore = parseScore(geminiResult, "EvalB");
 
     if (!gptScore && !geminiScore) throw new Error("Both AI evaluations failed");
 

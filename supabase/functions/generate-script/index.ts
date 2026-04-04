@@ -1,12 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { callGeminiWithFallback, callGeminiStreaming } from "../_shared/gemini-direct.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
@@ -235,113 +234,7 @@ const GENRE_DIRECTIONS: Record<string, string> = {
 };
 
 // Sanitize strings to remove broken Unicode surrogate pairs that cause JSON.stringify to fail
-function sanitizeUnicode(text: string): string {
-  // Remove lone surrogates (unpaired high/low surrogates)
-  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
-             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
-}
-
-async function callAiGateway(
-  apiKey: string,
-  system: string,
-  userMessage: string,
-  options: {
-    model: string;
-    stream: boolean;
-    maxTokens?: number;
-  },
-) {
-  const cleanSystem = sanitizeUnicode(system);
-  const cleanUser = sanitizeUnicode(userMessage);
-
-  return fetch(AI_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: options.model,
-      stream: options.stream,
-      ...(options.maxTokens ? { max_completion_tokens: options.maxTokens } : {}),
-      messages: [
-        { role: "system", content: cleanSystem },
-        { role: "user", content: cleanUser },
-      ],
-    }),
-  });
-}
-
-async function callAiGatewayNonStreaming(
-  apiKey: string,
-  system: string,
-  userMessage: string,
-  options: {
-    primaryModel: string;
-    fallbackModel?: string;
-    maxTokens?: number;
-    label: string;
-  },
-): Promise<string> {
-  const models = [options.primaryModel, options.fallbackModel].filter(Boolean) as string[];
-
-  for (const model of models) {
-    const res = await callAiGateway(apiKey, system, userMessage, {
-      model,
-      stream: false,
-      maxTokens: options.maxTokens,
-    });
-
-    if (!res.ok) {
-      const t = await res.text();
-      console.error(`[${options.label}] ${model} error:`, res.status, t);
-      if ((res.status === 429 || res.status === 402) && model === models[models.length - 1]) {
-        throw new Error(`AI gateway error: ${res.status}`);
-      }
-      continue;
-    }
-
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-
-  throw new Error("AI gateway error: all models failed");
-}
-
-async function callAiGatewayStreaming(
-  apiKey: string,
-  system: string,
-  userMessage: string,
-  options: {
-    primaryModel: string;
-    fallbackModel?: string;
-    maxTokens?: number;
-    label: string;
-  },
-) {
-  const models = [options.primaryModel, options.fallbackModel].filter(Boolean) as string[];
-
-  for (const model of models) {
-    const res = await callAiGateway(apiKey, system, userMessage, {
-      model,
-      stream: true,
-      maxTokens: options.maxTokens,
-    });
-
-    if (res.ok) {
-      console.log(`[${options.label}] Streaming with ${model}`);
-      return res;
-    }
-
-    const t = await res.text();
-    console.error(`[${options.label}] ${model} error:`, res.status, t);
-    if ((res.status === 429 || res.status === 402) && model === models[models.length - 1]) {
-      throw new Error(`AI gateway error: ${res.status}`);
-    }
-  }
-
-  throw new Error("AI gateway error: all models failed");
-}
+// Helper functions now imported from _shared/gemini-direct.ts
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -367,9 +260,9 @@ serve(async (req) => {
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
 
-    // ═══ GEMINI (PRIMARY) via Lovable AI Gateway ═══
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured — required for script generation");
+    // ═══ GEMINI (PRIMARY) via Direct API ═══
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const runId = phaseId || crypto.randomUUID();
     console.log(`[PHASE-1 DRAFT] runId=${runId} topic="${topic}" style="${style}" duration=${duration}min ENGINE=GEMINI`);
@@ -724,13 +617,13 @@ ${ANTI_SLOP_DIRECTIVE}
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
 Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
 
-        hookText = await callAiGatewayNonStreaming(
-          LOVABLE_API_KEY,
+        hookText = await callGeminiWithFallback(
+          GOOGLE_AI_API_KEY,
           hookSystemPrompt,
           `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
           {
-            primaryModel: "google/gemini-2.5-pro",
-            fallbackModel: "openai/gpt-5",
+            primaryModel: "gemini-2.5-pro",
+            fallbackModel: "gemini-2.5-flash",
             maxTokens: 2000,
             label: `PHASE-0 HOOK runId=${runId}`,
           },
@@ -983,13 +876,13 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from AI gateway...`);
 
-    const phase1Res = await callAiGatewayStreaming(
-      LOVABLE_API_KEY,
+    const phase1Res = await callGeminiStreaming(
+      GOOGLE_AI_API_KEY,
       systemPrompt,
       userMessage,
       {
-        primaryModel: "google/gemini-2.5-pro",
-        fallbackModel: "openai/gpt-5",
+        primaryModel: "gemini-2.5-pro",
+        fallbackModel: "gemini-2.5-flash",
         maxTokens: 16000,
         label: `PHASE-1 DRAFT runId=${runId}`,
       },
