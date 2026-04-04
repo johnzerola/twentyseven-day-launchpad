@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
 
 // ========== HELPER: Search YouTube for competing videos ==========
 async function searchYouTubeCompetitors(topic: string, niche: string, language: string, YOUTUBE_API_KEY: string): Promise<string> {
@@ -150,13 +150,11 @@ serve(async (req) => {
 
     const body = await req.json();
     const { type = "generate" } = body;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
-    const headers = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    };
+    const geminiUrl = `${GEMINI_URL}?key=${GOOGLE_AI_API_KEY}`;
+    const geminiHeaders = { "Content-Type": "application/json" };
 
     // ========== SAVE LEARNING (feedback loop) ==========
     if (type === "learn") {
@@ -325,61 +323,28 @@ REGRAS PARA CTR MÁXIMO:
 
 Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
 
-      // Use Gemini Pro for title generation (higher quality)
-      const response = await fetch(AI_URL, {
+      const response = await fetch(geminiUrl, {
         method: "POST",
-        headers,
+        headers: geminiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: "Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados." },
-            { role: "user", content: prompt },
+          contents: [
+            { role: "user", parts: [{ text: `SYSTEM: Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}` }] },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "return_titles",
-              description: "Return viral title suggestions with competitive analysis",
-              parameters: {
-                type: "object",
-                properties: {
-                  competitor_analysis: { type: "string", description: "Brief analysis of what competitors are doing right/wrong with their titles" },
-                  titles: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        style: { type: "string", description: "Dynamic style/pattern name" },
-                        estimatedCTR: { type: "number", description: "Estimated CTR between 5 and 30" },
-                        hook_used: { type: "string", description: "Which hook technique was applied" },
-                        psychological_trigger: { type: "string", description: "Primary psychological trigger used" },
-                        differentiation: { type: "string", description: "How this title differentiates from competitors" },
-                      },
-                      required: ["title", "style", "estimatedCTR", "hook_used", "psychological_trigger", "differentiation"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["competitor_analysis", "titles"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "return_titles" } },
+          generationConfig: { temperature: 0.9, responseMimeType: "application/json" },
         }),
       });
 
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini error:", response.status, errText);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         throw new Error(`AI error: ${response.status}`);
       }
 
       const result = await response.json();
-      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call response");
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("No content in response");
+      const parsed = JSON.parse(content);
 
       // Log execution for monitoring
       try { await sb.from('execution_logs').insert({
@@ -429,70 +394,28 @@ Título B: "${titleB}"${langNote}${competitorContext}
 
 Analise com profundidade: CTR estimado (5-30%), gatilhos emocionais, SEO score (1-10), score de comprimento (1-10, ideal 50-65 chars), curiosity gap score (1-10), e uma análise comparativa detalhada de 3-4 frases. Compare com os títulos top de referência.`;
 
-      const response = await fetch(AI_URL, {
+      const response = await fetch(geminiUrl, {
         method: "POST",
-        headers,
+        headers: geminiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: "Você é um especialista em YouTube analytics, CTR optimization e psicologia de cliques. Analise com dados reais e padrões comprovados." },
-            { role: "user", content: prompt },
+          contents: [
+            { role: "user", parts: [{ text: `SYSTEM: Você é um especialista em YouTube analytics, CTR optimization e psicologia de cliques. Analise com dados reais e padrões comprovados.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"winner": "A" ou "B", "titleA": {"ctr": number, "emotionalTriggers": ["string"], "seoScore": number, "lengthScore": number, "curiosityGapScore": number}, "titleB": {"ctr": number, "emotionalTriggers": ["string"], "seoScore": number, "lengthScore": number, "curiosityGapScore": number}, "analysis": "string", "improvement_suggestion": "string"}` }] },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "return_ab_result",
-              description: "Return A/B test comparison",
-              parameters: {
-                type: "object",
-                properties: {
-                  winner: { type: "string", enum: ["A", "B"] },
-                  titleA: {
-                    type: "object",
-                    properties: {
-                      ctr: { type: "number" },
-                      emotionalTriggers: { type: "array", items: { type: "string" } },
-                      seoScore: { type: "number" },
-                      lengthScore: { type: "number" },
-                      curiosityGapScore: { type: "number" },
-                    },
-                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore", "curiosityGapScore"],
-                    additionalProperties: false,
-                  },
-                  titleB: {
-                    type: "object",
-                    properties: {
-                      ctr: { type: "number" },
-                      emotionalTriggers: { type: "array", items: { type: "string" } },
-                      seoScore: { type: "number" },
-                      lengthScore: { type: "number" },
-                      curiosityGapScore: { type: "number" },
-                    },
-                    required: ["ctr", "emotionalTriggers", "seoScore", "lengthScore", "curiosityGapScore"],
-                    additionalProperties: false,
-                  },
-                  analysis: { type: "string" },
-                  improvement_suggestion: { type: "string", description: "Suggestion to create an even better title combining the best of both" },
-                },
-                required: ["winner", "titleA", "titleB", "analysis", "improvement_suggestion"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "return_ab_result" } },
+          generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
         }),
       });
 
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini AB error:", response.status, errText);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         throw new Error(`AI error: ${response.status}`);
       }
 
       const result = await response.json();
-      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call response");
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("No content in response");
+      const parsed = JSON.parse(content);
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -561,48 +484,28 @@ IMPORTANTE: Os capítulos (timestamps) aumentam MUITO o SEO e CTR. ${hasTimestam
 O YouTube usa as primeiras 2-3 linhas da descrição para ranking — otimize com keywords de alto volume.
 Formato profissional, 250-500 palavras.`;
 
-      const response = await fetch(AI_URL, {
+      const response = await fetch(geminiUrl, {
         method: "POST",
-        headers,
+        headers: geminiHeaders,
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: "Você é um especialista em YouTube SEO com conhecimento profundo do algoritmo 2025-2026. Gere descrições que maximizam alcance, impressões e ranking. Use keywords de alto volume de busca e otimize cada linha para o algoritmo." },
-            { role: "user", content: prompt },
+          contents: [
+            { role: "user", parts: [{ text: `SYSTEM: Você é um especialista em YouTube SEO com conhecimento profundo do algoritmo 2025-2026. Gere descrições que maximizam alcance, impressões e ranking. Use keywords de alto volume de busca e otimize cada linha para o algoritmo.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"description": "string", "hashtags": ["string"], "keywords": ["string"], "seo_score": number, "keyword_density_note": "string"}` }] },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "return_seo_description",
-              description: "Return SEO optimized description with enhanced data",
-              parameters: {
-                type: "object",
-                properties: {
-                  description: { type: "string" },
-                  hashtags: { type: "array", items: { type: "string" } },
-                  keywords: { type: "array", items: { type: "string" } },
-                  seo_score: { type: "number", description: "Overall SEO score 1-10" },
-                  keyword_density_note: { type: "string", description: "Note about keyword density and placement" },
-                },
-                required: ["description", "hashtags", "keywords", "seo_score", "keyword_density_note"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "return_seo_description" } },
+          generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
         }),
       });
 
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini SEO error:", response.status, errText);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         throw new Error(`AI error: ${response.status}`);
       }
 
       const result = await response.json();
-      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call response");
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("No content in response");
+      const parsed = JSON.parse(content);
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
