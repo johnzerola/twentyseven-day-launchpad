@@ -162,6 +162,7 @@ export const AudioProcessor = ({
           script: cleanScript,
           videoStyle,
           customStyleNotes,
+          enableASMR: enableASMR || false,
           referenceImageUrls: referenceImageUrls?.length ? referenceImageUrls : undefined,
           characters: characters.length > 0 ? characters : undefined,
           language,

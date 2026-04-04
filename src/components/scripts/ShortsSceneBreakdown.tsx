@@ -65,7 +65,7 @@ export const ShortsSceneBreakdown = ({
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-scenes-short', {
-        body: { script, durationSeconds, videoStyle, characters, customStyleNotes },
+        body: { script, durationSeconds, videoStyle, characters, customStyleNotes, enableASMR: enableASMR || false },
       });
       if (error) throw error;
       if (data?.scenes) {
