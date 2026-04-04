@@ -316,10 +316,25 @@ serve(async (req) => {
 
 ${isShort ? shortsTimingRules : longTimingRules}
 
+═══ MULTI-MOMENT TECHNIQUE (CRITICAL — MANDATORY FOR VEO3) ═══
+Each 8-second clip MUST contain 2-3 DISTINCT visual moments synchronized to what the narrator is SAYING.
+The AUDIO TRANSCRIPTION with timestamps tells you EXACTLY what is being said at each second.
+Your visual prompt MUST match what is heard at each sub-timestamp.
+
+EXAMPLE — Transcript: "[0.0s-2.5s] Forget everything you learned in school [2.5s-5.0s] or saw in documentaries [5.0s-8.0s] These are the Pyramids of Egypt"
+CORRECT: "0-3s: Medium shot, teenager slumped in school chair, textbooks scattered, fluorescent lights. 3-5s: Camera push into living room, man watching documentary on glowing TV. 5-8s: Dramatic aerial sweep over Great Pyramids at golden hour, sand particles in sunlight."
+WRONG: Static shot of pyramids for 8 seconds while narrator discusses school and documentaries.
+
+RULES:
+- Use timestamps from the transcript to align visuals: "0-3s:", "3-5s:", "5-8s:"
+- What the viewer HEARS at second 2 must MATCH what they SEE at second 2
+- Camera transitions (whip pan, match cut, focus pull) connect sub-moments
+- This creates DOPAMINERGIC rhythm — constant visual novelty = maximum retention
+
 ABSOLUTE RULES:
 1. Cover the ENTIRE transcript — from first word to last word. NO GAPS.
 2. startTime/endTime MUST match actual transcript timestamps.
-3. Every visual prompt MUST directly illustrate what the narrator says.
+3. Every visual prompt MUST directly illustrate what the narrator says AT THAT EXACT MOMENT.
 4. End every prompt with: (no subtitles, no text, no titles, no captions, no logos, no watermarks)
 5. Use 5+ different camera angles — never repeat consecutively.
 
@@ -331,7 +346,7 @@ ${selectedStyleGuide}
 ${characterBlock}
 ${knowledgeBlock ? `KNOWLEDGE:\n${knowledgeBlock}` : ''}
 
-PROMPT FORMULA: [ART STYLE descriptor first] + [Camera+Lens] + [Subject matching narration] + [Action] + [Environment] + [Lighting] + anti-text block
+PROMPT FORMULA: [ART STYLE descriptor first] + [Camera+Lens] + [Subject matching narration at timestamp] + [Action] + [Environment] + [Lighting] + anti-text block
 Quality keywords: masterpiece, award-winning, 8K UHD`;
 
     // ========== STEP 8: Process chunks SEQUENTIALLY (avoid rate limits) ==========
