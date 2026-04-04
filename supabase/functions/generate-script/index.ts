@@ -876,13 +876,13 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from AI gateway...`);
 
-    const phase1Res = await callAiGatewayStreaming(
-      LOVABLE_API_KEY,
+    const phase1Res = await callGeminiStreaming(
+      GOOGLE_AI_API_KEY,
       systemPrompt,
       userMessage,
       {
-        primaryModel: "google/gemini-2.5-pro",
-        fallbackModel: "openai/gpt-5",
+        primaryModel: "gemini-2.5-pro",
+        fallbackModel: "gemini-2.5-flash",
         maxTokens: 16000,
         label: `PHASE-1 DRAFT runId=${runId}`,
       },

@@ -310,36 +310,31 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
     const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. Retorne o roteiro COMPLETO.`;
 
-    // ═══ PRIMARY: Gemini 2.5 Pro via Lovable AI Gateway ═══
-    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from GEMINI 2.5 PRO...`);
+    // ═══ PRIMARY: Gemini 2.5 Pro via Direct API ═══
+    console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from GEMINI 2.5 PRO (direct)...`);
     
-    const refineRes = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        stream: true,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
+    try {
+      const refineRes = await callGeminiStreaming(
+        GOOGLE_AI_API_KEY,
+        systemPrompt,
+        userMessage,
+        {
+          primaryModel: "gemini-2.5-pro",
+          fallbackModel: "gemini-2.5-flash",
+          maxTokens: 16000,
+          label: `PHASE-2 REFINE runId=${runId}`,
+        },
+      );
 
-    if (!refineRes.ok) {
-      const errText = await refineRes.text();
-      console.error(`[PHASE-2 REFINE] runId=${runId} Gemini error:`, refineRes.status, errText);
-      if (refineRes.status === 429) return errResp("Rate limit. Aguarde.", 429);
-      if (refineRes.status === 402) return errResp("Créditos insuficientes.", 402);
-      throw new Error(`Gemini API error: ${refineRes.status}`);
+      return new Response(refineRes.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    } catch (streamErr) {
+      const msg = streamErr instanceof Error ? streamErr.message : "Streaming failed";
+      console.error(`[PHASE-2 REFINE] runId=${runId} Error:`, msg);
+      if (msg.includes('429')) return errResp("Rate limit. Aguarde.", 429);
+      throw streamErr;
     }
-
-    return new Response(refineRes.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
 
   } catch (e) {
     console.error("refine-script error:", e);

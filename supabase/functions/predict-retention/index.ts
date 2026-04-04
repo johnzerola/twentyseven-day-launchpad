@@ -80,94 +80,51 @@ serve(async (req) => {
     // Determine if we need a full curve
     const wantCurve = returnCurve && script && script.length >= 100;
 
-    // AI prediction
-    const predRes = await fetch(AI_URL, {
-      method: "POST", headers: aiHeaders,
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system", content: wantCurve
-              ? `You are a YouTube retention curve predictor. Analyze the script provided and generate a timestamp-by-timestamp retention curve.
+    // AI prediction via Gemini Direct
+    const systemPrompt = wantCurve
+      ? `You are a YouTube retention curve predictor. Analyze the script provided and generate a timestamp-by-timestamp retention curve.
 
 Return ONLY valid JSON:
 {
   "curve": {
-    "points": [{"second": 0, "label": "Hook", "attention": 0.95}, ...],
+    "points": [{"second": 0, "label": "Hook", "attention": 0.95}],
     "avgRetention": 65,
     "dropOffs": [{"timestamp": "1:30", "from": 70, "to": 52, "drop": 18, "fix": "Add pattern interrupt or revelation here"}],
     "bestMoment": {"second": 15, "label": "Hook Payoff", "attention": 0.92},
     "worstMoment": {"second": 300, "label": "Valley", "attention": 0.45}
   },
   "prediction": {
-    "estimated_ctr": N, "estimated_retention": N, "viral_probability": N,
-    "attention_score": N, "curiosity_score": N, "dopamine_score": N,
-    "retention_prediction": {"first_30s": N, "mid_video": N, "last_30s": N},
+    "estimated_ctr": 0, "estimated_retention": 0, "viral_probability": 0,
+    "attention_score": 0, "curiosity_score": 0, "dopamine_score": 0,
+    "retention_prediction": {"first_30s": 0, "mid_video": 0, "last_30s": 0},
     "recommended_content_model": "string", "recommended_hook_type": "string",
-    "risk_factors": ["string"], "optimization_tips": ["string"], "confidence": N
+    "risk_factors": ["string"], "optimization_tips": ["string"], "confidence": 0
   }
 }
 
-Rules for curve generation:
-- Generate 10-20 points spread across the video duration
-- Include labels for each point (Hook, Setup, Context, Development, Midpoint Twist, Climax Build, Climax, Resolution, CTA, End)
-- Attention values are 0.0 to 1.0 (1.0 = 100% viewers still watching)
-- Always start at 1.0 (or 0.95+)
-- Identify drop-offs: any drop > 10% between consecutive points
-- For each drop-off, provide a specific actionable fix
-- Base predictions on the actual script content, style, and niche data provided`
-              : `Você é um modelo de predição de performance de vídeos YouTube.
-Analise os dados fornecidos e preveja métricas de performance.
+Rules: Generate 10-20 points, start at 1.0, identify drops >10%, provide actionable fixes.`
+      : `Você é um modelo de predição de performance de vídeos YouTube. Analise os dados e preveja métricas. Retorne APENAS JSON válido com: estimated_ctr, estimated_retention, viral_probability, attention_score, curiosity_score, dopamine_score, retention_prediction (first_30s, mid_video, last_30s), recommended_content_model, recommended_hook_type, risk_factors, optimization_tips, confidence.`;
 
-Retorne APENAS um JSON válido:
-{
-  "estimated_ctr": number (0-30, percentual),
-  "estimated_retention": number (0-100, percentual médio),
-  "viral_probability": number (0-100),
-  "attention_score": number (0-10),
-  "curiosity_score": number (0-10),
-  "dopamine_score": number (0-10),
-  "retention_prediction": {
-    "first_30s": number (0-100),
-    "mid_video": number (0-100),
-    "last_30s": number (0-100)
-  },
-  "recommended_content_model": string,
-  "recommended_hook_type": string,
-  "risk_factors": [string],
-  "optimization_tips": [string],
-  "confidence": number (0-100)
-}
+    const userPrompt = wantCurve
+      ? `Analyze this script and generate a retention curve:\n\nScript (first 3000 chars):\n${script.slice(0, 3000)}\n\nContext:\n${JSON.stringify(context, null, 2)}\n\nDuration: ${duration} ${isShort ? 'seconds' : 'minutes'}\nReturn ONLY the JSON.`
+      : `Preveja a performance deste vídeo:\n${JSON.stringify(context, null, 2)}\n\nRetorne APENAS o JSON.`;
 
-Base suas predições nos dados reais fornecidos (viral titles, hooks, attention patterns, niche averages).`
-          },
-          {
-            role: "user", content: wantCurve
-              ? `Analyze this script and generate a retention curve:\n\nScript (first 3000 chars):\n${script.slice(0, 3000)}\n\nContext:\n${JSON.stringify(context, null, 2)}\n\nDuration: ${duration} ${isShort ? 'seconds' : 'minutes'}\nReturn ONLY the JSON.`
-              : `Preveja a performance deste vídeo:\n${JSON.stringify(context, null, 2)}\n\nRetorne APENAS o JSON.`
-          }
-        ],
-        stream: false,
-      }),
-    });
-
-    let prediction: any = {};
-    let curve: any = null;
-    if (predRes.ok) {
-      const d = await predRes.json();
-      const content = d.choices?.[0]?.message?.content || '';
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (wantCurve && parsed.curve) {
-            curve = parsed.curve;
-            prediction = parsed.prediction || {};
-          } else {
-            prediction = parsed;
-          }
-        }
-      } catch { /* fallback */ }
+    try {
+      const content = await callGemini(GOOGLE_AI_API_KEY, systemPrompt, userPrompt, {
+        model: 'gemini-2.5-flash-lite',
+        jsonMode: true,
+        maxTokens: 4096,
+        temperature: 0.5,
+      });
+      const parsed = JSON.parse(content);
+      if (wantCurve && parsed.curve) {
+        curve = parsed.curve;
+        prediction = parsed.prediction || {};
+      } else {
+        prediction = parsed;
+      }
+    } catch (e) {
+      console.warn("Gemini prediction failed, using fallback:", e);
     }
 
     // Fallback if AI failed
