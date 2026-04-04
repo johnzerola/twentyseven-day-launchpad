@@ -109,46 +109,60 @@ export const ChatbotWidget = () => {
   }, [location.pathname, open]);
   // Get user and check onboarding
   useEffect(() => {
+    let active = true;
+
     const checkOnboarding = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserId(user.id);
-      
-      // Load most recent conversation
-      const { data: recentConvo } = await supabase
-        .from('chat_conversations')
-        .select('id, messages, title')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(1);
-      
-      const { data: plans } = await supabase
-        .from('onboarding_plans')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1);
-      
-      if (plans && plans.length > 0) {
-        setHasSeenOnboarding(true);
-        setOnboarding({ step: 'idle' });
-        
-        if (recentConvo && recentConvo.length > 0 && Array.isArray(recentConvo[0].messages) && recentConvo[0].messages.length > 1) {
-          // Restore last conversation
-          setConversationId(recentConvo[0].id);
-          setMessages(recentConvo[0].messages as unknown as Msg[]);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (!user || !active) return;
+
+        setUserId(user.id);
+
+        const [{ data: recentConvo }, { data: plans }] = await Promise.all([
+          supabase
+            .from('chat_conversations')
+            .select('id, messages, title')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(1),
+          supabase
+            .from('onboarding_plans')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1),
+        ]);
+
+        if (!active) return;
+
+        if (plans && plans.length > 0) {
+          setHasSeenOnboarding(true);
+          setOnboarding({ step: 'idle' });
+
+          if (recentConvo && recentConvo.length > 0 && Array.isArray(recentConvo[0].messages) && recentConvo[0].messages.length > 1) {
+            setConversationId(recentConvo[0].id);
+            setMessages(recentConvo[0].messages as unknown as Msg[]);
+          } else {
+            setMessages([
+              { role: 'assistant', content: '👋 Olá! Sou o **Dotti**, seu consultor estratégico de YouTube.\n\nTenho acesso a **bases de conhecimento** com dados reais sobre algoritmo, roteiros, hooks, nichos e canais.\n\nPosso ajudar com **ideias**, **roteiros**, **títulos**, **monetização**, **algoritmo** e muito mais.\n\nO que você precisa?' },
+            ]);
+          }
         } else {
+          setOnboarding({ step: 'welcome' });
           setMessages([
-            { role: 'assistant', content: '👋 Olá! Sou o **Dotti**, seu consultor estratégico de YouTube.\n\nTenho acesso a **bases de conhecimento** com dados reais sobre algoritmo, roteiros, hooks, nichos e canais.\n\nPosso ajudar com **ideias**, **roteiros**, **títulos**, **monetização**, **algoritmo** e muito mais.\n\nO que você precisa?' },
+            { role: 'assistant', content: '🤖 **Precisa de ajuda?**\n\nQuer que eu te guie? Posso **analisar seu canal**, encontrar **nichos lucrativos** e montar um **plano para monetizar em 30 dias**.\n\nPode pular o tutorial e voltar depois.' },
           ]);
         }
-      } else {
-        setOnboarding({ step: 'welcome' });
-        setMessages([
-          { role: 'assistant', content: '🤖 **Precisa de ajuda?**\n\nQuer que eu te guie? Posso **analisar seu canal**, encontrar **nichos lucrativos** e montar um **plano para monetizar em 30 dias**.\n\nPode pular o tutorial e voltar depois.' },
-        ]);
+      } catch (error) {
+        console.warn('Chatbot onboarding check skipped:', error);
       }
     };
-    checkOnboarding();
+
+    void checkOnboarding();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Auto-save conversation
