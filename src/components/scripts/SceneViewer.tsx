@@ -119,6 +119,15 @@ export const SceneViewer = ({ scenes }: SceneViewerProps) => {
             {scene.cameraMove && (
               <Badge variant="secondary" className="text-[9px]">🎥 {scene.cameraMove}</Badge>
             )}
+            {scene.audioDirection && scene.audioDirection.toLowerCase().includes('asmr') && (
+              <Badge className="text-[9px] bg-purple-500/20 text-purple-400 border-purple-500/30">🎧 ASMR</Badge>
+            )}
+            {scene.environment?.weather && /rain|snow|fog|storm|wind|chuva|neve|neblina|tempestade/i.test(scene.environment.weather) && (
+              <Badge className="text-[9px] bg-sky-500/20 text-sky-400 border-sky-500/30">🌧️ {scene.environment.weather.split(',')[0]}</Badge>
+            )}
+            {scene.environment?.timeOfDay && /night|midnight|noite|madrugada|3am|2am|1am/i.test(scene.environment.timeOfDay) && (
+              <Badge className="text-[9px] bg-indigo-500/20 text-indigo-400 border-indigo-500/30">🌙 Noturno</Badge>
+            )}
           </div>
 
           {/* Characters with full details */}

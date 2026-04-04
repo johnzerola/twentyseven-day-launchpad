@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
+import { PROMPT_ANATOMY_CHECKLIST, SCENE_COVERAGE_STRATEGY, CAMERA_SHOT_VARIETY_RULES, MULTI_CHARACTER_RULES, CHARACTER_TAG_FORMAT, validatePromptAnatomy, buildConditionalTraining } from "../_shared/video-production-training.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -313,6 +314,18 @@ VEO 3 MASTER PROMPT FORMULA v2.0 (use for EVERY prompt):
 [AUDIO_DIRECTION]: ambient sounds + foley SFX + music mood.
 (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)
 
+${PROMPT_ANATOMY_CHECKLIST}
+
+${SCENE_COVERAGE_STRATEGY}
+
+${CAMERA_SHOT_VARIETY_RULES}
+
+${MULTI_CHARACTER_RULES}
+
+${CHARACTER_TAG_FORMAT}
+
+${buildConditionalTraining(script)}
+
 MASTER VISUAL STYLE:
 ${selectedStyleGuide}
 ${characterBlock}
@@ -473,6 +486,10 @@ SCENES:\n\n${sceneTexts}`
         }
       }
     }
+
+    // ═══ Video Production Training v2.0: Prompt Anatomy Validation ═══
+    const anatomyWarnings = validatePromptAnatomy(parsed.scenes);
+    validationWarnings.push(...anatomyWarnings);
 
     return new Response(JSON.stringify({
       scenes: parsed.scenes,

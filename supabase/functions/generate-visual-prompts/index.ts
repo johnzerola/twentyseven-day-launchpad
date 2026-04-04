@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
 import { verifyAuth, isAuthError, corsHeaders } from "../_shared/auth.ts";
+import { PROMPT_ANATOMY_CHECKLIST, CAMERA_SHOT_VARIETY_RULES, SCENE_COVERAGE_STRATEGY, buildConditionalTraining, validatePromptAnatomy } from "../_shared/video-production-training.ts";
 
 // ═══════════════════════════════════════════════════════════════
 // DARKPLANNER v3 — Visual Prompts Engine (Full Training + Veo3 Policy)
@@ -45,6 +46,8 @@ serve(async (req) => {
     const styleKey = (videoStyle || 'cinematográfico').toLowerCase();
     const selectedStyle = styleGuides[styleKey] || styleGuides['cinematográfico'];
     const segmentTexts = segments.map((s: any, i: number) => `Segment ${i + 1}: "${s.text}"`).join("\n");
+    const allSegmentText = segments.map((s: any) => s.text || '').join(' ');
+    const conditionalTraining = buildConditionalTraining(allSegmentText);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -155,10 +158,16 @@ SEGMENTS:\n\n${segmentTexts}`
       }
     }
 
+    // ═══ Video Production Training v2.0: Prompt Anatomy Validation ═══
+    const anatomyWarnings = validatePromptAnatomy(
+      parsed.prompts.map((p: any) => ({ visualPrompt: p.visualPrompt, sceneIndex: p.segmentIndex }))
+    );
+    warnings.push(...anatomyWarnings);
+
     return new Response(JSON.stringify({
       prompts: parsed.prompts,
       metadata: {
-        system: "DarkPlanner Visual Prompts v3",
+        system: "DarkPlanner Visual Prompts v3 + Video Production Training v2.0",
         style: styleKey,
         validationWarnings: warnings,
         autoFixes,

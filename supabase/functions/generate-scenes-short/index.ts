@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
+import { PROMPT_ANATOMY_CHECKLIST, CAMERA_SHOT_VARIETY_RULES, MULTI_CHARACTER_RULES, validatePromptAnatomy, buildConditionalTraining } from "../_shared/video-production-training.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -295,6 +297,14 @@ CAMERA ANGLE VARIETY (use ALL of these across scenes — NEVER repeat consecutiv
 - Crane up/down for reveal
 - Split diopter for dual focus
 
+${PROMPT_ANATOMY_CHECKLIST}
+
+${CAMERA_SHOT_VARIETY_RULES}
+
+${MULTI_CHARACTER_RULES}
+
+${buildConditionalTraining(script || '')}
+
 EXAMPLE: If narrator says "No Egito antigo foi achado isso, esqueça tudo que aprendeu na escola sobre o Egito":
 - Scene 1 (0-2s): Aerial drone over Egyptian pyramids at sunset, sand particles floating, golden hour
 - Scene 2 (2-4s): Close-up of ancient hieroglyphics being illuminated by torch, dust particles, dark tomb
@@ -376,6 +386,10 @@ NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
       }
     }
 
+    // ═══ Video Production Training v2.0: Prompt Anatomy Validation ═══
+    const anatomyWarnings = validatePromptAnatomy(scenes);
+    const validationWarnings = anatomyWarnings;
+
     return new Response(JSON.stringify({
       scenes,
       sceneCount: scenes.length,
@@ -384,8 +398,9 @@ NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
       dopamineProfile: {
         hookWindow: timing.hookWindow,
         scenePacing: timing.sceneDuration,
-        technique: "Master Prompt Block",
+        technique: "Master Prompt Block + Video Production Training v2.0",
       },
+      validationWarnings,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
