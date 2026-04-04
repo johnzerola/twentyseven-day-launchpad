@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Google Cloud TTS language codes mapped from user-facing names
 const LANG_MAP: Record<string, { code: string; voices: { name: string; label: string; gender: string }[] }> = {
   'português': {
     code: 'pt-BR',
@@ -74,126 +73,285 @@ const LANG_MAP: Record<string, { code: string; voices: { name: string; label: st
   },
 };
 
+const ELEVENLABS_FALLBACK_VOICES = {
+  MALE: 'onwK4e9ZLuTAKqWW03F9',
+  FEMALE: 'EXAVITQu4vr4xnSDxMaL',
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function splitText(text: string, maxChars = 4500) {
+  if (text.length <= maxChars) return [text];
+
+  const chunks: string[] = [];
+  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+  let current = '';
+
+  for (const sentence of sentences) {
+    if ((current + sentence).length > maxChars) {
+      if (current.trim()) chunks.push(current.trim());
+      current = sentence;
+    } else {
+      current += sentence;
+    }
+  }
+
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+function decodeBase64Audio(audioContent: string) {
+  const binaryString = atob(audioContent);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function mergeAudioBuffers(audioBuffers: ArrayBuffer[]) {
+  let totalLength = 0;
+  for (const buffer of audioBuffers) totalLength += buffer.byteLength;
+
+  const merged = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const buffer of audioBuffers) {
+    merged.set(new Uint8Array(buffer), offset);
+    offset += buffer.byteLength;
+  }
+
+  return merged;
+}
+
+async function synthesizeWithGoogle(
+  chunks: string[],
+  apiKey: string,
+  langCode: string,
+  selectedVoice: string,
+  speakingRate: number,
+  pitch: number,
+) {
+  const audioBuffers: ArrayBuffer[] = [];
+
+  for (const chunk of chunks) {
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text: chunk },
+          voice: {
+            languageCode: langCode,
+            name: selectedVoice,
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate,
+            pitch,
+            sampleRateHertz: 24000,
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Google TTS error:', response.status, errText);
+      if (response.status === 403) throw new Error('GOOGLE_TTS_PERMISSION_DENIED');
+      if (response.status === 429) throw new Error('GOOGLE_TTS_RATE_LIMIT');
+      throw new Error(`GOOGLE_TTS_${response.status}`);
+    }
+
+    const result = await response.json();
+    audioBuffers.push(decodeBase64Audio(result.audioContent));
+  }
+
+  return audioBuffers;
+}
+
+async function synthesizeWithElevenLabs(
+  chunks: string[],
+  apiKey: string,
+  speakingRate: number,
+  gender: 'MALE' | 'FEMALE',
+) {
+  const audioBuffers: ArrayBuffer[] = [];
+  const voiceId = ELEVENLABS_FALLBACK_VOICES[gender] || ELEVENLABS_FALLBACK_VOICES.MALE;
+
+  for (let i = 0; i < chunks.length; i++) {
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: chunks[i],
+          model_id: 'eleven_multilingual_v2',
+          previous_text: i > 0 ? chunks[i - 1].slice(-400) : undefined,
+          next_text: i < chunks.length - 1 ? chunks[i + 1].slice(0, 400) : undefined,
+          voice_settings: {
+            stability: 0.55,
+            similarity_boost: 0.8,
+            style: 0.2,
+            use_speaker_boost: true,
+            speed: clamp(speakingRate || 1, 0.7, 1.2),
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('ElevenLabs TTS error:', response.status, errText);
+      throw new Error(`ELEVENLABS_TTS_${response.status}`);
+    }
+
+    audioBuffers.push(await response.arrayBuffer());
+  }
+
+  return audioBuffers;
+}
+
+async function synthesizeWithLovableTTS(chunks: string[], apiKey: string) {
+  const audioBuffers: ArrayBuffer[] = [];
+
+  for (const chunk of chunks) {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        input: chunk,
+        voice: 'onyx',
+        response_format: 'mp3',
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Lovable TTS gateway error:', response.status, errText);
+      throw new Error(`LOVABLE_TTS_${response.status}`);
+    }
+
+    audioBuffers.push(await response.arrayBuffer());
+  }
+
+  return audioBuffers;
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY não configurada");
-
     const body = await req.json();
     const { action } = body;
 
-    // Action: list voices for a language
-    if (action === "list_voices") {
+    if (action === 'list_voices') {
       const { language } = body;
       const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
       return new Response(JSON.stringify({
         languageCode: langConfig.code,
         voices: langConfig.voices,
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Action: synthesize text
-    const { text, language, voiceName, speakingRate, pitch } = body;
-    if (!text?.trim()) throw new Error("Texto é obrigatório");
+    const { text, language, voiceName, speakingRate = 1.0, pitch = 0 } = body;
+    if (!text?.trim()) throw new Error('Texto é obrigatório');
 
     const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
     const selectedVoice = voiceName || langConfig.voices[0].name;
+    const selectedVoiceMeta = langConfig.voices.find((voice) => voice.name === selectedVoice);
+    const fallbackGender = selectedVoiceMeta?.gender === 'FEMALE' ? 'FEMALE' : 'MALE';
+    const chunks = splitText(text);
 
-    // Split long text into chunks (max 5000 bytes for Google TTS)
-    const MAX_CHARS = 4500;
-    const chunks: string[] = [];
-    if (text.length <= MAX_CHARS) {
-      chunks.push(text);
-    } else {
-      // Split by sentences
-      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-      let current = '';
-      for (const s of sentences) {
-        if ((current + s).length > MAX_CHARS) {
-          if (current) chunks.push(current.trim());
-          current = s;
-        } else {
-          current += s;
-        }
-      }
-      if (current.trim()) chunks.push(current.trim());
-    }
+    const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-    console.log(`Google TTS: ${chunks.length} chunks, voice=${selectedVoice}, lang=${langConfig.code}`);
+    console.log(`Google TTS requested: ${chunks.length} chunks, voice=${selectedVoice}, lang=${langConfig.code}`);
 
-    const audioBuffers: ArrayBuffer[] = [];
+    let audioBuffers: ArrayBuffer[] = [];
+    let engine = 'google-cloud-tts';
+    let fallbackReason: string | null = null;
 
-    for (const chunk of chunks) {
-      const ttsResponse = await fetch(
-        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_AI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: chunk },
-            voice: {
-              languageCode: langConfig.code,
-              name: selectedVoice,
-            },
-            audioConfig: {
-              audioEncoding: "MP3",
-              speakingRate: speakingRate || 1.0,
-              pitch: pitch || 0,
-              sampleRateHertz: 24000,
-            },
-          }),
-        }
+    try {
+      if (!GOOGLE_AI_API_KEY) throw new Error('GOOGLE_TTS_UNAVAILABLE');
+      audioBuffers = await synthesizeWithGoogle(
+        chunks,
+        GOOGLE_AI_API_KEY,
+        langConfig.code,
+        selectedVoice,
+        speakingRate,
+        pitch,
       );
+    } catch (googleError) {
+      fallbackReason = googleError instanceof Error ? googleError.message : 'GOOGLE_TTS_FAILED';
+      console.warn('Google TTS unavailable, starting fallback chain:', fallbackReason);
 
-      if (!ttsResponse.ok) {
-        const errText = await ttsResponse.text();
-        console.error("Google TTS error:", ttsResponse.status, errText);
-        if (ttsResponse.status === 403) throw new Error("Google Cloud TTS não habilitado ou API key sem permissão. Ative a API Text-to-Speech no Google Cloud Console.");
-        if (ttsResponse.status === 429) throw new Error("Limite de requisições do Google TTS atingido. Tente novamente em alguns minutos.");
-        throw new Error(`Erro no Google TTS: ${ttsResponse.status}`);
+      if (ELEVENLABS_API_KEY) {
+        try {
+          audioBuffers = await synthesizeWithElevenLabs(chunks, ELEVENLABS_API_KEY, speakingRate, fallbackGender);
+          engine = 'elevenlabs';
+        } catch (elevenError) {
+          console.warn('ElevenLabs fallback failed:', elevenError instanceof Error ? elevenError.message : elevenError);
+        }
       }
 
-      const result = await ttsResponse.json();
-      // Google returns audioContent as base64
-      const binaryString = atob(result.audioContent);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      if (!audioBuffers.length && LOVABLE_API_KEY) {
+        try {
+          audioBuffers = await synthesizeWithLovableTTS(chunks, LOVABLE_API_KEY);
+          engine = 'openai-tts';
+        } catch (lovableError) {
+          console.warn('Lovable TTS fallback failed:', lovableError instanceof Error ? lovableError.message : lovableError);
+        }
       }
-      audioBuffers.push(bytes.buffer);
+
+      if (!audioBuffers.length) {
+        return new Response(JSON.stringify({
+          use_browser_synthesis: true,
+          engine: 'browser-synthesis',
+          text,
+          languageCode: langConfig.code,
+          voice: selectedVoice,
+          chunks: chunks.length,
+          characterCount: text.length,
+          fallbackReason,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
-    // Merge audio buffers
-    let totalLength = 0;
-    for (const buf of audioBuffers) totalLength += buf.byteLength;
-    const merged = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const buf of audioBuffers) {
-      merged.set(new Uint8Array(buf), offset);
-      offset += buf.byteLength;
-    }
-
-    const audioBase64 = base64Encode(merged);
+    const audioBase64 = base64Encode(mergeAudioBuffers(audioBuffers));
 
     return new Response(JSON.stringify({
       audioBase64,
-      mimeType: "audio/mpeg",
-      engine: "google-cloud-tts",
+      mimeType: 'audio/mpeg',
+      engine,
       voice: selectedVoice,
       languageCode: langConfig.code,
       chunks: chunks.length,
       characterCount: text.length,
+      fallbackReason,
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    console.error("google-tts error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    console.error('google-tts error:', e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Erro desconhecido' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

@@ -122,7 +122,33 @@ export const VoiceGeneratorStep = ({
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      // Convert base64 to blob
+      if (data.use_browser_synthesis) {
+        if (!('speechSynthesis' in window)) {
+          throw new Error('Nenhum provedor de voz disponível no momento');
+        }
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = data.languageCode || 'pt-BR';
+        utterance.rate = Math.min(Math.max(speakingRate, 0.7), 1.2);
+        utterance.pitch = Math.min(Math.max(1 + pitch / 20, 0), 2);
+
+        const preferredVoice = window
+          .speechSynthesis
+          .getVoices()
+          .find((voice) => voice.lang.toLowerCase().startsWith((data.languageCode || 'pt-BR').toLowerCase().split('-')[0]));
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        setAudioUrl('');
+        setIsPlaying(false);
+        window.speechSynthesis.speak(utterance);
+        toast.warning('🎙️ Google bloqueado — usando voz local do navegador para prévia.');
+        return;
+      }
+
       const url = `data:audio/mpeg;base64,${data.audioBase64}`;
       const res = await fetch(url);
       const blob = await res.blob();
@@ -130,7 +156,12 @@ export const VoiceGeneratorStep = ({
       
       setAudioUrl(objectUrl);
       onAudioGenerated(blob, objectUrl);
-      toast.success(`🎙️ Áudio gerado! (${data.characterCount.toLocaleString()} caracteres, ${data.chunks} partes)`);
+      const engineLabel = data.engine === 'elevenlabs'
+        ? 'ElevenLabs'
+        : data.engine === 'openai-tts'
+          ? 'TTS secundário'
+          : 'Google TTS';
+      toast.success(`🎙️ Áudio gerado com ${engineLabel}! (${data.characterCount.toLocaleString()} caracteres, ${data.chunks} partes)`);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao gerar áudio');
     } finally {
@@ -197,7 +228,7 @@ export const VoiceGeneratorStep = ({
           <Mic className="w-5 h-5 text-primary" /> Gerar Voz / Narração
         </h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Gere a narração com Google Cloud TTS (gratuito) ou suba seu próprio áudio
+          Gere a narração com fallback automático de voz ou suba seu próprio áudio
         </p>
       </div>
 
@@ -210,7 +241,7 @@ export const VoiceGeneratorStep = ({
           ⏱️ ~{estimatedMinutes} min de áudio
         </Badge>
         <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 bg-primary/10 text-primary border-primary/20">
-          💰 Google TTS — Gratuito (4M chars/mês)
+          💰 TTS com fallback automático
         </Badge>
       </div>
 
@@ -372,8 +403,8 @@ export const VoiceGeneratorStep = ({
       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
         <p className="text-xs font-semibold text-primary">💡 Como funciona</p>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Google Cloud TTS oferece <strong>4 milhões de caracteres/mês grátis</strong></li>
-          <li>Vozes Neural2 são as mais naturais (similares ao ElevenLabs)</li>
+          <li>O sistema tenta Google TTS primeiro e usa fallback automático se indisponível</li>
+          <li>Vozes premium mantêm a geração funcionando mesmo com falha de permissão no Google</li>
           <li>Na próxima etapa (Cenas), você pode usar este áudio ou subir outro</li>
           <li>O áudio gerado será transcrito automaticamente para sincronizar as cenas</li>
         </ul>
