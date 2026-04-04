@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -107,10 +108,10 @@ serve(async (req) => {
   try {
     const { channelInput } = await req.json();
     const youtubeKeys = getYouTubeKeys();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
     if (youtubeKeys.length === 0) throw new Error("YOUTUBE_API_KEY not configured");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const channelId = await resolveChannelId(channelInput, youtubeKeys);
 

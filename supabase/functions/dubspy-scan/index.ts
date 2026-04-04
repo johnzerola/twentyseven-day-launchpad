@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -220,7 +221,7 @@ serve(async (req) => {
   try {
     const params: ScanParams = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
 
     const { mode, niche, country = "", language = "" } = params;

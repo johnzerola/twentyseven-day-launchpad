@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -90,8 +91,8 @@ serve(async (req) => {
 
   try {
     const { texts, source_table, source_ids, metadata_list } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,

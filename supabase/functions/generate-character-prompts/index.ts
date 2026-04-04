@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -29,8 +30,8 @@ serve(async (req) => {
 
   try {
     const { characters, scenes, visualStyle, videoStyle, customStyleNotes } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     if (!characters?.length || !scenes?.length) {
       throw new Error("characters and scenes arrays required");

@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -96,7 +97,7 @@ serve(async (req) => {
     const isShort = videoType === 'short' || videoType === 'shorts';
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!ELEVENLABS_API_KEY) throw new Error("ElevenLabs não configurado.");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
     if (!audioFile) throw new Error("Arquivo de áudio obrigatório.");

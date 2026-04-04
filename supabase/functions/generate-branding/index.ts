@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -12,8 +13,8 @@ const supabase = createClient(
 );
 
 const callAI = async (messages: any[], tools?: any[], toolChoice?: any) => {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+  const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+  if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
   const body: any = { model: "google/gemini-3-flash-preview", messages };
   if (tools) body.tools = tools;

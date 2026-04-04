@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX, TRIGGER_REPLACEMENTS } from "../_shared/veo3-policy-filter.ts";
 
@@ -79,8 +80,8 @@ serve(async (req) => {
     }
 
     const { segments, characterDescription, videoStyle, characters } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     // ═══ Step 1: Script Analysis (DarkPlanner Etapa 1) ═══
     const contentType = detectContentType(segments || []);

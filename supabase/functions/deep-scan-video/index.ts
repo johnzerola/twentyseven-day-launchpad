@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT } from "../_shared/veo3-policy-filter.ts";
@@ -69,9 +70,9 @@ serve(async (req) => {
   try {
     const { videoId } = await req.json();
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY not configured");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!videoId) throw new Error("videoId is required");
 
     // 1. Fetch video + channel details + transcript in parallel
