@@ -1,3 +1,4 @@
+import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -7,7 +8,7 @@ const corsHeaders = {
 };
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+// Migrated to Gemini Direct via _shared/gemini-direct.ts
 
 // ── Default curated channels ──
 const DEFAULT_CHANNELS = [
@@ -620,8 +621,8 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { start_index = 0, batch_size = 5, custom_channels, mode = "default", target_channel_id } = body;
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const ytKeys = getYouTubeKeys();
     if (!ytKeys.length) throw new Error("No YouTube API keys configured");

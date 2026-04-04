@@ -1,6 +1,14 @@
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -13,22 +21,18 @@ const countryToLanguage: Record<string, string> = {
 };
 
 async function translateKeywords(keywords: string[], targetLang: string): Promise<string[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
   if (!LOVABLE_API_KEY || keywords.length === 0) return keywords;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const res = await _ai({
         model: "google/gemini-2.5-flash-lite",
         messages: [{
           role: "user",
           content: `Translate these YouTube search keywords to ${targetLang} language. Return ONLY a JSON array of translated strings, nothing else. If a keyword is already in the target language, keep it as-is. Keywords: ${JSON.stringify(keywords)}`
         }],
         temperature: 0.1,
-      }),
-    });
+      });
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
     const match = content.match(/\[[\s\S]*?\]/);

@@ -1,7 +1,15 @@
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -27,13 +35,7 @@ async function callAI(
   const model = attempt >= 2 ? models[1] : models[0];
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await _ai({
         model,
         max_completion_tokens: 16384,
         tools: [toolDef],
@@ -42,8 +44,7 @@ async function callAI(
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-      }),
-    });
+      });
 
     if (!response.ok) {
       const t = await response.text();
@@ -96,9 +97,9 @@ serve(async (req) => {
     const isShort = videoType === 'short' || videoType === 'shorts';
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!ELEVENLABS_API_KEY) throw new Error("ElevenLabs não configurado.");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
+    if (!GOOGLE_AI_API_KEY) throw new Error("LOVABLE_API_KEY não configurado.");
     if (!audioFile) throw new Error("Arquivo de áudio obrigatório.");
 
     const sceneDuration = isShort ? Math.min(parseInt(sceneDurationStr) || 3, 4) : (parseInt(sceneDurationStr) || 8);

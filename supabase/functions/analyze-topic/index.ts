@@ -1,7 +1,15 @@
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -11,9 +19,9 @@ serve(async (req) => {
 
   try {
     const { topic, niche, style, language } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!topic?.trim()) throw new Error("Topic is required");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -208,13 +216,7 @@ serve(async (req) => {
       : 'No real-time YouTube data available.';
 
     // ========== AI Analysis ==========
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await _ai({
         model: "google/gemini-3-flash-preview",
         tools: [{
           type: "function",
@@ -366,8 +368,7 @@ LANGUAGE: ${language || 'português'}
 IMPORTANT: Analyze the real-time YouTube videos found about this topic. Why did the top ones succeed? What angles are already covered? What's the gap I can exploit? What hooks and title patterns work best for THIS specific topic?`
           }
         ],
-      }),
-    });
+      });
 
     if (!response.ok) {
       if (response.status === 429) return errResp("Rate limit. Tente novamente.", 429);

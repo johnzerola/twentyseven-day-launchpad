@@ -1,17 +1,22 @@
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // Uses Lovable AI to generate new knowledge entries
 async function aiGenerate(prompt: string, apiKey: string, toolDef: any): Promise<any> {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const resp = await _ai({
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: "You are a YouTube viral content analyst. Always respond via the tool call with precise, actionable data." },
@@ -19,8 +24,7 @@ async function aiGenerate(prompt: string, apiKey: string, toolDef: any): Promise
       ],
       tools: [toolDef],
       tool_choice: { type: "function", function: { name: toolDef.function.name } },
-    }),
-  });
+    });
   if (!resp.ok) throw new Error(`AI ${resp.status}`);
   const data = await resp.json();
   const tc = data.choices?.[0]?.message?.tool_calls?.[0];
@@ -108,8 +112,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,

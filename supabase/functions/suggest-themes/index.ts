@@ -1,7 +1,15 @@
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -11,8 +19,8 @@ serve(async (req) => {
 
   try {
     const { niche, subNiche, style, language, count, topic, narrativeStyle, channelKnowledge, videoFormat, shortsDuration } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -263,13 +271,7 @@ ${videoFormat === 'short' ? `- FORMATO SHORTS: Para cada tema, indique a duraç�
 
 IMPORTANTE: Gere temas que fariam o espectador clicar IMEDIATAMENTE.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiRes = await _ai({
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: "Retorne APENAS JSON válido." },
@@ -318,8 +320,7 @@ IMPORTANTE: Gere temas que fariam o espectador clicar IMEDIATAMENTE.`;
           },
         }],
         tool_choice: { type: "function", function: { name: "suggest_themes" } },
-      }),
-    });
+      });
 
     if (!aiRes.ok) {
       if (aiRes.status === 429) return errResp("Rate limit. Tente novamente.", 429);

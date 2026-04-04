@@ -1,7 +1,15 @@
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
@@ -11,8 +19,8 @@ serve(async (req) => {
 
   try {
     const { video_title, niche, emotion, style, count } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch existing thumbnail patterns for the niche
@@ -49,10 +57,7 @@ ${(mechanics || []).map((m: any) => `- ${m.mechanic_name}: ${m.how_to_apply} (+$
 
 For each variant, provide: Midjourney prompt, DALL-E 3 prompt, composition description, color palette, expected CTR boost.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiResp = await _ai({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "You are a YouTube thumbnail expert. Output ONLY via the tool call." },
@@ -89,8 +94,7 @@ For each variant, provide: Midjourney prompt, DALL-E 3 prompt, composition descr
           },
         }],
         tool_choice: { type: "function", function: { name: "generate_thumbnails" } },
-      }),
-    });
+      });
 
     if (!aiResp.ok) throw new Error(`AI error: ${aiResp.status}`);
     const aiData = await aiResp.json();

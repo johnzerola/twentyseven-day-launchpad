@@ -1,7 +1,15 @@
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
+
+const _ai = async (body: any) => {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
+  const res = await callGeminiOpenAICompat(apiKey, body);
+  return res;
+};
+
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -24,7 +32,7 @@ serve(async (req) => {
   try {
     const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
-    const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const GATEWAY_URL = "GEMINI_COMPAT_URL";
     if (!LOVABLE_API_KEY && !GOOGLE_AI_KEY) throw new Error("Nenhuma API key configurada (LOVABLE_API_KEY ou GOOGLE_AI_API_KEY).");
 
     // Helper: call Lovable AI Gateway (preferred) with Gemini direct fallback
