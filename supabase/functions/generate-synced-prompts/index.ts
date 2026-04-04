@@ -314,6 +314,18 @@ VEO 3 MASTER PROMPT FORMULA v2.0 (use for EVERY prompt):
 [AUDIO_DIRECTION]: ambient sounds + foley SFX + music mood.
 (no subtitles, no text, no titles, no captions, no logos, no watermarks, no on-screen graphics, no writing)
 
+${PROMPT_ANATOMY_CHECKLIST}
+
+${SCENE_COVERAGE_STRATEGY}
+
+${CAMERA_SHOT_VARIETY_RULES}
+
+${MULTI_CHARACTER_RULES}
+
+${CHARACTER_TAG_FORMAT}
+
+${buildConditionalTraining(script)}
+
 MASTER VISUAL STYLE:
 ${selectedStyleGuide}
 ${characterBlock}
