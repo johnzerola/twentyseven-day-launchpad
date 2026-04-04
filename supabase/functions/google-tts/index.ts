@@ -220,7 +220,7 @@ serve(async (req) => {
     }
 
     // Generate audio
-    const { text, language, voiceName, speakingRate = 1.0 } = body;
+    const { text, language, voiceName, speakingRate = 1.0, voiceStyle } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
     const defaultVoice = LANG_DEFAULT_VOICE[language?.toLowerCase()] || 'Charon';
