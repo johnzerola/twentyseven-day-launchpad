@@ -344,15 +344,17 @@ SCENE 1 IS EVERYTHING. If scene 1 doesn't STOP THE SCROLL, the video FAILS.
 The LAST scene must create an irresistible LOOP back to scene 1.
 NEVER generate fewer than ${sceneCount} scenes. Each scene = 2-4 seconds.`;
 
-    const res = await fetch(AI_URL, {
-      method: "POST", headers: aiHeaders,
+    const res = await fetch(`${GEMINI_BASE}?key=${GOOGLE_AI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate ${sceneCount} DOPAMINERGIC scenes (${category} category, ${dur}s) using Master Prompt Block format for this Short:\n\n${script}\n\nStyle: ${styleKey}\nReturn ONLY the JSON array. Each visualPrompt must be a vivid, timestamped cinematic shot description.` }
+        contents: [
+          { role: "user", parts: [{ text: `${systemPrompt}\n\nGenerate ${sceneCount} DOPAMINERGIC scenes (${category} category, ${dur}s) using Master Prompt Block format for this Short:\n\n${script}\n\nStyle: ${styleKey}\nReturn ONLY the JSON array. Each visualPrompt must be a vivid, timestamped cinematic shot description.` }] },
         ],
-        stream: false,
+        generationConfig: {
+          temperature: 0.8,
+          responseMimeType: "application/json",
+        },
       }),
     });
 
