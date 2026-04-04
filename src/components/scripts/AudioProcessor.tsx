@@ -24,6 +24,7 @@ interface AudioProcessorProps {
   getCleanNarration: () => string;
   customStyleNotes: string;
   setCustomStyleNotes: (notes: string) => void;
+  enableASMR?: boolean;
   referenceImageUrls?: string[];
   onReferenceImagesChange?: (urls: string[]) => void;
 }
