@@ -150,7 +150,6 @@ const Scripts = () => {
         const state = {
           topic, niche, script, videoType, videoStyle, duration, language,
           activeStep, characters, syncedScenes, customStyleNotes, enableASMR,
-          activeStep, characters, syncedScenes, customStyleNotes,
           selectedChannelId, sceneBlueprintJson,
         };
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
