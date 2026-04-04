@@ -218,11 +218,12 @@ async function synthesizeWithElevenLabs(
   return audioBuffers;
 }
 
-async function synthesizeWithLovableTTS(chunks: string[], apiKey: string) {
+async function synthesizeWithOpenAITTS(chunks: string[], apiKey: string, gender: 'MALE' | 'FEMALE') {
   const audioBuffers: ArrayBuffer[] = [];
+  const voice = gender === 'FEMALE' ? 'nova' : 'onyx';
 
   for (const chunk of chunks) {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/speech', {
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -231,15 +232,15 @@ async function synthesizeWithLovableTTS(chunks: string[], apiKey: string) {
       body: JSON.stringify({
         model: 'tts-1',
         input: chunk,
-        voice: 'onyx',
+        voice,
         response_format: 'mp3',
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Lovable TTS gateway error:', response.status, errText);
-      throw new Error(`LOVABLE_TTS_${response.status}`);
+      console.error('OpenAI TTS error:', response.status, errText);
+      throw new Error(`OPENAI_TTS_${response.status}`);
     }
 
     audioBuffers.push(await response.arrayBuffer());
