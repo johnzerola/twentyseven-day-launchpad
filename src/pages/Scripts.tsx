@@ -1182,6 +1182,7 @@ const Scripts = () => {
                       videoStyle={videoStyle}
                       characters={characters}
                       customStyleNotes={customStyleNotes}
+                      enableASMR={enableASMR}
                       onScenesGenerated={setSyncedScenes}
                     />
                   ) : (
