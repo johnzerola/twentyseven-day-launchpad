@@ -243,7 +243,7 @@ serve(async (req) => {
     // ── Try Gemini TTS (primary) ──
     try {
       if (!GOOGLE_AI_API_KEY) throw new Error('GEMINI_TTS_UNAVAILABLE');
-      const wavBytes = await synthesizeWithGeminiTTS(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate);
+      const wavBytes = await synthesizeWithGeminiTTS(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate, voiceStyle);
       audioBase64 = base64Encode(wavBytes);
       mimeType = 'audio/wav';
     } catch (geminiError) {
