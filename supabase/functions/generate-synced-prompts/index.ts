@@ -261,12 +261,33 @@ YOUR COMMANDMENTS:
    HOOK SCENE (Scene 1): 8s — MOST spectacular opening shot.
 2. SCENE 1 = HOOK: MYSTERY + SCALE + MOTION + DETAIL. Prefix with "HOOK SCENE —"
 3. PROMPT LENGTH: 150-250 words. Professional film terminology.
-4. MULTI-MOMENT TECHNIQUE: 2-3 visual moments within 8s with natural transitions.
+
+4. ═══ MULTI-MOMENT TECHNIQUE (CRITICAL — MANDATORY) ═══
+   Each 8-second Veo3 clip MUST contain 2-3 DISTINCT visual moments that match the narration timeline.
+   The narration drives the visuals — what the viewer HEARS at second 0-3 must MATCH what they SEE at second 0-3.
+   
+   EXAMPLE — Narration: "Forget everything you learned in school, or saw in documentaries. These are the Pyramids of Egypt."
+   CORRECT PROMPT: "Opening at 0-3s: Medium shot of a teenager slumping in a school chair, textbooks scattered, 
+   fluorescent lights buzzing overhead. At 3-5s: Quick camera push into a living room where a man watches a 
+   documentary on a glowing TV screen, blue light reflecting on his face. At 5-8s: Dramatic aerial drone shot 
+   sweeping over the Great Pyramids of Giza at golden hour, sand particles catching sunlight, vast desert stretching 
+   to the horizon..."
+   
+   WRONG: A single static shot of pyramids for 8 seconds while narrator talks about school and documentaries.
+   
+   RULES:
+   - DESCRIBE each sub-moment with its approximate timestamp within the 8s clip
+   - Use transition words: "Opening at 0-3s:", "At 3-5s:", "At 5-8s:", "Then at..."
+   - Each sub-moment MUST visually represent what is being SAID at that exact moment
+   - Camera moves (whip pan, match cut, focus pull) connect sub-moments naturally
+   - This creates a DOPAMINERGIC rhythm — constant visual novelty matching audio = maximum retention
+
 5. ANTI-AI REALISM: natural skin pores, motion blur, film grain, lens breathing.
 6. CAMERA VARIETY (STRICT): Never repeat angles in consecutive scenes. 5+ different shot types.
 7. DOPAMINERGIC VISUALS: DOPAMINE = (NOVELTY × BEAUTY × MOTION) / PREDICTABILITY.
    Every scene must create a VISCERAL emotional response — the viewer must feel compelled to keep watching.
-8. NARRATION-VISUAL SYNC: Each scene's visual MUST directly illustrate the narrated content.
+8. NARRATION-VISUAL SYNC: Each scene's visual MUST directly illustrate the narrated content AT THE EXACT TIMESTAMP.
+   If the narrator says "a dark forest" at second 2, the viewer MUST see a dark forest at second 2 — NOT a city.
 9. AUDIO DIRECTION: Specify ambient sounds, foley SFX, and music mood per scene.
 10. ALL PROMPTS IN ENGLISH.
 11. ENVIRONMENT IDENTITY SHEET — For EVERY scene, generate a COMPLETE "environment" object.
