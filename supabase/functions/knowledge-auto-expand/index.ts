@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -153,7 +152,7 @@ Generate NEW, UNIQUE content for 2026 YouTube trends:
 
 Focus on what's TRENDING NOW in 2026: AI content, faceless channels, short-form evolution, niche-specific growth hacks.`;
 
-    const result = await aiGenerate(prompt, LOVABLE_API_KEY, EXPAND_TOOL);
+    const result = await aiGenerate(prompt, GOOGLE_AI_API_KEY, EXPAND_TOOL);
     const report: Record<string, number> = { hooks: 0, attention: 0, psychology: 0, titles: 0, errors: 0 };
 
     // Insert new hooks

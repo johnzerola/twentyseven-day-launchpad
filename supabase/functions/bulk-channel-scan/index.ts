@@ -210,14 +210,14 @@ serve(async (req) => {
     // AI Pattern Analysis (if enabled)
     let aiAnalysis: any = null;
     if (analyze_patterns && videos.length >= 5) {
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (LOVABLE_API_KEY) {
+      const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+      if (GOOGLE_AI_API_KEY) {
         const topVideos = [...videos].sort((a, b) => b.views - a.views).slice(0, 15);
         const bottomVideos = [...videos].sort((a, b) => a.views - b.views).slice(0, 5);
         
         const aiRes = await fetch(AI_URL, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
             messages: [{

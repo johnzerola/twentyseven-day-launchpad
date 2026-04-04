@@ -32,7 +32,7 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const YT_KEY = getYouTubeKey();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const lang = language || 'pt';
 
     const results: any = {
@@ -93,11 +93,11 @@ serve(async (req) => {
     }
 
     // ═══ 2) GENERATE STARTER CONTENT IDEAS ═══
-    if (LOVABLE_API_KEY) {
+    if (GOOGLE_AI_API_KEY) {
       try {
         const ideaRes = await fetch(AI_URL, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash-lite",
             messages: [{

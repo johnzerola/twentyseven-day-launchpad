@@ -205,11 +205,11 @@ serve(async (req) => {
       }
 
       // Synthesize Brave findings into knowledge via AI
-      if (braveInsights.length > 10 && LOVABLE_API_KEY) {
+      if (braveInsights.length > 10 && GOOGLE_AI_API_KEY) {
         console.log(`Synthesizing ${braveInsights.length} Brave findings...`);
         const aiRes = await fetch(AI_URL, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
             messages: [
@@ -348,7 +348,7 @@ serve(async (req) => {
     }
 
     // ========== PHASE 3: GEMINI FALLBACK FOR UNCOVERED DOMAINS ==========
-    if (LOVABLE_API_KEY && (mode === "full" || mode === "gemini_fallback")) {
+    if (GOOGLE_AI_API_KEY && (mode === "full" || mode === "gemini_fallback")) {
       console.log("Phase 3: Gemini fallback for uncovered domains...");
       const coveredDomains = new Set(results.filter(r => r.success || r.cached).map(r => r.domain));
 
@@ -365,7 +365,7 @@ serve(async (req) => {
           const contextPrompt = `Context — Top niches: ${nicheContext}. Emerging: ${emergingContext || "N/A"}.\n\n${domain.prompt}`;
           const aiResp = await fetch(AI_URL, {
             method: "POST",
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [

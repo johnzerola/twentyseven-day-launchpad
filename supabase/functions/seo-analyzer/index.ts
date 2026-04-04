@@ -301,7 +301,7 @@ serve(async (req) => {
     let aiSuggestions: any = null;
     if (include_suggestions) {
       const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-      if (LOVABLE_API_KEY) {
+      if (GOOGLE_AI_API_KEY) {
         const [{ data: hooks }, { data: viralTitles }] = await Promise.all([
           sb.from("hook_library").select("hook_text, hook_type, retention_score").order("retention_score", { ascending: false }).limit(8),
           sb.from("viral_titles_db").select("title, views").ilike("niche", `%${niche}%`).order("views", { ascending: false }).limit(8),
@@ -331,7 +331,7 @@ IMPORTANT: All suggestions must be in ${language === "pt" ? "Portuguese" : "Engl
         try {
           const aiRes = await fetch(AI_URL, {
             method: "POST",
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-3-flash-preview",
               messages: [{ role: "user", content: prompt }],

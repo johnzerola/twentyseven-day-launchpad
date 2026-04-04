@@ -2,14 +2,13 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const corsHeaders = {
-
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
   const res = await callGeminiOpenAICompat(apiKey, body);
   return res;
 };
 
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -128,7 +127,7 @@ serve(async (req) => {
       const { topic, niche, style, duration } = data;
       
       // Track popular topic/niche combinations
-      if (topic && niche && LOVABLE_API_KEY) {
+      if (topic && niche && GOOGLE_AI_API_KEY) {
         // Use AI to extract keyword patterns from the topic
         try {
           const aiRes = await _ai({

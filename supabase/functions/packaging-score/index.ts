@@ -19,8 +19,8 @@ serve(async (req) => {
     const { title, thumbnailPrompt, hookText, niche, videoType, language } = await req.json();
     if (!title && !hookText) throw new Error("At least title or hookText is required");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const prompt = `You are a YouTube packaging analyst specializing in faceless/dark channels.
 Analyze this content package as a UNIT and score each dimension 0-100.
@@ -54,7 +54,7 @@ Return ONLY valid JSON, no markdown.`;
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${GOOGLE_AI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",

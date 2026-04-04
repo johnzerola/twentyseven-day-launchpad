@@ -69,7 +69,7 @@ serve(async (req) => {
         // 2. AI NLP Analysis (replaces spaCy, HuggingFace, BERTopic)
         const aiRes = await fetch(AI_URL, {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
             messages: [
