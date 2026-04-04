@@ -122,6 +122,33 @@ export const VoiceGeneratorStep = ({
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
+      if (data.use_browser_synthesis) {
+        if (!('speechSynthesis' in window)) {
+          throw new Error('Nenhum provedor de voz disponível no momento');
+        }
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = data.languageCode || 'pt-BR';
+        utterance.rate = Math.min(Math.max(speakingRate, 0.7), 1.2);
+        utterance.pitch = Math.min(Math.max(1 + pitch / 20, 0), 2);
+
+        const preferredVoice = window
+          .speechSynthesis
+          .getVoices()
+          .find((voice) => voice.lang.toLowerCase().startsWith((data.languageCode || 'pt-BR').toLowerCase().split('-')[0]));
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        setAudioUrl('');
+        setIsPlaying(false);
+        window.speechSynthesis.speak(utterance);
+        toast.warning('🎙️ Google bloqueado — usando voz local do navegador para prévia.');
+        return;
+      }
+
       const url = `data:audio/mpeg;base64,${data.audioBase64}`;
       const res = await fetch(url);
       const blob = await res.blob();

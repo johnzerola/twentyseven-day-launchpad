@@ -318,10 +318,18 @@ serve(async (req) => {
       }
 
       if (!audioBuffers.length) {
-        if (fallbackReason === 'GOOGLE_TTS_PERMISSION_DENIED') {
-          throw new Error('Google Cloud TTS não habilitado e nenhum fallback de voz está disponível.');
-        }
-        throw new Error('Nenhum mecanismo de TTS disponível no momento.');
+        return new Response(JSON.stringify({
+          use_browser_synthesis: true,
+          engine: 'browser-synthesis',
+          text,
+          languageCode: langConfig.code,
+          voice: selectedVoice,
+          chunks: chunks.length,
+          characterCount: text.length,
+          fallbackReason,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     }
 
