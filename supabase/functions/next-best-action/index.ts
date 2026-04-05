@@ -170,10 +170,14 @@ Return ONLY valid JSON with this structure:
     const aiData = await resp.json();
     const raw = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Failed to parse AI response");
-
-    const result = JSON.parse(jsonMatch[0]);
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Failed to parse AI response");
+      result = JSON.parse(jsonMatch[0]);
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
