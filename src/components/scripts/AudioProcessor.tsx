@@ -51,12 +51,30 @@ export const AudioProcessor = ({
   script, videoStyle, videoStyles, characters, language, niche,
   sceneBlueprintJson, syncedScenes, setSyncedScenes, getCleanNarration,
   customStyleNotes, setCustomStyleNotes, enableASMR, referenceImageUrls, onReferenceImagesChange,
+  generatedAudioBlob, generatedAudioUrl,
 }: AudioProcessorProps) => {
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioSource, setAudioSource] = useState<'generated' | 'upload'>(generatedAudioBlob ? 'generated' : 'upload');
   const [uploadingRefImage, setUploadingRefImage] = useState(false);
   const [masteringOpen, setMasteringOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-switch to generated when it becomes available
+  useEffect(() => {
+    if (generatedAudioBlob && !audioFile) {
+      setAudioSource('generated');
+    }
+  }, [generatedAudioBlob]);
+
+  /** The effective audio file/blob to use for scene generation */
+  const effectiveAudioFile = audioSource === 'generated' && generatedAudioBlob
+    ? new File([generatedAudioBlob], 'narration-generated.wav', { type: generatedAudioBlob.type || 'audio/wav' })
+    : audioFile;
+
+  const effectiveAudioForMastering = audioSource === 'generated' && generatedAudioBlob
+    ? new File([generatedAudioBlob], 'narration-generated.wav', { type: generatedAudioBlob.type || 'audio/wav' })
+    : audioFile;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
