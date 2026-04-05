@@ -31,14 +31,13 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: authErr } = await sbAuth.auth.getClaims(token);
-    if (authErr || !claims?.claims) {
+    const { data: { user }, error: authErr } = await sbAuth.auth.getUser();
+    if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
 
     const { channelId } = await req.json();
 
@@ -138,44 +137,49 @@ Based on all this data, determine the SINGLE best next action for this creator. 
 - Risk vs reward
 - Time to produce vs potential impact
 
-Return ONLY valid JSON with this structure:
-{
-  "action": "Clear, specific action in 1 sentence (in Portuguese)",
-  "format": "short" or "long",
-  "title_suggestion": "A specific title suggestion",
-  "thumb_direction": "Brief thumbnail concept",
-  "hook_strategy": "How the first 30s should work",
-  "why": "2-3 sentence explanation of why THIS is the best move NOW (in Portuguese)",
-  "risk": "low", "medium", or "high",
-  "expected_views": "Range estimate like 5k-15k",
-  "monetization_impact": "How this helps monetization (in Portuguese)",
-  "urgency": "now", "today", "this_week", or "when_ready",
-  "confidence": 0-100,
-  "sources": ["what data points informed this decision"]
-}`;
+Return ONLY valid JSON with these keys:
+- action (string, in Portuguese)
+- format ("short" or "long")
+- title_suggestion (string)
+- thumb_direction (string)
+- hook_strategy (string)
+- why (string, in Portuguese)
+- risk ("low", "medium", or "high")
+- expected_views (string, e.g. "5k-15k")
+- monetization_impact (string, in Portuguese)
+- urgency ("now", "today", "this_week", or "when_ready")
+- confidence (number 0-100)
+- sources (array of strings)`;
 
-    const resp = await fetch(AI_URL, {
+    const resp = await fetch(`${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${GOOGLE_AI_API_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.4,
-        max_tokens: 1500,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: "application/json" },
       }),
     });
 
-    if (!resp.ok) throw new Error(`AI error: ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error("Gemini error:", resp.status, errText);
+      throw new Error(`AI error: ${resp.status}`);
+    }
     const aiData = await resp.json();
-    const raw = aiData.choices?.[0]?.message?.content || "";
+    const raw = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("Gemini raw length:", raw.length, "first 200 chars:", raw.slice(0, 200));
+    if (!raw) {
+      console.error("Full Gemini response:", JSON.stringify(aiData).slice(0, 500));
+    }
 
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Failed to parse AI response");
-
-    const result = JSON.parse(jsonMatch[0]);
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Failed to parse AI response");
+      result = JSON.parse(jsonMatch[0]);
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
