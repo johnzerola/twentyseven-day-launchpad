@@ -150,7 +150,7 @@ export const AudioProcessor = ({
   }, []);
 
   const generateSyncedScenes = async () => {
-    if (!audioFile) { toast.error('Selecione um arquivo de áudio'); return; }
+    if (!effectiveAudioFile) { toast.error('Selecione um arquivo de áudio ou gere narração na etapa Voz'); return; }
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
 
