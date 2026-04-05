@@ -525,7 +525,7 @@ export const AudioProcessor = ({
 
       {/* Generate + SRT Buttons */}
       <div className="flex gap-2">
-        <Button onClick={generateSyncedScenes} disabled={isProcessing || !audioFile}
+        <Button onClick={generateSyncedScenes} disabled={isProcessing || !effectiveAudioFile}
           className="flex-1 gap-2 h-11 text-sm gradient-hero border-0">
           {isProcessing
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {PHASE_LABELS[phase]}</>
