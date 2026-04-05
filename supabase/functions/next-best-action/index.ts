@@ -154,17 +154,12 @@ Return ONLY valid JSON with this structure:
   "sources": ["what data points informed this decision"]
 }`;
 
-    const resp = await fetch(AI_URL, {
+    const resp = await fetch(`${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${GOOGLE_AI_API_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.4,
-        max_tokens: 1500,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 1500, responseMimeType: "application/json" },
       }),
     });
 
