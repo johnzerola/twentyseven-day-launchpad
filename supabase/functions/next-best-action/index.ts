@@ -166,8 +166,11 @@ Return ONLY valid JSON with these keys:
       throw new Error(`AI error: ${resp.status}`);
     }
     const aiData = await resp.json();
-    console.log("Gemini response keys:", JSON.stringify(Object.keys(aiData)));
     const raw = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("Gemini raw length:", raw.length, "first 200 chars:", raw.slice(0, 200));
+    if (!raw) {
+      console.error("Full Gemini response:", JSON.stringify(aiData).slice(0, 500));
+    }
 
     let result;
     try {
