@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Sparkles, Loader2, Image as ImageIcon, Upload, Music, X, Headphones, AlertTriangle, FileText, Users, Clock, Zap, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,9 @@ interface AudioProcessorProps {
   enableASMR?: boolean;
   referenceImageUrls?: string[];
   onReferenceImagesChange?: (urls: string[]) => void;
+  /** Audio blob generated in the Voice step */
+  generatedAudioBlob?: Blob | null;
+  generatedAudioUrl?: string;
 }
 
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
@@ -48,12 +51,30 @@ export const AudioProcessor = ({
   script, videoStyle, videoStyles, characters, language, niche,
   sceneBlueprintJson, syncedScenes, setSyncedScenes, getCleanNarration,
   customStyleNotes, setCustomStyleNotes, enableASMR, referenceImageUrls, onReferenceImagesChange,
+  generatedAudioBlob, generatedAudioUrl,
 }: AudioProcessorProps) => {
   const [phase, setPhase] = useState<ProcessingPhase>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioSource, setAudioSource] = useState<'generated' | 'upload'>(generatedAudioBlob ? 'generated' : 'upload');
   const [uploadingRefImage, setUploadingRefImage] = useState(false);
   const [masteringOpen, setMasteringOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-switch to generated when it becomes available
+  useEffect(() => {
+    if (generatedAudioBlob && !audioFile) {
+      setAudioSource('generated');
+    }
+  }, [generatedAudioBlob]);
+
+  /** The effective audio file/blob to use for scene generation */
+  const effectiveAudioFile = audioSource === 'generated' && generatedAudioBlob
+    ? new File([generatedAudioBlob], 'narration-generated.wav', { type: generatedAudioBlob.type || 'audio/wav' })
+    : audioFile;
+
+  const effectiveAudioForMastering = audioSource === 'generated' && generatedAudioBlob
+    ? new File([generatedAudioBlob], 'narration-generated.wav', { type: generatedAudioBlob.type || 'audio/wav' })
+    : audioFile;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -129,22 +150,22 @@ export const AudioProcessor = ({
   }, []);
 
   const generateSyncedScenes = async () => {
-    if (!audioFile) { toast.error('Selecione um arquivo de áudio'); return; }
+    if (!effectiveAudioFile) { toast.error('Selecione um arquivo de áudio ou gere narração na etapa Voz'); return; }
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
 
     setPhase('uploading');
     try {
-      const audioDurationSeconds = await getAudioDurationSeconds(audioFile);
+      const audioDurationSeconds = await getAudioDurationSeconds(effectiveAudioFile);
 
       // Upload audio to storage
-      const mimeType = audioFile.type || 'audio/mp3';
-      const ext = audioFile.name.split('.').pop() || 'mp3';
+      const mimeType = effectiveAudioFile.type || 'audio/wav';
+      const ext = effectiveAudioFile.name.split('.').pop() || 'wav';
       const storagePath = `audio-uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
       
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(storagePath, audioFile, { contentType: mimeType });
+        .upload(storagePath, effectiveAudioFile, { contentType: mimeType });
       
       if (uploadError) throw new Error(`Erro ao enviar áudio: ${uploadError.message}`);
       
@@ -299,70 +320,123 @@ export const AudioProcessor = ({
 
   return (
     <div className="space-y-4">
-      {/* Audio Upload */}
+      {/* Audio Source Toggle */}
       <div className="border border-border/50 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Music className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Upload de Áudio (Narração)</span>
+          <span className="text-sm font-semibold text-foreground">Áudio para Cenas</span>
           <Badge className="bg-primary/20 text-primary text-[10px]">Gemini</Badge>
         </div>
-        <p className="text-[10px] text-muted-foreground mb-3">
-          Envie o áudio narrado. A IA transcreve, analisa os tempos de fala e cria cenas visuais sincronizadas automaticamente.
-        </p>
 
-        {!audioFile ? (
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-lg p-6 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
-            <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-            <span className="text-xs font-medium text-foreground">Clique para selecionar áudio</span>
-            <span className="text-[10px] text-muted-foreground mt-1">MP3, WAV, M4A, OGG — até 100MB (~50 min)</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-          </label>
-        ) : (
-          <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
-            <Music className="w-5 h-5 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">{audioFile.name}</p>
-              <p className="text-[10px] text-muted-foreground">{(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>
-            </div>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={removeFile} disabled={isProcessing}>
-              <X className="w-3.5 h-3.5" />
-            </Button>
+        {/* Source selector when generated audio is available */}
+        {generatedAudioBlob && (
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setAudioSource('generated')}
+              className={`flex-1 p-3 rounded-lg border-2 text-left transition-all ${
+                audioSource === 'generated'
+                  ? 'border-primary bg-primary/10 shadow-md'
+                  : 'border-border hover:border-primary/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-xs font-semibold">Usar narração gerada</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Áudio gerado na etapa Voz (já sincronizado com o roteiro)</p>
+              {generatedAudioUrl && audioSource === 'generated' && (
+                <audio src={generatedAudioUrl} controls className="w-full mt-2 h-8" />
+              )}
+            </button>
+            <button
+              onClick={() => setAudioSource('upload')}
+              className={`flex-1 p-3 rounded-lg border-2 text-left transition-all ${
+                audioSource === 'upload'
+                  ? 'border-primary bg-primary/10 shadow-md'
+                  : 'border-border hover:border-primary/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Upload className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-semibold">Enviar áudio externo</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Use uma narração gravada externamente</p>
+            </button>
           </div>
-      )}
+        )}
+
+        {/* Upload area (shown when no generated audio or upload mode selected) */}
+        {(audioSource === 'upload' || !generatedAudioBlob) && (
+          <>
+            <p className="text-[10px] text-muted-foreground mb-3">
+              Envie o áudio narrado. A IA transcreve, analisa os tempos de fala e cria cenas visuais sincronizadas automaticamente.
+            </p>
+            {!audioFile ? (
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-lg p-6 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                <span className="text-xs font-medium text-foreground">Clique para selecionar áudio</span>
+                <span className="text-[10px] text-muted-foreground mt-1">MP3, WAV, M4A, OGG — até 100MB (~50 min)</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </label>
+            ) : (
+              <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
+                <Music className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{audioFile.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                </div>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={removeFile} disabled={isProcessing}>
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Generated audio indicator */}
+        {audioSource === 'generated' && generatedAudioBlob && (
+          <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3 mt-2">
+            <Sparkles className="w-5 h-5 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground">Narração gerada na etapa Voz</p>
+              <p className="text-[10px] text-muted-foreground">{(generatedAudioBlob.size / 1024 / 1024).toFixed(1)} MB • Pronto para gerar cenas</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Audio Mastering - Side Panel (always visible) */}
+      {/* Audio Mastering - Side Panel */}
       <Button
         variant="outline"
         size="sm"
-        className="w-full gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full gap-2 border-chart-4/30 text-chart-4 hover:bg-chart-4/10 disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={() => setMasteringOpen(true)}
-        disabled={!audioFile}
+        disabled={!effectiveAudioForMastering}
       >
         <Headphones className="w-4 h-4" />
         🎛️ Masterização de Áudio (Studio Grade)
-        {!audioFile && <span className="text-[10px] text-muted-foreground ml-1">— envie áudio primeiro</span>}
+        {!effectiveAudioForMastering && <span className="text-[10px] text-muted-foreground ml-1">— envie ou gere áudio primeiro</span>}
       </Button>
-      {audioFile && (
+      {effectiveAudioForMastering && (
         <Sheet open={masteringOpen} onOpenChange={setMasteringOpen}>
           <SheetContent side="right" className="w-full sm:max-w-lg p-0">
             <SheetHeader className="p-6 pb-2">
               <SheetTitle className="flex items-center gap-2 text-base">
-                <Headphones className="w-5 h-5 text-amber-400" />
+                <Headphones className="w-5 h-5 text-chart-4" />
                 Masterização de Áudio
               </SheetTitle>
               <SheetDescription className="text-xs">
-                Pipeline profissional para transformar seu áudio em padrão estúdio.
+                Pipeline profissional para transformar seu áudio em padrão estúdio (Adobe Podcast style).
               </SheetDescription>
             </SheetHeader>
             <ScrollArea className="h-[calc(100vh-120px)] px-6 pb-6">
-              <AudioMasteringPanel audioFile={audioFile} />
+              <AudioMasteringPanel audioFile={effectiveAudioForMastering} />
             </ScrollArea>
           </SheetContent>
         </Sheet>
@@ -451,7 +525,7 @@ export const AudioProcessor = ({
 
       {/* Generate + SRT Buttons */}
       <div className="flex gap-2">
-        <Button onClick={generateSyncedScenes} disabled={isProcessing || !audioFile}
+        <Button onClick={generateSyncedScenes} disabled={isProcessing || !effectiveAudioFile}
           className="flex-1 gap-2 h-11 text-sm gradient-hero border-0">
           {isProcessing
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {PHASE_LABELS[phase]}</>

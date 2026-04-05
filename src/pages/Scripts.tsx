@@ -1198,6 +1198,8 @@ const Scripts = () => {
                         enableASMR={enableASMR}
                         referenceImageUrls={referenceImages.map(img => img.url)}
                         onReferenceImagesChange={(urls) => setReferenceImages(urls.map(url => ({ url })))}
+                        generatedAudioBlob={generatedAudioBlob}
+                        generatedAudioUrl={generatedAudioUrl}
                       />
                       {syncedScenes.length > 0 && (
                         <div className="space-y-4">
