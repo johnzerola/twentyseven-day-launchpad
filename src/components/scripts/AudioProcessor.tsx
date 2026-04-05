@@ -27,6 +27,9 @@ interface AudioProcessorProps {
   enableASMR?: boolean;
   referenceImageUrls?: string[];
   onReferenceImagesChange?: (urls: string[]) => void;
+  /** Audio blob generated in the Voice step */
+  generatedAudioBlob?: Blob | null;
+  generatedAudioUrl?: string;
 }
 
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
