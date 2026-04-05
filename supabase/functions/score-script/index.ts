@@ -194,8 +194,8 @@ serve(async (req) => {
     const userScoreMsg = `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}`;
 
     const [gptResult, geminiResult] = await Promise.allSettled([
-      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 2048 }),
-      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 2048 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 4096 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 4096 }),
     ]);
 
     const parseScore = (result: PromiseSettledResult<string>, name: string) => {
