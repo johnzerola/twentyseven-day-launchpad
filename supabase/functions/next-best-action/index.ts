@@ -31,14 +31,13 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: authErr } = await sbAuth.auth.getClaims(token);
-    if (authErr || !claims?.claims) {
+    const { data: { user }, error: authErr } = await sbAuth.auth.getUser();
+    if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
 
     const { channelId } = await req.json();
 
