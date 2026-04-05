@@ -163,9 +163,13 @@ Return ONLY valid JSON with this structure:
       }),
     });
 
-    if (!resp.ok) throw new Error(`AI error: ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error("Gemini error:", resp.status, errText);
+      throw new Error(`AI error: ${resp.status}`);
+    }
     const aiData = await resp.json();
-    const raw = aiData.choices?.[0]?.message?.content || "";
+    const raw = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Failed to parse AI response");
