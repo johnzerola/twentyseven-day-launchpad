@@ -156,16 +156,16 @@ export const AudioProcessor = ({
 
     setPhase('uploading');
     try {
-      const audioDurationSeconds = await getAudioDurationSeconds(audioFile);
+      const audioDurationSeconds = await getAudioDurationSeconds(effectiveAudioFile);
 
       // Upload audio to storage
-      const mimeType = audioFile.type || 'audio/mp3';
-      const ext = audioFile.name.split('.').pop() || 'mp3';
+      const mimeType = effectiveAudioFile.type || 'audio/wav';
+      const ext = effectiveAudioFile.name.split('.').pop() || 'wav';
       const storagePath = `audio-uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
       
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(storagePath, audioFile, { contentType: mimeType });
+        .upload(storagePath, effectiveAudioFile, { contentType: mimeType });
       
       if (uploadError) throw new Error(`Erro ao enviar áudio: ${uploadError.message}`);
       
