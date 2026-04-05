@@ -194,14 +194,21 @@ serve(async (req) => {
     const userScoreMsg = `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}`;
 
     const [gptResult, geminiResult] = await Promise.allSettled([
-      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 2048 }),
-      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 2048 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 4096 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 4096 }),
     ]);
 
     const parseScore = (result: PromiseSettledResult<string>, name: string) => {
       try {
         if (result.status === 'rejected') { console.error(`[PHASE-3 SCORE] ${name} rejected:`, result.reason); return null; }
-        return JSON.parse(result.value);
+        const raw = result.value.trim();
+        // Try direct parse first
+        try { return JSON.parse(raw); } catch {}
+        // Try extracting JSON object
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+        console.error(`[PHASE-3 SCORE] Parse ${name} failed, raw length: ${raw.length}`);
+        return null;
       } catch (e) {
         console.error(`[PHASE-3 SCORE] Parse ${name} error:`, e);
         return null;
