@@ -62,6 +62,74 @@ const TTS_HEADERS = {
 // Max chars per chunk to avoid memory limit on edge function
 const MAX_CHUNK_CHARS = 800;
 
+/**
+ * Concatenate multiple WAV blobs into a single valid WAV file.
+ * Strips individual headers and writes one combined header.
+ */
+async function concatenateWavBlobs(blobs: Blob[]): Promise<Blob> {
+  if (blobs.length === 1) return blobs[0];
+
+  const buffers = await Promise.all(blobs.map(b => b.arrayBuffer()));
+  
+  // Read header info from first WAV to get format details
+  const firstView = new DataView(buffers[0]);
+  // Standard WAV: bytes 0-3 "RIFF", 8-11 "WAVE", then fmt chunk
+  const numChannels = firstView.getUint16(22, true);
+  const sampleRate = firstView.getUint32(24, true);
+  const bitsPerSample = firstView.getUint16(34, true);
+  
+  // Extract raw PCM data from each WAV (skip 44-byte header)
+  const pcmChunks: Uint8Array[] = [];
+  let totalPcmLength = 0;
+  for (const buf of buffers) {
+    // Find "data" chunk — usually at byte 36, size at 40, data starts at 44
+    // But some WAVs have extra chunks, so search for "data" marker
+    const view = new DataView(buf);
+    let dataOffset = 44; // default
+    for (let i = 12; i < Math.min(buf.byteLength - 4, 200); i++) {
+      if (view.getUint8(i) === 0x64 && view.getUint8(i+1) === 0x61 &&
+          view.getUint8(i+2) === 0x74 && view.getUint8(i+3) === 0x61) {
+        dataOffset = i + 8; // skip "data" + 4-byte size
+        break;
+      }
+    }
+    const pcm = new Uint8Array(buf, dataOffset);
+    pcmChunks.push(pcm);
+    totalPcmLength += pcm.byteLength;
+  }
+
+  // Build new WAV with combined PCM
+  const wavBuffer = new ArrayBuffer(44 + totalPcmLength);
+  const wav = new DataView(wavBuffer);
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) wav.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeStr(0, 'RIFF');
+  wav.setUint32(4, 36 + totalPcmLength, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  wav.setUint32(16, 16, true); // fmt chunk size
+  wav.setUint16(20, 1, true);  // PCM format
+  wav.setUint16(22, numChannels, true);
+  wav.setUint32(24, sampleRate, true);
+  wav.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
+  wav.setUint16(32, numChannels * (bitsPerSample / 8), true);
+  wav.setUint16(34, bitsPerSample, true);
+  writeStr(36, 'data');
+  wav.setUint32(40, totalPcmLength, true);
+
+  // Copy all PCM data
+  const output = new Uint8Array(wavBuffer);
+  let offset = 44;
+  for (const chunk of pcmChunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
 /** Split text at sentence boundaries into chunks ≤ maxLen */
 function splitTextIntoChunks(text: string, maxLen: number): string[] {
   if (text.length <= maxLen) return [text];
