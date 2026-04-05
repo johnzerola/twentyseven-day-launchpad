@@ -220,11 +220,10 @@ serve(async (req) => {
     }
 
     // Generate audio
-    const { text, language, voiceName, speakingRate = 1.0, voiceStyle } = body;
+    const { text, language, voiceName, speakingRate = 1.0, voiceStyle, returnBinary } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
     const defaultVoice = LANG_DEFAULT_VOICE[language?.toLowerCase()] || 'Charon';
-    // Map old Google Cloud TTS voice names to Gemini voices
     const isOldVoiceName = voiceName?.includes('-') && voiceName?.includes('Neural');
     const selectedVoice = isOldVoiceName ? defaultVoice : (voiceName || defaultVoice);
     const selectedVoiceMeta = GEMINI_VOICES.find(v => v.name === selectedVoice);
@@ -233,63 +232,63 @@ serve(async (req) => {
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
-    console.log(`TTS requested: voice=${selectedVoice}, lang=${language}, chars=${text.length}`);
-
-    let audioBase64 = '';
-    let mimeType = 'audio/wav';
-    let engine = 'gemini-tts';
-    let fallbackReason: string | null = null;
+    console.log(`TTS requested: voice=${selectedVoice}, lang=${language}, chars=${text.length}, binary=${!!returnBinary}`);
 
     // ── Try Gemini TTS (primary) ──
     try {
       if (!GOOGLE_AI_API_KEY) throw new Error('GEMINI_TTS_UNAVAILABLE');
       const wavBytes = await synthesizeWithGeminiTTS(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate, voiceStyle);
-      audioBase64 = base64Encode(wavBytes);
-      mimeType = 'audio/wav';
+
+      // Return binary directly to save memory (no base64 encoding)
+      if (returnBinary) {
+        return new Response(wavBytes, {
+          headers: { ...corsHeaders, 'Content-Type': 'audio/wav', 'Content-Length': String(wavBytes.length) },
+        });
+      }
+
+      const audioBase64 = base64Encode(wavBytes);
+      return new Response(JSON.stringify({
+        audioBase64, mimeType: 'audio/wav', engine: 'gemini-tts',
+        voice: selectedVoice, languageCode: 'auto', chunks: 1, characterCount: text.length,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } catch (geminiError) {
-      fallbackReason = geminiError instanceof Error ? geminiError.message : 'GEMINI_TTS_FAILED';
+      const fallbackReason = geminiError instanceof Error ? geminiError.message : 'GEMINI_TTS_FAILED';
       console.warn('Gemini TTS failed, trying fallback:', fallbackReason);
 
       // ── ElevenLabs fallback ──
       if (ELEVENLABS_API_KEY) {
         try {
           const result = await synthesizeWithElevenLabs(text, ELEVENLABS_API_KEY, speakingRate, fallbackGender as 'MALE' | 'FEMALE');
-          audioBase64 = base64Encode(new Uint8Array(result.buffer));
-          mimeType = result.mimeType;
-          engine = 'elevenlabs';
+
+          if (returnBinary) {
+            return new Response(result.buffer, {
+              headers: { ...corsHeaders, 'Content-Type': result.mimeType },
+            });
+          }
+
+          const audioBase64 = base64Encode(new Uint8Array(result.buffer));
+          return new Response(JSON.stringify({
+            audioBase64, mimeType: result.mimeType, engine: 'elevenlabs',
+            voice: selectedVoice, languageCode: 'auto', chunks: 1, characterCount: text.length, fallbackReason,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         } catch (elevenError) {
           console.warn('ElevenLabs fallback failed:', elevenError instanceof Error ? elevenError.message : elevenError);
         }
       }
 
       // ── Browser synthesis fallback ──
-      if (!audioBase64) {
-        return new Response(JSON.stringify({
-          use_browser_synthesis: true,
-          engine: 'browser-synthesis',
-          text,
-          languageCode: 'auto',
-          voice: selectedVoice,
-          characterCount: text.length,
-          fallbackReason,
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      return new Response(JSON.stringify({
+        use_browser_synthesis: true, engine: 'browser-synthesis',
+        text, languageCode: 'auto', voice: selectedVoice,
+        characterCount: text.length, fallbackReason,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    return new Response(JSON.stringify({
-      audioBase64,
-      mimeType,
-      engine,
-      voice: selectedVoice,
-      languageCode: 'auto',
-      chunks: 1,
-      characterCount: text.length,
-      fallbackReason,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (e) {
     console.error('google-tts error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Erro desconhecido' }), {

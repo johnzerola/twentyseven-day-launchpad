@@ -60,7 +60,7 @@ const TTS_HEADERS = {
 };
 
 // Max chars per chunk to avoid memory limit on edge function
-const MAX_CHUNK_CHARS = 2500;
+const MAX_CHUNK_CHARS = 800;
 
 /** Split text at sentence boundaries into chunks ≤ maxLen */
 function splitTextIntoChunks(text: string, maxLen: number): string[] {
@@ -131,22 +131,54 @@ export const VoiceGeneratorStep = ({
   };
 
   /** Call TTS for a single chunk, returns audio Blob */
-  const generateChunk = async (text: string): Promise<Blob | null> => {
-    const response = await fetch(TTS_URL, {
-      method: 'POST', headers: TTS_HEADERS,
-      body: JSON.stringify({
-        text, language: ttsLanguage,
-        voiceName: selectedVoice, voiceStyle, speakingRate, pitch,
-      }),
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    if (data.use_browser_synthesis) return null; // fallback signal
+  const generateChunk = async (text: string, retries = 2): Promise<Blob | null> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(TTS_URL, {
+          method: 'POST', headers: TTS_HEADERS,
+          body: JSON.stringify({
+            text, language: ttsLanguage,
+            voiceName: selectedVoice, voiceStyle, speakingRate, pitch,
+            returnBinary: true,
+          }),
+        });
 
-    const mime = data.mimeType || 'audio/mpeg';
-    const url = `data:${mime};base64,${data.audioBase64}`;
-    const res = await fetch(url);
-    return res.blob();
+        // Check for WORKER_LIMIT or other non-200
+        if (!response.ok) {
+          const errText = await response.text();
+          if (attempt < retries && (errText.includes('WORKER_LIMIT') || errText.includes('Memory'))) {
+            console.warn(`TTS chunk retry ${attempt + 1}: ${errText.slice(0, 100)}`);
+            await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+            continue;
+          }
+          throw new Error(`TTS error: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+
+        // Binary response (audio/wav or audio/mpeg)
+        if (contentType.startsWith('audio/')) {
+          return response.blob();
+        }
+
+        // JSON response (legacy base64 path)
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        if (data.use_browser_synthesis) return null;
+
+        const mime = data.mimeType || 'audio/mpeg';
+        const url = `data:${mime};base64,${data.audioBase64}`;
+        const res = await fetch(url);
+        return res.blob();
+      } catch (err) {
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
+    }
+    return null;
   };
 
   const generateAudio = async () => {
