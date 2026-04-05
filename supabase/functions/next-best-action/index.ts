@@ -137,21 +137,19 @@ Based on all this data, determine the SINGLE best next action for this creator. 
 - Risk vs reward
 - Time to produce vs potential impact
 
-Return ONLY valid JSON with this structure:
-{
-  "action": "Clear, specific action in 1 sentence (in Portuguese)",
-  "format": "short" or "long",
-  "title_suggestion": "A specific title suggestion",
-  "thumb_direction": "Brief thumbnail concept",
-  "hook_strategy": "How the first 30s should work",
-  "why": "2-3 sentence explanation of why THIS is the best move NOW (in Portuguese)",
-  "risk": "low", "medium", or "high",
-  "expected_views": "Range estimate like 5k-15k",
-  "monetization_impact": "How this helps monetization (in Portuguese)",
-  "urgency": "now", "today", "this_week", or "when_ready",
-  "confidence": 0-100,
-  "sources": ["what data points informed this decision"]
-}`;
+Return ONLY valid JSON with these keys:
+- action (string, in Portuguese)
+- format ("short" or "long")
+- title_suggestion (string)
+- thumb_direction (string)
+- hook_strategy (string)
+- why (string, in Portuguese)
+- risk ("low", "medium", or "high")
+- expected_views (string, e.g. "5k-15k")
+- monetization_impact (string, in Portuguese)
+- urgency ("now", "today", "this_week", or "when_ready")
+- confidence (number 0-100)
+- sources (array of strings)`;
 
     const resp = await fetch(`${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
       method: "POST",
