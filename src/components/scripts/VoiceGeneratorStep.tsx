@@ -288,8 +288,8 @@ export const VoiceGeneratorStep = ({
       setProgress(100);
       setProgressLabel('Finalizando...');
 
-      // Concatenate all audio blobs
-      const finalBlob = new Blob(audioBlobs, { type: audioBlobs[0]?.type || 'audio/wav' });
+      // Properly concatenate WAV PCM data with a single header
+      const finalBlob = await concatenateWavBlobs(audioBlobs);
       const objectUrl = URL.createObjectURL(finalBlob);
       setAudioUrl(objectUrl);
       onAudioGenerated(finalBlob, objectUrl);
