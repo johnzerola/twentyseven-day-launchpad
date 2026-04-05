@@ -201,7 +201,14 @@ serve(async (req) => {
     const parseScore = (result: PromiseSettledResult<string>, name: string) => {
       try {
         if (result.status === 'rejected') { console.error(`[PHASE-3 SCORE] ${name} rejected:`, result.reason); return null; }
-        return JSON.parse(result.value);
+        const raw = result.value.trim();
+        // Try direct parse first
+        try { return JSON.parse(raw); } catch {}
+        // Try extracting JSON object
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+        console.error(`[PHASE-3 SCORE] Parse ${name} failed, raw length: ${raw.length}`);
+        return null;
       } catch (e) {
         console.error(`[PHASE-3 SCORE] Parse ${name} error:`, e);
         return null;
