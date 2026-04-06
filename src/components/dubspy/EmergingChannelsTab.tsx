@@ -26,6 +26,10 @@ interface ChannelResult {
   avgLikeRatio: number;
   avgViewVelocity72h: number;
   uploadFrequencyDays: number;
+  goldScore?: number;
+  dataConfidence?: 'high' | 'medium' | 'low';
+  sampleSize?: number;
+  multiplier?: number;
 }
 
 interface EmergingChannelsTabProps {
