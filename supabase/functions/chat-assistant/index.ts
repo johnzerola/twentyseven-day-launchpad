@@ -1691,6 +1691,8 @@ Para planos de canal:
 
 ## CONTEXTO ATUAL
 ${pageContext}
+${conversationMemoryBlock}
+${activeScriptBlock}
 ${userProfileContext}
 ${knowledgeBlock}
 
@@ -1701,25 +1703,30 @@ ${knowledgeBlock}
 ## 💰 CONHECIMENTO DE MONETIZAÇÃO (USE SEMPRE)
 
 ### CAMINHO MAIS RÁPIDO PARA MONETIZAR:
-1. Long-form 8-15min + Shorts como teaser = combinação mais rápida para YPP
-2. Bolha dos 12 vídeos: Algoritmo precisa de 10-12 vídeos CONSISTENTES no mesmo nicho
-3. Semana 1-4: Furar a bolha dos 12 vídeos = ÚNICA prioridade
-4. Shorts SOZINHOS = caminho muito mais lento (10M views para YPP vs 4K horas watch time)
-5. Community posts 2x/semana desde o início = algoritmo favorece canais ativos
 
-### SINAIS DE CANAL QUE VAI MONETIZAR:
+📋 OFICIAL (YouTube Help Center):
+1. YPP Tier 1: 500 subs + 3.000 horas watch time público em 12 meses
+2. YPP Tier 2: 1.000 subs + 4.000 horas watch time público em 12 meses  
+3. Shorts: 10 milhões views públicas em Shorts válidos em 90 dias
+4. Conteúdo reutilizado/repetitivo sem valor agregado NÃO é elegível
+5. Long-form 8-15min + Shorts como teaser = combinação oficial mais rápida
+
+📊 BENCHMARK OBSERVÁVEL (dados de canais):
+- Bolha dos 12 vídeos: Algoritmo TENDE a precisar de 10-12 vídeos CONSISTENTES no mesmo nicho
+- Community posts 2x/semana desde o início — canais ativos TENDEM a ser favorecidos
+- Shorts SOZINHOS = caminho geralmente mais lento (10M views para YPP vs 4K horas watch time)
+
+### SINAIS DE CANAL QUE TENDE A MONETIZAR (benchmark, não garantia):
 - Retenção longform > 40% após 10 vídeos ✅
-- CTR > 4% após ajuste de thumbnail ✅
-- Shorts com swipe ratio > 81% ✅
+- CTR acima da média do nicho (benchmark: 4-6% curiosidades, 3-5% true crime) ✅
 - Upload consistente por 4+ semanas ✅
 
-### SINAIS DE CANAL QUE VAI TRAVAR:
+### SINAIS DE CANAL QUE TENDE A TRAVAR (benchmark, não garantia):
 - Retenção < 25% nos primeiros 5 vídeos ❌
 - Nicho mudando a cada vídeo ❌
-- Shorts como único conteúdo ❌
 - Upload irregular (3 semanas sem postar) ❌
 
-### RPM REAL (para projeções honestas):
+### RPM REAL (para projeções honestas — valores são MÉDIAS com alta variação):
 Brasil: $0.80-2.50/1K views | EUA: $6-15/1K views | PT: $2.50-5/1K views
 Nicho Finanças: 3-5x o RPM base | Horror/Curiosidades: 0.8-1.2x base
 Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
