@@ -273,6 +273,7 @@ ${dnaContext}
 ${emergingContext}
 ${nicheEmergingContext}
 ${nicheSaturationContext}
+${referenceContext}
 ${topicContext}
 ${narrativeContext}
 ${subNicheContext}
