@@ -542,9 +542,14 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
       </div>
 
       {hasSearched && !loading && channels.length === 0 && (
-        <div className="glass rounded-xl p-12 text-center text-muted-foreground">
+        <div className="glass rounded-xl p-12 text-center text-muted-foreground space-y-3">
           <Rocket className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p>Nenhum canal encontrado. Tente outro nicho ou amplie os filtros.</p>
+          <p className="font-medium">Nenhum canal encontrado com os filtros atuais.</p>
+          <p className="text-xs max-w-md mx-auto">
+            {mode === 'emerging' 
+              ? 'Dica: tente aumentar "Max vídeos" ou "Max idade (dias)" nos filtros de canal emergente. Nichos muito competitivos têm poucos canais genuinamente novos.'
+              : 'Dica: amplie os filtros ou tente outro nicho. Canais "escapees" precisam ter crescimento de 150%+ em views/subs.'}
+          </p>
         </div>
       )}
     </div>
