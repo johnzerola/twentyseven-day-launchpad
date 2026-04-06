@@ -1,4 +1,15 @@
 import { useState, useEffect } from 'react';
+
+// SEO: noindex for internal pages
+const useNoIndex = () => {
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
+  }, []);
+};
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
 import { ViralDiagnosisPanel } from '@/components/dashboard/ViralDiagnosisPanel';
