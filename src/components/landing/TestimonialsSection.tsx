@@ -1,6 +1,7 @@
 import { Star, TrendingUp, Users, Eye, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { motion } from 'framer-motion';
+import { YouTubePlayIcon } from './YouTubePlayIcon';
 
 const TESTIMONIALS = [
   {
@@ -43,9 +44,14 @@ export const TestimonialsSection = () => {
     <section className="py-20 relative">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
+      {/* YouTube icon decoration */}
+      <div className="absolute top-10 right-16 hidden lg:block">
+        <YouTubePlayIcon size={48} opacity={0.04} />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div className="text-center mb-14" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <p className="text-accent font-semibold text-sm mb-3 tracking-wider uppercase">
+          <p className="text-primary font-semibold text-sm mb-3 tracking-wider uppercase">
             {pt ? 'Resultados Reais' : 'Real Results'}
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">
@@ -68,7 +74,7 @@ export const TestimonialsSection = () => {
                   {t.avatar}
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-accent">{t.name}</p>
+                  <p className="font-semibold text-sm text-primary">{t.name}</p>
                   <p className="text-[11px] text-muted-foreground">{t.niche}</p>
                 </div>
               </div>
@@ -77,7 +83,7 @@ export const TestimonialsSection = () => {
                 {[1,2,3,4,5].map(j => <Star key={j} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />)}
               </div>
 
-              <div className="inline-flex self-start items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
+              <div className="inline-flex self-start items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-semibold mb-4">
                 <TrendingUp className="w-3.5 h-3.5" />
                 {pt ? t.resultPt : t.resultEn}
               </div>
@@ -93,12 +99,12 @@ export const TestimonialsSection = () => {
                   <p className="text-[10px] text-muted-foreground">subs</p>
                 </div>
                 <div className="text-center">
-                  <Eye className="w-3.5 h-3.5 text-accent mx-auto mb-1" />
+                  <Eye className="w-3.5 h-3.5 text-primary mx-auto mb-1" />
                   <p className="text-xs font-bold">{t.metrics.views}</p>
                   <p className="text-[10px] text-muted-foreground">views</p>
                 </div>
                 <div className="text-center">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-400 mx-auto mb-1" />
+                  <DollarSign className="w-3.5 h-3.5 text-accent mx-auto mb-1" />
                   <p className="text-xs font-bold">{t.metrics.revenue}</p>
                   <p className="text-[10px] text-muted-foreground">/mês</p>
                 </div>

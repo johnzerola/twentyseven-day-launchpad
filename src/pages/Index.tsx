@@ -10,10 +10,12 @@ import { UrgencySection } from '@/components/landing/UrgencySection';
 import { GuaranteeSection } from '@/components/landing/GuaranteeSection';
 import { FaqSection } from '@/components/landing/FaqSection';
 import { FooterSection } from '@/components/landing/FooterSection';
+import { FloatingYouTubeIcons } from '@/components/landing/YouTubePlayIcon';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      <FloatingYouTubeIcons />
       <ScrollProgress />
       <LandingNav />
       <HeroSection />
