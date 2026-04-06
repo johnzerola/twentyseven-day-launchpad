@@ -59,7 +59,7 @@ export const PricingSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">
-            {pt ? 'Investimento que se paga no primeiro mês monetizado' : 'Investment that pays for itself in the first monetized month'}
+            {pt ? 'Planos para Monetizar seu YouTube — A partir de R$0' : 'Plans to Monetize your YouTube — Starting at $0'}
           </h2>
           <p className="text-muted-foreground text-lg mb-8">
             {pt ? 'Escolha seu plano. Cancele quando quiser.' : 'Choose your plan. Cancel anytime.'}

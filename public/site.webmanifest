@@ -1,0 +1,17 @@
+{
+  "name": "Monetiza27 — IA para YouTube",
+  "short_name": "Monetiza27",
+  "description": "Plataforma de IA para monetizar canais YouTube em 27 dias",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050508",
+  "theme_color": "#DC2626",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

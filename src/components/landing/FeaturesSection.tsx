@@ -12,13 +12,32 @@ const features = [
   { key: 'dashboard', Icon: Rocket, tagPt: 'IA 24/7', tagEn: 'AI 24/7', color: 'text-primary' },
 ];
 
+const seoDescriptions = {
+  pt: {
+    plan: 'Cada dia tem uma missão. IA analisa seu nicho e cria um plano de monetização YouTube com inteligência artificial do dia 1 ao dia 27.',
+    search: 'Descubra os canais crescendo agora com nossa análise de nicho YouTube e espionagem de concorrentes em tempo real.',
+    script: 'IA escreve roteiros virais para YouTube gerados por IA, otimizados para retenção e algoritmo. Você só precisa gravar.',
+    narration: 'Voz profissional gerada por IA em português. Narração automática em português para canal sem aparecer no YouTube.',
+    analytics: 'Preveja qual vídeo vai viralizar. Estimativa de ganhos e RPM por nicho YouTube com dados reais do algoritmo.',
+    dashboard: 'Acompanhamento de progresso rumo ao YPP em tempo real. Cada ação conta para atingir 1.000 inscritos.',
+  },
+  en: {
+    plan: 'Each day has a mission. AI analyzes your niche and creates a YouTube monetization plan from day 1 to day 27.',
+    search: 'Discover growing channels with real-time YouTube niche analysis and competitor intelligence.',
+    script: 'AI writes viral YouTube scripts optimized for retention and algorithm. You just need to record.',
+    narration: 'Professional AI voice in Portuguese. Automatic narration for faceless YouTube channels.',
+    analytics: 'Predict which video will go viral. Revenue estimates and RPM by YouTube niche with real data.',
+    dashboard: 'Track your progress toward YPP in real time. Every action counts toward 1,000 subscribers.',
+  },
+};
+
 export const FeaturesSection = () => {
   const { t, locale } = useLanguage();
   const pt = locale === 'pt-BR';
+  const descs = pt ? seoDescriptions.pt : seoDescriptions.en;
 
   return (
     <section id="features" className="py-24 relative">
-      {/* Decorative YouTube icons */}
       <div className="absolute top-12 left-8 hidden lg:block">
         <YouTubePlayIcon size={44} opacity={0.04} />
       </div>
@@ -32,7 +51,7 @@ export const FeaturesSection = () => {
             {pt ? 'Plataforma completa' : 'Complete platform'}
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">
-            {pt ? 'Tudo que você precisa para monetizar. Numa só plataforma.' : 'Everything you need to monetize. One platform.'}
+            {pt ? 'Ferramentas de IA para Crescer no YouTube mais Rápido' : 'AI Tools to Grow on YouTube Faster'}
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             {pt ? 'Enquanto você dorme, nossa IA trabalha no seu canal.' : 'While you sleep, our AI works on your channel.'}
@@ -55,13 +74,13 @@ export const FeaturesSection = () => {
                   <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center group-hover:glow-primary transition-shadow">
                     <Icon className="w-6 h-6 text-primary-foreground" />
                   </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${f.color} bg-current/10 px-2 py-1 rounded-full border border-current/20`}
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${f.color} px-2 py-1 rounded-full border border-current/20`}
                     style={{ backgroundColor: 'transparent' }}>
                     {pt ? f.tagPt : f.tagEn}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold font-display mb-2">{t(`features.${f.key}.title`)}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{t(`features.${f.key}.desc`)}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{descs[f.key as keyof typeof descs]}</p>
               </motion.div>
             );
           })}

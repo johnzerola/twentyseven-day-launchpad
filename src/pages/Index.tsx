@@ -11,10 +11,12 @@ import { GuaranteeSection } from '@/components/landing/GuaranteeSection';
 import { FaqSection } from '@/components/landing/FaqSection';
 import { FooterSection } from '@/components/landing/FooterSection';
 import { FloatingYouTubeIcons } from '@/components/landing/YouTubePlayIcon';
+import { SeoSchema } from '@/components/SeoSchema';
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
+      <SeoSchema />
       <FloatingYouTubeIcons />
       <ScrollProgress />
       <LandingNav />

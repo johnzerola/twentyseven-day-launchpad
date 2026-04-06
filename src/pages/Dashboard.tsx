@@ -1,4 +1,15 @@
 import { useState, useEffect } from 'react';
+
+// SEO: noindex for internal pages
+const useNoIndex = () => {
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
+  }, []);
+};
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
 import { ViralDiagnosisPanel } from '@/components/dashboard/ViralDiagnosisPanel';
@@ -31,6 +42,7 @@ interface OnboardingPlan {
 }
 
 const Dashboard = () => {
+  useNoIndex();
   const [stats, setStats] = useState({ channels: 0, scripts: 0, projects: 0, trackedChannels: 0, titles: 0, nicheAnalyses: 0 });
   const [displayName, setDisplayName] = useState('Creator');
   const [workflowProgress, setWorkflowProgress] = useState(0);
