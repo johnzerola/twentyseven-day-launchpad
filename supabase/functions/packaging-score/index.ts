@@ -50,6 +50,7 @@ Also provide:
 
 Return ONLY valid JSON, no markdown.`;
 
+    const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
     const resp = await fetch(AI_URL, {
       method: "POST",
       headers: {
@@ -57,7 +58,7 @@ Return ONLY valid JSON, no markdown.`;
         "Authorization": `Bearer ${GOOGLE_AI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
         max_tokens: 1500,
@@ -73,6 +74,10 @@ Return ONLY valid JSON, no markdown.`;
     if (!jsonMatch) throw new Error("Failed to parse AI response");
     
     const result = JSON.parse(jsonMatch[0]);
+
+    // Add epistemic honesty labels
+    result.confidence_source = 'ai_estimate';
+    result.calibration_note = '⚠️ Scores são estimativas da IA sem calibração empírica — use como referência, não como previsão.';
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -17,7 +17,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { video_title, niche, emotion, style, count } = await req.json();
+    const { video_title, niche, emotion, style, count, script_context } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -42,11 +42,16 @@ serve(async (req) => {
       .order("effectiveness_score", { ascending: false })
       .limit(5);
 
+    const scriptBlock = script_context
+      ? `\n\nSCRIPT CONTEXT (use the most impactful moment for the thumbnail, not just the title):\n${script_context.slice(0, 1500)}`
+      : '';
+
     const prompt = `Generate ${count || 3} high-CTR YouTube thumbnail concepts for:
 Title: "${video_title}"
 Niche: ${niche || "general"}
 Target emotion: ${emotion || "curiosity"}
 Style preference: ${style || "auto"}
+${scriptBlock}
 
 Reference patterns from our database:
 ${referencePatterns || "None yet"}
@@ -54,7 +59,8 @@ ${referencePatterns || "None yet"}
 Thumbnail CTR mechanics:
 ${(mechanics || []).map((m: any) => `- ${m.mechanic_name}: ${m.how_to_apply} (+${m.avg_ctr_boost_pct}% CTR)`).join("\n")}
 
-For each variant, provide: Midjourney prompt, DALL-E 3 prompt, composition description, color palette, expected CTR boost.`;
+For each variant, provide: Midjourney prompt, DALL-E 3 prompt, composition description, color palette, estimated CTR boost.
+IMPORTANT: The "expected_ctr_boost" field is an AI ESTIMATE without empirical calibration. Label it honestly.`;
 
     const aiResp = await _ai({
         model: "google/gemini-2.5-flash",
@@ -116,7 +122,7 @@ Output ONLY via the tool call.` },
                       color_palette: { type: "array", items: { type: "string" } },
                       complementary_contrast: { type: "string", description: "Which complementary color pair is used" },
                       emotion_target: { type: "string" },
-                      expected_ctr_boost: { type: "number" },
+                      expected_ctr_boost: { type: "number", description: "AI-estimated CTR boost percentage (uncalibrated)" },
                       face_required: { type: "boolean" },
                       post_production_instructions: { type: "string", description: "Exact After Effects/Photoshop instructions: Drop Shadow, Optical Glow, Radial Blur, Curves, Motion Blur" },
                     },
@@ -138,11 +144,19 @@ Output ONLY via the tool call.` },
 
     const result = JSON.parse(tc.function.arguments);
 
+    // Add epistemic honesty labels to each variant
+    const labeledVariants = (result.variants || []).map((v: any) => ({
+      ...v,
+      estimated_ctr_boost_ai: v.expected_ctr_boost,
+      ctr_boost_source: 'ai_estimate_uncalibrated',
+    }));
+
     return new Response(JSON.stringify({
       success: true,
       video_title,
       niche,
-      variants: result.variants || [],
+      confidence_source: 'ai_estimate',
+      variants: labeledVariants,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

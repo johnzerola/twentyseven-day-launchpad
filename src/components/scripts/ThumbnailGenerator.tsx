@@ -14,15 +14,18 @@ interface ThumbnailVariant {
   color_palette: string[];
   emotion_target: string;
   expected_ctr_boost?: number;
+  estimated_ctr_boost_ai?: number;
+  ctr_boost_source?: string;
   face_required?: boolean;
 }
 
 interface Props {
   videoTitle: string;
   niche: string;
+  scriptSummary?: string;
 }
 
-export const ThumbnailGenerator = ({ videoTitle, niche }: Props) => {
+export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) => {
   const [variants, setVariants] = useState<ThumbnailVariant[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +37,12 @@ export const ThumbnailGenerator = ({ videoTitle, niche }: Props) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-thumbnail-prompt', {
-        body: { video_title: videoTitle, niche: niche || 'general', count: 3 },
+        body: {
+          video_title: videoTitle,
+          niche: niche || 'general',
+          count: 3,
+          script_context: scriptSummary || undefined,
+        },
       });
       if (error) throw error;
       setVariants(data?.variants || []);
@@ -78,10 +86,15 @@ export const ThumbnailGenerator = ({ videoTitle, niche }: Props) => {
                 <Badge variant="outline" className="text-[9px]">{v.style}</Badge>
                 <Badge variant="outline" className="text-[9px]">🎭 {v.emotion_target}</Badge>
               </div>
-              {v.expected_ctr_boost != null && (
-                <Badge className="bg-chart-2/20 text-chart-2 border-chart-2/30 text-[9px]">
-                  +{v.expected_ctr_boost}% CTR
-                </Badge>
+              {(v.estimated_ctr_boost_ai ?? v.expected_ctr_boost) != null && (
+                <div className="flex items-center gap-1">
+                  <Badge className="bg-chart-2/20 text-chart-2 border-chart-2/30 text-[9px]">
+                    +{v.estimated_ctr_boost_ai ?? v.expected_ctr_boost}% CTR
+                  </Badge>
+                  <Badge variant="outline" className="text-[8px] text-muted-foreground border-muted-foreground/30">
+                    Estimativa IA
+                  </Badge>
+                </div>
               )}
             </div>
 

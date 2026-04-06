@@ -460,11 +460,23 @@ serve(async (req) => {
       } catch (e) { console.warn("Skill scoring save error:", e); }
     }
 
+    // Determine calibration status
+    const hasCalibration = calibrationContext.length > 0;
+    const calibrationStatus = hasCalibration ? 'calibrated' : 'uncalibrated';
+    const calibrationNote = hasCalibration
+      ? 'Scores ajustados com base em dados reais de calibração por nicho.'
+      : '⚠️ Score sem calibração real para este nicho — use como referência, não como previsão.';
+
     return new Response(JSON.stringify({
       approved,
       combinedScore,
       gpt_score: gpt,
       gemini_score: gemini,
+      confidence_source: 'ai_estimate',
+      calibration_status: calibrationStatus,
+      calibration_note: calibrationNote,
+      hook_mechanism_detected: gptScore?.hook_mechanism_detected || geminiScore?.hook_mechanism_detected || 'unknown',
+      hook_mechanism_strength: gptScore?.hook_mechanism_strength || geminiScore?.hook_mechanism_strength || 0,
       slop_score: slopResult.slopScore,
       slop_penalty: slopResult.slopPenalty,
       slop_details: slopResult.details,
