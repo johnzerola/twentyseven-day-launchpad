@@ -1,155 +1,120 @@
 
 
-# Análise de Custos e Precificação — 27-Day Launchpad
+# Plano: Canais de Referência Pessoais — Sistema de Modelagem Inteligente
 
-## PARTE 1: Custo Real por Usuário/Mês
+## Contexto Atual
 
-### Consumo de IA por vídeo (3 vídeos/semana = ~12-15/mês)
+Hoje existe uma tabela `reference_channels` global (canais de referência do sistema) e `user_channels` (canais do próprio usuário). Mas **não existe vínculo entre o usuário e canais de referência específicos que ele escolhe como modelo**. As sugestões de vídeo (`suggest-themes`) usam apenas os dados do canal do usuário + concorrentes genéricos, sem considerar canais-modelo escolhidos pelo usuário.
 
-O pipeline por vídeo usa estas chamadas Gemini (via `GOOGLE_AI_API_KEY` direto):
+## O que vou construir (indo além do que você pediu)
 
-| Etapa | Modelo Gemini | Input tokens (est.) | Output tokens (est.) | Custo/vídeo |
-|-------|---------------|---------------------|----------------------|-------------|
-| Phase 0: Hook (gpt-5 → gemini-2.5-pro) | 2.5 Pro | ~4K in / ~2K out | | $0.025 |
-| Phase 1: Draft (gemini-2.5-flash) | 2.5 Flash | ~8K in / ~6K out | | $0.017 |
-| Phase 2: Refine (gemini-2.5-pro) | 2.5 Pro | ~12K in / ~8K out | | $0.095 |
-| Phase 3: Fact-check (gpt-5-mini → flash) | 2.5 Flash | ~10K in / ~3K out | | $0.010 |
-| Phase 4: Scene breakdown (flash-lite) | 2.5 Flash-Lite | ~6K in / ~4K out | | $0.002 |
-| RAG search (Brave) | — | — | — | ~$0.003 |
-| Score-script | 2.5 Flash | ~8K in / ~2K out | | $0.007 |
-| Generate-titles (5 títulos) | 2.5 Flash | ~4K in / ~3K out | | $0.009 |
-| Thumbnail prompt | 2.5 Flash | ~3K in / ~2K out | | $0.006 |
-| Veo3 prompts (10 cenas) | 2.5 Pro | ~6K in / ~5K out | | $0.058 |
-| **Subtotal IA/vídeo** | | | | **~$0.23** |
+Não vou apenas "salvar canais de referência". Vou criar um **sistema de modelagem contínua** onde os canais de referência do usuário se tornam uma fonte ativa de inteligência que alimenta TODO o pipeline.
 
-### TTS (narração por vídeo de ~10-15 min)
-
-| Serviço | Caracteres (~15 min narração) | Custo |
-|---------|-------------------------------|-------|
-| Gemini TTS (primário) | ~15.000 chars | ~$0.06 |
-| ElevenLabs (fallback) | ~15.000 chars | ~$0.18 |
-| **Custo TTS médio** | | **~$0.08** |
-
-### Dotti (chat-assistant) — média 20 interações/mês
-
-| Item | Custo |
-|------|-------|
-| 20 conversas × ~5K in + 2K out (2.5 Pro) | ~$0.50 |
-| Tool calls (5 por conversa avg) | ~$0.30 |
-| **Subtotal Dotti/mês** | **~$0.80** |
-
-### Outros consumos mensais
-
-| Item | Custo/mês |
-|------|-----------|
-| Busca de canais/nichos (~10 scans) | ~$0.15 |
-| Viral diagnosis, packaging-score | ~$0.10 |
-| Self-learning/cron jobs | ~$0.05 |
-| **Subtotal outros** | **~$0.30** |
-
-### CUSTO TOTAL POR USUÁRIO/MÊS
+### Arquitetura
 
 ```text
-┌─────────────────────────────────────────────┐
-│ 12 vídeos × $0.31 (IA + TTS)  = $3.72      │
-│ Dotti (20 conversas)           = $0.80      │
-│ Outros (scans, crons)          = $0.30      │
-│ Supabase Edge (invocações)     = ~$0.10     │
-│ Supabase DB (storage/bandwidth)= ~$0.50     │
-│ Lovable Cloud hosting          = ~$1.00     │
-│─────────────────────────────────────────────│
-│ CUSTO TOTAL/USUÁRIO/MÊS       ≈ $6.42      │
-│ EM REAIS (câmbio ~5.5)        ≈ R$ 35.30   │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│           user_reference_channels (nova tabela)      │
+│  user_id │ channel_id (channel_intelligence) │ role  │
+│  ───────   ─────────────────────────────────   ──── │
+│  usr_1   │ UCxxx (MrBeast)                   │ style │
+│  usr_1   │ UCyyy (Nexpo)                     │ hook  │
+│  usr_1   │ UCzzz (Leirbag)                   │ model │
+└──────────────┬──────────────────────────────────────┘
+               │
+    ┌──────────▼──────────┐
+    │  refresh-references  │  (nova edge function)
+    │  Cron ou on-demand   │
+    │                      │
+    │  1. YouTube API:     │
+    │     últimos 10 vídeos│
+    │     de cada ref      │
+    │                      │
+    │  2. Gemini analisa:  │
+    │     títulos, hooks,  │
+    │     formatos que     │
+    │     performaram      │
+    │                      │
+    │  3. Salva em         │
+    │     reference_intel  │
+    │     (JSON no vínculo)│
+    └──────────┬──────────┘
+               │
+    ┌──────────▼──────────────────────────┐
+    │  Injeção automática no pipeline:    │
+    │                                      │
+    │  suggest-themes   → "seus refs      │
+    │                      postaram X"     │
+    │  generate-script  → "modelo de hook │
+    │                      do canal Y"     │
+    │  generate-titles  → "padrão título  │
+    │                      do canal Z"     │
+    │  chat-assistant   → contexto Dotti  │
+    └─────────────────────────────────────┘
 ```
 
-Usuário pesado (15 vídeos + 40 conversas Dotti + Veo3 geração real): ~$12-15/mês (~R$ 66-82).
+### Diferenciais vs o que você pediu
 
----
+1. **Papel por referência**: Cada canal de referência tem um `role` — o usuário pode dizer "quero modelar o ESTILO do MrBeast, os HOOKS do Nexpo e o FORMATO do Leirbag". Isso permite injeção cirúrgica.
 
-## PARTE 2: Precificação Recomendada
+2. **Intel snapshot automático**: Toda vez que o usuário gera um roteiro ou pede sugestões, o sistema verifica se os canais de referência foram atualizados nos últimos 7 dias. Se não, faz refresh silencioso dos últimos 10 vídeos.
 
-### Modelo sem tier grátis — direto ao ponto
+3. **Padrões extraídos, não vídeos brutos**: O Gemini analisa os últimos vídeos e extrai: padrões de título, tipos de hook, duração média, formato dominante, e "o que mudou desde o último scan". Isso vira contexto compacto, não dump de dados.
 
-| Plano | Preço BRL | Preço USD | Margem bruta | LTV 6 meses |
-|-------|-----------|-----------|--------------|-------------|
-| **Starter** | R$ 67/mês | $12/mês | ~47% | R$ 402 |
-| **Pro** | R$ 127/mês | $23/mês | ~72% | R$ 762 |
-| **Full** | R$ 197/mês | $36/mês | ~82% | R$ 1.182 |
+4. **Comparativo de evolução**: O sistema detecta quando um canal de referência muda de estratégia (ex: passou de vídeos de 20min para Shorts) e avisa o usuário.
 
-### Justificativa
+## Implementação
 
-- **Starter (R$ 67)**: Cobre custo (~R$ 35) + margem saudável. Compete com ferramentas de IA genéricas (ChatGPT Plus R$ 100+). Inclui 12 vídeos, 20 conversas Dotti, busca básica.
-- **Pro (R$ 127)**: Para quem produz 3+/semana com TTS ilimitado, análise de concorrentes, 3 canais. Margem de ~72% absorve usuários pesados.
-- **Full (R$ 197)**: Canais ilimitados, API, white-label. Margem >80%.
-
-### CAC Estimado (mercado BR YouTube faceless)
-
-- CAC orgânico (YouTube/Instagram sobre o produto): R$ 15-30
-- CAC pago (Meta Ads BR, nicho criadores): R$ 40-80
-- **LTV/CAC ratio mínimo aceitável**: 3:1
-- Com Starter (LTV R$ 402) e CAC R$ 60: ratio = 6.7:1 — excelente
-
-### Churn esperado: 15-20%/mês (mercado BR de ferramentas creator)
-
-Com 15% churn: lifetime médio = 6.7 meses → LTV Starter = R$ 449, Pro = R$ 851.
-
----
-
-## PARTE 3: Monetização em 1 mês (12-15 vídeos) — É Realista?
-
-### Resposta curta: **NÃO para AdSense. SIM para validação.**
-
-### Os números reais
-
-```text
-Requisitos YPP (monetização):
-  Tier 1: 500 subs + 3.000h watch time (12 meses)
-  Tier 2: 1.000 subs + 4.000h watch time (12 meses)
-  Shorts: 10M views em 90 dias
-
-Canal novo postando 12-15 vídeos no primeiro mês:
-  Cenário conservador: 500-2.000 views/vídeo → 6K-30K views totais
-  Cenário otimista: 5.000-20.000 views/vídeo → 60K-300K views totais
-  
-  Subs ganhos (conservador): 30-150
-  Subs ganhos (otimista): 300-1.500
-  
-  Watch time (15 vídeos × 10 min × 1.000 views avg × 40% retenção):
-  = 1.000 horas (conservador)
-  = 25% do necessário para Tier 2
+### 1. Migration: Tabela `user_reference_channels`
+```sql
+CREATE TABLE public.user_reference_channels (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  channel_intelligence_id uuid REFERENCES public.channel_intelligence(id) ON DELETE SET NULL,
+  youtube_channel_id text NOT NULL,
+  channel_name text NOT NULL,
+  thumbnail text,
+  role text DEFAULT 'model', -- 'model', 'style', 'hook', 'format'
+  latest_intel jsonb DEFAULT '{}',
+  last_scanned_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(user_id, youtube_channel_id)
+);
+ALTER TABLE public.user_reference_channels ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own refs" ON public.user_reference_channels
+  FOR ALL USING (auth.uid() = user_id);
 ```
 
-### Cronograma realista
+### 2. Nova Edge Function: `refresh-references`
+- Recebe `user_id` (ou executa para todos usuários com refs não escaneados há >7 dias)
+- Para cada canal de referência: busca últimos 10 vídeos via YouTube API
+- Gemini Flash extrai: `title_patterns`, `hook_types`, `avg_duration`, `format_shift`, `top_performing_elements`
+- Salva em `latest_intel` (JSON compacto ~500 chars por canal)
 
-| Marco | Tempo estimado | Condição |
-|-------|---------------|----------|
-| Primeiros 1.000 subs | 2-4 meses | 3 vídeos/semana consistente |
-| 4.000h watch time | 3-6 meses | Retenção >50%, vídeos 10-20 min |
-| **Monetização Tier 2** | **3-6 meses** | Nicho bem escolhido + execução |
-| Alternativa Shorts (10M views) | 1-3 meses | Se 1+ short viralizar (>500K) |
+### 3. UI: Aba "Referências" na página Channels
+- Nova tab ao lado de "Visão Geral", "Concorrentes", "Sugestões"
+- Interface para adicionar até 5 canais de referência (input URL + select role)
+- Cards mostrando: último vídeo, padrão de título, hook dominante, status do scan
+- Botão "Atualizar referências" (manual)
 
-### O que a plataforma PODE entregar em 1 mês
-
-A plataforma não garante monetização em 30 dias, mas entrega:
-1. **12-15 roteiros otimizados** com hooks testados e anti-AI-slop
-2. **Validação de nicho** com dados reais de saturação e RPM
-3. **Base sólida** para o mês 2-3 onde o crescimento exponencial começa
-4. **Vantagem competitiva** sobre quem produz sem análise (90% dos novos canais)
-
-O cenário mais provável para um usuário disciplinado é monetizar entre o mês 3 e 6.
-
----
-
-## Implementação proposta
-
-Atualizar a `PricingSection.tsx` e `translations.ts` com os novos preços (remover tier grátis, ajustar para R$ 67 / R$ 127 / R$ 197) e adicionar uma seção "Quanto tempo para monetizar?" com o cronograma realista acima.
+### 4. Injeção no Pipeline
+- `suggest-themes`: Adicionar bloco de contexto "Canais de referência do usuário postaram recentemente: [títulos + performance]"
+- `chat-assistant`: Dotti recebe `reference_channels_context` no user state
+- `generate-titles`: Padrões de título dos refs como exemplos adicionais
 
 ### Arquivos a editar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/i18n/translations.ts` | Novos preços (R$ 67/127/197, $12/23/36, etc.) |
-| `src/components/landing/PricingSection.tsx` | Features atualizados por tier, remover CTA "grátis", adicionar timeline de monetização |
-| `src/components/landing/MonetizationSimulator.tsx` | Verificar se reflete dados reais |
+| **Migration** | Criar `user_reference_channels` com RLS |
+| `supabase/functions/refresh-references/index.ts` | **Nova** — scan + extração Gemini |
+| `src/pages/Channels.tsx` | Nova aba "Referências" com CRUD |
+| `supabase/functions/suggest-themes/index.ts` | Injetar contexto dos refs |
+| `supabase/functions/chat-assistant/index.ts` | Carregar refs no user state |
+
+### Detalhes Técnicos
+- 5 arquivos (1 novo, 4 editados) + 1 migration
+- Limite de 5 canais de referência por usuário (controle de custo)
+- YouTube API: ~1 request por canal de referência por scan (quota mínima)
+- Gemini Flash-Lite para extração de padrões (custo ~$0.001 por scan)
 
