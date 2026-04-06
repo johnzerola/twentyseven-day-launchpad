@@ -46,6 +46,7 @@ const EMERGING_PRESETS = [
 
   const SORT_OPTIONS = [
   { value: 'viralScore', label: '🔥 Viral Score' },
+  { value: 'goldScore', label: '🏆 Gold Score' },
   { value: 'subscribers', label: '👥 Inscritos' },
   { value: 'maxVideoViews', label: '👁 Max Views' },
   { value: 'growthVelocity', label: '📈 Crescimento' },
@@ -479,8 +480,9 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                     </div>
                   </div>
 
-                  <div className="flex gap-4 mt-3 items-start">
+                  <div className="flex gap-4 mt-3 items-start flex-wrap">
                     <ViralScoreRing score={ch.viralScore || 0} label="Viral Score" />
+                    <ViralScoreRing score={ch.goldScore || 0} label="Gold Score" />
                     <ViralScoreRing score={ch.growthPotentialScore || 0} label="Growth" />
                     <ViralScoreRing score={ch.algorithmBoostProbability || 0} label="Algo Boost" />
                     <div className="flex flex-col gap-1 text-[10px] ml-2">
@@ -493,7 +495,21 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                       <span className="flex items-center gap-1 text-muted-foreground">
                         <Activity className="w-3 h-3" /> V72h: {formatNumber(ch.avgViewVelocity72h || 0)}
                       </span>
+                      {ch.multiplier != null && ch.multiplier > 1 && (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          ⚡ Multiplier: {ch.multiplier}x
+                        </span>
+                      )}
                     </div>
+                    {ch.dataConfidence && (
+                      <Badge variant="outline" className={`text-[9px] h-5 self-start ${
+                        ch.dataConfidence === 'high' ? 'border-emerald-500/30 text-emerald-400' :
+                        ch.dataConfidence === 'medium' ? 'border-amber-500/30 text-amber-400' :
+                        'border-red-500/30 text-red-400'
+                      }`}>
+                        {ch.dataConfidence === 'high' ? '✓' : ch.dataConfidence === 'medium' ? '~' : '!'} {ch.sampleSize || 0} vídeos amostrados
+                      </Badge>
+                    )}
                   </div>
 
                   {ch.videos.length > 0 && (
