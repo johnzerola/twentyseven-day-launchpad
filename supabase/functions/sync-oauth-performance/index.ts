@@ -126,7 +126,7 @@ serve(async (req) => {
             const startDate = publishDate.toISOString().split("T")[0];
             const endDate = new Date().toISOString().split("T")[0];
             
-            const analyticsUrl = `https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${tokenRow.channel_id}&startDate=${startDate}&endDate=${endDate}&metrics=views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionClickThroughRate,subscribersGained&filters=video==${video.videoId}&dimensions=day&sort=day`;
+            const analyticsUrl = `https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${tokenRow.channel_id}&startDate=${startDate}&endDate=${endDate}&metrics=views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained&filters=video==${video.videoId}&dimensions=day&sort=day`;
             
             const analyticsResp = await fetch(analyticsUrl, {
               headers: { Authorization: `Bearer ${accessToken}` },
