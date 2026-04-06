@@ -76,6 +76,14 @@ Use contraste de cores complementares para máximo impacto:
 - Verde Neon vs Magenta
 NUNCA use paleta monocromática — o contraste BRUTAL é o que faz parar o scroll.
 
+═══ COMBOS DE COR POR NICHO (TABELA DE REFERÊNCIA) ═══
+- Laranja #FF6B00 × Preto: Urgência + Ameaça → True Crime, Conspiração
+- Azul #0080FF × Laranja #FF8C00: Curiosidade + Tensão → Tecnologia, Ciência
+- Vermelho #CC0000 × Branco: Perigo + Urgência máxima → Saúde, Avisos, Crime
+- Verde #00CC44 × Preto: Dinheiro + Segredo → Finanças, Investimentos
+- Roxo #6600CC × Amarelo #FFD700: Mistério + Descoberta → Ocultismo, Mistérios
+Escolha o combo baseado no nicho do vídeo. SEMPRE use o par complementar correto.
+
 ═══ INSTRUÇÕES DE PÓS-PRODUÇÃO (OBRIGATÓRIO em cada variante) ═══
 Cada variante DEVE incluir instruções técnicas de finalização:
 - Drop Shadow no elemento principal para profundidade

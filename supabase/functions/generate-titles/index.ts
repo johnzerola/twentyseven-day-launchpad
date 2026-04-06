@@ -312,7 +312,7 @@ O clique NÃO é racional — é um REFLEXO EMOCIONAL. Título e thumbnail não 
 eles criam um MISTÉRIO PERTURBADOR ou IRRESISTÍVEL. O cérebro ODEIA lacunas de informação
 e PRECISA fechá-las (Efeito Zeigarnik). Explore isso em CADA título.
 
-═══ 8 FÓRMULAS MATEMÁTICAS DE TÍTULOS VIRAIS (use pelo menos 5 delas) ═══
+═══ 10 FÓRMULAS MATEMÁTICAS DE TÍTULOS VIRAIS (use pelo menos 6 delas) ═══
 1. O SEGREDO OCULTO: "A verdade perturbadora que a [Indústria/Pessoa] escondeu"
 2. O ERRO FATAL: "Por que 99% das pessoas erram ao [Ação Comum]"
 3. CONTRASTE ABSURDO: "Como um [Objeto Simples] gerou [Resultado Milionário/Catastrófico]"
@@ -321,6 +321,8 @@ e PRECISA fechá-las (Efeito Zeigarnik). Explore isso em CADA título.
 6. NEGATIVIDADE/AVISO: "Pare de fazer [Ação Comum] imediatamente" — explora viés da negatividade
 7. CURIOSIDADE INVERSA: "O que acontece quando você [Ação Bizarra] por 30 dias" — gatilho de experimento
 8. PROMESSA CONDICIONAL: "Se você fizer isso 1× por dia, seu [Resultado] muda em [Tempo]" — promessa tangível
+9. QUESTÃO PERTURBADORA: "E se [Fato Aceito] fosse completamente falso?" — descrença + curiosidade profunda
+10. PESSOA SIMPLES: "O [Pessoa Anônima] que [Resultado Extraordinário] com [Coisa Simples]" — narrativa underdog
 
 REGRAS PARA CTR MÁXIMO:
 1. MÁXIMO 50 caracteres (para não cortar no mobile) — ideal 40-50

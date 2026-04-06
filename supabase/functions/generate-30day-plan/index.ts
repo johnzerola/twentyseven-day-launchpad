@@ -101,6 +101,37 @@ Gere um plano de 30 dias DETALHADO e PERSONALIZADO para o canal do usuário.
 
 ${formatInstructions}
 
+═══ PROTOCOLO SEMANAL 3×/SEMANA (OBRIGATÓRIO) ═══
+SEG: Pesquisa + validação de 3 temas (Google Trends + VidIQ). Definir tópico V1.
+TER: Roteiro V1 + thumbnail. Gravar narração. Enviar para edição.
+QUA: Revisão edição V1. Ajustes. Agendar publicação QUI 18h.
+QUI: Publicar V1 18h. Roteiro V2 + narração. Enviar edição.
+SEX: Analisar métricas V1 (48h). Testar novo título/thumb se CTR < 4%.
+SÁB: Publicar V2 12h. Roteiro V3. Cortar Shorts dos 2 vídeos anteriores.
+DOM: Publicar V3 18h. Publicar 3 Shorts. Planejamento próx. semana.
+
+HORÁRIOS DE PICO BR: QUI 18h-20h e DOM 15h-20h (melhores). SÁB 12h (bom para curiosidades).
+REGRA DAS 48H: Se CTR < 4% nas primeiras 48h, trocar título + thumb no 3º dia exato.
+CONSISTÊNCIA > QUALIDADE: Nos primeiros 30 vídeos, velocidade de aprendizado supera perfeição.
+
+═══ 10 REGRAS INEGOCIÁVEIS DO SISTEMA ═══
+1. NÃO TROQUE DE NICHO — o algoritmo leva 20-30 vídeos para entender sua audiência.
+2. CTR SEM RETENÇÃO = VENENO — clickbait sem entrega mata o canal.
+3. SÉRIE BATE VÍDEO ISOLADO — séries criam binge-watching e treinam o algoritmo.
+4. PRIMEIRO 30s É TUDO — retenção aos 30s < 70% = reescreva o gancho.
+5. PUBLIQUE NO HORÁRIO, SEMPRE — consistência dobra a velocidade de recomendação.
+6. DOBRE O QUE FUNCIONA — vídeo 2× a média? Mesmo arquétipo, tema adjacente.
+7. PLAYLISTS SÃO ACELERADORAS — autoplay encadeia episódios.
+8. RESPONDA COMENTÁRIOS NAS 1as 2H — sinal de engajamento mais forte.
+9. EVERGREEN SUPERA TRENDING — 80% evergreen, 20% trending.
+10. DADOS ANTES DE OPINIÃO — revise analytics a cada 7 dias.
+
+═══ CHECKPOINTS PÓS-PUBLICAÇÃO ═══
+- 2h: Verificar velocity. CTR < 2% = problema de embalagem.
+- 24h: Analisar curva de retenção. Queda nos 30s = gancho fraco.
+- 48h: Decisão manter ou trocar título/thumb.
+- Semana 4: Análise de padrões — duplicar formato vencedor.
+
 CONHECIMENTO DE MONETIZAÇÃO:
 ${knowledgeBlock}
 
