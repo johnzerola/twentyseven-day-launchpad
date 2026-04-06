@@ -11,14 +11,15 @@ export const LandingNav = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass-premium border-b-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center glow-primary">
               <Zap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold font-['Space_Grotesk']">{APP_NAME}</span>
+            <span className="text-lg font-bold font-display">{APP_NAME}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">Beta</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
@@ -30,7 +31,7 @@ export const LandingNav = () => {
               <Button variant="ghost" size="sm">{t('nav.login')}</Button>
             </Link>
             <Link to="/login">
-              <Button size="sm" className="gradient-hero border-0 glow-primary">{t('nav.signup')}</Button>
+              <Button size="sm" className="gradient-hero border-0 glow-primary shimmer font-semibold">{t('nav.signup')}</Button>
             </Link>
           </div>
 
@@ -41,13 +42,13 @@ export const LandingNav = () => {
       </div>
 
       {open && (
-        <div className="md:hidden glass border-t border-border p-4 space-y-3">
+        <div className="md:hidden glass-premium border-t border-border/30 p-4 space-y-3">
           <a href="#features" className="block text-sm text-muted-foreground">{t('nav.features')}</a>
           <a href="#pricing" className="block text-sm text-muted-foreground">{t('nav.pricing')}</a>
           <a href="#faq" className="block text-sm text-muted-foreground">{t('nav.faq')}</a>
           <LanguageSwitcher />
           <Link to="/login" className="block">
-            <Button className="w-full gradient-hero border-0">{t('nav.signup')}</Button>
+            <Button className="w-full gradient-hero border-0 shimmer">{t('nav.signup')}</Button>
           </Link>
         </div>
       )}
