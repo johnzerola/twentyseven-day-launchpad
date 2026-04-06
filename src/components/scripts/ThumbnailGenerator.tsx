@@ -128,8 +128,8 @@ export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) 
               </div>
               <div className="flex items-center gap-1">
                 {(v.estimated_ctr_boost_ai ?? v.expected_ctr_boost) != null && (
-                  <Badge className="bg-chart-2/20 text-chart-2 border-chart-2/30 text-[9px]">
-                    +{v.estimated_ctr_boost_ai ?? v.expected_ctr_boost}% CTR
+                  <Badge className="bg-chart-2/20 text-chart-2 border-chart-2/30 text-[9px]" title="Estimativa gerada por IA, não dado real">
+                    +{v.estimated_ctr_boost_ai ?? v.expected_ctr_boost}% CTR (est.)
                   </Badge>
                 )}
                 <Button 

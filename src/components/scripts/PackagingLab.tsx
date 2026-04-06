@@ -115,7 +115,7 @@ export function PackagingLab({ title: initialTitle, thumbnailPrompt: initialThum
               <div className={`text-4xl font-black ${getScoreColor(result.composite_score)}`}>
                 {result.composite_score}
               </div>
-              <div className="text-xs text-muted-foreground">Packaging Score</div>
+              <div className="text-xs text-muted-foreground">Packaging Score <span className="text-[9px] opacity-60">(estimativa IA)</span></div>
               <Badge className="mt-1">{result.verdict}</Badge>
             </div>
 
@@ -144,6 +144,7 @@ export function PackagingLab({ title: initialTitle, thumbnailPrompt: initialThum
             <div className="flex gap-2 flex-wrap">
               <Badge variant="outline" className="text-xs">CTR est: {result.ctr_estimate}</Badge>
               <Badge variant="outline" className="text-xs">Tráfego: {result.traffic_fit}</Badge>
+              <Badge variant="secondary" className="text-[9px] gap-1 opacity-70">📊 Estimativa IA</Badge>
             </div>
 
             {/* Thumbnail Preview Simulation */}
