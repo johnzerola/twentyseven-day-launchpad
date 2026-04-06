@@ -4,29 +4,29 @@ import { motion } from 'framer-motion';
 
 const comparisonData = {
   pt: {
-    title: 'A Diferença de Quem Usa Inteligência Artificial',
-    without: 'Sem Monetiza27',
+    title: 'Como a IA Muda Seu Workflow',
+    without: 'Produção Manual',
     with: 'Com Monetiza27',
     items: [
-      { without: '6-12 meses para YPP', with: '27-90 dias para YPP' },
-      { without: '~200 views por vídeo', with: '~2.000+ views por vídeo' },
       { without: '3h+ por roteiro', with: '15 min por roteiro com IA' },
-      { without: 'Nicho escolhido no achismo', with: 'Nicho validado com dados reais' },
-      { without: 'Títulos genéricos', with: 'Títulos A/B testados com CTR 12%+' },
-      { without: 'Retenção ~25%', with: 'Retenção ~55% com scripts otimizados' },
+      { without: 'Nicho escolhido no achismo', with: 'Nicho validado com dados de 1.300+ canais' },
+      { without: 'Títulos genéricos', with: 'Títulos otimizados com análise de concorrentes' },
+      { without: 'Sem análise de retenção', with: 'Curva de retenção estimada por IA' },
+      { without: 'Thumb sem estratégia', with: 'Thumbnail com conceito + prompt gerado' },
+      { without: 'Sem feedback loop', with: 'Performance real sincronizada via YouTube' },
     ],
   },
   en: {
-    title: 'The Difference AI Makes',
-    without: 'Without Monetiza27',
+    title: 'How AI Changes Your Workflow',
+    without: 'Manual Production',
     with: 'With Monetiza27',
     items: [
-      { without: '6-12 months to YPP', with: '27-90 days to YPP' },
-      { without: '~200 views per video', with: '~2,000+ views per video' },
       { without: '3h+ per script', with: '15 min per script with AI' },
-      { without: 'Niche chosen by guessing', with: 'Niche validated with real data' },
-      { without: 'Generic titles', with: 'A/B tested titles with 12%+ CTR' },
-      { without: '~25% retention', with: '~55% retention with optimized scripts' },
+      { without: 'Niche chosen by guessing', with: 'Niche validated with 1,300+ channel data' },
+      { without: 'Generic titles', with: 'Titles optimized with competitor analysis' },
+      { without: 'No retention analysis', with: 'AI-estimated retention curve' },
+      { without: 'Thumbnail without strategy', with: 'Thumbnail with concept + generated prompt' },
+      { without: 'No feedback loop', with: 'Real performance synced via YouTube' },
     ],
   },
 };
@@ -61,7 +61,7 @@ export const BeforeAfterSection = () => {
 
           <div className="rounded-2xl glass-premium p-6 relative">
             <div className="absolute -top-3 right-6 px-3 py-1 rounded-full gradient-hero text-xs font-semibold text-primary-foreground">
-              {pt ? '⚡ Resultado comprovado' : '⚡ Proven results'}
+              {pt ? '⚡ Produção assistida' : '⚡ AI-assisted production'}
             </div>
             <div className="flex items-center gap-2 mb-6">
               <TrendingUp className="w-5 h-5 text-emerald-400" />
