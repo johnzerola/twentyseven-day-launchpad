@@ -180,14 +180,14 @@ export const RetentionCurveAnalyzer = ({ script, topic, niche, style, duration, 
         className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-chart-2" />
-          <span className="font-semibold text-sm">Curva de Retenção por Timestamp</span>
+          <span className="font-semibold text-sm">Curva de Retenção Estimada (IA)</span>
           {predicted && (
             <Badge variant="outline" className={`text-[10px] ${
               predicted.avgRetention >= 60 ? 'bg-chart-2/10 text-chart-2 border-chart-2/30' :
               predicted.avgRetention >= 40 ? 'bg-chart-4/10 text-chart-4 border-chart-4/30' :
               'bg-destructive/10 text-destructive border-destructive/30'
             }`}>
-              {predicted.avgRetention}% média
+              {predicted.avgRetention}% média <span className="text-[8px] opacity-60">(est.)</span>
             </Badge>
           )}
         </div>

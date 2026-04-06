@@ -84,6 +84,23 @@ export function PredictionVsReality() {
 
   return (
     <div className="space-y-4">
+      {/* Truth Layer Banner */}
+      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+        <p className="text-[10px] font-medium text-amber-400 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3" /> Camada de Verdade
+        </p>
+        <p className="text-[9px] text-muted-foreground mt-1">
+          Scores preditivos são <strong>estimativas de IA</strong> baseadas em padrões observados.
+          Resultados reais vêm do YouTube Analytics via OAuth.
+          A calibração melhora com mais dados reais — publique e sincronize para refinar as previsões.
+        </p>
+        <div className="flex gap-2 mt-2">
+          <Badge variant="outline" className="text-[8px] gap-1">🤖 Estimado por IA: {predictions.length > 0 ? `${predictions.length} comparações` : 'sem dados ainda'}</Badge>
+          <Badge variant="outline" className="text-[8px] gap-1">📊 Calibrado: {calibration.filter(c => c.samples_count >= 5).length} nichos</Badge>
+          <Badge variant="outline" className="text-[8px] gap-1">🎯 Erro médio: {avgError > 0 ? `${avgError}pts` : 'N/A'}</Badge>
+        </div>
+      </div>
+
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-border/40">

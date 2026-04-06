@@ -33,20 +33,20 @@ export const HeroSection = () => {
             <motion.div {...fadeUp(0)}>
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-dark border border-red-500/30 text-sm text-[#A3A3A3]">
                 <svg width="20" height="14" viewBox="0 0 28 20" fill="none"><rect width="28" height="20" rx="6" fill="#FF0000"/><path d="M11 6L19 10L11 14V6Z" fill="white"/></svg>
-                A plataforma #1 de monetização YouTube no Brasil
+                Produção assistida por IA para criadores YouTube
               </span>
             </motion.div>
 
             <motion.h1 {...fadeUp(0.1)} className="font-display font-extrabold text-[44px] md:text-[68px] leading-[1.05] tracking-[-0.03em]">
-              <span className="text-white">Monetize seu canal</span>
+              <span className="text-white">Acelere seu canal</span>
               <br />
-              <span className="shimmer-text">em 27 dias.</span>
+              <span className="shimmer-text">com IA real.</span>
               <br />
-              <span className="text-white/70 font-sans font-medium text-lg md:text-[22px] block mt-4 tracking-normal">Com inteligência artificial. Do zero ao YPP.</span>
+              <span className="text-white/70 font-sans font-medium text-lg md:text-[22px] block mt-4 tracking-normal">Roteiros, títulos, thumbnails e estratégia — tudo assistido por inteligência artificial.</span>
             </motion.h1>
 
             <motion.p {...fadeUp(0.2)} className="text-[#A3A3A3] text-lg max-w-[480px] leading-relaxed">
-              A única IA que analisa seu nicho, cria seu plano do dia 1 ao YPP, escreve seus roteiros e até narra seus vídeos. Você só precisa publicar.
+              Analise seu nicho, gere roteiros otimizados, crie thumbnails e acompanhe sua performance com dados reais. Um sistema completo de produção para criadores sérios.
             </motion.p>
 
             <motion.div {...fadeUp(0.3)} className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export const HeroSection = () => {
                   </div>
                 ))}
               </div>
-              <span className="text-sm text-[#A3A3A3]"><strong className="text-white">3.847</strong> criadores monetizados este mês</span>
+              <span className="text-sm text-[#A3A3A3]"><strong className="text-white">Criadores ativos</strong> usando a plataforma</span>
             </motion.div>
 
             <motion.div {...fadeUp(0.4)} className="flex flex-col sm:flex-row gap-3 mt-2">
@@ -71,7 +71,7 @@ export const HeroSection = () => {
 
             <motion.p {...fadeUp(0.5)} className="text-[13px] text-[#A3A3A3] flex flex-wrap gap-x-4 gap-y-1">
               <span>✓ Sem cartão</span>
-              <span>✓ Resultado em 27 dias</span>
+              <span>✓ Pipeline completo de produção</span>
               <span>✓ Cancele quando quiser</span>
             </motion.p>
           </div>
@@ -126,9 +126,9 @@ export const HeroSection = () => {
         {/* Stats row */}
         <motion.div {...fadeUp(0.5)} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-16 lg:mt-20">
           {[
-            { num: '3.847+', label: 'Criadores monetizados' },
-            { num: '27 dias', label: 'Tempo médio para YPP' },
-            { num: '4.9★', label: 'Avaliação na App Store' },
+            { num: '5.000+', label: 'Títulos virais analisados' },
+            { num: '1.300+', label: 'Canais de referência' },
+            { num: '100+', label: 'Nichos cobertos' },
           ].map((s, i) => (
             <div key={i} className="glass-dark rounded-2xl p-6 text-center">
               <div className="font-display font-extrabold text-3xl md:text-4xl gradient-text-fire">{s.num}</div>
