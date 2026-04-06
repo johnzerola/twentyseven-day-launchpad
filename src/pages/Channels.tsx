@@ -1022,6 +1022,11 @@ const Channels = () => {
                       </div>
                     )}
                   </TabsContent>
+
+                  {/* ==================== REFERENCES TAB ==================== */}
+                  <TabsContent value="references" className="mt-4">
+                    <ReferenceChannelsTab />
+                  </TabsContent>
                 </Tabs>
               </div>
             )}
