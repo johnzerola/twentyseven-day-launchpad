@@ -478,7 +478,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                       {isWinner && <Badge className="bg-emerald-500/20 text-emerald-400 text-[9px] mb-1">🏆 Vencedor</Badge>}
                       <p className="font-medium text-[10px] mb-2">{title}</p>
                       <div className="space-y-1 text-[10px]">
-                        <div className="flex justify-between"><span className="text-muted-foreground">CTR</span><span className="font-bold text-primary">{data.ctr}%</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">CTR (est.)</span><span className="font-bold text-primary">{data.ctr}%</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">SEO</span><span className="font-bold">{data.seoScore}/10</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Comprimento</span><span className="font-bold">{data.lengthScore}/10</span></div>
                         {data.curiosityGapScore && (
@@ -495,6 +495,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                 })}
               </div>
               <p className="text-[10px] text-muted-foreground bg-muted/20 rounded-lg p-2">{abResult.analysis}</p>
+              <p className="text-[8px] text-muted-foreground/50 italic">⚠️ Análise simulada por IA — não substitui teste real com público.</p>
               {abResult.improvement_suggestion && (
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
                   <p className="text-[9px] font-medium text-primary mb-0.5">💡 Sugestão de melhoria:</p>
