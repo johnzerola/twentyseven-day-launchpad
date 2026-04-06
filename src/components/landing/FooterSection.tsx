@@ -1,79 +1,102 @@
-import { useLanguage } from '@/i18n/LanguageContext';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 export const FooterSection = () => {
-  const { locale } = useLanguage();
-  const pt = locale === 'pt-BR';
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
 
   return (
-    <footer className="border-t border-border/50 py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-4 gap-8 mb-12">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 68 48" fill="none">
-                  <path d="M66.52 7.74C65.77 4.81 63.48 2.52 60.55 1.77C55.22 0.27 34 0.27 34 0.27S12.78 0.27 7.45 1.77C4.52 2.52 2.23 4.81 1.48 7.74C0 13.09 0 24.13 0 24.13S0 35.17 1.48 40.52C2.23 43.45 4.52 45.74 7.45 46.49C12.78 47.99 34 47.99 34 47.99S55.22 47.99 60.55 46.49C63.48 45.74 65.77 43.45 66.52 40.52C68 35.17 68 24.13 68 24.13S68 13.09 66.52 7.74Z" fill="white" fillOpacity="0.9"/>
-                  <path d="M27.16 34.33L44.84 24.13L27.16 13.93V34.33Z" fill="hsl(0, 72%, 51%)"/>
-                </svg>
-              </div>
-              <span className="text-lg font-bold font-display">Monetiza27</span>
-            </div>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-              {pt ? 'A plataforma que leva criadores do zero ao YPP.' : 'The platform that takes creators from zero to YPP.'}
-            </p>
-
-            <p className="text-sm font-semibold mb-2">{pt ? 'Receba dicas semanais de crescimento' : 'Get weekly growth tips'}</p>
-            <div className="flex gap-2 max-w-sm">
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <Button size="sm" className="gradient-hero border-0 shimmer">{pt ? 'Assinar' : 'Subscribe'}</Button>
-            </div>
-
-            <div className="flex items-center gap-4 mt-6 text-xs text-muted-foreground">
-              <span>🇧🇷 {pt ? 'Feito no Brasil' : 'Made in Brazil'}</span>
-              <span>🔒 {pt ? 'Dados seguros' : 'Secure data'}</span>
-              <span>⚡ Powered by AI</span>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-3">{pt ? 'Produto' : 'Product'}</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#features" className="hover:text-foreground transition-colors">{pt ? 'Funcionalidades' : 'Features'}</a></li>
-              <li><a href="#pricing" className="hover:text-foreground transition-colors">{pt ? 'Planos' : 'Pricing'}</a></li>
-              <li><a href="#faq" className="hover:text-foreground transition-colors">FAQ</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-3">{pt ? 'Legal' : 'Legal'}</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors">{pt ? 'Privacidade' : 'Privacy'}</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">{pt ? 'Termos' : 'Terms'}</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">{pt ? 'Contato' : 'Contact'}</a></li>
-            </ul>
-          </div>
+    <footer>
+      {/* Final CTA */}
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(255,0,0,0.1)_0%,transparent_70%)]" />
         </div>
-
-        {/* SEO-rich text block */}
-        <div className="border-t border-border/30 pt-8 mb-8">
-          <p className="text-xs text-muted-foreground leading-relaxed max-w-4xl mx-auto text-center">
-            {pt
-              ? 'O Monetiza27 é a plataforma brasileira de inteligência artificial para YouTube especializada em monetização rápida de canais. Nossa IA analisa nichos, gera roteiros virais para YouTube, produz narração automática em português e cria um plano personalizado de 27 dias para você atingir os requisitos do YouTube Partner Program (YPP): 1.000 inscritos e 4.000 horas assistidas. Funciona para canais novos, canais sem aparecer (faceless) e criadores de qualquer nicho. Mais de 3.200 criadores já monetizaram seus canais usando o Monetiza27.'
-              : 'Monetiza27 is the Brazilian AI platform for YouTube specialized in fast channel monetization. Our AI analyzes niches, generates viral YouTube scripts, produces automatic narration in Portuguese, and creates a personalized 27-day plan to help you reach YouTube Partner Program (YPP) requirements: 1,000 subscribers and 4,000 watch hours. Works for new channels, faceless channels, and creators of any niche. Over 3,200 creators have already monetized using Monetiza27.'}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative max-w-3xl mx-auto px-4 text-center"
+        >
+          <h2 className="font-display font-extrabold text-4xl md:text-5xl text-white mb-4">
+            Seu canal pode ser o próximo.
+          </h2>
+          <p className="text-[#A3A3A3] text-lg mb-8">
+            Mais de 3.847 criadores já tomaram essa decisão. O que está esperando?
           </p>
-        </div>
+          <button
+            onClick={() => navigate('/login')}
+            className="btn-youtube shimmer px-12 py-5 text-xl font-display font-extrabold min-w-[300px]"
+          >
+            ▶ Começar meu plano grátis agora
+          </button>
+          <p className="text-[13px] text-[#A3A3A3] mt-4">
+            Sem cartão de crédito · Resultado em 27 dias
+          </p>
+        </motion.div>
+      </section>
 
-        <div className="border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
-          © 2026 Monetiza27. {pt ? 'Todos os direitos reservados.' : 'All rights reserved.'}
+      {/* SEO text */}
+      <div className="max-w-4xl mx-auto px-4 pb-12">
+        <p className="text-xs text-[#A3A3A3]/60 leading-relaxed text-center">
+          O Monetiza27 é a plataforma brasileira de inteligência artificial para YouTube especializada em monetização rápida de canais.
+          Nossa IA analisa nichos, gera roteiros virais para YouTube, produz narração automática em português e cria um plano personalizado de 27 dias
+          para você atingir os requisitos do YouTube Partner Program (YPP): 1.000 inscritos e 4.000 horas assistidas.
+          Funciona para canais novos, canais sem aparecer (faceless) e criadores de qualquer nicho.
+          Mais de 3.200 criadores já monetizaram seus canais usando o Monetiza27.
+        </p>
+      </div>
+
+      {/* Footer proper */}
+      <div className="border-t border-white/5" style={{ backgroundColor: '#050505' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            {/* Brand */}
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-3">
+                <svg width="24" height="17" viewBox="0 0 28 20" fill="none"><rect width="28" height="20" rx="6" fill="#FF0000"/><path d="M11 6L19 10L11 14V6Z" fill="white"/></svg>
+                <span className="font-display font-bold text-white">Monetiza27</span>
+              </div>
+              <p className="text-xs text-[#A3A3A3] leading-relaxed">
+                A plataforma de IA que leva criadores do zero ao YPP.
+              </p>
+            </div>
+
+            {/* Produto */}
+            <div>
+              <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Produto</h4>
+              <ul className="space-y-2">
+                {['Features', 'Planos', 'FAQ'].map(l => (
+                  <li key={l}><a href={`#${l.toLowerCase()}`} className="text-xs text-[#A3A3A3] hover:text-white transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Empresa */}
+            <div>
+              <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Empresa</h4>
+              <ul className="space-y-2">
+                {['Sobre', 'Blog', 'Contato'].map(l => (
+                  <li key={l}><span className="text-xs text-[#A3A3A3]">{l}</span></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Legal</h4>
+              <ul className="space-y-2">
+                {['Privacidade', 'Termos'].map(l => (
+                  <li key={l}><span className="text-xs text-[#A3A3A3]">{l}</span></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-white/5 pt-6 text-center">
+            <p className="text-[11px] text-[#A3A3A3]">
+              © 2026 Monetiza27. Feito com ▶ no Brasil.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

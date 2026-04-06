@@ -1,187 +1,142 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Play, Shield, Star, CheckCircle2, Users, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/i18n/LanguageContext';
-import { motion, useInView } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
-import { YouTubePlayIcon } from './YouTubePlayIcon';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Check, Circle } from 'lucide-react';
 
-const useAnimatedCounter = (target: number, duration: number = 2000, start = true) => {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    let v = 0;
-    const inc = target / (duration / 16);
-    const timer = setInterval(() => {
-      v += inc;
-      if (v >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(v));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [target, duration, start]);
-  return count;
-};
+const fadeUp = (delay: number) => ({
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.6, delay },
+});
+
+const avatars = [
+  { initial: 'MC', bg: '#FF0000' },
+  { initial: 'RS', bg: '#F5C518' },
+  { initial: 'JP', bg: '#22C55E' },
+  { initial: 'AF', bg: '#CC0000' },
+  { initial: 'TL', bg: '#E8A800' },
+];
 
 export const HeroSection = () => {
-  const { locale } = useLanguage();
-  const pt = locale === 'pt-BR';
-  const statsRef = useRef(null);
-  const statsInView = useInView(statsRef, { once: true });
-  const days = useAnimatedCounter(27, 1500, statsInView);
-  const creators = useAnimatedCounter(3200, 2000, statsInView);
-  const [showDemo, setShowDemo] = useState(false);
+  const navigate = useNavigate();
 
   return (
-    <section className="relative pt-24 pb-20 overflow-hidden particles-bg grid-texture">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[200px]" style={{ background: 'radial-gradient(circle, hsl(0 72% 30% / 0.2), transparent 70%)' }} />
-        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px]" style={{ background: 'radial-gradient(circle, hsl(142 76% 30% / 0.08), transparent 70%)' }} />
-      </div>
+    <section className="relative min-h-screen pt-24 pb-16 overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 grid-texture" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(255,0,0,0.12)_0%,transparent_70%)] pointer-events-none" />
 
-      <div className="absolute top-20 right-[15%] hidden lg:block">
-        <YouTubePlayIcon size={56} opacity={0.06} />
-      </div>
-      <div className="absolute bottom-32 left-[10%] hidden lg:block">
-        <YouTubePlayIcon size={40} opacity={0.05} />
-      </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-[1.5fr_1fr] gap-12 lg:gap-16 items-center min-h-[70vh]">
+          {/* Left column */}
+          <div className="flex flex-col gap-6">
+            <motion.div {...fadeUp(0)}>
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-dark border border-red-500/30 text-sm text-[#A3A3A3]">
+                <svg width="20" height="14" viewBox="0 0 28 20" fill="none"><rect width="28" height="20" rx="6" fill="#FF0000"/><path d="M11 6L19 10L11 14V6Z" fill="white"/></svg>
+                A plataforma #1 de monetização YouTube no Brasil
+              </span>
+            </motion.div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <motion.div className="flex items-center gap-3 mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <motion.h1 {...fadeUp(0.1)} className="font-display font-extrabold text-[44px] md:text-[72px] leading-[1.0] tracking-[-0.03em]">
+              <span className="text-white">De 0 a monetizado</span>
+              <br />
+              <span className="shimmer-text">em 27 dias.</span>
+              <br />
+              <span className="text-white/80 font-sans font-medium text-xl md:text-2xl block mt-3">com inteligência artificial.</span>
+            </motion.h1>
+
+            <motion.p {...fadeUp(0.2)} className="text-[#A3A3A3] text-lg max-w-[480px] leading-relaxed">
+              A única IA que analisa seu nicho, cria seu plano do dia 1 ao YPP, escreve seus roteiros e até narra seus vídeos. Você só precisa publicar.
+            </motion.p>
+
+            <motion.div {...fadeUp(0.3)} className="flex items-center gap-3">
               <div className="flex -space-x-2.5">
-                {['M','J','A','R','L','K'].map((l, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/50 to-accent/50 border-2 border-background flex items-center justify-center text-[10px] font-bold text-primary-foreground">
-                    {l}
+                {avatars.map((a, i) => (
+                  <div key={i} className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-[#0A0A0A]" style={{ backgroundColor: a.bg, zIndex: 5 - i }}>
+                    {a.initial}
                   </div>
                 ))}
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">{pt ? 'Criadores que monetizaram:' : 'Creators who monetized:'}</p>
-                <div className="flex items-center gap-1">
-                  {[1,2,3,4,5].map(i => <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />)}
-                  <span className="text-xs text-muted-foreground ml-1">4.9/5 (847 {pt ? 'avaliações' : 'reviews'})</span>
+              <span className="text-sm text-[#A3A3A3]"><strong className="text-white">3.847</strong> criadores monetizados este mês</span>
+            </motion.div>
+
+            <motion.div {...fadeUp(0.4)} className="flex flex-col sm:flex-row gap-3 mt-2">
+              <button onClick={() => navigate('/login')} className="btn-youtube shimmer px-8 py-4 text-lg font-display font-bold flex items-center justify-center gap-2">
+                ▶ Começar meu plano grátis
+              </button>
+              <button className="px-6 py-4 rounded-xl border border-white/15 text-white text-sm font-medium hover:border-white/40 transition-colors">
+                Ver como funciona em 90s
+              </button>
+            </motion.div>
+
+            <motion.p {...fadeUp(0.5)} className="text-[13px] text-[#A3A3A3] flex flex-wrap gap-x-4 gap-y-1">
+              <span>✓ Sem cartão</span>
+              <span>✓ Resultado em 27 dias</span>
+              <span>✓ Cancele quando quiser</span>
+            </motion.p>
+          </div>
+
+          {/* Right column — floating planner card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.3 }}
+            className="relative hidden lg:block"
+          >
+            <div className="float glass-dark rounded-[20px] p-6 border border-red-500/20 relative">
+              <div className="text-sm text-[#A3A3A3] mb-1">Plano de Monetização</div>
+              <div className="text-white font-display font-bold text-lg mb-4">Dia 14 de 27</div>
+
+              {/* Progress bar */}
+              <div className="mb-5">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-[#A3A3A3]">Progresso</span>
+                  <span className="text-white font-medium">52%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#FF0000] to-[#F5C518] w-[52%]" />
                 </div>
               </div>
-            </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold font-display leading-[1.05] mb-6 tracking-tight">
-              {pt ? (
-                <>Monetize seu Canal do <span className="text-primary">YouTube</span> com <span className="gradient-text">IA em 27 Dias</span></>
-              ) : (
-                <>Monetize your <span className="text-primary">YouTube</span> Channel with <span className="gradient-text">AI in 27 Days</span></>
-              )}
-            </h1>
-
-            <p className="text-lg text-muted-foreground max-w-xl mb-8 leading-relaxed">
-              {pt
-                ? 'A única plataforma com IA que planeja, roteiriza, narra e analisa seu canal — do dia 1 até o YPP. Mais de 3.200 criadores já monetizaram.'
-                : 'The only AI platform that plans, scripts, narrates and analyzes your channel — from day 1 to YPP. Over 3,200 creators already monetized.'}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4 mb-8 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" />{pt ? 'Grátis para começar' : 'Free to start'}</span>
-              <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-accent" />{pt ? 'Sem cartão de crédito' : 'No credit card'}</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" />{pt ? 'Cancele quando quiser' : 'Cancel anytime'}</span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start gap-4 mb-10">
-              <Link to="/login">
-                <Button size="lg" className="gradient-hero border-0 glow-primary shimmer text-lg px-8 py-7 group font-semibold rounded-lg">
-                  {pt ? 'Começar meu plano de 27 dias' : 'Start my 27-day plan'} →
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="text-base px-6 py-7 group border-border/60 hover:border-primary/40 rounded-lg" onClick={() => setShowDemo(true)}>
-                <Play className="w-4 h-4 mr-2 text-primary" />
-                {pt ? 'Ver demonstração' : 'Watch demo'}
-              </Button>
-            </div>
-          </motion.div>
-
-          <motion.div className="relative" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }}>
-            <div className="glass-premium rounded-2xl p-1 glow-primary">
-              <div className="bg-card rounded-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-muted/20">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-primary/60" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                    <div className="w-3 h-3 rounded-full bg-accent/60" />
-                  </div>
-                  <div className="flex-1 text-center">
-                    <span className="text-xs text-muted-foreground bg-muted/50 px-4 py-1 rounded-full">app.monetiza27.com</span>
-                  </div>
+              {/* Tasks */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <Check size={16} className="text-[#22C55E]" />
+                  <span className="text-white/90">Roteiro gerado pela IA</span>
                 </div>
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">{pt ? 'Plano Diário' : 'Daily Plan'}</p>
-                      <p className="text-lg font-bold font-display">{pt ? 'Dia 12 de 27' : 'Day 12 of 27'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{pt ? 'Progresso' : 'Progress'}</p>
-                      <p className="text-lg font-bold text-primary">44%</p>
-                    </div>
-                  </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <motion.div className="h-full gradient-hero rounded-full" initial={{ width: 0 }} animate={{ width: '44%' }} transition={{ delay: 1, duration: 1.2 }} />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
-                      <p className="text-[10px] text-muted-foreground">{pt ? 'Inscritos' : 'Subs'}</p>
-                      <p className="text-xl font-bold text-accent">847</p>
-                    </div>
-                    <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
-                      <p className="text-[10px] text-muted-foreground">Views</p>
-                      <p className="text-xl font-bold text-primary">32K</p>
-                    </div>
-                    <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
-                      <p className="text-[10px] text-muted-foreground">{pt ? 'Receita' : 'Revenue'}</p>
-                      <p className="text-xs font-semibold text-yellow-400 mt-1">R$ 890</p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Check size={16} className="text-[#22C55E]" />
+                  <span className="text-white/90">Thumbnail criada</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Circle size={16} className="text-[#F5C518]" />
+                  <span className="text-white/60">Publicar às 18:00</span>
                 </div>
               </div>
-            </div>
 
-            <motion.div className="absolute -right-2 top-16 glass-premium rounded-xl px-3 py-2 shadow-lg" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.5 }}>
-              <p className="text-xs font-semibold flex items-center gap-1.5">
-                <span className="text-primary">▶</span>
-                {pt ? 'Canal atingiu 1.000 subs' : 'Channel hit 1,000 subs'}
-              </p>
-            </motion.div>
-            <motion.div className="absolute -left-2 bottom-20 glass-premium rounded-xl px-3 py-2 shadow-lg" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.8 }} style={{ animation: 'float-anim 4s ease-in-out infinite' }}>
-              <p className="text-xs font-semibold">💰 {pt ? 'YPP aprovado!' : 'YPP approved!'}</p>
-            </motion.div>
-
-            <div className="absolute -top-4 -left-4">
-              <YouTubePlayIcon size={32} opacity={0.08} animate={false} />
+              {/* Floating badge */}
+              <div className="absolute -top-3 -right-3 px-3 py-1.5 rounded-full text-xs font-display font-bold text-[#0A0A0A] shadow-lg" style={{ background: 'linear-gradient(135deg, #F5C518, #E8A800)' }}>
+                🏆 1.247 inscritos
+              </div>
             </div>
           </motion.div>
         </div>
 
-        <motion.div ref={statsRef} className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+        {/* Stats row */}
+        <motion.div {...fadeUp(0.5)} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-16 lg:mt-20">
           {[
-            { value: `${days}`, suffix: pt ? ' dias' : ' days', label: pt ? 'Tempo médio para monetização' : 'Avg time to monetize' },
-            { value: `${creators.toLocaleString()}`, suffix: '+', label: pt ? 'Criadores monetizados' : 'Creators monetized' },
-            { value: '4.9', suffix: '★', label: pt ? 'Avaliação média' : 'Average rating' },
-          ].map((stat, i) => (
-            <motion.div key={i} className="glass-premium rounded-xl p-5 text-center glow-primary" transition={{ delay: i * 0.1 }}>
-              <div className="text-3xl sm:text-4xl font-bold font-display gradient-text">{stat.value}{stat.suffix}</div>
-              <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
-            </motion.div>
+            { num: '3.847+', label: 'Criadores monetizados' },
+            { num: '27 dias', label: 'Tempo médio para YPP' },
+            { num: '4.9★', label: 'Avaliação na App Store' },
+          ].map((s, i) => (
+            <div key={i} className="glass-dark rounded-2xl p-6 text-center">
+              <div className="font-display font-extrabold text-3xl md:text-4xl gradient-text-fire">{s.num}</div>
+              <div className="text-sm text-[#A3A3A3] mt-1">{s.label}</div>
+            </div>
           ))}
         </motion.div>
       </div>
-
-      {showDemo && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDemo(false)}>
-          <div className="glass-premium rounded-2xl p-2 max-w-3xl w-full" onClick={e => e.stopPropagation()}>
-            <div className="aspect-video bg-muted rounded-xl flex items-center justify-center">
-              <p className="text-muted-foreground text-sm">{pt ? 'Vídeo demo em breve' : 'Demo video coming soon'}</p>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
