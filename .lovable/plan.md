@@ -1,115 +1,101 @@
 
+# Plano de Implementação — Melhorias Prioritárias do Monetiza27
 
-# Landing Page Premium Overhaul — Monetize AI
+## Resumo
+11 melhorias organizadas em 4 fases de execução, priorizadas por impacto e dependência.
 
-## Objetivo
-Transformar a landing page atual de "funcional" para "magnética" — uma experiencia visual dopaminergica que transmita tecnologia de ponta e converta visitantes em assinantes usando tecnicas de persuasao comprovadas.
+---
 
-## Diagnostico Atual
-- **Hero**: Texto-centrico, sem elemento visual impactante, social proof cards pequenos e discretos
-- **Features**: Grid basico de cards com icones genericos — nao transmite "tecnologia incrivel"
-- **Pricing**: Cards glass genericos sem diferenciacao visual forte entre planos
-- **Falta**: Secao de depoimentos, secao "antes vs depois", contador de urgencia, video/demo embed, secao de garantia
-- **Cores**: Purple/orange gradient ok mas subutilizado — precisa de mais profundidade visual
+## Fase 1 — Correções Imediatas (Quick Wins)
 
-## Plano de Implementacao
+### 1.1 Corrigir import duplicado em chat-assistant
+- **Arquivo:** `supabase/functions/chat-assistant/index.ts`
+- **Problema:** Linha 1 importa `callGeminiOpenAICompat, generateEmbedding`, linha 2 importa `callGeminiOpenAICompat` novamente — causa erro de deploy
+- **Fix:** Remover linha 2, manter apenas linha 1
 
-### 1. Nova Paleta de Cores e Efeitos Visuais (index.css)
-- Adicionar gradientes mais ricos: mesh gradients, animated aurora backgrounds
-- Novas utility classes: `.aurora-bg`, `.glass-premium`, `.shimmer`, `.pulse-glow`
-- Animacao de shimmer para CTAs (efeito de luz passando pelo botao)
-- Bordas com gradiente animado nos cards premium
+### 1.2 Thumbnail com geração de imagem real
+- **Arquivo:** `supabase/functions/generate-thumbnail-prompt/index.ts` — adicionar modo `generate_image: true` que, além de retornar prompts, chama o Gemini image gen (mesmo padrão do `generate-segment-image`)
+- **Arquivo:** `src/components/scripts/ThumbnailGenerator.tsx` — adicionar botão "Gerar Imagem" por variante que chama a nova função, exibe preview base64, e permite download/upload ao storage bucket `media`
+- **Modelo:** `google/gemini-3.1-flash-image-preview` com `modalities: ["image", "text"]`
 
-### 2. Hero Section — Impacto Imediato (HeroSection.tsx)
-- **Headline reescrita** com copy mais agressiva: "Transforme Seu Canal em Uma Maquina de Dinheiro em 27 Dias"
-- **Animated counter** mostrando receita sendo gerada em tempo real (contador incrementando)
-- **Video thumbnail mockup** com play button pulsante — simula preview da plataforma
-- **Social proof bar** com logos/avatares animados tipo ticker horizontal
-- **Urgencia**: Badge "247 pessoas criaram conta hoje" com pulsacao
-- **Trust badges maiores**: "Garantia 7 dias", "Sem cartao", "Cancele quando quiser"
+---
 
-### 3. Nova Secao: Social Proof / Resultados Reais (novo componente TestimonialsSection.tsx)
-- Cards grandes com metricas reais: "Canal X: 0 -> 1.000 subs em 18 dias"
-- Grafico visual mostrando curva de crescimento
-- Avatares com nomes, nichos e resultados
-- Animacao de entrada staggered
+## Fase 2 — Closed-Loop (YouTube OAuth → Performance → Aprendizado)
 
-### 4. Features Section — Demonstracao Visual (FeaturesSection.tsx)
-- Redesign: em vez de grid de cards, usar layout alternado (imagem + texto, texto + imagem)
-- Cada feature com um "mini-preview" visual da interface real (mockup simplificado em CSS)
-- Numeros de impacto grandes: "+89% retenção", "3.2x mais views"
-- Hover effects premium com glow e scale
+### 2.1 Conectar YouTube OAuth → video_performance real
+- **Arquivo novo:** `supabase/functions/sync-oauth-performance/index.ts`
+- Usa `youtube_oauth_tokens` para buscar métricas reais via YouTube Analytics API (CTR, retenção, impressões)
+- Popula a tabela `video_performance` com dados D1/D3/D7/D30 reais (campos `ctr_percent`, `avg_retention_percent`, `avg_view_duration_seconds`)
+- Cruza com `script_performance_link` para vincular roteiros a resultados
 
-### 5. Nova Secao: Antes vs Depois (novo componente BeforeAfterSection.tsx)
-- Comparacao visual lado a lado: "Sem Monetize AI" vs "Com Monetize AI"
-- Metricas: views, subs, receita, tempo gasto
-- Animacao de slide/reveal entre os dois estados
+### 2.2 Closed-loop: métricas → calibração de scores
+- **Arquivo:** `supabase/functions/extract-user-learnings/index.ts` — estender para consumir dados OAuth reais (não apenas YouTube Data API pública)
+- **Arquivo:** `supabase/functions/backtest-scores/index.ts` — alimentar `score_calibration` comparando `predicted_viral_score` vs views reais D7
+- Resultado: pesos do title-score e script-score se auto-ajustam com dados reais
 
-### 6. Pricing Section — Premium Conversion (PricingSection.tsx)
-- Card Pro com borda gradiente animada e glow forte
-- Card Full com efeito "premium gold" — borda dourada, badge exclusivo
-- Adicionar "economize X%" com toggle anual/mensal (visual only por enquanto)
-- Cada card com "valor real" riscado tipo "Valor real: R$497" mostrando desconto
-- Microcopy de urgencia: "Faltam 12 vagas no plano Pro"
-- Garantia de 7 dias com icone de escudo grande abaixo dos cards
+---
 
-### 7. Nova Secao: Garantia + CTA Final (novo componente GuaranteeSection.tsx)
-- Secao com fundo diferenciado (gradiente sutil)
-- Icone de escudo grande
-- Copy: "7 Dias de Garantia Total. Se nao ver resultados, devolvemos 100%."
-- CTA final grande com glow pulsante
+## Fase 3 — Refatoração Estrutural
 
-### 8. FAQ — Visual Polish (FaqSection.tsx)
-- Adicionar icones nos items
-- Melhorar contraste e espacamento
-- Adicionar 2-3 perguntas novas focadas em objecoes de compra
+### 3.1 Refazer chat-assistant em módulos
+Quebrar o arquivo de 1.847 linhas em partes importáveis dentro do mesmo diretório (Edge Functions não suportam imports entre funções, mas suportam `_shared/`):
+- `supabase/functions/_shared/tubebot-tools.ts` — definições dos 19 tools (TUBEBOT_TOOLS)
+- `supabase/functions/_shared/tubebot-executor.ts` — função `executeTool()` com todo o switch/case
+- `supabase/functions/_shared/tubebot-system-prompt.ts` — system prompt e contexto
+- `supabase/functions/chat-assistant/index.ts` — reduzido a ~200 linhas: auth, context injection, AI loop
 
-### 9. Translations Update (translations.ts)
-- Reescrever todas as copies com tecnicas de persuasao: curiosity gap, loss aversion, social proof, urgencia, especificidade
-- PT-BR e EN atualizados
+### 3.2 Consolidar edge functions similares
+Fundir pares redundantes (reduzir de 100+ para ~70):
+- `find-competitors` + `find-competitors-ai` → manter apenas `find-competitors-ai`
+- `generate-30day-plan` + `generate-adaptive-plan` → unificar em `generate-plan` existente
+- `seed-reference-channels` + `seed-elite-knowledge` + `seed-complete-knowledge` → `data-seeding-engine` (já existe)
+- `generate-script` + `generate-script-short` → unificar com param `format: "short" | "long"`
+- Deletar funções não utilizadas: `auto-intelligence-cron`, `daily-data-ingestion`, `evolve-patterns`, `calibrate-knowledge`
 
-### 10. Nav e Footer Polish
-- Nav: adicionar badge "Novo" ou "Beta" ao lado do logo
-- Footer: adicionar contador de canais monetizados
+---
 
-## Arquivos a Criar
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/landing/TestimonialsSection.tsx` | Depoimentos e resultados reais |
-| `src/components/landing/BeforeAfterSection.tsx` | Comparacao visual antes/depois |
-| `src/components/landing/GuaranteeSection.tsx` | Garantia + CTA final |
+## Fase 4 — Fortalecimento dos Diferenciais
 
-## Arquivos a Editar
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/index.css` | Novas utility classes visuais (aurora, shimmer, glass-premium) |
-| `src/components/landing/HeroSection.tsx` | Redesign completo com counter, urgencia, video mockup |
-| `src/components/landing/FeaturesSection.tsx` | Layout alternado com mini-previews visuais |
-| `src/components/landing/PricingSection.tsx` | Cards premium, gradiente animado, urgencia, garantia |
-| `src/components/landing/FaqSection.tsx` | Mais perguntas, icones, polish visual |
-| `src/components/landing/LandingNav.tsx` | Badge "Novo" |
-| `src/components/landing/FooterSection.tsx` | Contador de canais |
-| `src/pages/Index.tsx` | Adicionar novas secoes na ordem correta |
-| `src/i18n/translations.ts` | Copies persuasivas reescritas (PT + EN) |
+### 4.1 Anti-Slop Engine — documentar e expor
+- Já existe no prompt do `generate-script` — extrair as 13 "Soul Signals" para `_shared/anti-slop-rules.ts`
+- Reutilizar em `generate-titles`, `generate-thumbnail-prompt`, `chat-assistant`
+- Adicionar badge "Anti-Slop ✓" no UI quando roteiro passa validação
 
-## Ordem das Secoes na Landing (Final)
-1. Nav (glass + badge)
-2. Hero (counter + urgencia + video mockup)
-3. Social Proof / Testimonials (resultados reais)
-4. Features (layout alternado com previews)
-5. Before vs After (comparacao visual)
-6. Monetization Simulator (ja existe, manter)
-7. Pricing (premium cards + urgencia + garantia)
-8. Guarantee + CTA Final
-9. FAQ (expandido)
-10. Footer
+### 4.2 Audio mastering pipeline — manter e ampliar
+- Pipeline de 12 estágios já funciona via Web Audio API — sem mudanças necessárias
+- Adicionar preset "YouTube Shorts" otimizado para mobile speakers (boost 2-4kHz)
 
-## Tecnicas de Persuasao Aplicadas
-- **Loss aversion**: "Quanto custa NAO monetizar?"
-- **Social proof**: Contadores, depoimentos, "2.400+ canais"
-- **Urgencia**: "Faltam X vagas", "247 pessoas hoje"
-- **Especificidade**: Numeros exatos em vez de vagos
-- **Garantia**: Remove risco da decisao
-- **Ancoragem de preco**: Valor riscado > preco real
-- **Reciprocidade**: Simulador gratuito antes do pricing
+### 4.3 Title Score statistical engine — manter
+- Abordagem baseada em dados com `viral_titles_db` já é sólida — sem mudanças
 
+### 4.4 Smart Knowledge Retrieval (RAG) — manter
+- `match_knowledge` com pgvector funciona — sem mudanças
+
+### 4.5 Channel Voice Profile — manter
+- `learn-channel-voice` já persiste DNA do canal — sem mudanças
+
+---
+
+## Arquivos Modificados/Criados
+
+| Ação | Arquivo |
+|------|---------|
+| Edit (1 linha) | `supabase/functions/chat-assistant/index.ts` |
+| Edit | `supabase/functions/generate-thumbnail-prompt/index.ts` |
+| Edit | `src/components/scripts/ThumbnailGenerator.tsx` |
+| Create | `supabase/functions/sync-oauth-performance/index.ts` |
+| Create | `supabase/functions/_shared/tubebot-tools.ts` |
+| Create | `supabase/functions/_shared/tubebot-executor.ts` |
+| Create | `supabase/functions/_shared/tubebot-system-prompt.ts` |
+| Create | `supabase/functions/_shared/anti-slop-rules.ts` |
+| Refactor | `supabase/functions/chat-assistant/index.ts` (reduce to ~200 lines) |
+| Delete | ~8 redundant edge functions |
+| Edit | `supabase/config.toml` (add sync-oauth-performance) |
+
+## Ordem de Execução
+1. Fix import duplicado (5 min)
+2. Thumbnail com imagem real (30 min)
+3. sync-oauth-performance + closed-loop (45 min)
+4. Refatorar chat-assistant em módulos (40 min)
+5. Consolidar/deletar edge functions redundantes (30 min)
+6. Anti-Slop compartilhado (15 min)
