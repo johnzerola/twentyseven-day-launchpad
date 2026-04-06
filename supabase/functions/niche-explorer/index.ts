@@ -303,7 +303,16 @@ CRITICAL RULES:
 - Revenue projections: Month 1-3 should show $0 for most niches (not monetized yet)
 - Base content strategy on ACTUAL patterns from trending videos AND viral database
 - Cross-reference with internal databases when available
-- All text in Portuguese (BR)`
+- All text in Portuguese (BR)
+
+═══ ÁRVORE DE MICRO-NICHOS (use para sugestões de sub-nicho) ═══
+• Mistérios & Conspiração ($8-$15): Casos Não Resolvidos (desaparecimentos, crimes com teorias ocultas, casos bizarros BR) | Governos & Arquivos Secretos (docs desclassificados, operações militares, experimentos humanos)
+• Curiosidades & Ciência Pop ($5-$12): Fatos Científicos Bizarros (animais absurdos, física quântica simplificada) | História Sombria (impérios desaparecidos, práticas medievais, personagens apagados)
+• Finanças & Mentalidade Rica ($10-$22): Colapsos & Fraudes (pirâmides, falências bilionárias) | Riqueza Oculta (como bilionários escondem dinheiro, fortuna real vs declarada)
+• True Crime & Psicologia Criminal ($8-$15): Crimes Brasileiros (serial killers BR, casos encobertos) | Psicologia do Crime (como criminosos pensam, manipulação e culto)
+• Tecnologia & IA Sombria ($8-$18): IA & Futuro Perturbador (IA autônoma, deepfake casos reais) | Vigilância & Privacidade (rastreamento, dados corporativos)
+
+REGRA DE OURO: Quem escolhe o nicho amplo compete com canais de 10M subs. Quem entra pelo MICRO-NICHO tem menos concorrência e sobe mais rápido. Sempre sugira micro-nichos específicos.`
           },
           {
             role: "user",

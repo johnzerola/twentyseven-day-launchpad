@@ -319,13 +319,15 @@ export const REVIVAL_48H_STRATEGY: RevivalStrategy = {
 export const HOOK_STYLES = ['curiosidade', 'urgência', 'polêmica', 'storytelling', 'choque', 'empatia', 'contraintuitivo', 'arquivo_oculto'] as const;
 export const CTA_PLACEMENTS = ['início', 'meio', 'fim', 'pin_comment'] as const;
 export const CTA_TYPES = ['inscrição', 'like', 'comentário', 'compartilhar', 'playlist', 'produto'] as const;
-export const TITLE_STYLES = ['curiosidade', 'urgência', 'números', 'contraintuitivo', 'storytelling', 'polêmica', 'segredo_oculto', 'erro_fatal', 'contraste_absurdo', 'desafio_tempo', 'arquivos_nao_revelados', 'negatividade_aviso', 'curiosidade_inversa', 'promessa_condicional'] as const;
+export const TITLE_STYLES = ['curiosidade', 'urgência', 'números', 'contraintuitivo', 'storytelling', 'polêmica', 'segredo_oculto', 'erro_fatal', 'contraste_absurdo', 'desafio_tempo', 'arquivos_nao_revelados', 'negatividade_aviso', 'curiosidade_inversa', 'promessa_condicional', 'questao_perturbadora', 'pessoa_simples'] as const;
 
 // ========== ADDITIONAL TITLE PATTERNS V3 (Viral Engine v4.0 — Complete Formula Set) ==========
 export const VIRAL_TITLE_PATTERNS_V3: TitlePattern[] = [
   { id: 't18', pattern: 'Pare de [Ação Comum] imediatamente', example: 'Pare de carregar seu celular à noite imediatamente', style: 'negatividade_aviso', avgCTR: 17.4 },
   { id: 't19', pattern: 'O que acontece quando você [Ação Bizarra] por 30 dias', example: 'O que acontece quando você bebe 5L de água por 30 dias', style: 'curiosidade_inversa', avgCTR: 16.8 },
   { id: 't20', pattern: 'Se você fizer isso 1× por dia, seu [Resultado] muda em [Tempo]', example: 'Se você fizer isso 1× por dia, seu sono muda em 2 semanas', style: 'promessa_condicional', avgCTR: 15.9 },
+  { id: 't21', pattern: 'E se [Fato Aceito] fosse completamente falso?', example: 'E se o caso Maradona fosse completamente diferente do que contaram?', style: 'questao_perturbadora', avgCTR: 16.5 },
+  { id: 't22', pattern: 'O [Pessoa Anônima] que [Resultado Extraordinário] com [Coisa Simples]', example: 'O homem que enganou o FBI com um envelope vazio', style: 'pessoa_simples', avgCTR: 18.2 },
 ];
 
 // ========== PSYCHOLOGICAL CTAs (Viral Engine v4.0) ==========
@@ -378,6 +380,164 @@ export interface EliteReferenceChannel {
   revenue?: string;
   keyLessons: string[];
 }
+
+// ========== NICHE TREE (Nicho → Sub-Nicho → Micro-Nicho) ==========
+export interface NicheNode {
+  name: string;
+  cpmRange: string;
+  subNiches: { name: string; microNiches: string[] }[];
+}
+
+export const NICHE_TREE: NicheNode[] = [
+  {
+    name: 'Mistérios & Conspiração', cpmRange: '$8–$15',
+    subNiches: [
+      { name: 'Casos Não Resolvidos', microNiches: ['Desaparecimentos sem explicação', 'Crimes com teorias ocultas', 'Casos bizarros do Brasil', 'Mortes de celebridades contestadas'] },
+      { name: 'Governos & Arquivos Secretos', microNiches: ['Documentos desclassificados NASA/CIA', 'Operações militares ocultas', 'Experimentos humanos reais', 'Tecnologia suprimida'] },
+    ],
+  },
+  {
+    name: 'Curiosidades & Ciência Pop', cpmRange: '$5–$12',
+    subNiches: [
+      { name: 'Fatos Científicos Bizarros', microNiches: ['Animais com capacidades absurdas', 'Reações químicas perturbadoras', 'Física quântica simplificada', 'O que seu corpo faz enquanto dorme'] },
+      { name: 'História Sombria', microNiches: ['Impérios que desapareceram sem explicação', 'Práticas medievais perturbadoras', 'Eventos históricos censurados', 'Personagens apagados da história BR'] },
+    ],
+  },
+  {
+    name: 'Finanças & Mentalidade Rica', cpmRange: '$10–$22',
+    subNiches: [
+      { name: 'Colapsos & Fraudes', microNiches: ['Pirâmides financeiras reais', 'Falências bilionárias em 30 dias', 'Roubos corporativos esquecidos', 'Trader que perdeu tudo em 1 dia'] },
+      { name: 'Riqueza Oculta', microNiches: ['Como bilionários escondem dinheiro', 'Ativos que a mídia não mostra', 'Estratégias de quem nunca aparece', 'Fortuna real vs fortuna declarada'] },
+    ],
+  },
+  {
+    name: 'True Crime & Psicologia Criminal', cpmRange: '$8–$15',
+    subNiches: [
+      { name: 'Crimes Brasileiros', microNiches: ['Casos BR que não foram ao ar', 'Serial killers esquecidos BR', 'Crimes em pequenas cidades', 'Casos de polícia militar encobertos'] },
+      { name: 'Psicologia do Crime', microNiches: ['Como criminosos pensam', 'Perfil de sociopatas famosos', 'Por que pessoas normais matam', 'Manipulação e culto — casos reais'] },
+    ],
+  },
+  {
+    name: 'Tecnologia & IA Sombria', cpmRange: '$8–$18',
+    subNiches: [
+      { name: 'IA & Futuro Perturbador', microNiches: ['IA que tomou decisões sozinha', 'Empregos que desaparecem em 5 anos', 'Deepfake — casos reais de destruição', 'O que a IA já decidiu sem avisar'] },
+      { name: 'Vigilância & Privacidade', microNiches: ['Como você é rastreado agora', 'Dados que empresas têm sobre você', 'Câmeras e escuta — casos reais', 'Como desaparecer digitalmente'] },
+    ],
+  },
+];
+
+// ========== WEEKLY PROTOCOL 3×/WEEK ==========
+export interface WeeklyProtocolDay {
+  day: string;
+  tasks: string[];
+}
+
+export const WEEKLY_PROTOCOL_3X: WeeklyProtocolDay[] = [
+  { day: 'SEG', tasks: ['Pesquisa + validação de 3 temas (Google Trends + VidIQ)', 'Definir tópico V1'] },
+  { day: 'TER', tasks: ['Roteiro V1 + thumbnail', 'Gravar narração', 'Enviar para edição'] },
+  { day: 'QUA', tasks: ['Revisão edição V1', 'Ajustes', 'Agendar publicação QUI 18h'] },
+  { day: 'QUI', tasks: ['Publicar V1 18h', 'Roteiro V2 + narração', 'Enviar edição'] },
+  { day: 'SEX', tasks: ['Analisar métricas V1 (48h)', 'Testar novo título/thumb se CTR < 4%'] },
+  { day: 'SÁB', tasks: ['Publicar V2 12h', 'Roteiro V3', 'Cortar Shorts dos 2 vídeos anteriores'] },
+  { day: 'DOM', tasks: ['Publicar V3 18h', 'Publicar 3 Shorts (1 de cada vídeo)', 'Planejamento próx. semana'] },
+];
+
+export const PEAK_HOURS_BR = {
+  best: ['QUI 18h–20h', 'DOM 15h–20h'],
+  good: ['SÁB 12h'],
+  note: 'Teste seu horário após 10 vídeos e ajuste pelo pico de CTR nas primeiras 2h.',
+};
+
+// ========== 10 INVIOLABLE RULES ==========
+export interface InviolableRule {
+  number: number;
+  title: string;
+  description: string;
+}
+
+export const INVIOLABLE_RULES: InviolableRule[] = [
+  { number: 1, title: 'Não Troque de Nicho', description: 'O algoritmo leva 20–30 vídeos para entender sua audiência. Trocar antes reseta tudo. Valide com 30 vídeos antes de qualquer mudança.' },
+  { number: 2, title: 'CTR Sem Retenção = Veneno', description: 'Clickbait que não entrega gera CTR alto + retenção baixa. O algoritmo lê como "conteúdo enganoso" e suprime impressões progressivamente.' },
+  { number: 3, title: 'Série Bate Vídeo Isolado', description: 'Uma série de 5 episódios cria binge-watching, aumenta Session Time e treina o algoritmo. Transforme o melhor vídeo em série.' },
+  { number: 4, title: 'Primeiro 30 Segundos é Tudo', description: '50%+ dos espectadores que saem, saem nos primeiros 30s. Retenção aos 30s < 70% = reescreva o gancho.' },
+  { number: 5, title: 'Publique no Horário, Sempre', description: 'Consistência de horário treina o algoritmo. 1 mês de publicação consistente dobra a velocidade de recomendação.' },
+  { number: 6, title: 'Dobre o Que Funciona', description: 'Vídeo superou 2× a média? Copie: mesmo arquétipo de título, mesmo tom, tema adjacente.' },
+  { number: 7, title: 'Playlists São Aceleradoras', description: 'Playlists temáticas aumentam Session Time via autoplay. Crie playlists antes de ter vídeos suficientes.' },
+  { number: 8, title: 'Responda Comentários nas 1as 2h', description: 'Comentários nas primeiras 2h = sinal de engajamento mais forte. Reserve 30 min após cada publicação.' },
+  { number: 9, title: 'Evergreen Supera Trending', description: '80% evergreen, 20% trending. Vídeos evergreen geram views por anos.' },
+  { number: 10, title: 'Dados Antes de Opinião', description: 'O que os dados dizem > o que você acha. Revise analytics a cada 7 dias, sem exceção.' },
+];
+
+// ========== POST-PUBLISH CHECKPOINTS ==========
+export interface PostPublishCheckpoint {
+  timing: string;
+  action: string;
+  metrics: string[];
+  threshold: string;
+}
+
+export const POST_PUBLISH_CHECKPOINTS: PostPublishCheckpoint[] = [
+  { timing: '2h pós-publicação', action: 'Verificar Velocity Inicial', metrics: ['CTR'], threshold: 'CTR < 2% = problema de embalagem. Agende troca para dia 3.' },
+  { timing: '24h pós-publicação', action: 'Analisar Curva de Retenção', metrics: ['APV', 'Retenção aos 30s'], threshold: 'Queda forte nos 30s = gancho fraco. Queda no meio = falta de Micro-Hook.' },
+  { timing: '48h pós-publicação', action: 'Decisão: Manter ou Substituir', metrics: ['CTR', 'APV'], threshold: 'CTR < 4%: trocar thumb+título. Retenção < 40%: revisar gancho do próximo.' },
+  { timing: 'Semana 4', action: 'Análise de Padrões', metrics: ['CTR por título', 'Retenção por formato'], threshold: 'Identificar padrão vencedor entre 10-12 vídeos e duplicar.' },
+  { timing: 'Mês 2-3', action: 'Otimização de Nicho', metrics: ['Inscritos por view', 'Sub-nicho'], threshold: 'Com 20-30 vídeos, focar no sub-nicho que gerou mais inscritos por view.' },
+];
+
+// ========== YOUTUBE RECOMMENDATION SYSTEMS ==========
+export interface RecommendationSystem {
+  name: string;
+  primarySignal: string;
+  howToOptimize: string;
+  impactForDark: string;
+}
+
+export const YOUTUBE_RECOMMENDATION_SYSTEMS: RecommendationSystem[] = [
+  { name: 'Home Feed', primarySignal: 'CTR + Video Velocity', howToOptimize: 'Thumbnail irresistível. Publicar nos horários de pico do nicho.', impactForDark: '70% das views vêm daqui. Mais impactante para novos canais.' },
+  { name: 'Suggested Videos', primarySignal: 'APV + Session Time', howToOptimize: 'End-screen para próximo vídeo. Binge Loop no roteiro.', impactForDark: 'Cresce com o canal. Requer retenção >60% consistente.' },
+  { name: 'Search', primarySignal: 'Relevância + CTR + APV', howToOptimize: 'Títulos com palavras-chave na frente. Vídeos evergreen.', impactForDark: 'Tráfego passivo de longo prazo. Essencial para curiosidades.' },
+  { name: 'Subscriptions', primarySignal: 'Notificação + Frequência', howToOptimize: 'Postar 3×/sem cria hábito. Horário consistente é crucial.', impactForDark: 'Cresce após monetização. Reforça Session Time.' },
+  { name: 'Shorts Feed', primarySignal: 'Swipe-through Rate + Loop', howToOptimize: 'Hook nos 2 primeiros segundos. Loop natural no final.', impactForDark: 'Motor de inscritos. Não gera watch-time para long-form, mas testa audiência.' },
+];
+
+// ========== THUMBNAIL COLOR COMBOS ==========
+export interface ThumbnailColorCombo {
+  colors: string;
+  hexPrimary: string;
+  hexSecondary: string;
+  emotion: string;
+  bestNiches: string[];
+}
+
+export const THUMBNAIL_COLOR_COMBOS: ThumbnailColorCombo[] = [
+  { colors: 'Laranja × Preto', hexPrimary: '#FF6B00', hexSecondary: '#000000', emotion: 'Urgência + Ameaça', bestNiches: ['true crime', 'conspiração'] },
+  { colors: 'Azul × Laranja', hexPrimary: '#0080FF', hexSecondary: '#FF8C00', emotion: 'Curiosidade + Tensão', bestNiches: ['tecnologia', 'ciência'] },
+  { colors: 'Vermelho × Branco', hexPrimary: '#CC0000', hexSecondary: '#FFFFFF', emotion: 'Perigo + Urgência máxima', bestNiches: ['saúde', 'avisos', 'crime'] },
+  { colors: 'Verde × Preto', hexPrimary: '#00CC44', hexSecondary: '#000000', emotion: 'Dinheiro + Segredo', bestNiches: ['finanças', 'investimentos'] },
+  { colors: 'Roxo × Amarelo', hexPrimary: '#6600CC', hexSecondary: '#FFD700', emotion: 'Mistério + Descoberta', bestNiches: ['ocultismo', 'mistérios'] },
+];
+
+// ========== RECOMMENDED TOOL STACK ==========
+export interface RecommendedTool {
+  stage: string;
+  name: string;
+  function: string;
+  cost: string;
+}
+
+export const RECOMMENDED_TOOL_STACK: RecommendedTool[] = [
+  { stage: 'Pesquisa de Nicho', name: 'VidIQ + Google Trends', function: 'Volume de busca, concorrência, outlier videos', cost: '$7–15/mês' },
+  { stage: 'Roteiro', name: 'Claude / ChatGPT', function: 'Gerar roteiro com prompt dopaminérgico', cost: '$20/mês' },
+  { stage: 'Voz IA', name: 'ElevenLabs', function: 'Narração realista em PT-BR, clone de voz', cost: '$5–22/mês' },
+  { stage: 'Vídeos de Stock', name: 'Pexels + Pixabay + Mixkit', function: 'B-roll gratuito sem direitos autorais', cost: 'Grátis' },
+  { stage: 'Edição Base', name: 'CapCut', function: 'Edição completa, legendas automáticas', cost: 'Grátis' },
+  { stage: 'Edição Avançada', name: 'DaVinci Resolve', function: 'Color grading, VFX, After Effects-like', cost: 'Grátis / $295' },
+  { stage: 'Thumbnail', name: 'Canva Pro + Photoshop', function: 'Composição + pós-produção', cost: '$13/mês' },
+  { stage: 'Geração de Imagens', name: 'Midjourney / Ideogram', function: 'Elementos visuais originais', cost: '$8–24/mês' },
+  { stage: 'Trilha Sonora', name: 'Artlist / Epidemic Sound', function: 'Música licenciada por BPM e emoção', cost: '$10–15/mês' },
+  { stage: 'Agendamento', name: 'YouTube Studio', function: 'Agendar publicação para horário de pico', cost: 'Grátis' },
+  { stage: 'Análise', name: 'TubeBuddy + Analytics', function: 'A/B test de títulos, tracking de CTR', cost: '$5/mês' },
+];
 
 export const ELITE_REFERENCE_CHANNELS: EliteReferenceChannel[] = [
   // 5 US Channels
