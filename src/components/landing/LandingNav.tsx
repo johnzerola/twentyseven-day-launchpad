@@ -1,83 +1,89 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X, Rocket } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { useLanguage } from '@/i18n/LanguageContext';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
+
+const YouTubeIcon = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size * 0.7} viewBox="0 0 28 20" fill="none">
+    <rect width="28" height="20" rx="6" fill="#FF0000" />
+    <path d="M11 6L19 10L11 14V6Z" fill="white" />
+  </svg>
+);
 
 export const LandingNav = () => {
-  const { t } = useLanguage();
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled ? 'glass-premium border-b border-border/20' : 'bg-transparent'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2.5">
-            {/* YouTube-style play button logo */}
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center glow-primary">
-              <svg width="16" height="16" viewBox="0 0 68 48" fill="none">
-                <path d="M66.52 7.74C65.77 4.81 63.48 2.52 60.55 1.77C55.22 0.27 34 0.27 34 0.27S12.78 0.27 7.45 1.77C4.52 2.52 2.23 4.81 1.48 7.74C0 13.09 0 24.13 0 24.13S0 35.17 1.48 40.52C2.23 43.45 4.52 45.74 7.45 46.49C12.78 47.99 34 47.99 34 47.99S55.22 47.99 60.55 46.49C63.48 45.74 65.77 43.45 66.52 40.52C68 35.17 68 24.13 68 24.13S68 13.09 66.52 7.74Z" fill="white" fillOpacity="0.9"/>
-                <path d="M27.16 34.33L44.84 24.13L27.16 13.93V34.33Z" fill="hsl(0, 72%, 51%)"/>
-              </svg>
-            </div>
-            <span className="text-lg font-bold font-display">Monetiza27</span>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider bg-primary/15 text-primary px-2 py-0.5 rounded-full border border-primary/20 animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              Novo: IA Veo3
-            </span>
-          </Link>
+  const links = [
+    { label: 'Como Funciona', href: '#features' },
+    { label: 'Resultados', href: '#testimonials' },
+    { label: 'Planos', href: '#pricing' },
+  ];
 
-          <div className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group">
-              {t('nav.features')}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-            </a>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group">
-              {t('nav.pricing')}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-            </a>
-            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group">
-              {t('nav.faq')}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-            </a>
-            <LanguageSwitcher />
-            <Link to="/login">
-              <Button variant="ghost" size="sm">{t('nav.login')}</Button>
-            </Link>
-            <Link to="/login">
-              <Button size="sm" className="gradient-hero border-0 glow-primary shimmer font-semibold rounded-lg">
-                {t('nav.signup')} →
-              </Button>
-            </Link>
+  return (
+    <>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'glass-dark border-b border-white/5' : 'bg-transparent'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+          <div className="flex items-center gap-3">
+            <YouTubeIcon size={28} />
+            <span className="font-display font-bold text-white text-lg tracking-tight">Monetiza27</span>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border border-red-500/30 bg-red-500/10 text-red-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              AO VIVO
+            </span>
           </div>
 
-          <button className="md:hidden" onClick={() => setOpen(!open)}>
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
+          <div className="hidden md:flex items-center gap-8">
+            {links.map(l => (
+              <a key={l.href} href={l.href} className="text-[#A3A3A3] text-sm hover:text-white transition-colors">
+                {l.label}
+              </a>
+            ))}
+          </div>
 
-      {open && (
-        <div className="md:hidden glass-premium border-t border-border/30 p-4 space-y-3">
-          <a href="#features" className="block text-sm text-muted-foreground">{t('nav.features')}</a>
-          <a href="#pricing" className="block text-sm text-muted-foreground">{t('nav.pricing')}</a>
-          <a href="#faq" className="block text-sm text-muted-foreground">{t('nav.faq')}</a>
-          <LanguageSwitcher />
-          <Link to="/login" className="block">
-            <Button className="w-full gradient-hero border-0 shimmer">{t('nav.signup')}</Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="hidden md:inline-block btn-youtube shimmer px-5 py-2.5 text-sm"
+            >
+              Começar Grátis
+            </button>
+            <button className="md:hidden text-white" onClick={() => setMenuOpen(true)}>
+              <Menu size={24} />
+            </button>
+          </div>
         </div>
-      )}
-    </nav>
+      </nav>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-8"
+          >
+            <button className="absolute top-5 right-5 text-white" onClick={() => setMenuOpen(false)}>
+              <X size={28} />
+            </button>
+            {links.map(l => (
+              <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="text-white text-2xl font-display font-bold">
+                {l.label}
+              </a>
+            ))}
+            <button onClick={() => { setMenuOpen(false); navigate('/login'); }} className="btn-youtube shimmer px-8 py-3 text-lg mt-4">
+              Começar Grátis
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

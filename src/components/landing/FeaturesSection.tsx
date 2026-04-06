@@ -1,91 +1,146 @@
-import { Calendar, Search, FileText, Mic, BarChart3, Rocket } from 'lucide-react';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { motion } from 'framer-motion';
-import { YouTubePlayIcon } from './YouTubePlayIcon';
+import { Check, Search, Pen, Mic, BarChart3, LayoutDashboard } from 'lucide-react';
 
-const features = [
-  { key: 'plan', Icon: Calendar, tagPt: 'IA Powered', tagEn: 'AI Powered', color: 'text-primary' },
-  { key: 'search', Icon: Search, tagPt: 'Exclusivo', tagEn: 'Exclusive', color: 'text-accent' },
-  { key: 'script', Icon: FileText, tagPt: 'IA Powered', tagEn: 'AI Powered', color: 'text-primary' },
-  { key: 'narration', Icon: Mic, tagPt: 'Novo', tagEn: 'New', color: 'text-accent' },
-  { key: 'analytics', Icon: BarChart3, tagPt: 'Dados Reais', tagEn: 'Real Data', color: 'text-yellow-400' },
-  { key: 'dashboard', Icon: Rocket, tagPt: 'IA 24/7', tagEn: 'AI 24/7', color: 'text-primary' },
-];
+const fadeUp = (delay: number) => ({
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.5, delay },
+});
 
-const seoDescriptions = {
-  pt: {
-    plan: 'Cada dia tem uma missão. IA analisa seu nicho e cria um plano de monetização YouTube com inteligência artificial do dia 1 ao dia 27.',
-    search: 'Descubra os canais crescendo agora com nossa análise de nicho YouTube e espionagem de concorrentes em tempo real.',
-    script: 'IA escreve roteiros virais para YouTube gerados por IA, otimizados para retenção e algoritmo. Você só precisa gravar.',
-    narration: 'Voz profissional gerada por IA em português. Narração automática em português para canal sem aparecer no YouTube.',
-    analytics: 'Preveja qual vídeo vai viralizar. Estimativa de ganhos e RPM por nicho YouTube com dados reais do algoritmo.',
-    dashboard: 'Acompanhamento de progresso rumo ao YPP em tempo real. Cada ação conta para atingir 1.000 inscritos.',
-  },
-  en: {
-    plan: 'Each day has a mission. AI analyzes your niche and creates a YouTube monetization plan from day 1 to day 27.',
-    search: 'Discover growing channels with real-time YouTube niche analysis and competitor intelligence.',
-    script: 'AI writes viral YouTube scripts optimized for retention and algorithm. You just need to record.',
-    narration: 'Professional AI voice in Portuguese. Automatic narration for faceless YouTube channels.',
-    analytics: 'Predict which video will go viral. Revenue estimates and RPM by YouTube niche with real data.',
-    dashboard: 'Track your progress toward YPP in real time. Every action counts toward 1,000 subscribers.',
-  },
-};
+export const FeaturesSection = () => (
+  <section id="features" className="py-20 md:py-28">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <motion.div {...fadeUp(0)} className="text-center mb-16">
+        <span className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-red-500/10 text-red-400 border border-red-500/20 mb-6">
+          O QUE ESTÁ INCLUSO
+        </span>
+        <h2 className="font-display font-bold text-3xl md:text-[44px] text-white leading-tight">
+          Ferramentas de IA para Crescer no YouTube mais Rápido
+        </h2>
+        <p className="text-[#A3A3A3] mt-4 max-w-lg mx-auto">
+          Enquanto seus concorrentes adivinham, você executa com dados.
+        </p>
+      </motion.div>
 
-export const FeaturesSection = () => {
-  const { t, locale } = useLanguage();
-  const pt = locale === 'pt-BR';
-  const descs = pt ? seoDescriptions.pt : seoDescriptions.en;
+      {/* Bento grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Card 1 — Large, spans 2 cols */}
+        <motion.div {...fadeUp(0.1)} className="md:col-span-2 glass-dark rounded-2xl p-8 hover:border-red-500/30 transition-colors group">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/20 transition-colors">
+              <svg width="24" height="17" viewBox="0 0 28 20" fill="none"><rect width="28" height="20" rx="6" fill="#FF0000"/><path d="M11 6L19 10L11 14V6Z" fill="white"/></svg>
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-xl text-white">Plano de 27 Dias com IA</h3>
+              <p className="text-[#A3A3A3] text-sm mt-1.5 leading-relaxed">
+                Plano de monetização YouTube com inteligência artificial. Cada dia tem uma missão personalizada baseada no seu nicho, país e estilo de conteúdo.
+              </p>
+            </div>
+          </div>
+          {/* Timeline preview */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {[
+              { day: 'Dia 1', label: 'Nicho definido', done: true },
+              { day: 'Dia 7', label: 'Primeiros vídeos', done: true },
+              { day: 'Dia 14', label: '500 inscritos', done: false },
+              { day: 'Dia 27', label: 'YPP aprovado ★', done: false },
+            ].map((m, i) => (
+              <div key={i} className="flex-shrink-0 flex items-center gap-2">
+                <div className={`px-3 py-2 rounded-lg text-xs font-medium ${m.done ? 'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20' : 'bg-white/5 text-[#A3A3A3] border border-white/10'}`}>
+                  <span className="block font-bold">{m.day}</span>
+                  <span>{m.label}</span>
+                </div>
+                {i < 3 && <div className="w-6 h-px bg-white/10 flex-shrink-0" />}
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
-  return (
-    <section id="features" className="py-24 relative">
-      <div className="absolute top-12 left-8 hidden lg:block">
-        <YouTubePlayIcon size={44} opacity={0.04} />
-      </div>
-      <div className="absolute bottom-16 right-12 hidden lg:block">
-        <YouTubePlayIcon size={36} opacity={0.05} />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <p className="text-primary font-semibold text-sm mb-3 tracking-wider uppercase">
-            {pt ? 'Plataforma completa' : 'Complete platform'}
-          </p>
-          <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">
-            {pt ? 'Ferramentas de IA para Crescer no YouTube mais Rápido' : 'AI Tools to Grow on YouTube Faster'}
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            {pt ? 'Enquanto você dorme, nossa IA trabalha no seu canal.' : 'While you sleep, our AI works on your channel.'}
+        {/* Card 2 — Roteiros */}
+        <motion.div {...fadeUp(0.15)} className="glass-dark rounded-2xl p-6 hover:border-red-500/30 transition-colors group">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-4 group-hover:bg-red-500/20 transition-colors">
+            <Pen size={20} className="text-red-400" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-white">Roteiros que Retêm 80%+</h3>
+          <p className="text-[#A3A3A3] text-sm mt-2 leading-relaxed">
+            Roteiros virais para YouTube gerados por IA com estrutura de hook, retenção e CTA otimizados para o algoritmo.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((f, i) => {
-            const { Icon } = f;
-            return (
-              <motion.div
-                key={f.key}
-                className="glass-premium rounded-2xl p-6 group hover:-translate-y-1 transition-all duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center group-hover:glow-primary transition-shadow">
-                    <Icon className="w-6 h-6 text-primary-foreground" />
+        {/* Card 3 — Análise de Nicho */}
+        <motion.div {...fadeUp(0.2)} className="glass-dark rounded-2xl p-6 hover:border-red-500/30 transition-colors group">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-4 group-hover:bg-red-500/20 transition-colors">
+            <Search size={20} className="text-red-400" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-white">Nichos com 0 Concorrência</h3>
+          <p className="text-[#A3A3A3] text-sm mt-2 leading-relaxed">
+            Análise de nicho YouTube e espionagem de concorrentes. Descubra sub-nichos inexplorados com alto RPM.
+          </p>
+          {/* Mini bar chart */}
+          <div className="flex items-end gap-1.5 mt-4 h-12">
+            {[40, 65, 30, 85, 55, 90, 70].map((h, i) => (
+              <div key={i} className="flex-1 rounded-sm bg-gradient-to-t from-red-500/40 to-red-500/20" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Card 4 — Narração IA (gold accent) */}
+        <motion.div {...fadeUp(0.25)} className="glass-dark rounded-2xl p-6 border-[#F5C518]/20 hover:border-[#F5C518]/40 transition-colors group" style={{ boxShadow: '0 0 40px -10px rgba(245,197,24,0.15)' }}>
+          <div className="w-10 h-10 rounded-xl bg-[#F5C518]/10 flex items-center justify-center mb-4 group-hover:bg-[#F5C518]/20 transition-colors">
+            <Mic size={20} className="text-[#F5C518]" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-white">Narração IA Profissional</h3>
+          <p className="text-[#A3A3A3] text-sm mt-2 leading-relaxed">
+            Narração automática em português para canal sem aparecer. Vozes neurais que soam 100% humanas.
+          </p>
+          <span className="inline-block mt-3 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#F5C518]/10 text-[#F5C518] border border-[#F5C518]/20">
+            EXCLUSIVO
+          </span>
+        </motion.div>
+
+        {/* Card 5 — Analytics */}
+        <motion.div {...fadeUp(0.3)} className="glass-dark rounded-2xl p-6 hover:border-red-500/30 transition-colors group">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-4 group-hover:bg-red-500/20 transition-colors">
+            <BarChart3 size={20} className="text-red-400" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-white">Analytics Preditivo</h3>
+          <p className="text-[#A3A3A3] text-sm mt-2 leading-relaxed">
+            Estimativa de ganhos e RPM por nicho YouTube. Preveja qual vídeo vai viralizar antes de publicar.
+          </p>
+        </motion.div>
+
+        {/* Card 6 — Dashboard, spans 2 cols */}
+        <motion.div {...fadeUp(0.35)} className="md:col-span-2 glass-dark rounded-2xl p-8 hover:border-red-500/30 transition-colors group">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/20 transition-colors">
+              <LayoutDashboard size={24} className="text-red-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-display font-bold text-xl text-white">Dashboard de Crescimento Completo</h3>
+              <p className="text-[#A3A3A3] text-sm mt-1.5 leading-relaxed">
+                Acompanhamento de progresso rumo ao YPP em tempo real. Cada ação, cada métrica, tudo num painel único.
+              </p>
+              {/* YPP progress preview */}
+              <div className="mt-5 grid grid-cols-3 gap-4">
+                {[
+                  { label: 'Inscritos', value: '847 / 1.000', pct: 85 },
+                  { label: 'Horas assistidas', value: '3.200 / 4.000', pct: 80 },
+                  { label: 'Vídeos publicados', value: '18', pct: 100 },
+                ].map((m, i) => (
+                  <div key={i} className="bg-white/5 rounded-xl p-3">
+                    <div className="text-[10px] text-[#A3A3A3] uppercase tracking-wider">{m.label}</div>
+                    <div className="text-white font-bold text-sm mt-1">{m.value}</div>
+                    <div className="h-1 rounded-full bg-white/10 mt-2 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#FF0000] to-[#F5C518]" style={{ width: `${m.pct}%` }} />
+                    </div>
                   </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${f.color} px-2 py-1 rounded-full border border-current/20`}
-                    style={{ backgroundColor: 'transparent' }}>
-                    {pt ? f.tagPt : f.tagEn}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold font-display mb-2">{t(`features.${f.key}.title`)}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{descs[f.key as keyof typeof descs]}</p>
-              </motion.div>
-            );
-          })}
-        </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
