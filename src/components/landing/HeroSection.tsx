@@ -37,12 +37,12 @@ export const HeroSection = () => {
               </span>
             </motion.div>
 
-            <motion.h1 {...fadeUp(0.1)} className="font-display font-extrabold text-[44px] md:text-[72px] leading-[1.0] tracking-[-0.03em]">
-              <span className="text-white">De 0 a monetizado</span>
+            <motion.h1 {...fadeUp(0.1)} className="font-display font-extrabold text-[44px] md:text-[68px] leading-[1.05] tracking-[-0.03em]">
+              <span className="text-white">Monetize seu canal</span>
               <br />
               <span className="shimmer-text">em 27 dias.</span>
               <br />
-              <span className="text-white/80 font-sans font-medium text-xl md:text-2xl block mt-3">com inteligência artificial.</span>
+              <span className="text-white/70 font-sans font-medium text-lg md:text-[22px] block mt-4 tracking-normal">Com inteligência artificial. Do zero ao YPP.</span>
             </motion.h1>
 
             <motion.p {...fadeUp(0.2)} className="text-[#A3A3A3] text-lg max-w-[480px] leading-relaxed">
