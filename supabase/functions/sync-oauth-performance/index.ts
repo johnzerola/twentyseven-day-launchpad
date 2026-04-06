@@ -274,11 +274,47 @@ serve(async (req) => {
     // ── Phase 2: Auto-link videos to scripts via title similarity ──
     const linkedCount = await autoLinkScripts(sb, tokens.map((t: any) => t.user_id));
 
+    // ── Phase 3: AUTO FEEDBACK LOOP ──
+    // Automatically trigger extract-user-learnings + self-learning-worker
+    // to close the loop without manual intervention
+    const feedbackResults: any = { learnings: [], selfLearning: null };
+    const uniqueUserIds = [...new Set(tokens.map((t: any) => t.user_id))];
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // 3a: Extract learnings for each user (updates user_content_memory + hook_library)
+    for (const uid of uniqueUserIds) {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/extract-user-learnings`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: uid }),
+        });
+        const data = await res.json().catch(() => ({}));
+        feedbackResults.learnings.push({ user_id: uid, success: res.ok, patterns: data.patterns?.length || 0 });
+      } catch (e) {
+        feedbackResults.learnings.push({ user_id: uid, success: false, error: (e as Error).message });
+      }
+    }
+
+    // 3b: Run self-learning-worker (calibrates prediction scores with real data)
+    try {
+      const slRes = await fetch(`${supabaseUrl}/functions/v1/self-learning-worker`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      feedbackResults.selfLearning = await slRes.json().catch(() => ({ ok: slRes.ok }));
+    } catch (e) {
+      feedbackResults.selfLearning = { error: (e as Error).message };
+    }
+
     return new Response(JSON.stringify({
       success: true,
       synced: results.filter(r => !r.error).length,
       linked: linkedCount,
       errors: results.filter(r => r.error).length,
+      feedbackLoop: feedbackResults,
       results,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

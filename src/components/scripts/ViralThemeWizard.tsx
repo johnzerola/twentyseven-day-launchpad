@@ -354,8 +354,8 @@ export const ViralThemeWizard = ({ onSelectTheme, userChannels }: ViralThemeWiza
                       className="w-full text-left p-2.5 rounded-lg border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-medium text-xs flex-1">{theme.title}</span>
-                        <span className={`text-[10px] font-bold shrink-0 ${theme.viral_score >= 8 ? 'text-chart-2' : theme.viral_score >= 6 ? 'text-chart-3' : 'text-muted-foreground'}`}>
-                          🔥 {theme.viral_score}/10
+                        <span className={`text-[10px] font-bold shrink-0 ${theme.viral_score >= 8 ? 'text-chart-2' : theme.viral_score >= 6 ? 'text-chart-3' : 'text-muted-foreground'}`} title="Estimativa IA baseada em padrões virais">
+                          🔥 {theme.viral_score}/10 <span className="font-normal opacity-60">(est.)</span>
                         </span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{theme.description}</p>
