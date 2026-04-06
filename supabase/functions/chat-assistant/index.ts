@@ -1453,7 +1453,7 @@ serve(async (req) => {
       const { data: matches, error: matchError } = await sb.rpc('match_knowledge', {
         query_embedding: `[${queryEmbedding.join(',')}]`,
         match_count: 30,
-        match_threshold: 0.25,
+        match_threshold: 0.40,
       });
       if (!matchError && matches?.length > 0) {
         usedSemantic = true;
