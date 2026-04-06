@@ -1,67 +1,155 @@
 
 
-# Plano: Remediação Sistêmica — Fase 2 (Gaps Restantes da Auditoria)
+# Análise de Custos e Precificação — 27-Day Launchpad
 
-## O que JA FOI CORRIGIDO (não repetir)
-- Epistemic honesty nos scores (confidence_source, calibration_status) ✅
-- Dotti memory entre sessões (conversation_summary) ✅
-- Dotti active script context ✅
-- Dotti data_reliability: "FAILED" em tool errors ✅
-- Hook taxonomy (HOOK_MECHANISMS constant) ✅
-- YPP directive rewrite (3 tiers) ✅
-- Thumbnail script_context ✅
-- extract-user-learnings hook feedback loop ✅
+## PARTE 1: Custo Real por Usuário/Mês
 
-## GAPS RESTANTES (7 itens priorizados)
+### Consumo de IA por vídeo (3 vídeos/semana = ~12-15/mês)
 
-### 1. Dotti Persona Rewrite — De "Gênio Universal" para "Sistema de Decisão"
-O system prompt atual em `chat-assistant` (linha 1587) diz: "o consultor estratégico mais poderoso do mundo", "conselho de 3 experts: ex-CEO do YouTube, ex-diretor da Netflix, ex-diretor do Google". Isso gera overclaim.
+O pipeline por vídeo usa estas chamadas Gemini (via `GOOGLE_AI_API_KEY` direto):
 
-**Acao:** Reescrever persona para "sistema operacional de decisão baseado em dados", remover hipérboles, adicionar framework decisório explícito: diagnosticar → buscar sinal → recomendar → validar. Reduzir instruções de "26 FERRAMENTAS" para hierarquia de prioridade (Tier 1: dados reais YouTube API, Tier 2: análise AI, Tier 3: pesquisa externa).
+| Etapa | Modelo Gemini | Input tokens (est.) | Output tokens (est.) | Custo/vídeo |
+|-------|---------------|---------------------|----------------------|-------------|
+| Phase 0: Hook (gpt-5 → gemini-2.5-pro) | 2.5 Pro | ~4K in / ~2K out | | $0.025 |
+| Phase 1: Draft (gemini-2.5-flash) | 2.5 Flash | ~8K in / ~6K out | | $0.017 |
+| Phase 2: Refine (gemini-2.5-pro) | 2.5 Pro | ~12K in / ~8K out | | $0.095 |
+| Phase 3: Fact-check (gpt-5-mini → flash) | 2.5 Flash | ~10K in / ~3K out | | $0.010 |
+| Phase 4: Scene breakdown (flash-lite) | 2.5 Flash-Lite | ~6K in / ~4K out | | $0.002 |
+| RAG search (Brave) | — | — | — | ~$0.003 |
+| Score-script | 2.5 Flash | ~8K in / ~2K out | | $0.007 |
+| Generate-titles (5 títulos) | 2.5 Flash | ~4K in / ~3K out | | $0.009 |
+| Thumbnail prompt | 2.5 Flash | ~3K in / ~2K out | | $0.006 |
+| Veo3 prompts (10 cenas) | 2.5 Pro | ~6K in / ~5K out | | $0.058 |
+| **Subtotal IA/vídeo** | | | | **~$0.23** |
 
-### 2. Audio Mastering — Remover Claims Falsos
-`src/lib/audioMastering.ts` linha 2: "Superior to Adobe Podcast". Claim não comprovado.
+### TTS (narração por vídeo de ~10-15 min)
 
-**Acao:** Renomear para "Audio Processing Pipeline v5" e remover comparações com produtos comerciais. Adicionar disclaimer: "Processamento via Web Audio API — para áudios >10min, recomendamos processamento server-side."
+| Serviço | Caracteres (~15 min narração) | Custo |
+|---------|-------------------------------|-------|
+| Gemini TTS (primário) | ~15.000 chars | ~$0.06 |
+| ElevenLabs (fallback) | ~15.000 chars | ~$0.18 |
+| **Custo TTS médio** | | **~$0.08** |
 
-### 3. Backtest Engine — Fix Bug de `AI_URL` Indefinido
-`supabase/functions/backtest-scores/index.ts` linha ~120 usa `AI_URL` que nunca é declarado. Isso crasharia a meta-analysis.
+### Dotti (chat-assistant) — média 20 interações/mês
 
-**Acao:** Substituir `AI_URL` pela URL correta do Gemini OpenAI compat (`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`).
+| Item | Custo |
+|------|-------|
+| 20 conversas × ~5K in + 2K out (2.5 Pro) | ~$0.50 |
+| Tool calls (5 por conversa avg) | ~$0.30 |
+| **Subtotal Dotti/mês** | **~$0.80** |
 
-### 4. Análise Pareada — Vencedores vs Perdedores
-O find-outliers encontra vencedores mas não contrasta com perdedores equivalentes do mesmo canal.
+### Outros consumos mensais
 
-**Acao:** No `find-outliers`, após identificar outliers, buscar 3-5 vídeos do MESMO canal com performance abaixo da média. Retornar campo `paired_losers` com título, views e delta. Isso separa correlação de causalidade.
+| Item | Custo/mês |
+|------|-----------|
+| Busca de canais/nichos (~10 scans) | ~$0.15 |
+| Viral diagnosis, packaging-score | ~$0.10 |
+| Self-learning/cron jobs | ~$0.05 |
+| **Subtotal outros** | **~$0.30** |
 
-### 5. Smart Knowledge Retrieval — Threshold Mínimo + Decay Temporal
-O `match_knowledge` RPC usa threshold 0.25 (muito baixo) e não penaliza conhecimento antigo.
+### CUSTO TOTAL POR USUÁRIO/MÊS
 
-**Acao:** No `chat-assistant` (linha 1457), aumentar `match_threshold` de 0.25 para 0.40. Adicionar filtro de recência: priorizar embeddings dos últimos 6 meses no re-ranking.
+```text
+┌─────────────────────────────────────────────┐
+│ 12 vídeos × $0.31 (IA + TTS)  = $3.72      │
+│ Dotti (20 conversas)           = $0.80      │
+│ Outros (scans, crons)          = $0.30      │
+│ Supabase Edge (invocações)     = ~$0.10     │
+│ Supabase DB (storage/bandwidth)= ~$0.50     │
+│ Lovable Cloud hosting          = ~$1.00     │
+│─────────────────────────────────────────────│
+│ CUSTO TOTAL/USUÁRIO/MÊS       ≈ $6.42      │
+│ EM REAIS (câmbio ~5.5)        ≈ R$ 35.30   │
+└─────────────────────────────────────────────┘
+```
 
-### 6. Niche Saturation Detection
-O sistema recomenda nichos virais sem detectar saturação (50 canais novos/semana).
-
-**Acao:** No `analyze_niche` tool do chat-assistant (linhas 624-674), adicionar query de contagem de canais criados nos últimos 90 dias no mesmo nicho. Retornar `saturation_velocity: X novos canais/mês` e flag `saturating: true/false`.
-
-### 7. Dotti Tool Dedup — Merge Ferramentas Redundantes
-`claude_deep_analysis` e `gpt_expert_analysis` são quase idênticos na prática. `find_competitors` e `find_competitors_ai` fazem a mesma coisa.
-
-**Acao:** Manter `expert_analysis` (uma ferramenta) que usa Gemini internamente com os 4 estilos (strategic, creative, analytical, diagnostic). Remover `claude_deep_analysis` como tool separado (Claude continua acessível internamente se necessário). Manter `find_competitors` e remover `find_competitors_ai` da lista de tools.
+Usuário pesado (15 vídeos + 40 conversas Dotti + Veo3 geração real): ~$12-15/mês (~R$ 66-82).
 
 ---
 
-## Resumo de Implementacao
+## PARTE 2: Precificação Recomendada
 
-| Arquivo | Mudanca |
+### Modelo sem tier grátis — direto ao ponto
+
+| Plano | Preço BRL | Preço USD | Margem bruta | LTV 6 meses |
+|-------|-----------|-----------|--------------|-------------|
+| **Starter** | R$ 67/mês | $12/mês | ~47% | R$ 402 |
+| **Pro** | R$ 127/mês | $23/mês | ~72% | R$ 762 |
+| **Full** | R$ 197/mês | $36/mês | ~82% | R$ 1.182 |
+
+### Justificativa
+
+- **Starter (R$ 67)**: Cobre custo (~R$ 35) + margem saudável. Compete com ferramentas de IA genéricas (ChatGPT Plus R$ 100+). Inclui 12 vídeos, 20 conversas Dotti, busca básica.
+- **Pro (R$ 127)**: Para quem produz 3+/semana com TTS ilimitado, análise de concorrentes, 3 canais. Margem de ~72% absorve usuários pesados.
+- **Full (R$ 197)**: Canais ilimitados, API, white-label. Margem >80%.
+
+### CAC Estimado (mercado BR YouTube faceless)
+
+- CAC orgânico (YouTube/Instagram sobre o produto): R$ 15-30
+- CAC pago (Meta Ads BR, nicho criadores): R$ 40-80
+- **LTV/CAC ratio mínimo aceitável**: 3:1
+- Com Starter (LTV R$ 402) e CAC R$ 60: ratio = 6.7:1 — excelente
+
+### Churn esperado: 15-20%/mês (mercado BR de ferramentas creator)
+
+Com 15% churn: lifetime médio = 6.7 meses → LTV Starter = R$ 449, Pro = R$ 851.
+
+---
+
+## PARTE 3: Monetização em 1 mês (12-15 vídeos) — É Realista?
+
+### Resposta curta: **NÃO para AdSense. SIM para validação.**
+
+### Os números reais
+
+```text
+Requisitos YPP (monetização):
+  Tier 1: 500 subs + 3.000h watch time (12 meses)
+  Tier 2: 1.000 subs + 4.000h watch time (12 meses)
+  Shorts: 10M views em 90 dias
+
+Canal novo postando 12-15 vídeos no primeiro mês:
+  Cenário conservador: 500-2.000 views/vídeo → 6K-30K views totais
+  Cenário otimista: 5.000-20.000 views/vídeo → 60K-300K views totais
+  
+  Subs ganhos (conservador): 30-150
+  Subs ganhos (otimista): 300-1.500
+  
+  Watch time (15 vídeos × 10 min × 1.000 views avg × 40% retenção):
+  = 1.000 horas (conservador)
+  = 25% do necessário para Tier 2
+```
+
+### Cronograma realista
+
+| Marco | Tempo estimado | Condição |
+|-------|---------------|----------|
+| Primeiros 1.000 subs | 2-4 meses | 3 vídeos/semana consistente |
+| 4.000h watch time | 3-6 meses | Retenção >50%, vídeos 10-20 min |
+| **Monetização Tier 2** | **3-6 meses** | Nicho bem escolhido + execução |
+| Alternativa Shorts (10M views) | 1-3 meses | Se 1+ short viralizar (>500K) |
+
+### O que a plataforma PODE entregar em 1 mês
+
+A plataforma não garante monetização em 30 dias, mas entrega:
+1. **12-15 roteiros otimizados** com hooks testados e anti-AI-slop
+2. **Validação de nicho** com dados reais de saturação e RPM
+3. **Base sólida** para o mês 2-3 onde o crescimento exponencial começa
+4. **Vantagem competitiva** sobre quem produz sem análise (90% dos novos canais)
+
+O cenário mais provável para um usuário disciplinado é monetizar entre o mês 3 e 6.
+
+---
+
+## Implementação proposta
+
+Atualizar a `PricingSection.tsx` e `translations.ts` com os novos preços (remover tier grátis, ajustar para R$ 67 / R$ 127 / R$ 197) e adicionar uma seção "Quanto tempo para monetizar?" com o cronograma realista acima.
+
+### Arquivos a editar
+
+| Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/chat-assistant/index.ts` | Rewrite persona, merge tools (26→22), threshold 0.25→0.40, saturation query no analyze_niche |
-| `src/lib/audioMastering.ts` | Remover claim "Superior to Adobe Podcast", disclaimer |
-| `supabase/functions/backtest-scores/index.ts` | Fix AI_URL bug |
-| `supabase/functions/find-outliers/index.ts` | Adicionar paired_losers |
-
-## Detalhes Tecnicos
-- 4 arquivos editados (1 client-side, 3 edge functions)
-- 0 database migrations
-- Todas as mudancas sao aditivas ou de refinamento — zero risco de quebra
+| `src/i18n/translations.ts` | Novos preços (R$ 67/127/197, $12/23/36, etc.) |
+| `src/components/landing/PricingSection.tsx` | Features atualizados por tier, remover CTA "grátis", adicionar timeline de monetização |
+| `src/components/landing/MonetizationSimulator.tsx` | Verificar se reflete dados reais |
 
