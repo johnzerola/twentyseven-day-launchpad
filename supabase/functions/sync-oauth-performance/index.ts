@@ -202,9 +202,13 @@ serve(async (req) => {
       }
     }
 
+    // ── Phase 2: Auto-link videos to scripts via title similarity ──
+    const linkedCount = await autoLinkScripts(sb, tokens.map((t: any) => t.user_id));
+
     return new Response(JSON.stringify({
       success: true,
       synced: results.filter(r => !r.error).length,
+      linked: linkedCount,
       errors: results.filter(r => r.error).length,
       results,
     }), {
