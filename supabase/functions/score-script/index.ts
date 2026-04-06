@@ -209,6 +209,8 @@ serve(async (req) => {
   "vfx_edit_tags_count": number (how many [J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL] tags found),
   "has_binge_loop": boolean (does the ending hook into next video instead of saying goodbye?),
   "uses_but_therefore": boolean (does the script use MAS/PORTANTO instead of E/Então for transitions?),
+  "hook_mechanism_detected": string (one of: "curiosity_gap", "threat_warning", "social_proof", "contradiction", "identity_trigger", "time_pressure", "confession", "transformation", "unknown"),
+  "hook_mechanism_strength": number (1-10, how effectively the hook uses its psychological mechanism),
   "strengths": ["string", "string", "string"],
   "weaknesses": ["string", "string", "string"],
   "improvements": ["string", "string", "string"],
