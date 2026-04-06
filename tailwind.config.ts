@@ -68,6 +68,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        youtube: {
+          red: "hsl(var(--youtube-red))",
+        },
+        money: {
+          green: "hsl(var(--money-green))",
+          gold: "hsl(var(--money-gold))",
+        },
         cyan: {
           400: "#22d3ee",
           500: "#06b6d4",
