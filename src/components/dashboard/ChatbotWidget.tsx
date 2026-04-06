@@ -144,7 +144,7 @@ export const ChatbotWidget = () => {
             setMessages(recentConvo[0].messages as unknown as Msg[]);
           } else {
             setMessages([
-              { role: 'assistant', content: '👋 Olá! Sou o **Dotti**, seu consultor estratégico de YouTube.\n\nTenho acesso a **bases de conhecimento** com dados reais sobre algoritmo, roteiros, hooks, nichos e canais.\n\nPosso ajudar com **ideias**, **roteiros**, **títulos**, **monetização**, **algoritmo** e muito mais.\n\nO que você precisa?' },
+              { role: 'assistant', content: '👋 Olá! Sou o **TubeBot**, seu consultor estratégico de YouTube.\n\nTenho acesso a **bases de conhecimento** com dados reais sobre algoritmo, roteiros, hooks, nichos e canais.\n\nPosso ajudar com **ideias**, **roteiros**, **títulos**, **monetização**, **algoritmo** e muito mais.\n\nO que você precisa?' },
             ]);
           }
         } else {
@@ -397,7 +397,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
       setOnboarding(prev => ({ ...prev, step: 'plan_ready' }));
       setHasSeenOnboarding(true);
     } catch (err) {
-      console.error('Dotti onboarding error:', err);
+      console.error('TubeBot onboarding error:', err);
       addAssistantMsg('⚠️ Erro ao gerar o plano. Verifique sua conexão e tente novamente.');
       setOnboarding(prev => ({ ...prev, step: 'idle' }));
     } finally {
@@ -454,7 +454,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({ error: 'Erro desconhecido' }));
-        console.error('Dotti error:', resp.status, errData);
+        console.error('TubeBot error:', resp.status, errData);
         addAssistantMsg(`⚠️ Erro: ${errData.error || 'Falha na comunicação'}. Tente novamente.`);
         setLoading(false);
         return;
@@ -499,14 +499,14 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
         }
       }
     } catch (err) {
-      console.error('Dotti chat error:', err);
+      console.error('TubeBot chat error:', err);
       addAssistantMsg('⚠️ Ocorreu um erro na comunicação. Verifique sua conexão e tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ===== Save Dotti suggestion =====
+  // ===== Save TubeBot suggestion =====
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
   const [editingSuggestion, setEditingSuggestion] = useState<{ idx: number; title: string; content: string; channelId: string | null } | null>(null);
   const [saveChannels, setSaveChannels] = useState<any[]>([]);
@@ -527,7 +527,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
     setSavingIdx(idx);
     
     const firstLine = msgContent.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
-    const title = firstLine.slice(0, 80) || 'Sugestão do Dotti';
+    const title = firstLine.slice(0, 80) || 'Sugestão do TubeBot';
 
     setEditingSuggestion({ idx, title, content: msgContent, channelId: null });
   };
@@ -535,7 +535,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
   const confirmSaveSuggestion = async () => {
     if (!editingSuggestion || !userId) return;
     try {
-      await supabase.from('dotti_suggestions').insert({
+      await supabase.from('tubebot_suggestions').insert({
         user_id: userId,
         title: editingSuggestion.title,
         content: editingSuggestion.content,
@@ -686,7 +686,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
                   <Bot className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Dotti AI</p>
+                  <p className="text-sm font-semibold text-foreground">TubeBot AI</p>
                   <p className="text-[10px] text-chart-2 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-chart-2 rounded-full inline-block" />
                     {isOnboardingActive ? 'Onboarding • Seu guia pessoal' : 'Online • RAG + 13 bases de dados'}
@@ -772,9 +772,9 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
                             <button
                               onClick={() => {
                                 const firstLine = msg.content.split('\n').find(l => l.trim().length > 5)?.replace(/^[#*\-•\s]+/, '').trim() || '';
-                                const topicText = firstLine.slice(0, 120) || 'Tema sugerido pelo Dotti';
-                                sessionStorage.setItem('dotti_script_topic', topicText);
-                                navigate('/scripts?source=dotti');
+                                const topicText = firstLine.slice(0, 120) || 'Tema sugerido pelo TubeBot';
+                                sessionStorage.setItem('tubebot_script_topic', topicText);
+                                navigate('/scripts?source=tubebot');
                                 toast.success('✍️ Tema enviado ao Gerador de Roteiros!');
                               }}
                               className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-accent transition-colors"

@@ -74,7 +74,7 @@ serve(async (req) => {
 
     const { queries, singleQuery, storeResults } = await req.json();
 
-    // Single query mode (for Dotti tool calling)
+    // Single query mode (for TubeBot tool calling)
     if (singleQuery) {
       const result = await queryPerplexity(
         PERPLEXITY_API_KEY,

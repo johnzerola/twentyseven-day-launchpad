@@ -138,7 +138,7 @@ export const ScriptGenerator = ({
     return true;
   }, []);
 
-  // ═══════ SUGGESTION BANK (from Dotti) ═══════
+  // ═══════ SUGGESTION BANK (from TubeBot) ═══════
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -150,7 +150,7 @@ export const ScriptGenerator = ({
       if (!user) return;
       setLoadingSuggestions(true);
       let query = supabase
-        .from('dotti_suggestions')
+        .from('tubebot_suggestions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -163,7 +163,7 @@ export const ScriptGenerator = ({
       setSuggestions(items);
       setLoadingSuggestions(false);
 
-      // Build channel knowledge context from saved Dotti suggestions for this channel
+      // Build channel knowledge context from saved TubeBot suggestions for this channel
       if (selectedChannelId && items.length > 0) {
         const knowledge = items
           .filter(s => s.channel_id === selectedChannelId)
@@ -186,11 +186,11 @@ export const ScriptGenerator = ({
     setShowSuggestions(false);
     toast.success('💡 Sugestão aplicada! Ajuste e gere o roteiro.');
     // Increment used_count
-    supabase.from('dotti_suggestions').update({ used_count: (s.used_count || 0) + 1, updated_at: new Date().toISOString() } as any).eq('id', s.id).then();
+    supabase.from('tubebot_suggestions').update({ used_count: (s.used_count || 0) + 1, updated_at: new Date().toISOString() } as any).eq('id', s.id).then();
   };
 
   const deleteSuggestion = async (id: string) => {
-    await supabase.from('dotti_suggestions').delete().eq('id', id);
+    await supabase.from('tubebot_suggestions').delete().eq('id', id);
     setSuggestions(prev => prev.filter(s => s.id !== id));
     toast.success('Sugestão removida');
   };
@@ -777,7 +777,7 @@ export const ScriptGenerator = ({
                 >
                   <span className="flex items-center gap-1.5 font-medium text-primary">
                     <Lightbulb className="w-3.5 h-3.5" />
-                    💡 Banco de Ideias do Dotti ({suggestions.length})
+                    💡 Banco de Ideias do TubeBot ({suggestions.length})
                   </span>
                   {showSuggestions ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
                 </button>

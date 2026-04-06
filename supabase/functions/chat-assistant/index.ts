@@ -15,7 +15,7 @@ const corsHeaders = {
 };
 
 // ===== TOOL DEFINITIONS (19 TOOLS) =====
-const DOTTI_TOOLS = [
+const TUBEBOT_TOOLS = [
   {
     type: "function",
     function: {
@@ -1510,7 +1510,7 @@ serve(async (req) => {
     // ========== ONBOARDING MODE ==========
     if (mode === 'onboarding' && onboardingData) {
       const od = onboardingData;
-      const onboardingPrompt = `Você é o **Dotti** — assistente de onboarding.
+      const onboardingPrompt = `Você é o **TubeBot** — assistente de onboarding.
 
 ## MISSÃO: Gere PLANO PERSONALIZADO DE 30 DIAS.
 
@@ -1549,7 +1549,7 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
       ? `## 🔍 CONHECIMENTO RAG (Semântico)\n${semanticContext}`
       : `## BASE DE CONHECIMENTO\n${fallbackContext}`;
 
-    const systemPrompt = `Você é o **Dotti** — sistema operacional de decisão para crescimento no YouTube, baseado em dados reais e análise observável.
+    const systemPrompt = `Você é o **TubeBot** — sistema operacional de decisão para crescimento no YouTube, baseado em dados reais e análise observável.
 
 ## 🧠 FRAMEWORK DECISÓRIO (siga SEMPRE nesta ordem)
 1. **DIAGNOSTICAR** — Colete dados reais com ferramentas antes de opinar
@@ -1696,7 +1696,7 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
     const firstResponse = await _ai({
         model: "google/gemini-2.5-flash-lite",
         messages: aiMessages,
-        tools: DOTTI_TOOLS,
+        tools: TUBEBOT_TOOLS,
         stream: false,
       });
 
@@ -1736,7 +1736,7 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
       toolRound++;
       // Cap parallel tools to avoid timeout
       const toolCalls = currentChoice.tool_calls.slice(0, MAX_PARALLEL_TOOLS);
-      console.log(`Dotti tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`,
+      console.log(`TubeBot tool round ${toolRound}: calling ${toolCalls.length}/${currentChoice.tool_calls.length} tools:`,
         toolCalls.map((t: any) => {
           try {
             return `${t.function.name}(${JSON.stringify(JSON.parse(t.function.arguments || '{}')).slice(0, 80)})`;
@@ -1780,7 +1780,7 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
         const nextResponse = await _ai({
             model: "google/gemini-2.5-flash",
             messages: currentMessages,
-            tools: DOTTI_TOOLS,
+            tools: TUBEBOT_TOOLS,
             stream: false,
           });
 

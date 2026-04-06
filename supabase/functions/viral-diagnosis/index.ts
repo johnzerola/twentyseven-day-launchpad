@@ -222,7 +222,7 @@ Generate a JSON response with this EXACT structure:
 
 RULES:
 - Be SPECIFIC, not generic. Use the data.
-- Actions must reference actual tools: "DubSpy", "Gerador de Roteiros", "Daily Planner", "Dotti", "TubeRush", "Niche Explorer"
+- Actions must reference actual tools: "DubSpy", "Gerador de Roteiros", "Daily Planner", "TubeBot", "TubeRush", "Niche Explorer"
 - If upload frequency > 5 days, this is a CRITICAL weakness
 - If retention < 40%, this is the #1 bottleneck
 - If subs < 100, focus on Shorts strategy for rapid growth
