@@ -776,6 +776,60 @@ ${YPP_2025_DIRECTIVE}
 
 ${ANTI_SLOP_DIRECTIVE}
 
+═══ SOUND DESIGN DIRECTIVE (OBRIGATÓRIO) ═══
+Você DEVE inserir tags de Sound Design no roteiro. O áudio é 50% do sucesso de um canal Dark/Faceless.
+
+MAPEAMENTO DE BPM POR NICHO:
+- Terror/Mistério: 50-70 BPM — Drone sub-bass, frequências graves 30-50Hz
+- True Crime: 60-80 BPM — Piano sombrio, strings tensas
+- Tecnologia/Cripto: 110-130 BPM — Synthwave futurista
+- Finanças: 100-120 BPM — Synthwave moderado com piano
+- História/Mitologia: 70-90 BPM — Orquestra cinematográfica
+- Curiosidades/Entretenimento: 120-140 BPM — Upbeat electro
+- Motivacional/Superação: 90-110 BPM — Piano inspiracional crescente
+
+TAGS DE ÁUDIO OBRIGATÓRIAS (insira no mínimo 3 por roteiro):
+- [ÁUDIO: Frequência baixa (Drone sub-bass) — Tensão] — para momentos de suspense
+- [ÁUDIO: Boom/Hit impacto + parada abrupta da música por 1s] — para revelações
+- [TRILHA: Synthwave 120 BPM] ou [TRILHA: Violão acústico 80 BPM] — para estabelecer ritmo
+- [CORTAR TODA MÚSICA POR 1.5 SEGUNDOS] — Silêncio tático antes de informação chave (a AUSÊNCIA de som prende a atenção)
+- [SFX: Batimento cardíaco crescente] — para escalada de tensão
+- [SFX: Glitch + distorção rápida] — para pattern interrupts visuais
+
+═══ VFX EDIT TAGS DIRECTIVE (OBRIGATÓRIO) ═══
+Como o canal não tem rosto, o ritmo depende 100% da edição. INSIRA tags de edição VFX:
+
+- [J-CUT] — O áudio da próxima cena entra ANTES do vídeo. Use a cada transição de parágrafo.
+- [BLENDER: projeção de câmera 3D sobre imagem 2D — parallax profundo] — Para dar vida a imagens estáticas.
+- [AFTER EFFECTS: zoom-in contínuo (100% → 115% em 10s) + Camera Shake sutil] — Para forçar foco visual pós-gancho.
+- [AFTER EFFECTS: animação de mapa com Trim Paths + Motion Blur] — Para motion graphics.
+- [INSERIR B-ROLL ACELERADO + EFEITO DE GLITCH] — Para micro-hooks visuais.
+- [TELA ESCURECE 0.5s — troca brusca de cenário] — Para mudanças de ato.
+
+Insira pelo menos 5 tags VFX distribuídas pelo roteiro nos momentos de maior impacto.
+
+═══ NARRATOR ARCHETYPE (PERSONA NARRATIVA) ═══
+${nicheLC.includes('crime') || nicheLC.includes('mistério') || nicheLC.includes('conspiração') || nicheLC.includes('terror') ? 
+'PERSONA ATIVA: O Investigador — Tom denso, pausas dramáticas, frases curtas, foco em detalhes lógicos. Linguagem forense: "as evidências indicam", "o padrão se repete". Cada dado é uma evidência sob análise.' :
+nicheLC.includes('história') || nicheLC.includes('mitologia') || nicheLC.includes('folclore') || nicheLC.includes('superação') || nicheLC.includes('emocionante') ?
+'PERSONA ATIVA: O Sábio — Tom acolhedor, ritmo pausado mas envolvente. Voz de contador de causos. Metáforas da natureza. Faça o espectador SENTIR saudade de algo que nunca viveu.' :
+'PERSONA ATIVA: O Hacker de Informação — Ritmo FRENÉTICO. Humor ácido. Cada frase carrega 2-3 informações. Zero enrolação. Dopamina a cada 10 segundos. Analogias absurdas mas precisas.'}
+
+═══ BINGE LOOP (OBRIGATÓRIO — PROIBIDO DESPEDIR-SE) ═══
+REGRAS ABSOLUTAS DO FINAL:
+- NUNCA diga "Obrigado por assistir", "Deixe o like", "Tchau" ou qualquer despedida
+- Quando você se despede, o cérebro entende que a TAREFA ACABOU e o usuário FECHA o app
+- Isso DESTRÓI o Session Time — a métrica favorita do algoritmo
+- O FINAL do vídeo deve ser a INTRODUÇÃO do próximo vídeo
+- Fórmula: "[Resolução do tema atual]. Mas isso levantou uma questão ainda mais [sombria/bizarra/fascinante] sobre [tema Y]... Eu explico todos os detalhes nesse vídeo que aparece na sua tela agora. Clica nele."
+
+═══ REGRA MAS/PORTANTO (MECÂNICA NARRATIVA OBRIGATÓRIA) ═══
+NUNCA use "E" ou "Então" como conectores entre parágrafos.
+Use APENAS "MAS" (criação de conflito) ou "PORTANTO" (resolução que gera nova consequência).
+- ERRADO: "Isso aconteceu. E depois isso. E ele fez isso." (tediante, cérebro desliga)
+- CORRETO: "Ele tentou o teste. MAS a máquina falhou. PORTANTO, ele teve que tomar uma atitude drástica."
+Isso mantém progressão narrativa CONSTANTE com conflito e resolução em cada transição.
+
 Nicho: ${niche || 'geral'} | Idioma: ${language || 'português'} | Formato: ${isShort ? 'SHORT (vertical 9:16)' : 'LONGFORM (16:9)'}
 
 ${isShort ? `

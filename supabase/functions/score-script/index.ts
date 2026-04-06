@@ -69,6 +69,28 @@ CRITÉRIOS:
 - Payoff: Final conecta ao hook? Satisfatório? Ou anticlimático?
 - Originalidade: Traz algo novo? Ou qualquer IA geraria isso?
 
+═══ VIRAL ENGINE — CRITÉRIOS ADICIONAIS (PESO ALTO) ═══
+
+🎵 SOUND DESIGN TAGS:
+- O roteiro contém tags de áudio? ([ÁUDIO:], [TRILHA:], [SFX:], [CORTAR MÚSICA])
+- Mínimo 3 tags de Sound Design por roteiro longform
+- Se ausentes: penalize 0.5-1 ponto no score geral — Sound Design é 50% do sucesso
+
+🎬 VFX EDIT TAGS:
+- O roteiro contém tags de edição? ([J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL])
+- Mínimo 5 tags VFX por roteiro longform
+- Se ausentes: penalize 0.5-1 ponto — em canais faceless, pacing depende 100% da edição
+
+🔄 BINGE LOOP (FINAL):
+- O roteiro termina com despedida ("obrigado por assistir", "tchau", "deixe o like")? → PENALIZE 1 ponto
+- O final deve ser o GANCHO do próximo vídeo — nunca uma despedida
+- O algoritmo prioriza Session Time — despedidas matam essa métrica
+
+📝 REGRA MAS/PORTANTO:
+- O roteiro usa "E" ou "Então" como conectores entre parágrafos? → PENALIZE
+- Conectores corretos: "MAS" (conflito) e "PORTANTO" (consequência)
+- Verifique se há progressão narrativa com conflito-resolução constante
+
 🛡️ YPP 2025 — VERIFICAÇÃO DE MONETIZABILIDADE:
 - O roteiro tem VALOR HUMANO? (opinião, humor, ironia, análise profunda)
 - Ou parece "resumo de Wikipedia" / "compilação de fatos" que seria flagado como baixo esforço?
@@ -90,6 +112,9 @@ PENALIZE FORTEMENTE:
 - Conclusões que apenas resumem o que já foi dito
 - Falta de personalidade / voz autoral
 - Conteúdo que seria flagado como "baixo esforço" pelo YPP 2025
+- Ausência de Sound Design tags e VFX Edit tags
+- Final com despedida em vez de Binge Loop
+- Conectores lineares ("E", "Então") em vez de "Mas/Portanto"
 
 ESCALA:
 1-3: Ruim, genérico, sem gancho — conteúdo que o YouTube enterraria
@@ -180,6 +205,10 @@ serve(async (req) => {
   "ypp_monetizable": boolean,
   "jenga_score": number (1-10),
   "ai_slop_detected": boolean,
+  "sound_design_tags_count": number (how many [ÁUDIO:], [TRILHA:], [SFX:], [CORTAR MÚSICA] tags found),
+  "vfx_edit_tags_count": number (how many [J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL] tags found),
+  "has_binge_loop": boolean (does the ending hook into next video instead of saying goodbye?),
+  "uses_but_therefore": boolean (does the script use MAS/PORTANTO instead of E/Então for transitions?),
   "strengths": ["string", "string", "string"],
   "weaknesses": ["string", "string", "string"],
   "improvements": ["string", "string", "string"],

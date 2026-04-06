@@ -137,6 +137,21 @@ Based on all this data, determine the SINGLE best next action for this creator. 
 - Risk vs reward
 - Time to produce vs potential impact
 
+═══ ESTRATÉGIA DAS 48 HORAS (VERIFICAR OBRIGATORIAMENTE) ═══
+Analise os vídeos recentes do creator. Se algum vídeo tem 3+ dias publicado e:
+- CTR abaixo da média do canal OU
+- Views estagnadas (menos de 50% do esperado)
+
+ENTÃO a ação recomendada DEVE ser:
+1. Gerar 3 novas variações de título mais amplas (menos nichadas)
+2. Gerar 2 novos conceitos de thumbnail com contraste de cores COMPLETAMENTE diferente
+3. Trocar no YouTube Studio AGORA
+4. Justificativa: Vídeos têm pico nas primeiras 48h e depois "morrem" porque o YouTube
+   testa com audiência ampla e o CTR cai. Trocar título/thumb no 3º dia "engana" 
+   a cegueira de banner do usuário recorrente.
+
+Se nenhum vídeo precisa de revival, prossiga com a recomendação normal.
+
 Return ONLY valid JSON with these keys:
 - action (string, in Portuguese)
 - format ("short" or "long")
@@ -149,7 +164,9 @@ Return ONLY valid JSON with these keys:
 - monetization_impact (string, in Portuguese)
 - urgency ("now", "today", "this_week", or "when_ready")
 - confidence (number 0-100)
-- sources (array of strings)`;
+- sources (array of strings)
+- revival_needed (boolean — true if a 48h revival was recommended)
+- revival_video_title (string or null — which video needs revival)`;
 
     const resp = await fetch(`${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
       method: "POST",
