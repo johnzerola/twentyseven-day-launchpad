@@ -129,11 +129,11 @@ export function PredictionVsReality() {
             </div>
             <div className="grid grid-cols-2 gap-3 text-center">
               <div>
-                <p className="text-[10px] text-muted-foreground">Previsto</p>
+                <p className="text-[10px] text-muted-foreground">Previsto <span className="opacity-60">(est. IA)</span></p>
                 <p className="text-lg font-bold text-primary">{p.predicted_viral_score}</p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Real</p>
+                <p className="text-[10px] text-muted-foreground">Real <span className="opacity-60">(dado real)</span></p>
                 <p className="text-lg font-bold">{formatViews(p.real_views)} views</p>
               </div>
             </div>

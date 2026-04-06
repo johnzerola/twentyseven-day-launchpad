@@ -249,7 +249,7 @@ export function VideoPerformanceTracker() {
                         <span className="flex items-center gap-1 text-primary"><Search className="h-3 w-3" />#{video.best_ranking_position}</span>
                       )}
                       {video.predicted_viral_score > 0 && (
-                        <span className="flex items-center gap-1"><Target className="h-3 w-3" />Pred: {video.predicted_viral_score}</span>
+                        <span className="flex items-center gap-1 opacity-70" title="Score predito por IA, não dado real"><Target className="h-3 w-3" />Pred: {video.predicted_viral_score} <span className="text-[8px]">(est.)</span></span>
                       )}
                     </div>
 
