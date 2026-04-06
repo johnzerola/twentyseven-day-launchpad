@@ -158,9 +158,9 @@ serve(async (req) => {
 
             // Determine performance grade
             let grade = 'C';
-            if (avgRetention >= 60 && avgCTR >= 8) grade = 'S';
-            else if (avgRetention >= 50 && avgCTR >= 6) grade = 'A';
-            else if (avgRetention >= 40 && avgCTR >= 4) grade = 'B';
+            if (avgRetention >= 60) grade = 'S';
+            else if (avgRetention >= 50) grade = 'A';
+            else if (avgRetention >= 40) grade = 'B';
             else if (avgRetention >= 30) grade = 'C';
             else if (avgRetention >= 20) grade = 'D';
             else grade = 'F';
