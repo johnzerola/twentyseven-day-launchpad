@@ -1,4 +1,4 @@
-import { Check, Clock, TrendingUp, Target, AlertTriangle } from 'lucide-react';
+import { Check, Clock, TrendingUp, Target, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -7,19 +7,75 @@ import { motion } from 'framer-motion';
 const plans = [
   {
     key: 'starter',
-    features: ['1 canal', '12 vídeos/mês', '20 conversas TubeBot', 'Busca básica de nichos', 'Narração IA (Google TTS)'],
-    featuresEn: ['1 channel', '12 videos/month', '20 TubeBot chats', 'Basic niche search', 'AI narration (Google TTS)'],
+    features: [
+      '1 canal',
+      '1 vídeo/dia',
+      '1 pesquisa/dia',
+      'Vídeos até 30 min',
+      '20 conversas TubeBot',
+      'Narração IA (Google TTS)',
+      'Busca básica de nichos',
+    ],
+    featuresEn: [
+      '1 channel',
+      '1 video/day',
+      '1 search/day',
+      'Videos up to 30 min',
+      '20 TubeBot chats',
+      'AI narration (Google TTS)',
+      'Basic niche search',
+    ],
+    limitations: ['Sem multilíngue', 'Sem análise de concorrentes'],
+    limitationsEn: ['No multilingual', 'No competitor analysis'],
   },
   {
     key: 'pro',
-    features: ['3 canais', '3+ vídeos/semana', 'TTS ilimitado', 'Análise de concorrentes', 'TubeBot ilimitado', 'Veo3 prompts'],
-    featuresEn: ['3 channels', '3+ videos/week', 'Unlimited TTS', 'Competitor analysis', 'Unlimited TubeBot', 'Veo3 prompts'],
+    features: [
+      '5 canais',
+      '5 vídeos/dia',
+      '10 pesquisas/dia',
+      'Vídeos até 1 hora',
+      'Multilíngue liberado',
+      'TubeBot ilimitado',
+      'Análise de concorrentes',
+      'Veo3 prompts',
+    ],
+    featuresEn: [
+      '5 channels',
+      '5 videos/day',
+      '10 searches/day',
+      'Videos up to 1 hour',
+      'Multilingual unlocked',
+      'Unlimited TubeBot',
+      'Competitor analysis',
+      'Veo3 prompts',
+    ],
     popular: true,
   },
   {
     key: 'full',
-    features: ['Canais ilimitados', 'Tudo do Pro', 'Roteiros ilimitados', 'API access', 'Suporte prioritário', 'White label'],
-    featuresEn: ['Unlimited channels', 'Everything in Pro', 'Unlimited scripts', 'API access', 'Priority support', 'White label'],
+    features: [
+      '20 canais',
+      '20 vídeos/dia',
+      '50 pesquisas/dia',
+      'Vídeos até 1h30',
+      'Tudo do Pro',
+      'Roteiros ilimitados',
+      'API access',
+      'Suporte prioritário',
+      'White label',
+    ],
+    featuresEn: [
+      '20 channels',
+      '20 videos/day',
+      '50 searches/day',
+      'Videos up to 1h30',
+      'Everything in Pro',
+      'Unlimited scripts',
+      'API access',
+      'Priority support',
+      'White label',
+    ],
   },
 ];
 
@@ -61,7 +117,7 @@ export const PricingSection = () => {
                 <span className="text-4xl font-bold gradient-text">{t(`pricing.${plan.key}.price`)}</span>
                 <span className="text-muted-foreground">{t('pricing.mo')}</span>
               </div>
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3 mb-4">
                 {(isPortuguese ? plan.features : plan.featuresEn).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary flex-shrink-0" />
@@ -69,6 +125,17 @@ export const PricingSection = () => {
                   </li>
                 ))}
               </ul>
+              {plan.limitations && (
+                <ul className="space-y-2 mb-8">
+                  {(isPortuguese ? plan.limitations : plan.limitationsEn)?.map((l) => (
+                    <li key={l} className="flex items-center gap-2 text-sm">
+                      <X className="w-4 h-4 text-destructive/60 flex-shrink-0" />
+                      <span className="text-muted-foreground/60">{l}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!plan.limitations && <div className="mb-8" />}
               <Link to="/login">
                 <Button
                   className={`w-full ${plan.popular ? 'gradient-hero border-0 glow-primary' : ''}`}
