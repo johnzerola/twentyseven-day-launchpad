@@ -1,75 +1,128 @@
 
+# Plano: Correções Críticas do Sistema — Auditoria de Qualidade
 
-# Plano: Absorver Documento "Arquitetura 2026" no Sistema
+## Diagnóstico
 
-## Análise de Cobertura
+O sistema tem engenharia sofisticada mas sofre de 5 falhas estruturais identificadas na auditoria. Este plano aborda as correções de maior impacto, priorizando o que muda a confiabilidade real do produto.
 
-Após revisão exaustiva, **~90% do documento já está implementado**. Os módulos de algoritmo (CTR, APV, Session Time), engenharia de roteiro (Hook Mortal, Mas/Portanto, Binge Loop, Micro-Hooks), Sound Design, VFX Tags, Archetypes, Title Formulas, Thumbnail Rules, 48h Revival e Reference Channels já existem no sistema.
+---
 
-## Gaps Reais Identificados
+## PRIORIDADE 1: Honestidade Epistêmica nos Scores (FALHA CRÍTICA)
 
-### 1. Árvore de Nichos com Sub-Nichos e Micro-Nichos (`src/lib/viralDatabase.ts`)
-O documento define uma **árvore hierárquica de nichos** (Nicho → Sub-Nicho → Micro-Nicho) com CPM estimado que não existe no sistema. Exemplo: Mistérios ($8-$15) → Casos Não Resolvidos → "Casos bizarros do Brasil".
+### Problema
+CTR estimado, boost de thumbnail, packaging score e viral_score são apresentados como previsões mas são opiniões de LLM sem calibração. O usuário confia em números que não têm base empírica.
 
-**Ação:** Adicionar constante `NICHE_TREE` com 5 categorias (Mistérios, Curiosidades, Finanças, True Crime, Tecnologia/IA), cada uma com sub-nichos e micro-nichos + CPM range.
+### Solução
+**Arquivo: `supabase/functions/score-script/index.ts`**
+- Adicionar campo `confidence_source` em cada score retornado: `"real"` (calibrado por backtest), `"heuristic"` (baseado em regra), `"ai_estimate"` (opinião do modelo)
+- Incluir `calibration_status` no JSON de resposta: `"calibrated"` (se existe dado em `score_calibration` para o nicho), `"uncalibrated"` (se não)
+- Se uncalibrated, adicionar disclaimer no `verdict`: "⚠️ Score sem calibração real — use como referência, não como previsão"
 
-### 2. Protocolo Semanal 3×/Semana (`src/lib/viralDatabase.ts`)
-O documento define um calendário semanal SEG-DOM com tarefas específicas (pesquisa, roteiro, publicação, análise, cortar Shorts). Não existe como constante no sistema.
+**Arquivo: `supabase/functions/generate-thumbnail-prompt/index.ts`**
+- Mudar `expected_ctr_boost` para `estimated_ctr_boost_ai` e adicionar nota: `"source": "ai_estimate_uncalibrated"`
 
-**Ação:** Adicionar constante `WEEKLY_PROTOCOL_3X` com o cronograma dia-a-dia + horários de pico BR.
+**Arquivo: `supabase/functions/packaging-score/index.ts`**
+- Mesma mudança: adicionar `confidence_source: "ai_estimate"` e `calibration_note` ao response
 
-### 3. 10 Regras Inegociáveis (`src/lib/viralDatabase.ts`)
-As 10 regras (não trocar nicho antes de 30 vídeos, CTR sem retenção = veneno, série > vídeo isolado, etc.) não estão codificadas.
+**Arquivo: `supabase/functions/generate-titles/index.ts`**
+- Adicionar `ctr_source: "ai_estimate"` em cada título gerado
 
-**Ação:** Adicionar constante `INVIOLABLE_RULES` com as 10 regras como array estruturado.
+**Arquivo: `src/components/scripts/ThumbnailGenerator.tsx`**
+- Exibir badge "Estimativa IA" ao lado do CTR boost em vez de apresentar como dado real
 
-### 4. Motor de Análise Pós-Publicação — Timelines (`src/lib/viralDatabase.ts`)
-O documento define checkpoints (2h, 24h, 48h, Semana 4, Mês 2-3) com ações específicas. O sistema tem a estratégia 48h mas não o protocolo completo.
+---
 
-**Ação:** Adicionar constante `POST_PUBLISH_CHECKPOINTS` com os 5 momentos + ações + métricas alvo.
+## PRIORIDADE 2: Dotti — Memória Persistente e Contexto do Projeto Ativo
 
-### 5. Stack de Ferramentas Recomendadas (`src/lib/viralDatabase.ts`)
-Lista de ferramentas por etapa (VidIQ, ElevenLabs, CapCut, etc.) com custo. Útil para onboarding.
+### Problema
+A Dotti não tem memória entre sessões. Não sabe o que o usuário está editando. Quando uma ferramenta falha, pode gerar dados fictícios.
 
-**Ação:** Adicionar constante `RECOMMENDED_TOOL_STACK`.
+### Solução
+**Arquivo: `supabase/functions/chat-assistant/index.ts`**
+- **Memória entre sessões**: Já carrega `user_content_memory`, `video_performance`, `saved_scripts`, `onboarding_plans` etc. O gap real é que NÃO salva resumos de conversa. Adicionar: ao final de cada conversa (quando `conversationId` muda ou após 10+ mensagens), salvar um `conversation_summary` na tabela `ai_learning` com topic, decisões tomadas, e próximos passos acordados. Na próxima sessão, carregar os últimos 3 summaries como contexto.
+- **Contexto do projeto ativo**: O `currentPage` já é enviado. Expandir: quando `currentPage === '/scripts'`, buscar o roteiro em edição mais recente (`saved_scripts` ORDER BY updated_at DESC LIMIT 1) e injetar título + primeiros 500 chars no system prompt
+- **Proteção contra dados fictícios**: No `executeTool`, quando o resultado contém `error: "YouTube API quota exceeded"` ou timeout, a Dotti deve receber explicitamente `{ error: "...", data_reliability: "FAILED" }` em vez de resultado parcial. Adicionar instrução no system prompt: "Se uma ferramenta retornar `data_reliability: FAILED`, DIGA AO USUÁRIO que a busca falhou e NÃO invente dados."
 
-### 6. 5 Sistemas de Recomendação do YouTube (`src/lib/viralDatabase.ts`)
-Home Feed, Suggested, Search, Subscriptions, Shorts Feed — cada um com sinal principal e como otimizar. Não codificado.
+**Migração de banco**: Nenhuma necessária — usar `ai_learning` existente com `source: "conversation_summary"`.
 
-**Ação:** Adicionar constante `YOUTUBE_RECOMMENDATION_SYSTEMS`.
+---
 
-### 7. Injetar Protocolo Semanal no `generate-30day-plan`
-O plano de 30 dias atualmente é genérico. Injetar o protocolo semanal 3×/semana com horários de pico e a regra "consistência > qualidade nos primeiros 30 vídeos".
+## PRIORIDADE 3: Taxonomia de Hooks por Mecanismo Psicológico
 
-**Ação:** Adicionar bloco `WEEKLY_PROTOCOL_DIRECTIVE` no system prompt com o cronograma SEG-DOM e as 10 regras.
+### Problema
+O `hook_library` tem hooks por nicho mas sem classificação pelo mecanismo psicológico (curiosidade, ameaça, prova, contradição, identidade, timing, confissão, transformação).
 
-### 8. Injetar Árvore de Nichos no `niche-explorer`
-O explorador de nicho não tem a hierarquia micro-nicho.
+### Solução
+**Arquivo: `src/lib/viralDatabase.ts`**
+- Adicionar constante `HOOK_MECHANISMS` com 8 categorias: `curiosity_gap`, `threat_warning`, `social_proof`, `contradiction`, `identity_trigger`, `time_pressure`, `confession`, `transformation`
+- Cada mecanismo com: nome, descrição psicológica, exemplo de hook, quando usar, nicho ideal
 
-**Ação:** Injetar constante `NICHE_TREE` no prompt do `niche-explorer` para sugerir micro-nichos com CPM.
+**Arquivo: `supabase/functions/generate-script/index.ts`**
+- No Phase 0 (Hook Generation), injetar a taxonomia de mecanismos no prompt e pedir que a IA identifique qual mecanismo está usando
+- Adicionar no output do hook: `hook_mechanism: string` para que o score-script possa validar
 
-### 9. Expandir Title Patterns com 2 fórmulas faltantes (`src/lib/viralDatabase.ts`)
-Do documento: "Questão Perturbadora" ("E se [Fato Aceito] fosse completamente falso?") e "Pessoa Simples" ("O [Pessoa Anônima] que [Resultado Extraordinário]") não existem.
+**Arquivo: `supabase/functions/score-script/index.ts`**
+- Adicionar no JSON de resposta: `hook_mechanism_detected: string` e `hook_mechanism_strength: number (1-10)`
 
-**Ação:** Adicionar 2 TitlePatterns ao array `VIRAL_TITLE_PATTERNS_V3`.
+---
 
-### 10. Thumbnail Color Combos (`src/lib/viralDatabase.ts`)
-O documento lista 5 combinações de cores específicas (Laranja×Preto, Azul×Laranja, Vermelho×Branco, Verde×Preto, Roxo×Amarelo) com emoção e nicho ideal. Não codificado.
+## PRIORIDADE 4: Algoritmo do YouTube — Separar Oficial de Inferência
 
-**Ação:** Adicionar constante `THUMBNAIL_COLOR_COMBOS`.
+### Problema
+O `YPP_2025_DIRECTIVE` mistura regras oficiais com folklore. "70% de retenção no primeiro meio minuto" não é política oficial do YouTube.
+
+### Solução
+**Arquivo: `supabase/functions/generate-script/index.ts`**
+- Reescrever `YPP_2025_DIRECTIVE` separando em 3 blocos etiquetados:
+  - `📋 OFICIAL (YouTube Help Center / Creator Academy)`: Tier 1 (500 subs + 3K horas), Tier 2 (1K subs + 4K horas), disclosure de IA obrigatório, políticas de conteúdo repetitivo
+  - `📊 BENCHMARK OBSERVÁVEL (dados de canal)`: "Canais com retenção >60% nos primeiros 30s tendem a receber mais impressões" (linguagem probabilística)
+  - `🔬 HIPÓTESE (inferência do sistema)`: "Teoria do Jenga — quebras de padrão a cada 20-30s podem melhorar retenção" (linguagem condicional)
+- Cada regra no prompt marcada com seu nível de confiança
+
+**Arquivo: `supabase/functions/chat-assistant/index.ts`**
+- No bloco de monetização do system prompt, mesma separação: oficial vs benchmark vs hipótese
+- Substituir "CTR > 4% após ajuste" por "CTR acima da média do nicho (benchmark: 4-6% para curiosidades, 3-5% para true crime)"
+
+---
+
+## PRIORIDADE 5: Quebras End-to-End — Fechar os 3 Gaps Mais Críticos
+
+### Quebra 1: Nicho validado → Script Generator
+**Arquivo: `src/components/dashboard/MicroNicheFinder.tsx`** (ou componente equivalente)
+- Adicionar botão "Usar este nicho" que navega para `/scripts` com query param `?niche=X&subniche=Y`
+
+**Arquivo: `src/pages/Scripts.tsx`**
+- Ler query params e pré-preencher os campos de nicho no ScriptGenerator
+
+### Quebra 2: Roteiro completo → Thumbnail Generator
+**Arquivo: `src/components/scripts/ThumbnailGenerator.tsx`**
+- Expandir props para aceitar `scriptSummary?: string` (primeiros 500 chars do roteiro + clímax)
+- Quando disponível, enviar ao `generate-thumbnail-prompt` para que a thumbnail reflita o momento mais impactante, não só o título
+
+**Arquivo: `supabase/functions/generate-thumbnail-prompt/index.ts`**
+- Aceitar campo opcional `script_context` no body e usá-lo para melhorar a composição da thumbnail
+
+### Quebra 5: Performance real → Retroalimenta hook_library
+**Arquivo: `supabase/functions/extract-user-learnings/index.ts`**
+- Após processar `script_performance_link`, se o vídeo teve retenção >60% no primeiro bloco, extrair o hook usado e fazer upsert no `hook_library` com `retention_score` real e `source: "user_real_data"`
+- Se retenção <30%, marcar o hook_type como `underperforming` na `ai_learning`
+
+---
 
 ## Resumo de Implementação
 
-| Arquivo | Mudanças |
-|---------|----------|
-| `src/lib/viralDatabase.ts` | +7 constantes (Niche Tree, Weekly Protocol, 10 Rules, Post-Publish Checkpoints, Tool Stack, YT Recommendation Systems, Thumbnail Color Combos) + 2 title patterns |
-| `supabase/functions/generate-30day-plan/index.ts` | Injetar protocolo semanal 3×/sem + 10 regras + horários de pico |
-| `supabase/functions/niche-explorer/index.ts` | Injetar árvore de nichos com micro-nichos + CPM |
-| `supabase/functions/generate-titles/index.ts` | +2 fórmulas de título (Questão Perturbadora, Pessoa Simples) |
-| `supabase/functions/generate-thumbnail-prompt/index.ts` | Injetar tabela de color combos no prompt |
+| Arquivo | Tipo de Mudança |
+|---------|----------------|
+| `src/lib/viralDatabase.ts` | +1 constante (HOOK_MECHANISMS) |
+| `src/components/scripts/ThumbnailGenerator.tsx` | Badge "Estimativa IA" + aceitar scriptSummary |
+| `src/pages/Scripts.tsx` | Ler query params de nicho |
+| `supabase/functions/score-script/index.ts` | confidence_source + hook_mechanism |
+| `supabase/functions/generate-script/index.ts` | YPP reescrito + hook_mechanism no Phase 0 |
+| `supabase/functions/generate-thumbnail-prompt/index.ts` | source labels + script_context |
+| `supabase/functions/generate-titles/index.ts` | ctr_source label |
+| `supabase/functions/packaging-score/index.ts` | confidence_source |
+| `supabase/functions/chat-assistant/index.ts` | Memória de conversa + proteção contra dados fictícios + oficial vs inferência |
+| `supabase/functions/extract-user-learnings/index.ts` | Retroalimentar hook_library com dados reais |
+| Dashboard niche component | Botão "Usar este nicho" |
 
-## Detalhes Técnicos
-- 5 arquivos editados (1 client-side, 4 edge functions)
-- Zero mudanças de banco de dados
-- Adições puras — sem risco de quebrar funcionalidades existentes
-
+**Total: 11 arquivos, 0 migrações de banco, 7 edge functions**
