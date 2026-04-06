@@ -4115,10 +4115,12 @@ export type Database = {
           duration_seconds: number | null
           hook_type: string | null
           id: string
+          impressions: number | null
           last_checked_at: string | null
           lessons_learned: string[] | null
           likes: number | null
           niche: string | null
+          oauth_synced: boolean | null
           performance_grade: string | null
           predicted_attention_score: number | null
           predicted_viral_score: number | null
@@ -4128,6 +4130,8 @@ export type Database = {
           ranking_keywords: Json | null
           script_id: string | null
           script_score: number | null
+          subscribers_gained: number | null
+          synced_at: string | null
           title: string
           title_pattern: string | null
           updated_at: string | null
@@ -4138,6 +4142,7 @@ export type Database = {
           views_day30: number | null
           views_day7: number | null
           watch_time_hours: number | null
+          watch_time_minutes: number | null
           youtube_video_id: string
         }
         Insert: {
@@ -4153,10 +4158,12 @@ export type Database = {
           duration_seconds?: number | null
           hook_type?: string | null
           id?: string
+          impressions?: number | null
           last_checked_at?: string | null
           lessons_learned?: string[] | null
           likes?: number | null
           niche?: string | null
+          oauth_synced?: boolean | null
           performance_grade?: string | null
           predicted_attention_score?: number | null
           predicted_viral_score?: number | null
@@ -4166,6 +4173,8 @@ export type Database = {
           ranking_keywords?: Json | null
           script_id?: string | null
           script_score?: number | null
+          subscribers_gained?: number | null
+          synced_at?: string | null
           title?: string
           title_pattern?: string | null
           updated_at?: string | null
@@ -4176,6 +4185,7 @@ export type Database = {
           views_day30?: number | null
           views_day7?: number | null
           watch_time_hours?: number | null
+          watch_time_minutes?: number | null
           youtube_video_id: string
         }
         Update: {
@@ -4191,10 +4201,12 @@ export type Database = {
           duration_seconds?: number | null
           hook_type?: string | null
           id?: string
+          impressions?: number | null
           last_checked_at?: string | null
           lessons_learned?: string[] | null
           likes?: number | null
           niche?: string | null
+          oauth_synced?: boolean | null
           performance_grade?: string | null
           predicted_attention_score?: number | null
           predicted_viral_score?: number | null
@@ -4204,6 +4216,8 @@ export type Database = {
           ranking_keywords?: Json | null
           script_id?: string | null
           script_score?: number | null
+          subscribers_gained?: number | null
+          synced_at?: string | null
           title?: string
           title_pattern?: string | null
           updated_at?: string | null
@@ -4214,6 +4228,7 @@ export type Database = {
           views_day30?: number | null
           views_day7?: number | null
           watch_time_hours?: number | null
+          watch_time_minutes?: number | null
           youtube_video_id?: string
         }
         Relationships: [

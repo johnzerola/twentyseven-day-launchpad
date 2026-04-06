@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Copy, Loader2, Palette, Sparkles } from 'lucide-react';
+import { Image, Copy, Loader2, Palette, Sparkles, Download, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,8 @@ interface ThumbnailVariant {
   estimated_ctr_boost_ai?: number;
   ctr_boost_source?: string;
   face_required?: boolean;
+  post_production_instructions?: string;
+  generated_image_url?: string;
 }
 
 interface Props {
@@ -28,6 +30,7 @@ interface Props {
 export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) => {
   const [variants, setVariants] = useState<ThumbnailVariant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState<number | null>(null);
 
   const generateThumbnails = async () => {
     if (!videoTitle.trim()) {
@@ -54,6 +57,43 @@ export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) 
     }
   };
 
+  const generateImage = async (variantIndex: number) => {
+    const variant = variants[variantIndex];
+    if (!variant) return;
+    
+    setGeneratingImage(variantIndex);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-thumbnail-prompt', {
+        body: {
+          generate_image: true,
+          variant_index: variantIndex,
+          video_title: videoTitle,
+          script_context: variant.dalle_prompt,
+          niche: niche || 'general',
+        },
+      });
+      if (error) throw error;
+      if (!data?.imageUrl) throw new Error('Nenhuma imagem gerada');
+
+      // Update the variant with the generated image
+      setVariants(prev => prev.map((v, i) =>
+        i === variantIndex ? { ...v, generated_image_url: data.imageUrl } : v
+      ));
+      toast.success('Thumbnail gerada com sucesso!');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao gerar imagem');
+    } finally {
+      setGeneratingImage(null);
+    }
+  };
+
+  const downloadImage = (dataUrl: string, index: number) => {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `thumbnail-v${index + 1}-${videoTitle.slice(0, 30).replace(/\s+/g, '-')}.png`;
+    link.click();
+  };
+
   const copyPrompt = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado!`);
@@ -67,7 +107,7 @@ export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) 
             <Image className="w-4 h-4 text-accent" /> Gerador de Thumbnail
           </h3>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            3 variantes com prompts Midjourney + DALL-E otimizados para CTR
+            3 variantes com prompts + geração de imagem real via IA
           </p>
         </div>
         <Button size="sm" onClick={generateThumbnails} disabled={loading || !videoTitle.trim()} className="gap-1 text-xs h-7">
@@ -86,17 +126,49 @@ export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) 
                 <Badge variant="outline" className="text-[9px]">{v.style}</Badge>
                 <Badge variant="outline" className="text-[9px]">🎭 {v.emotion_target}</Badge>
               </div>
-              {(v.estimated_ctr_boost_ai ?? v.expected_ctr_boost) != null && (
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
+                {(v.estimated_ctr_boost_ai ?? v.expected_ctr_boost) != null && (
                   <Badge className="bg-chart-2/20 text-chart-2 border-chart-2/30 text-[9px]">
                     +{v.estimated_ctr_boost_ai ?? v.expected_ctr_boost}% CTR
                   </Badge>
-                  <Badge variant="outline" className="text-[8px] text-muted-foreground border-muted-foreground/30">
-                    Estimativa IA
-                  </Badge>
-                </div>
-              )}
+                )}
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  className="h-6 px-2 text-[9px] gap-1"
+                  disabled={generatingImage === i}
+                  onClick={() => generateImage(i)}
+                >
+                  {generatingImage === i ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <ImagePlus className="w-3 h-3" />
+                  )}
+                  {generatingImage === i ? 'Gerando...' : 'Gerar Imagem'}
+                </Button>
+              </div>
             </div>
+
+            {/* Generated Image Preview */}
+            {v.generated_image_url && (
+              <div className="relative group">
+                <img 
+                  src={v.generated_image_url} 
+                  alt={`Thumbnail variante ${i + 1}`}
+                  className="w-full rounded-lg border border-border aspect-video object-cover"
+                />
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => downloadImage(v.generated_image_url!, i)}
+                  >
+                    <Download className="w-3 h-3" /> Download
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Composition */}
             <p className="text-xs text-muted-foreground">{v.composition}</p>
@@ -112,6 +184,14 @@ export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) 
                 </div>
               ))}
             </div>
+
+            {/* Post-production instructions */}
+            {v.post_production_instructions && (
+              <div className="bg-accent/10 rounded-lg p-2">
+                <span className="text-[10px] text-accent font-semibold">🎬 Pós-produção:</span>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{v.post_production_instructions}</p>
+              </div>
+            )}
 
             {/* Prompts */}
             <div className="space-y-2">

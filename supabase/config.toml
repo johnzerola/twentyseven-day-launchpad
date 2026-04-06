@@ -183,3 +183,6 @@ verify_jwt = false
 [functions.next-best-action]
 verify_jwt = false
 
+[functions.sync-oauth-performance]
+verify_jwt = false
+
