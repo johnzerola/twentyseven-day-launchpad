@@ -51,6 +51,7 @@ const TAB_CONFIG: Record<TabKey, { label: string; icon: any; table: string; colo
 };
 
 const KnowledgeAdmin = () => {
+  useNoIndex();
   const [activeTab, setActiveTab] = useState<TabKey>('youtube');
   const [data, setData] = useState<Record<TabKey, KnowledgeRecord[]>>({ youtube: [], script: [], viral: [], scene: [] });
   const [loading, setLoading] = useState(true);
