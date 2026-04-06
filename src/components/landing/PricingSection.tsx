@@ -1,4 +1,4 @@
-import { Check, Clock, TrendingUp, Target, AlertTriangle, X } from 'lucide-react';
+import { Check, Clock, TrendingUp, Target, AlertTriangle, X, Crown, Zap, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 const plans = [
   {
     key: 'starter',
+    tier: 'starter',
     features: [
       '1 canal',
       '12 vídeos/mês',
@@ -25,9 +26,13 @@ const plans = [
     ],
     limitations: ['Sem multilíngue', 'Sem análise de concorrentes'],
     limitationsEn: ['No multilingual', 'No competitor analysis'],
+    originalPricePt: 'R$ 197',
+    originalPriceEn: '$37',
+    spots: null,
   },
   {
     key: 'pro',
+    tier: 'pro',
     features: [
       '5 canais',
       '3 vídeos/dia',
@@ -47,9 +52,14 @@ const plans = [
       'Multilingual unlocked',
     ],
     popular: true,
+    originalPricePt: 'R$ 497',
+    originalPriceEn: '$97',
+    spotsPt: 'Faltam 12 vagas',
+    spotsEn: '12 spots left',
   },
   {
     key: 'full',
+    tier: 'full',
     features: [
       'Canais ilimitados',
       'Vídeos ilimitados',
@@ -72,55 +82,99 @@ const plans = [
       'Priority support',
       'White label',
     ],
+    originalPricePt: 'R$ 997',
+    originalPriceEn: '$197',
+    spotsPt: 'Faltam 5 vagas',
+    spotsEn: '5 spots left',
   },
 ];
 
 const timelineSteps = [
   { icon: Target, key: 'm1', color: 'text-blue-400' },
   { icon: TrendingUp, key: 'm2', color: 'text-yellow-400' },
-  { icon: Check, key: 'm3', color: 'text-green-400' },
+  { icon: Check, key: 'm3', color: 'text-emerald-400' },
 ];
 
 export const PricingSection = () => {
   const { t, locale } = useLanguage();
   const isPortuguese = locale === 'pt-BR';
 
-  return (
-    <section id="pricing" className="py-24 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold font-['Space_Grotesk'] mb-4">{t('pricing.title')}</h2>
-          <p className="text-muted-foreground text-lg">{t('pricing.subtitle')}</p>
-        </div>
+  const getCardClass = (plan: typeof plans[0]) => {
+    if (plan.tier === 'full') return 'glass-gold border-gold-animated';
+    if (plan.tier === 'pro') return 'glass-premium border-gradient-animated scale-105';
+    return 'glass';
+  };
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+  return (
+    <section id="pricing" className="py-24 relative aurora-bg">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <p className="text-primary font-semibold text-sm mb-3 tracking-wider uppercase">
+            {isPortuguese ? 'Invista no seu canal' : 'Invest in your channel'}
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">{t('pricing.title')}</h2>
+          <p className="text-muted-foreground text-lg">{t('pricing.subtitle')}</p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.key}
-              className={`glass rounded-2xl p-8 relative ${plan.popular ? 'border-primary/50 scale-105' : ''}`}
+              className={`rounded-2xl p-8 relative ${getCardClass(plan)}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.15 }}
             >
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full gradient-hero text-xs font-semibold text-primary-foreground">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full gradient-hero text-xs font-bold text-primary-foreground flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
                   {t('pricing.popular')}
                 </div>
               )}
-              <h3 className="text-xl font-bold font-['Space_Grotesk'] mb-2">{t(`pricing.${plan.key}`)}</h3>
-              <div className="flex items-baseline gap-1 mb-6">
+
+              {plan.tier === 'full' && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full gradient-gold text-xs font-bold text-background flex items-center gap-1">
+                  <Crown className="w-3 h-3" />
+                  {isPortuguese ? '👑 Elite' : '👑 Elite'}
+                </div>
+              )}
+
+              <h3 className="text-xl font-bold font-display mb-2">{t(`pricing.${plan.key}`)}</h3>
+
+              {/* Original price strikethrough */}
+              <div className="text-sm text-muted-foreground line-through mb-1">
+                {isPortuguese ? plan.originalPricePt : plan.originalPriceEn}
+              </div>
+
+              <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-4xl font-bold gradient-text">{t(`pricing.${plan.key}.price`)}</span>
                 <span className="text-muted-foreground">{t('pricing.mo')}</span>
               </div>
+
+              {/* Spots urgency */}
+              {(plan.spotsPt || plan.spotsEn) && (
+                <p className="text-xs text-destructive font-semibold mb-4 flex items-center gap-1">
+                  <span className="live-dot !w-1.5 !h-1.5" />
+                  {isPortuguese ? plan.spotsPt : plan.spotsEn}
+                </p>
+              )}
+              {!plan.spotsPt && !plan.spotsEn && <div className="mb-4" />}
+
               <ul className="space-y-3 mb-4">
                 {(isPortuguese ? plan.features : plan.featuresEn).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                     <span className="text-muted-foreground">{f}</span>
                   </li>
                 ))}
               </ul>
+
               {plan.limitations && (
                 <ul className="space-y-2 mb-8">
                   {(isPortuguese ? plan.limitations : plan.limitationsEn)?.map((l) => (
@@ -132,10 +186,18 @@ export const PricingSection = () => {
                 </ul>
               )}
               {!plan.limitations && <div className="mb-8" />}
+
               <Link to="/login">
                 <Button
-                  className={`w-full ${plan.popular ? 'gradient-hero border-0 glow-primary' : ''}`}
-                  variant={plan.popular ? 'default' : 'outline'}
+                  className={`w-full font-semibold ${
+                    plan.tier === 'full'
+                      ? 'gradient-gold border-0 glow-gold text-background shimmer'
+                      : plan.popular
+                        ? 'gradient-hero border-0 glow-primary shimmer'
+                        : ''
+                  }`}
+                  variant={plan.popular || plan.tier === 'full' ? 'default' : 'outline'}
+                  size="lg"
                 >
                   {t(`pricing.cta.${plan.key}`)}
                 </Button>
@@ -144,16 +206,28 @@ export const PricingSection = () => {
           ))}
         </div>
 
+        {/* Guarantee badge */}
+        <motion.div
+          className="flex items-center justify-center gap-3 mt-10 text-sm text-muted-foreground"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.5 }}
+        >
+          <Shield className="w-5 h-5 text-emerald-400" />
+          <span>{isPortuguese ? '7 dias de garantia total — ou seu dinheiro de volta' : '7-day money-back guarantee — no questions asked'}</span>
+        </motion.div>
+
         {/* Monetization Timeline */}
         <motion.div
-          className="mt-20 max-w-3xl mx-auto glass rounded-2xl p-8"
+          className="mt-20 max-w-3xl mx-auto glass-premium rounded-2xl p-8"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
           <div className="flex items-center gap-3 mb-2">
             <Clock className="w-6 h-6 text-primary" />
-            <h3 className="text-2xl font-bold font-['Space_Grotesk']">{t('pricing.timeline.title')}</h3>
+            <h3 className="text-2xl font-bold font-display">{t('pricing.timeline.title')}</h3>
           </div>
           <p className="text-muted-foreground mb-6">{t('pricing.timeline.subtitle')}</p>
 
@@ -163,7 +237,7 @@ export const PricingSection = () => {
               return (
                 <div key={step.key} className="flex gap-4 items-start">
                   <div className="flex flex-col items-center">
-                    <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center`}>
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                       <Icon className={`w-4 h-4 ${step.color}`} />
                     </div>
                     {i < timelineSteps.length - 1 && (

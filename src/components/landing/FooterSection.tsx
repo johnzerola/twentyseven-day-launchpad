@@ -1,8 +1,9 @@
-import { Zap } from 'lucide-react';
+import { Zap, Users } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export const FooterSection = () => {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const isPortuguese = locale === 'pt-BR';
 
   return (
     <footer className="border-t border-border py-12">
@@ -13,9 +14,16 @@ export const FooterSection = () => {
               <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
                 <Zap className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold font-['Space_Grotesk']">Monetize AI</span>
+              <span className="text-lg font-bold font-display">Monetize AI</span>
             </div>
-            <p className="text-sm text-muted-foreground">{t('footer.desc')}</p>
+            <p className="text-sm text-muted-foreground mb-4">{t('footer.desc')}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Users className="w-3.5 h-3.5 text-primary" />
+              <span>
+                <span className="text-primary font-semibold">2.400+</span>
+                {isPortuguese ? ' canais monetizados' : ' channels monetized'}
+              </span>
+            </div>
           </div>
           <div>
             <h4 className="font-semibold mb-3">{t('footer.product')}</h4>
