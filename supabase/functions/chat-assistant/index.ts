@@ -1056,48 +1056,15 @@ async function executeTool(
         break;
       }
 
-      // ===== AI ANALYSIS TOOLS =====
-      case "claude_deep_analysis": {
-        const claudeKey = Deno.env.get("CLAUDE_API_KEY");
-        if (!claudeKey) { result = { error: "Claude API key not configured" }; break; }
-        
-        const stylePrompts: Record<string, string> = {
+      // ===== UNIFIED AI ANALYSIS TOOL =====
+      case "expert_analysis":
+      case "claude_deep_analysis":
+      case "gpt_expert_analysis": {
+        const analysisStyles: Record<string, string> = {
           strategic: "Você é um consultor estratégico de YouTube com 15 anos de experiência. Analise com profundidade estratégica, considerando mercado, competição e oportunidades.",
           creative: "Você é um diretor criativo premiado. Foque em ideias originais, ângulos únicos, narrativas memoráveis e diferenciação criativa.",
           analytical: "Você é um analista de dados do YouTube. Interprete métricas, identifique padrões, calcule projeções e encontre insights ocultos nos dados.",
           diagnostic: "Você é um diagnosticador de canais do YouTube. Identifique problemas específicos, causas-raiz e prescreva soluções com prioridade e timeline.",
-        };
-        
-        try {
-          const resp = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": claudeKey,
-              "anthropic-version": "2023-06-01",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 4000,
-              system: stylePrompts[args.style || 'strategic'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto, use dados concretos, sem rodeios.",
-              messages: [{
-                role: "user",
-                content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}`,
-              }],
-            }),
-          });
-          const data = await resp.json();
-          result = { analysis: data.content?.[0]?.text || data.error?.message || "No response", model: "claude-sonnet-4" };
-        } catch (e: any) {
-          result = { error: `Claude error: ${e.message}` };
-        }
-        break;
-      }
-
-      case "gpt_expert_analysis": {
-        if (!lovableKey) { result = { error: "GOOGLE_AI_API_KEY not configured" }; break; }
-        
-        const gptStyles: Record<string, string> = {
           "data-driven": "You are a YouTube data scientist. Analyze with precision, find correlations, calculate growth curves, and predict outcomes based on historical patterns.",
           "growth-hacking": "You are a YouTube growth hacker. Focus on unconventional strategies, algorithm exploitation, viral mechanics, and rapid scaling techniques.",
           "monetization": "You are a YouTube monetization expert. Analyze RPM optimization, revenue diversification, sponsorship potential, and financial projections.",
@@ -1106,16 +1073,16 @@ async function executeTool(
         
         try {
           const resp = await _ai({
-              model: "openai/gpt-5",
-              messages: [
-                { role: "system", content: gptStyles[args.style || 'data-driven'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto e específico." },
-                { role: "user", content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}` },
-              ],
-            });
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: (analysisStyles[args.style || 'strategic'] || analysisStyles.strategic) + "\n\nResponda SEMPRE em português brasileiro. Seja direto, use dados concretos, sem rodeios." },
+              { role: "user", content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}` },
+            ],
+          });
           const data = await resp.json();
-          result = { analysis: data.choices?.[0]?.message?.content || "No response", model: "gpt-5" };
+          result = { analysis: data.choices?.[0]?.message?.content || "No response", model: "gemini-2.5-flash" };
         } catch (e: any) {
-          result = { error: `GPT error: ${e.message}` };
+          result = { error: `Analysis error: ${e.message}` };
         }
         break;
       }
