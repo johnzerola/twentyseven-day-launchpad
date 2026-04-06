@@ -395,34 +395,18 @@ const DOTTI_TOOLS = [
       },
     },
   },
-  // ===== AI ANALYSIS TOOLS =====
+  // ===== UNIFIED AI ANALYSIS TOOL =====
   {
     type: "function",
     function: {
-      name: "claude_deep_analysis",
-      description: "Use Claude AI for deep strategic analysis, creative writing, nuanced content strategy, or when you need a second expert opinion. Best for complex strategy, competitive analysis, and creative ideation.",
+      name: "expert_analysis",
+      description: "Deep AI analysis using multiple perspectives: strategic (channel diagnosis, competitive analysis), creative (ideation, storytelling), analytical (data interpretation, projections), diagnostic (problem identification, root cause analysis). Replaces separate AI tools.",
       parameters: {
         type: "object",
         properties: {
           task: { type: "string", description: "What to analyze or create" },
           context: { type: "string", description: "Relevant context, data, or channel info" },
-          style: { type: "string", enum: ["strategic", "creative", "analytical", "diagnostic"], description: "Analysis style" },
-        },
-        required: ["task"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "gpt_expert_analysis",
-      description: "Use GPT-5 for expert-level analysis, data interpretation, trend forecasting, or monetization strategy. Best for number crunching, market analysis, and growth projections.",
-      parameters: {
-        type: "object",
-        properties: {
-          task: { type: "string", description: "What to analyze" },
-          context: { type: "string", description: "Data and context" },
-          style: { type: "string", enum: ["data-driven", "growth-hacking", "monetization", "trend-analysis"], description: "Analysis focus" },
+          style: { type: "string", enum: ["strategic", "creative", "analytical", "diagnostic"], description: "Analysis perspective" },
         },
         required: ["task"],
       },
@@ -626,10 +610,10 @@ async function executeTool(
         const nicheQuery = (args.niche || args.query || '').toLowerCase();
         const nicheCountry = args.country || 'BR';
         
-        const [nicheDbResult, nicheChannels, nicheVirals] = await Promise.all([
+        const [nicheDbResult, nicheChannels, nicheVirals, nicheSaturation] = await Promise.all([
           sb.from("niche_database").select("*").or(`name.ilike.%${nicheQuery}%,sub_niches.cs.{${nicheQuery}}`).limit(10),
           sb.from("channel_intelligence")
-            .select("channel_name, subscribers, avg_views, growth_rate, rpm_estimate, style, is_faceless, country, upload_frequency")
+            .select("channel_name, subscribers, avg_views, growth_rate, rpm_estimate, style, is_faceless, country, upload_frequency, created_at")
             .ilike("niche", `%${nicheQuery}%`)
             .order("avg_views", { ascending: false })
             .limit(15),
@@ -638,9 +622,18 @@ async function executeTool(
             .ilike("niche", `%${nicheQuery}%`)
             .order("views", { ascending: false })
             .limit(10),
+          // Saturation detection: count channels added in last 90 days
+          sb.from("channel_intelligence")
+            .select("id", { count: "exact", head: true })
+            .ilike("niche", `%${nicheQuery}%`)
+            .gte("created_at", new Date(Date.now() - 90 * 86400000).toISOString()),
         ]);
         
         const nicheInfo = nicheDbResult.data?.[0];
+        const newChannels90d = nicheSaturation.count || 0;
+        const saturationVelocity = Math.round((newChannels90d / 3) * 10) / 10; // per month
+        const isSaturating = saturationVelocity > 15; // >15 new channels/month = saturating
+        
         result = {
           niche: args.niche,
           country: nicheCountry,
@@ -651,6 +644,12 @@ async function executeTool(
             faceless_friendly: nicheInfo.faceless_friendly,
             sub_niches: nicheInfo.sub_niches,
           } : { note: "Niche not in database — using channel data" },
+          saturation_analysis: {
+            new_channels_last_90_days: newChannels90d,
+            saturation_velocity: `${saturationVelocity} novos canais/mês`,
+            saturating: isSaturating,
+            warning: isSaturating ? `⚠️ NICHO SATURANDO: ${saturationVelocity} canais novos/mês nos últimos 90 dias` : null,
+          },
           channels: (nicheChannels.data || []).map((c: any) => ({
             name: c.channel_name,
             subs: c.subscribers,
