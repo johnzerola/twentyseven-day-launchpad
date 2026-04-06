@@ -334,9 +334,6 @@ Generate unique channel_id values like "UC" followed by 22 random alphanumeric c
             title_pattern: t.title_pattern || null,
             emotional_triggers: t.emotional_triggers || [],
             seo_score: t.seo_score || 7,
-            hook_type: t.hook_type || "curiosity",
-            viral_score: t.viral_score || 70,
-            source: "gemini-bulk-seeder",
           }));
 
           const { error } = await sb.from("viral_titles_db").insert(rows);
@@ -390,7 +387,6 @@ Each channel needs 1-2 viral_patterns describing their successful formulas.`;
                 visual_style_notes: ch.visual_style_notes || null,
                 top_videos: ch.top_videos || [],
                 viral_patterns: ch.viral_patterns || [],
-                source: "gemini-bulk-seeder",
               }, { onConflict: "youtube_channel_id" });
 
               if (!error) inserted++;
