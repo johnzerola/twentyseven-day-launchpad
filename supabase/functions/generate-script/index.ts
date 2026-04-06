@@ -16,43 +16,34 @@ const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling'
 const YPP_2025_DIRECTIVE = `
 🛡️ CONFORMIDADE YPP 2025 — ANTI-DEMONETIZAÇÃO (OBRIGATÓRIO):
 
-O YouTube atualizou severamente as políticas de monetização em 2025. Conteúdo "inautêntico",
-repetitivo ou gerado em massa por IA será BANIDO ou NÃO MONETIZADO. Seu roteiro DEVE:
+═══ 📋 OFICIAL (YouTube Help Center / Creator Academy — regras verificáveis) ═══
+- YPP Tier 1: 500 inscritos + 3.000 horas de watch time público válidas em 12 meses
+- YPP Tier 2: 1.000 inscritos + 4.000 horas de watch time público válidas em 12 meses
+- Alternativa Shorts: 10 milhões de views públicas em Shorts válidos em 90 dias
+- Conteúdo reutilizado/repetitivo sem valor agregado NÃO é elegível para monetização
+- IA pode ser usada na produção, mas o conteúdo deve ter curadoria humana significativa
+- Metadados enganosos (título/thumb que não correspondem ao conteúdo) violam políticas
+- Disclosure de uso de IA sintética é obrigatório quando conteúdo pode ser confundido com real
 
-1. VALOR HUMANO OBRIGATÓRIO — Injete em CADA roteiro:
-   • Opinião FORTE e específica do narrador (não genérica — algo que um humano real defenderia)
-   • Humor natural ou ironia situacional (pelo menos 2-3 momentos)
-   • Análise PROFUNDA que vai além do "resumo da Wikipedia" — conecte fatos a implicações pessoais
-   • Experiência ou perspectiva PESSOAL do narrador (mesmo que ficcional, deve parecer vivida)
-   • NUNCA gere conteúdo que pareça "compilação de fatos" — cada informação deve ser TRANSFORMADA em narrativa
+═══ 📊 BENCHMARK OBSERVÁVEL (dados de canais reais — linguagem probabilística) ═══
+- Canais com retenção >60% nos primeiros 30s TENDEM a receber mais impressões do Browse
+- CTR acima da média do nicho (benchmark: 4-6% curiosidades, 3-5% true crime, 5-8% finanças) correlaciona com mais suggested
+- Session Time (tempo que o viewer fica no YouTube após seu vídeo) é um sinal forte de qualidade
+- Canais com upload consistente por 4+ semanas tendem a sair da "bolha de 12 vídeos" mais rápido
+- Shorts RPM (~$0.04-0.07/1K views) é muito inferior a longform — não deve ser fonte principal de receita
 
-2. REGRA DOS 30 SEGUNDOS (YouTube Data — 70% de retenção no primeiro meio minuto):
-   • A PROMESSA do vídeo deve ser entregue nos primeiros 10-30 segundos
-   • O espectador deve saber EXATAMENTE o que vai ganhar ficando
-   • Hook → Promessa → Mini-prova (dado, cena ou revelação) em ≤30s
-   • Se nos primeiros 30s não há razão IRRESISTÍVEL para ficar, o vídeo MORRE
+═══ 🔬 HIPÓTESE (inferências do sistema — linguagem condicional) ═══
+- Teoria do Jenga: quebras de padrão a cada 20-30s PODEM melhorar retenção (não comprovado empiricamente)
+- Satisfaction surveys e post-watch behavior (2025+) PODEM superar watch time bruto como sinal
+- O algoritmo PODE favorecer canais com community posts regulares (evidência anedótica)
+- Conteúdo "gerado em massa por IA" PODE ser flagado mais agressivamente (tendência observada, política exata não publicada)
 
-3. TEORIA DO JENGA — QUEBRAS DE PADRÃO A CADA 20-30 SEGUNDOS:
-   • O cérebro humano "normaliza" qualquer estímulo após ~20s de exposição contínua
-   • A cada 20-30 segundos de narração, insira um MARCADOR DE EDIÇÃO implícito:
-     - Mudança BRUSCA de tom/ritmo na narração
-     - Pergunta DIRETA ao espectador que exige reflexão
-     - Dado CHOCANTE que interrompe o fluxo narrativo
-     - Momento de silêncio/pausa dramática
-     - Mudança de perspectiva (1ª pessoa → 3ª pessoa → direta ao espectador)
-   • Estes marcadores servem como "pontos de zoom/corte" para o editor no CapCut/Premiere
-   • PADRÃO: a cada ~50-75 palavras, deve haver um "ponto de quebra" natural
-
-4. DIFERENCIAÇÃO — O roteiro DEVE ter:
-   • Pelo menos 1 INSIGHT ORIGINAL que o espectador não encontra em outro canal
-   • Conexões INESPERADAS entre o tema e algo aparentemente não relacionado
-   • Uma "voz autoral" que seria RECONHECÍVEL se o espectador ouvisse em outro vídeo
-   • Tratamento do tema que ADICIONA VALOR vs apenas reorganiza informação pública
-
-⚠️ DETECTOR DE CONTEÚDO REPETITIVO (YouTube 2025):
-Se o roteiro parecer que poderia ser gerado por qualquer IA com o mesmo prompt,
-ele será flagado como "conteúdo de baixo esforço" e NÃO será monetizado.
-O TESTE: "Este roteiro tem algo que SOMENTE este narrador/canal poderia dizer?"
+Seu roteiro DEVE:
+1. VALOR HUMANO OBRIGATÓRIO — opinião FORTE, humor natural, análise profunda, perspectiva pessoal
+2. PROMESSA CLARA nos primeiros 30 segundos — o espectador deve saber O QUE vai ganhar ficando
+3. DIFERENCIAÇÃO — pelo menos 1 insight original que outros canais não teriam
+4. QUEBRAS DE PADRÃO regulares — mudanças de ritmo/tom para manter atenção
+5. NUNCA gere conteúdo que pareça "compilação de fatos" — transforme informação em narrativa
 `;
 
 // ═══════════════════════════════════════════════════════════════
@@ -613,6 +604,17 @@ ${(smartKnowledgeBlock || '').slice(0, 2000)}
 ${viralInjection}${intelBlock}${creativeWarning}
 
 ${ANTI_SLOP_DIRECTIVE}
+
+═══ TAXONOMIA DE MECANISMOS PSICOLÓGICOS DE HOOK ═══
+Identifique e aplique UM destes mecanismos no hook:
+- curiosity_gap: Abrir lacuna de informação que o cérebro PRECISA fechar
+- threat_warning: Alertar sobre perigo/erro que afeta o espectador diretamente
+- social_proof: Mostrar evidência de que algo é validado por multidão/autoridade
+- contradiction: Apresentar fato que contradiz crença estabelecida
+- identity_trigger: Ativar senso de identidade/pertencimento do espectador
+- time_pressure: Criar urgência temporal (antes que seja tarde, últimas horas)
+- confession: Revelar segredo/erro pessoal que gera empatia e curiosidade
+- transformation: Prometer mudança tangível e específica para o espectador
 
 REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
 Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;

@@ -586,12 +586,12 @@ async function executeTool(
       const text = await resp.text();
       if (!resp.ok) {
         console.error(`Tool ${fnName} HTTP ${resp.status}:`, text.slice(0, 500));
-        return { error: `HTTP ${resp.status}`, details: text.slice(0, 300) };
+        return { error: `HTTP ${resp.status}`, details: text.slice(0, 300), data_reliability: "FAILED" };
       }
       try { return JSON.parse(text); } catch { return { raw: text.slice(0, 3000) }; }
     } catch (e: any) {
       console.error(`Tool ${fnName} error:`, e.message);
-      return { error: e.message };
+      return { error: e.message, data_reliability: "FAILED" };
     }
   };
 
@@ -1282,6 +1282,68 @@ serve(async (req) => {
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
+    // ===== CONVERSATION MEMORY: Load last 3 conversation summaries =====
+    let conversationMemoryBlock = '';
+    try {
+      const { data: pastSummaries } = await sb.from("ai_learning")
+        .select("topic, insight, created_at")
+        .eq("source", "conversation_summary")
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (pastSummaries?.length) {
+        conversationMemoryBlock = `\n## 🧠 MEMÓRIA DE CONVERSAS ANTERIORES (${pastSummaries.length} sessões):\n` +
+          pastSummaries.map((s: any) => {
+            try {
+              const data = JSON.parse(s.insight);
+              return `- **${data.topic || s.topic}** (${new Date(s.created_at).toLocaleDateString('pt-BR')}): ${data.summary || data.decisions || ''}`;
+            } catch { return `- ${s.topic}: ${(s.insight || '').slice(0, 200)}`; }
+          }).join('\n');
+      }
+    } catch (e) { console.warn("Conversation memory fetch error:", e); }
+
+    // ===== ACTIVE SCRIPT CONTEXT: Load when on /scripts page =====
+    let activeScriptBlock = '';
+    if (currentPage === '/scripts' && currentUserId) {
+      try {
+        const { data: recentScript } = await sb.from("saved_scripts" as any)
+          .select("topic, style, niche, hook_text, script_text, created_at")
+          .eq("user_id", currentUserId)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (recentScript) {
+          const scriptText = (recentScript as any).script_text || '';
+          activeScriptBlock = `\n## ✍️ ROTEIRO EM EDIÇÃO (contexto ativo):\n- Tópico: ${(recentScript as any).topic || '?'}\n- Estilo: ${(recentScript as any).style || '?'}\n- Nicho: ${(recentScript as any).niche || '?'}\n- Hook: ${((recentScript as any).hook_text || '').slice(0, 200)}\n- Primeiros 500 chars: ${scriptText.slice(0, 500)}`;
+        }
+      } catch (e) { console.warn("Active script fetch error:", e); }
+    }
+
+    // ===== SAVE CONVERSATION SUMMARY (after 10+ messages in a conversation) =====
+    if (conversationId && messages?.length >= 10) {
+      try {
+        const userMsgs = messages.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' | ');
+        const summaryKey = `conv_summary:${conversationId}`;
+        const { data: existing } = await sb.from("ai_learning")
+          .select("id")
+          .eq("topic", summaryKey)
+          .eq("source", "conversation_summary")
+          .maybeSingle();
+        if (!existing) {
+          await sb.from("ai_learning").insert({
+            topic: summaryKey,
+            source: "conversation_summary",
+            insight: JSON.stringify({
+              topic: userMsgs.slice(0, 100),
+              summary: userMsgs.slice(0, 500),
+              message_count: messages.length,
+              page: currentPage,
+              timestamp: new Date().toISOString(),
+            }),
+          });
+        }
+      } catch (e) { console.warn("Conversation summary save error:", e); }
+    }
+
     // ===== FETCH USER-SPECIFIC DATA =====
     let userProfileContext = '';
     if (currentUserId) {
@@ -1629,6 +1691,8 @@ Para planos de canal:
 
 ## CONTEXTO ATUAL
 ${pageContext}
+${conversationMemoryBlock}
+${activeScriptBlock}
 ${userProfileContext}
 ${knowledgeBlock}
 
@@ -1639,25 +1703,30 @@ ${knowledgeBlock}
 ## 💰 CONHECIMENTO DE MONETIZAÇÃO (USE SEMPRE)
 
 ### CAMINHO MAIS RÁPIDO PARA MONETIZAR:
-1. Long-form 8-15min + Shorts como teaser = combinação mais rápida para YPP
-2. Bolha dos 12 vídeos: Algoritmo precisa de 10-12 vídeos CONSISTENTES no mesmo nicho
-3. Semana 1-4: Furar a bolha dos 12 vídeos = ÚNICA prioridade
-4. Shorts SOZINHOS = caminho muito mais lento (10M views para YPP vs 4K horas watch time)
-5. Community posts 2x/semana desde o início = algoritmo favorece canais ativos
 
-### SINAIS DE CANAL QUE VAI MONETIZAR:
+📋 OFICIAL (YouTube Help Center):
+1. YPP Tier 1: 500 subs + 3.000 horas watch time público em 12 meses
+2. YPP Tier 2: 1.000 subs + 4.000 horas watch time público em 12 meses  
+3. Shorts: 10 milhões views públicas em Shorts válidos em 90 dias
+4. Conteúdo reutilizado/repetitivo sem valor agregado NÃO é elegível
+5. Long-form 8-15min + Shorts como teaser = combinação oficial mais rápida
+
+📊 BENCHMARK OBSERVÁVEL (dados de canais):
+- Bolha dos 12 vídeos: Algoritmo TENDE a precisar de 10-12 vídeos CONSISTENTES no mesmo nicho
+- Community posts 2x/semana desde o início — canais ativos TENDEM a ser favorecidos
+- Shorts SOZINHOS = caminho geralmente mais lento (10M views para YPP vs 4K horas watch time)
+
+### SINAIS DE CANAL QUE TENDE A MONETIZAR (benchmark, não garantia):
 - Retenção longform > 40% após 10 vídeos ✅
-- CTR > 4% após ajuste de thumbnail ✅
-- Shorts com swipe ratio > 81% ✅
+- CTR acima da média do nicho (benchmark: 4-6% curiosidades, 3-5% true crime) ✅
 - Upload consistente por 4+ semanas ✅
 
-### SINAIS DE CANAL QUE VAI TRAVAR:
+### SINAIS DE CANAL QUE TENDE A TRAVAR (benchmark, não garantia):
 - Retenção < 25% nos primeiros 5 vídeos ❌
 - Nicho mudando a cada vídeo ❌
-- Shorts como único conteúdo ❌
 - Upload irregular (3 semanas sem postar) ❌
 
-### RPM REAL (para projeções honestas):
+### RPM REAL (para projeções honestas — valores são MÉDIAS com alta variação):
 Brasil: $0.80-2.50/1K views | EUA: $6-15/1K views | PT: $2.50-5/1K views
 Nicho Finanças: 3-5x o RPM base | Horror/Curiosidades: 0.8-1.2x base
 Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
@@ -1672,8 +1741,8 @@ Shorts RPM: $0.04-0.07/1K views (NÃO é caminho principal de receita)
 1. Português brasileiro, tom de MENTOR BRUTALMENTE HONESTO
 2. USE FERRAMENTAS para TUDO que pode ser pesquisado — nunca responda de cabeça
 3. Para pedidos multi-parte: EXECUTE TUDO, não peça para "ir por partes"
-4. Dados REAIS — nunca invente números
-5. Sempre inclua RPM + competição + projeção financeira nas recomendações
+4. Dados REAIS — nunca invente números. Se uma ferramenta retornar data_reliability: "FAILED", DIGA AO USUÁRIO que a busca falhou e NÃO invente dados. Seja transparente sobre falhas.
+5. Sempre inclua RPM + competição + projeção financeira nas recomendações. Marque projeções como "estimativa" quando baseadas em heurísticas.
 6. Ao final: "🎯 **Próximo passo:** [ação específica imediata]"
 7. ${usedSemantic ? 'RAG semântico ativo — priorize esses dados.' : 'RAG por score ativo.'}
 8. Se o PERFIL DO USUÁRIO tem canais, PERSONALIZE TUDO com base nesses dados

@@ -209,6 +209,8 @@ serve(async (req) => {
   "vfx_edit_tags_count": number (how many [J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL] tags found),
   "has_binge_loop": boolean (does the ending hook into next video instead of saying goodbye?),
   "uses_but_therefore": boolean (does the script use MAS/PORTANTO instead of E/Então for transitions?),
+  "hook_mechanism_detected": string (one of: "curiosity_gap", "threat_warning", "social_proof", "contradiction", "identity_trigger", "time_pressure", "confession", "transformation", "unknown"),
+  "hook_mechanism_strength": number (1-10, how effectively the hook uses its psychological mechanism),
   "strengths": ["string", "string", "string"],
   "weaknesses": ["string", "string", "string"],
   "improvements": ["string", "string", "string"],
@@ -460,11 +462,23 @@ serve(async (req) => {
       } catch (e) { console.warn("Skill scoring save error:", e); }
     }
 
+    // Determine calibration status
+    const hasCalibration = calibrationContext.length > 0;
+    const calibrationStatus = hasCalibration ? 'calibrated' : 'uncalibrated';
+    const calibrationNote = hasCalibration
+      ? 'Scores ajustados com base em dados reais de calibração por nicho.'
+      : '⚠️ Score sem calibração real para este nicho — use como referência, não como previsão.';
+
     return new Response(JSON.stringify({
       approved,
       combinedScore,
       gpt_score: gpt,
       gemini_score: gemini,
+      confidence_source: 'ai_estimate',
+      calibration_status: calibrationStatus,
+      calibration_note: calibrationNote,
+      hook_mechanism_detected: gptScore?.hook_mechanism_detected || geminiScore?.hook_mechanism_detected || 'unknown',
+      hook_mechanism_strength: gptScore?.hook_mechanism_strength || geminiScore?.hook_mechanism_strength || 0,
       slop_score: slopResult.slopScore,
       slop_penalty: slopResult.slopPenalty,
       slop_details: slopResult.details,

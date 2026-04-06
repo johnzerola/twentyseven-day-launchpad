@@ -379,9 +379,17 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
         },
       }); } catch { /* non-blocking */ }
 
+      // Add epistemic honesty labels to each title
+      const labeledTitles = (parsed.titles || []).map((t: any) => ({
+        ...t,
+        ctr_source: 'ai_estimate',
+        ctr_calibration_note: 'CTR estimado pela IA sem calibração por nicho/idioma/canal — use como referência relativa.',
+      }));
+
       return new Response(JSON.stringify({
-        titles: parsed.titles,
+        titles: labeledTitles,
         competitor_analysis: parsed.competitor_analysis,
+        confidence_source: 'ai_estimate',
         research: {
           competitors_analyzed: competitorBlock ? true : false,
           brave_trends_used: braveBlock ? true : false,

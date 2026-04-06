@@ -236,6 +236,42 @@ Return as JSON array: [{"pattern": "insight description in PT-BR", "confidence":
     const { error: upsertError } = await sb.from("user_content_memory").upsert(memoryData, { onConflict: "user_id" });
     if (upsertError) console.error("Upsert error:", upsertError);
 
+    // ═══ HOOK FEEDBACK LOOP: Feed real performance back into hook_library ═══
+    try {
+      for (const link of (links || [])) {
+        if (!link.avg_retention_pct || !link.hook_text) continue;
+        
+        if (link.avg_retention_pct >= 60) {
+          // High-performing hook → upsert to hook_library with real data
+          await sb.from("hook_library").upsert({
+            hook_text: link.hook_text.slice(0, 500),
+            hook_type: link.hook_type || 'unknown',
+            niche: link.niche || topNiche || 'general',
+            retention_score: Math.round(link.avg_retention_pct / 10),
+            source: 'user_real_data',
+          }, { onConflict: 'hook_text' }).then(() => {
+            console.log(`[HOOK-FEEDBACK] Upserted high-performing hook (${link.avg_retention_pct}% retention)`);
+          });
+        } else if (link.avg_retention_pct < 30) {
+          // Underperforming hook → log to ai_learning
+          await sb.from("ai_learning").insert({
+            topic: `underperforming_hook_${Date.now()}`,
+            source: 'hook_performance_feedback',
+            insight: JSON.stringify({
+              hook_text: link.hook_text?.slice(0, 300),
+              hook_type: link.hook_type,
+              niche: link.niche || topNiche,
+              retention_pct: link.avg_retention_pct,
+              views: link.views_30d || link.views_7d || 0,
+              verdict: 'underperforming',
+              timestamp: new Date().toISOString(),
+            }),
+          });
+          console.log(`[HOOK-FEEDBACK] Logged underperforming hook (${link.avg_retention_pct}% retention)`);
+        }
+      }
+    } catch (e) { console.warn("Hook feedback loop error:", e); }
+
     return new Response(JSON.stringify({
       success: true,
       source: hasLinkData ? "script_performance_link" : perfData?.length ? "video_performance" : "scripts_and_projects",
