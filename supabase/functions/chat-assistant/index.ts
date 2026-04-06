@@ -586,12 +586,12 @@ async function executeTool(
       const text = await resp.text();
       if (!resp.ok) {
         console.error(`Tool ${fnName} HTTP ${resp.status}:`, text.slice(0, 500));
-        return { error: `HTTP ${resp.status}`, details: text.slice(0, 300) };
+        return { error: `HTTP ${resp.status}`, details: text.slice(0, 300), data_reliability: "FAILED" };
       }
       try { return JSON.parse(text); } catch { return { raw: text.slice(0, 3000) }; }
     } catch (e: any) {
       console.error(`Tool ${fnName} error:`, e.message);
-      return { error: e.message };
+      return { error: e.message, data_reliability: "FAILED" };
     }
   };
 
@@ -1281,6 +1281,68 @@ serve(async (req) => {
     const { messages, currentPage, mode, onboardingData, conversationId } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+
+    // ===== CONVERSATION MEMORY: Load last 3 conversation summaries =====
+    let conversationMemoryBlock = '';
+    try {
+      const { data: pastSummaries } = await sb.from("ai_learning")
+        .select("topic, insight, created_at")
+        .eq("source", "conversation_summary")
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (pastSummaries?.length) {
+        conversationMemoryBlock = `\n## 🧠 MEMÓRIA DE CONVERSAS ANTERIORES (${pastSummaries.length} sessões):\n` +
+          pastSummaries.map((s: any) => {
+            try {
+              const data = JSON.parse(s.insight);
+              return `- **${data.topic || s.topic}** (${new Date(s.created_at).toLocaleDateString('pt-BR')}): ${data.summary || data.decisions || ''}`;
+            } catch { return `- ${s.topic}: ${(s.insight || '').slice(0, 200)}`; }
+          }).join('\n');
+      }
+    } catch (e) { console.warn("Conversation memory fetch error:", e); }
+
+    // ===== ACTIVE SCRIPT CONTEXT: Load when on /scripts page =====
+    let activeScriptBlock = '';
+    if (currentPage === '/scripts' && currentUserId) {
+      try {
+        const { data: recentScript } = await sb.from("saved_scripts" as any)
+          .select("topic, style, niche, hook_text, script_text, created_at")
+          .eq("user_id", currentUserId)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (recentScript) {
+          const scriptText = (recentScript as any).script_text || '';
+          activeScriptBlock = `\n## ✍️ ROTEIRO EM EDIÇÃO (contexto ativo):\n- Tópico: ${(recentScript as any).topic || '?'}\n- Estilo: ${(recentScript as any).style || '?'}\n- Nicho: ${(recentScript as any).niche || '?'}\n- Hook: ${((recentScript as any).hook_text || '').slice(0, 200)}\n- Primeiros 500 chars: ${scriptText.slice(0, 500)}`;
+        }
+      } catch (e) { console.warn("Active script fetch error:", e); }
+    }
+
+    // ===== SAVE CONVERSATION SUMMARY (after 10+ messages in a conversation) =====
+    if (conversationId && messages?.length >= 10) {
+      try {
+        const userMsgs = messages.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' | ');
+        const summaryKey = `conv_summary:${conversationId}`;
+        const { data: existing } = await sb.from("ai_learning")
+          .select("id")
+          .eq("topic", summaryKey)
+          .eq("source", "conversation_summary")
+          .maybeSingle();
+        if (!existing) {
+          await sb.from("ai_learning").insert({
+            topic: summaryKey,
+            source: "conversation_summary",
+            insight: JSON.stringify({
+              topic: userMsgs.slice(0, 100),
+              summary: userMsgs.slice(0, 500),
+              message_count: messages.length,
+              page: currentPage,
+              timestamp: new Date().toISOString(),
+            }),
+          });
+        }
+      } catch (e) { console.warn("Conversation summary save error:", e); }
+    }
 
     // ===== FETCH USER-SPECIFIC DATA =====
     let userProfileContext = '';
