@@ -808,9 +808,15 @@ Como o canal não tem rosto, o ritmo depende 100% da edição. INSIRA tags de ed
 
 Insira pelo menos 5 tags VFX distribuídas pelo roteiro nos momentos de maior impacto.
 
-═══ NARRATOR ARCHETYPE (PERSONA NARRATIVA) ═══
+═══ NARRATOR ARCHETYPE (PERSONA NARRATIVA — 6 ARQUÉTIPOS) ═══
 ${nicheLC.includes('crime') || nicheLC.includes('mistério') || nicheLC.includes('conspiração') || nicheLC.includes('terror') ? 
 'PERSONA ATIVA: O Investigador — Tom denso, pausas dramáticas, frases curtas, foco em detalhes lógicos. Linguagem forense: "as evidências indicam", "o padrão se repete". Cada dado é uma evidência sob análise.' :
+nicheLC.includes('escândalo') || nicheLC.includes('política') || nicheLC.includes('documentário') || styleLC.includes('documentário') ?
+'PERSONA ATIVA: O Jornalista Sombrio — Tom sério e factual, com gravidade na voz. Revelações graduais — cada fato mais pesado que o anterior. Cite fontes: "documentos internos mostram", "segundo fontes próximas". Credibilidade como arma de retenção.' :
+nicheLC.includes('guerra') || nicheLC.includes('desastre') || nicheLC.includes('império') || nicheLC.includes('épico') || styleLC.includes('cinematográfico') ?
+'PERSONA ATIVA: O Narrador Cinematográfico — Voz GRANDIOSA, construção de tensão longa, cada frase é um frame. Pausas longas antes de revelações. Cenários IMAX: escala, luz, som, textura. O espectador deve VISUALIZAR como filme de $200M.' :
+nicheLC.includes('biologia') || nicheLC.includes('física') || nicheLC.includes('química') || nicheLC.includes('espaço') || nicheLC.includes('astronomia') || (nicheLC.includes('ciência') && !nicheLC.includes('curiosidades')) ?
+'PERSONA ATIVA: O Cientista Curioso — Tom entusiasmado, surpreso, quase infantil na maravilha. Simplifica complexidade com analogias do cotidiano. "Imagine que cada célula fosse uma cidade...". Dados específicos que chocam. Humor geek natural.' :
 nicheLC.includes('história') || nicheLC.includes('mitologia') || nicheLC.includes('folclore') || nicheLC.includes('superação') || nicheLC.includes('emocionante') ?
 'PERSONA ATIVA: O Sábio — Tom acolhedor, ritmo pausado mas envolvente. Voz de contador de causos. Metáforas da natureza. Faça o espectador SENTIR saudade de algo que nunca viveu.' :
 'PERSONA ATIVA: O Hacker de Informação — Ritmo FRENÉTICO. Humor ácido. Cada frase carrega 2-3 informações. Zero enrolação. Dopamina a cada 10 segundos. Analogias absurdas mas precisas.'}
