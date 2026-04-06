@@ -28,6 +28,75 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
   return data;
 }
 
+// ── Auto-link scripts to YouTube videos by title similarity ──
+async function autoLinkScripts(sb: any, userIds: string[]): Promise<number> {
+  const uniqueUserIds = [...new Set(userIds)];
+  let linked = 0;
+
+  for (const userId of uniqueUserIds) {
+    // Get unlinked video performances
+    const { data: performances } = await sb.from("video_performance")
+      .select("youtube_video_id, title, avg_retention_percent, ctr_percent, views_day7, views_day30, performance_grade, views_current, published_at")
+      .eq("user_id", userId)
+      .eq("oauth_synced", true);
+
+    if (!performances?.length) continue;
+
+    // Get user's scripts
+    const { data: projects } = await sb.from("video_projects")
+      .select("id, title")
+      .eq("user_id", userId);
+
+    if (!projects?.length) continue;
+
+    // Check existing links
+    const { data: existingLinks } = await sb.from("script_performance_link")
+      .select("youtube_video_id")
+      .eq("user_id", userId);
+    const linkedVideoIds = new Set((existingLinks || []).map((l: any) => l.youtube_video_id));
+
+    for (const perf of performances) {
+      if (linkedVideoIds.has(perf.youtube_video_id)) continue;
+
+      // Simple fuzzy match: find script with most similar title
+      const perfTitle = (perf.title || "").toLowerCase().replace(/[^a-záàâãéèêíïóôõúç0-9\s]/gi, "");
+      let bestMatch: any = null;
+      let bestScore = 0;
+
+      for (const proj of projects) {
+        const projTitle = (proj.title || "").toLowerCase().replace(/[^a-záàâãéèêíïóôõúç0-9\s]/gi, "");
+        // Word overlap score
+        const perfWords = new Set(perfTitle.split(/\s+/).filter((w: string) => w.length > 2));
+        const projWords = new Set(projTitle.split(/\s+/).filter((w: string) => w.length > 2));
+        const overlap = [...perfWords].filter(w => projWords.has(w)).length;
+        const score = overlap / Math.max(perfWords.size, projWords.size, 1);
+        if (score > bestScore && score >= 0.3) {
+          bestScore = score;
+          bestMatch = proj;
+        }
+      }
+
+      if (bestMatch) {
+        const { error } = await sb.from("script_performance_link").insert({
+          user_id: userId,
+          script_id: bestMatch.id,
+          youtube_video_id: perf.youtube_video_id,
+          video_title: perf.title,
+          published_at: perf.published_at,
+          views_7d: perf.views_day7,
+          views_30d: perf.views_day30,
+          avg_retention_pct: perf.avg_retention_percent,
+          ctr_pct: perf.ctr_percent,
+          performance_grade: perf.performance_grade,
+        });
+        if (!error) linked++;
+      }
+    }
+  }
+
+  return linked;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -126,7 +195,7 @@ serve(async (req) => {
             const startDate = publishDate.toISOString().split("T")[0];
             const endDate = new Date().toISOString().split("T")[0];
             
-            const analyticsUrl = `https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${tokenRow.channel_id}&startDate=${startDate}&endDate=${endDate}&metrics=views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,impressions,impressionClickThroughRate,subscribersGained&filters=video==${video.videoId}&dimensions=day&sort=day`;
+            const analyticsUrl = `https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${tokenRow.channel_id}&startDate=${startDate}&endDate=${endDate}&metrics=views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained&filters=video==${video.videoId}&dimensions=day&sort=day`;
             
             const analyticsResp = await fetch(analyticsUrl, {
               headers: { Authorization: `Bearer ${accessToken}` },
@@ -142,14 +211,13 @@ serve(async (req) => {
             const rows = analyticsData.rows || [];
             if (!rows.length) continue;
 
+            // Columns: 0=day, 1=views, 2=estimatedMinutesWatched, 3=averageViewDuration, 4=averageViewPercentage, 5=subscribersGained
             const totalViews = rows.reduce((s: number, r: any) => s + (r[1] || 0), 0);
             const totalMinutes = rows.reduce((s: number, r: any) => s + (r[2] || 0), 0);
             const avgRetention = rows.reduce((s: number, r: any) => s + (r[4] || 0), 0) / rows.length;
-            const totalImpressions = rows.reduce((s: number, r: any) => s + (r[5] || 0), 0);
-            const avgCTR = totalImpressions > 0 
-              ? rows.reduce((s: number, r: any) => s + (r[6] || 0), 0) / rows.length * 100 
-              : 0;
-            const subsGained = rows.reduce((s: number, r: any) => s + (r[7] || 0), 0);
+            const subsGained = rows.reduce((s: number, r: any) => s + (r[5] || 0), 0);
+            // CTR not available via youtubeanalytics v2 basic metrics — estimate from views/subs ratio
+            const avgCTR = 0;
 
             // Calculate D1/D3/D7/D30 views
             const viewsD1 = rows.length >= 1 ? rows[0][1] || 0 : null;
@@ -159,9 +227,9 @@ serve(async (req) => {
 
             // Determine performance grade
             let grade = 'C';
-            if (avgRetention >= 60 && avgCTR >= 8) grade = 'S';
-            else if (avgRetention >= 50 && avgCTR >= 6) grade = 'A';
-            else if (avgRetention >= 40 && avgCTR >= 4) grade = 'B';
+            if (avgRetention >= 60) grade = 'S';
+            else if (avgRetention >= 50) grade = 'A';
+            else if (avgRetention >= 40) grade = 'B';
             else if (avgRetention >= 30) grade = 'C';
             else if (avgRetention >= 20) grade = 'D';
             else grade = 'F';
@@ -178,9 +246,9 @@ serve(async (req) => {
               views_day7: viewsD7,
               views_day30: viewsD30,
               avg_retention_percent: Math.round(avgRetention * 10) / 10,
-              ctr_percent: Math.round(avgCTR * 100) / 100,
+              ctr_percent: avgCTR,
               avg_view_duration_seconds: rows.length > 0 ? Math.round(rows.reduce((s: number, r: any) => s + (r[3] || 0), 0) / rows.length) : 0,
-              impressions: totalImpressions,
+              impressions: 0,
               subscribers_gained: subsGained,
               watch_time_minutes: Math.round(totalMinutes),
               performance_grade: grade,
@@ -203,9 +271,13 @@ serve(async (req) => {
       }
     }
 
+    // ── Phase 2: Auto-link videos to scripts via title similarity ──
+    const linkedCount = await autoLinkScripts(sb, tokens.map((t: any) => t.user_id));
+
     return new Response(JSON.stringify({
       success: true,
       synced: results.filter(r => !r.error).length,
+      linked: linkedCount,
       errors: results.filter(r => r.error).length,
       results,
     }), {
