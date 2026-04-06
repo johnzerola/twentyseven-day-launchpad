@@ -523,8 +523,7 @@ const TOOL_TIMEOUTS_MS: Record<string, number> = {
   "youtube_video_stats": 10000,
   "youtube_search_api": 10000,
   "perplexity-research": 20000,
-  "claude_deep_analysis": 20000,
-  "gpt_expert_analysis": 15000,
+  "expert_analysis": 15000,
 };
 
 const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
