@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check, Clock, TrendingUp, Target, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -6,14 +6,14 @@ import { motion } from 'framer-motion';
 
 const plans = [
   {
-    key: 'free',
-    features: ['1 canal', 'Plano 27 dias básico', '3 roteiros/mês', 'Busca limitada'],
-    featuresEn: ['1 channel', 'Basic 27-day plan', '3 scripts/month', 'Limited search'],
+    key: 'starter',
+    features: ['1 canal', '12 vídeos/mês', '20 conversas Dotti', 'Busca básica de nichos', 'Narração IA (Google TTS)'],
+    featuresEn: ['1 channel', '12 videos/month', '20 Dotti chats', 'Basic niche search', 'AI narration (Google TTS)'],
   },
   {
     key: 'pro',
-    features: ['3 canais', 'Plano 27 dias completo', '30 roteiros/mês', 'Busca ilimitada', 'Narração IA', 'Análise de concorrentes'],
-    featuresEn: ['3 channels', 'Full 27-day plan', '30 scripts/month', 'Unlimited search', 'AI narration', 'Competitor analysis'],
+    features: ['3 canais', '3+ vídeos/semana', 'TTS ilimitado', 'Análise de concorrentes', 'Dotti ilimitada', 'Veo3 prompts'],
+    featuresEn: ['3 channels', '3+ videos/week', 'Unlimited TTS', 'Competitor analysis', 'Unlimited Dotti', 'Veo3 prompts'],
     popular: true,
   },
   {
@@ -21,6 +21,12 @@ const plans = [
     features: ['Canais ilimitados', 'Tudo do Pro', 'Roteiros ilimitados', 'API access', 'Suporte prioritário', 'White label'],
     featuresEn: ['Unlimited channels', 'Everything in Pro', 'Unlimited scripts', 'API access', 'Priority support', 'White label'],
   },
+];
+
+const timelineSteps = [
+  { icon: Target, key: 'm1', color: 'text-blue-400' },
+  { icon: TrendingUp, key: 'm2', color: 'text-yellow-400' },
+  { icon: Check, key: 'm3', color: 'text-green-400' },
 ];
 
 export const PricingSection = () => {
@@ -74,6 +80,44 @@ export const PricingSection = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Monetization Timeline */}
+        <motion.div
+          className="mt-20 max-w-3xl mx-auto glass rounded-2xl p-8"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Clock className="w-6 h-6 text-primary" />
+            <h3 className="text-2xl font-bold font-['Space_Grotesk']">{t('pricing.timeline.title')}</h3>
+          </div>
+          <p className="text-muted-foreground mb-6">{t('pricing.timeline.subtitle')}</p>
+
+          <div className="space-y-4">
+            {timelineSteps.map((step, i) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.key} className="flex gap-4 items-start">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center`}>
+                      <Icon className={`w-4 h-4 ${step.color}`} />
+                    </div>
+                    {i < timelineSteps.length - 1 && (
+                      <div className="w-px h-6 bg-border mt-1" />
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground/80 pt-1">{t(`pricing.timeline.${step.key}`)}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+            <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-muted-foreground">{t('pricing.timeline.note')}</p>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
