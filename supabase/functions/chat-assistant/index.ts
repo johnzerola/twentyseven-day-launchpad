@@ -1631,12 +1631,6 @@ Para cada análise:
 3. **Ação concreta** (faça X agora)
 4. **Timeline** (quando esperar resultados)
 
-## CONTEXTO ATUAL
-${pageContext}
-${conversationMemoryBlock}
-${activeScriptBlock}
-
-## CONTEXTO ATUAL
 ${pageContext}
 ${conversationMemoryBlock}
 ${activeScriptBlock}
