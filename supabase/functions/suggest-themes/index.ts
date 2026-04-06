@@ -23,6 +23,33 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ═══ FETCH USER REFERENCE CHANNELS (if authenticated) ═══
+    let referenceContext = '';
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "");
+    if (token && token !== Deno.env.get("SUPABASE_ANON_KEY")) {
+      try {
+        const { data: { user } } = await sb.auth.getUser(token);
+        if (user) {
+          const { data: userRefs } = await sb.from("user_reference_channels")
+            .select("channel_name, role, latest_intel")
+            .eq("user_id", user.id);
+          if (userRefs && userRefs.length > 0) {
+            const refsWithIntel = userRefs.filter((r: any) => r.latest_intel?.title_patterns?.length > 0);
+            if (refsWithIntel.length > 0) {
+              referenceContext = `\n🎯 CANAIS DE REFERÊNCIA DO USUÁRIO (MODELAR com base neles):\n${refsWithIntel.map((r: any) => {
+                const intel = r.latest_intel;
+                const titles = (intel.title_patterns || []).slice(0, 3).join(', ');
+                const hooks = (intel.hook_types || []).slice(0, 2).join(', ');
+                const recent = (intel.recent_videos || []).slice(0, 3).map((v: any) => `"${v.title}" (${(v.views || 0).toLocaleString()} views)`).join('; ');
+                return `• ${r.channel_name} [papel: ${r.role}]: Títulos=${titles} | Hooks=${hooks} | Formato=${intel.dominant_format || 'N/A'} | Recentes: ${recent}${intel.format_shift && intel.format_shift !== 'none' ? ` | ⚠️ Mudança: ${intel.format_shift}` : ''}`;
+              }).join('\n')}\n\nIMPORTANTE: Use os padrões destes canais de referência como MODELO para gerar ideias. Adapte os padrões de título, hooks e formato ao nicho do usuário.`;
+            }
+          }
+        }
+      } catch (e) { console.error("Error fetching user refs:", e); }
+    }
+
     // ═══ FETCH INTELLIGENCE (parallel) — now includes real-time freshness ═══
     const fetchPromises: Promise<any>[] = [
       // 0: Channel intelligence
