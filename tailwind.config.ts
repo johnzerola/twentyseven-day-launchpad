@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        display: ['Bricolage Grotesque', 'sans-serif'],
+        sans: ['DM Sans', 'sans-serif'],
+        display: ['Syne', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -74,10 +74,6 @@ export default {
         money: {
           green: "hsl(var(--money-green))",
           gold: "hsl(var(--money-gold))",
-        },
-        cyan: {
-          400: "#22d3ee",
-          500: "#06b6d4",
         },
       },
       borderRadius: {
