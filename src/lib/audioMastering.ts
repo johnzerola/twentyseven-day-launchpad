@@ -1,5 +1,10 @@
 /**
- * Studio-Grade Audio Mastering Engine v5 — Superior to Adobe Podcast
+ * Audio Processing Pipeline v5 — Web Audio API
+ * 
+ * DISCLAIMER: Processamento via Web Audio API no navegador.
+ * Para áudios >10min, recomendamos processamento server-side
+ * para evitar artefatos de memória e limitações de buffer.
+ * Resultados podem variar entre navegadores (Safari usa 32-bit internamente).
  * 
  * Full DSP Pipeline:
  *  1. Intelligent Noise Profiling (adaptive floor detection)

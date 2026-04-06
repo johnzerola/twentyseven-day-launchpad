@@ -163,6 +163,61 @@ serve(async (req) => {
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // PAIRED LOSERS — Find underperforming videos from same channels
+    // ═══════════════════════════════════════════════════════════════
+    const YOUTUBE_API_KEY_FOR_LOSERS = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
+    if (YOUTUBE_API_KEY_FOR_LOSERS && outliers.length > 0) {
+      try {
+        // Get unique channels from top 5 outliers
+        const topChannelIds = [...new Set(outliers.slice(0, 5).map(o => o.channel_id))].slice(0, 3);
+        
+        for (const chId of topChannelIds) {
+          // Get channel's uploads playlist
+          const chResp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails,statistics&id=${chId}&key=${YOUTUBE_API_KEY_FOR_LOSERS}`);
+          const chData = await chResp.json();
+          const uploadsId = chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+          const totalViews = parseInt(chData.items?.[0]?.statistics?.viewCount || "0");
+          const totalVids = parseInt(chData.items?.[0]?.statistics?.videoCount || "1");
+          const channelAvg = totalVids > 0 ? Math.round(totalViews / totalVids) : 0;
+          if (!uploadsId) continue;
+
+          // Get recent videos
+          const plResp = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=15&key=${YOUTUBE_API_KEY_FOR_LOSERS}`);
+          const plData = await plResp.json();
+          const vidIds = (plData.items || []).map((i: any) => i.snippet?.resourceId?.videoId).filter(Boolean);
+          if (!vidIds.length) continue;
+
+          const vResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${vidIds.join(",")}&key=${YOUTUBE_API_KEY_FOR_LOSERS}`);
+          const vData = await vResp.json();
+
+          // Find losers: videos BELOW channel average
+          const losers = (vData.items || [])
+            .map((v: any) => ({
+              title: v.snippet?.title,
+              views: parseInt(v.statistics?.viewCount || "0"),
+              videoId: v.id,
+            }))
+            .filter((v: any) => v.views < channelAvg && v.views > 0)
+            .sort((a: any, b: any) => a.views - b.views)
+            .slice(0, 3);
+
+          // Attach paired_losers to matching outliers
+          for (const ol of outliers.filter(o => o.channel_id === chId)) {
+            ol.paired_losers = losers.map((l: any) => ({
+              title: l.title,
+              views: l.views,
+              delta_vs_outlier: ol.views - l.views,
+              delta_vs_avg: channelAvg - l.views,
+            }));
+            ol.channel_avg_views = channelAvg;
+          }
+        }
+      } catch (e) {
+        console.warn("Paired losers fetch error:", e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // CONTENT DNA EXTRACTION — Auto-extract from top outliers
     // ═══════════════════════════════════════════════════════════════
     let dnaResults: any[] = [];
@@ -175,7 +230,8 @@ serve(async (req) => {
             `${i+1}. "${o.video_title}" — ${o.channel_name} (${o.subscribers} subs, ${o.views} views, ${o.multiplier}x, engagement: ${o.engagement_rate}%)`
           ).join("\n");
 
-          const dnaRes = await fetch(AI_URL, {
+          const AI_URL_DNA = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+          const dnaRes = await fetch(AI_URL_DNA, {
             method: "POST",
             headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({

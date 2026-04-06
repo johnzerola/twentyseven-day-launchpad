@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 // ═══════════════════════════════════════════════════════════
 // BACKTESTING ENGINE

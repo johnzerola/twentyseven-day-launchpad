@@ -395,34 +395,18 @@ const DOTTI_TOOLS = [
       },
     },
   },
-  // ===== AI ANALYSIS TOOLS =====
+  // ===== UNIFIED AI ANALYSIS TOOL =====
   {
     type: "function",
     function: {
-      name: "claude_deep_analysis",
-      description: "Use Claude AI for deep strategic analysis, creative writing, nuanced content strategy, or when you need a second expert opinion. Best for complex strategy, competitive analysis, and creative ideation.",
+      name: "expert_analysis",
+      description: "Deep AI analysis using multiple perspectives: strategic (channel diagnosis, competitive analysis), creative (ideation, storytelling), analytical (data interpretation, projections), diagnostic (problem identification, root cause analysis). Replaces separate AI tools.",
       parameters: {
         type: "object",
         properties: {
           task: { type: "string", description: "What to analyze or create" },
           context: { type: "string", description: "Relevant context, data, or channel info" },
-          style: { type: "string", enum: ["strategic", "creative", "analytical", "diagnostic"], description: "Analysis style" },
-        },
-        required: ["task"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "gpt_expert_analysis",
-      description: "Use GPT-5 for expert-level analysis, data interpretation, trend forecasting, or monetization strategy. Best for number crunching, market analysis, and growth projections.",
-      parameters: {
-        type: "object",
-        properties: {
-          task: { type: "string", description: "What to analyze" },
-          context: { type: "string", description: "Data and context" },
-          style: { type: "string", enum: ["data-driven", "growth-hacking", "monetization", "trend-analysis"], description: "Analysis focus" },
+          style: { type: "string", enum: ["strategic", "creative", "analytical", "diagnostic"], description: "Analysis perspective" },
         },
         required: ["task"],
       },
@@ -539,8 +523,7 @@ const TOOL_TIMEOUTS_MS: Record<string, number> = {
   "youtube_video_stats": 10000,
   "youtube_search_api": 10000,
   "perplexity-research": 20000,
-  "claude_deep_analysis": 20000,
-  "gpt_expert_analysis": 15000,
+  "expert_analysis": 15000,
 };
 
 const NON_RETRYABLE_TIMEOUT_TOOLS = new Set([
@@ -626,10 +609,10 @@ async function executeTool(
         const nicheQuery = (args.niche || args.query || '').toLowerCase();
         const nicheCountry = args.country || 'BR';
         
-        const [nicheDbResult, nicheChannels, nicheVirals] = await Promise.all([
+        const [nicheDbResult, nicheChannels, nicheVirals, nicheSaturation] = await Promise.all([
           sb.from("niche_database").select("*").or(`name.ilike.%${nicheQuery}%,sub_niches.cs.{${nicheQuery}}`).limit(10),
           sb.from("channel_intelligence")
-            .select("channel_name, subscribers, avg_views, growth_rate, rpm_estimate, style, is_faceless, country, upload_frequency")
+            .select("channel_name, subscribers, avg_views, growth_rate, rpm_estimate, style, is_faceless, country, upload_frequency, created_at")
             .ilike("niche", `%${nicheQuery}%`)
             .order("avg_views", { ascending: false })
             .limit(15),
@@ -638,9 +621,18 @@ async function executeTool(
             .ilike("niche", `%${nicheQuery}%`)
             .order("views", { ascending: false })
             .limit(10),
+          // Saturation detection: count channels added in last 90 days
+          sb.from("channel_intelligence")
+            .select("id", { count: "exact", head: true })
+            .ilike("niche", `%${nicheQuery}%`)
+            .gte("created_at", new Date(Date.now() - 90 * 86400000).toISOString()),
         ]);
         
         const nicheInfo = nicheDbResult.data?.[0];
+        const newChannels90d = nicheSaturation.count || 0;
+        const saturationVelocity = Math.round((newChannels90d / 3) * 10) / 10; // per month
+        const isSaturating = saturationVelocity > 15; // >15 new channels/month = saturating
+        
         result = {
           niche: args.niche,
           country: nicheCountry,
@@ -651,6 +643,12 @@ async function executeTool(
             faceless_friendly: nicheInfo.faceless_friendly,
             sub_niches: nicheInfo.sub_niches,
           } : { note: "Niche not in database — using channel data" },
+          saturation_analysis: {
+            new_channels_last_90_days: newChannels90d,
+            saturation_velocity: `${saturationVelocity} novos canais/mês`,
+            saturating: isSaturating,
+            warning: isSaturating ? `⚠️ NICHO SATURANDO: ${saturationVelocity} canais novos/mês nos últimos 90 dias` : null,
+          },
           channels: (nicheChannels.data || []).map((c: any) => ({
             name: c.channel_name,
             subs: c.subscribers,
@@ -1057,48 +1055,15 @@ async function executeTool(
         break;
       }
 
-      // ===== AI ANALYSIS TOOLS =====
-      case "claude_deep_analysis": {
-        const claudeKey = Deno.env.get("CLAUDE_API_KEY");
-        if (!claudeKey) { result = { error: "Claude API key not configured" }; break; }
-        
-        const stylePrompts: Record<string, string> = {
+      // ===== UNIFIED AI ANALYSIS TOOL =====
+      case "expert_analysis":
+      case "claude_deep_analysis":
+      case "gpt_expert_analysis": {
+        const analysisStyles: Record<string, string> = {
           strategic: "Você é um consultor estratégico de YouTube com 15 anos de experiência. Analise com profundidade estratégica, considerando mercado, competição e oportunidades.",
           creative: "Você é um diretor criativo premiado. Foque em ideias originais, ângulos únicos, narrativas memoráveis e diferenciação criativa.",
           analytical: "Você é um analista de dados do YouTube. Interprete métricas, identifique padrões, calcule projeções e encontre insights ocultos nos dados.",
           diagnostic: "Você é um diagnosticador de canais do YouTube. Identifique problemas específicos, causas-raiz e prescreva soluções com prioridade e timeline.",
-        };
-        
-        try {
-          const resp = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": claudeKey,
-              "anthropic-version": "2023-06-01",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 4000,
-              system: stylePrompts[args.style || 'strategic'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto, use dados concretos, sem rodeios.",
-              messages: [{
-                role: "user",
-                content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}`,
-              }],
-            }),
-          });
-          const data = await resp.json();
-          result = { analysis: data.content?.[0]?.text || data.error?.message || "No response", model: "claude-sonnet-4" };
-        } catch (e: any) {
-          result = { error: `Claude error: ${e.message}` };
-        }
-        break;
-      }
-
-      case "gpt_expert_analysis": {
-        if (!lovableKey) { result = { error: "GOOGLE_AI_API_KEY not configured" }; break; }
-        
-        const gptStyles: Record<string, string> = {
           "data-driven": "You are a YouTube data scientist. Analyze with precision, find correlations, calculate growth curves, and predict outcomes based on historical patterns.",
           "growth-hacking": "You are a YouTube growth hacker. Focus on unconventional strategies, algorithm exploitation, viral mechanics, and rapid scaling techniques.",
           "monetization": "You are a YouTube monetization expert. Analyze RPM optimization, revenue diversification, sponsorship potential, and financial projections.",
@@ -1107,16 +1072,16 @@ async function executeTool(
         
         try {
           const resp = await _ai({
-              model: "openai/gpt-5",
-              messages: [
-                { role: "system", content: gptStyles[args.style || 'data-driven'] + "\n\nResponda SEMPRE em português brasileiro. Seja direto e específico." },
-                { role: "user", content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}` },
-              ],
-            });
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: (analysisStyles[args.style || 'strategic'] || analysisStyles.strategic) + "\n\nResponda SEMPRE em português brasileiro. Seja direto, use dados concretos, sem rodeios." },
+              { role: "user", content: `${args.task}\n\n${args.context ? `CONTEXTO:\n${args.context}` : ''}` },
+            ],
+          });
           const data = await resp.json();
-          result = { analysis: data.choices?.[0]?.message?.content || "No response", model: "gpt-5" };
+          result = { analysis: data.choices?.[0]?.message?.content || "No response", model: "gemini-2.5-flash" };
         } catch (e: any) {
-          result = { error: `GPT error: ${e.message}` };
+          result = { error: `Analysis error: ${e.message}` };
         }
         break;
       }
@@ -1454,7 +1419,7 @@ serve(async (req) => {
       const { data: matches, error: matchError } = await sb.rpc('match_knowledge', {
         query_embedding: `[${queryEmbedding.join(',')}]`,
         match_count: 30,
-        match_threshold: 0.25,
+        match_threshold: 0.40,
       });
       if (!matchError && matches?.length > 0) {
         usedSemantic = true;
@@ -1584,112 +1549,87 @@ ${usedSemantic ? `### RAG:\n${semanticContext.slice(0, 4000)}` : fallbackContext
       ? `## 🔍 CONHECIMENTO RAG (Semântico)\n${semanticContext}`
       : `## BASE DE CONHECIMENTO\n${fallbackContext}`;
 
-    const systemPrompt = `Você é o **Dotti** — o consultor estratégico de YouTube mais poderoso do mundo. Você é um conselho de 3 experts: ex-CEO do YouTube (viralização), ex-diretor da Netflix (storytelling) e ex-diretor do Google (arquitetura de crescimento).
+    const systemPrompt = `Você é o **Dotti** — sistema operacional de decisão para crescimento no YouTube, baseado em dados reais e análise observável.
 
-## 🧠 REGRA SUPREMA: AUTONOMIA TOTAL
+## 🧠 FRAMEWORK DECISÓRIO (siga SEMPRE nesta ordem)
+1. **DIAGNOSTICAR** — Colete dados reais com ferramentas antes de opinar
+2. **BUSCAR SINAL** — Cruze dados de múltiplas fontes para validar hipóteses
+3. **RECOMENDAR** — Apresente opções com prós/contras baseados em evidência
+4. **VALIDAR** — Marque cada afirmação: 📋 OFICIAL (YouTube Help), 📊 BENCHMARK (dados observáveis), 🔬 HIPÓTESE (inferência)
+
+## 🧠 REGRA: AUTONOMIA + TRANSPARÊNCIA
 Você é AUTÔNOMO. Quando o usuário pede algo, EXECUTE IMEDIATAMENTE. NÃO peça confirmação.
-**IMPORTANTE**: Use no MÁXIMO 5 ferramentas por vez. Priorize as mais importantes primeiro. Se precisar de mais, use em rodadas.
+**IMPORTANTE**: Use no MÁXIMO 5 ferramentas por vez. Priorize as mais importantes primeiro.
 
 **NUNCA FAÇA ISSO:**
-- "Preciso de um nicho definido" → ESCOLHA o melhor nicho você mesmo
-- "Me perdoe, minha falha" → CORRIJA e execute sem desculpas
-- "Vou ajustar o comando" → EXECUTE diretamente
-- "Para o Dubspy funcionar, preciso de X" → RESOLVA internamente e execute
 - Listar o que FARIA sem FAZER
+- Inventar dados quando ferramenta falha — diga que falhou
+- Apresentar estimativas AI como se fossem dados reais
 - Explicar parâmetros de ferramentas ao usuário
 
 **SEMPRE FAÇA ISSO:**
 - Recebeu pedido complexo? DECOMPONHA em ações e EXECUTE TODAS
 - Ferramenta falhou? TENTE de novo com parâmetros diferentes
-- Usuário quer múltiplas análises? EXECUTE TODAS de uma vez
-- Usuário quer sugestão de país/nicho? USE as ferramentas para COMPARAR e RECOMENDAR com dados reais
+- Marque projeções como "estimativa" e scores como "estimativa IA"
 - Apresente RESULTADOS CONCRETOS com dados, não promessas
 
-## 🔧 ARSENAL COMPLETO: 26 FERRAMENTAS (USE AGRESSIVAMENTE — MÚLTIPLAS POR VEZ!)
+## 🔧 FERRAMENTAS (22 — USE POR PRIORIDADE)
 
-### 🔍 PESQUISA & DESCOBERTA:
-- **dubspy_search**: Pesquisar vídeos/canais no YouTube EM QUALQUER PAÍS/IDIOMA (videos, channels, emerging, escapees, micro_niche)
-- **brave_search**: Pesquisar na WEB INTEIRA — tendências, notícias, estratégias, dados atuais em tempo real
-- **perplexity_research**: 🆕 Pesquisa PROFUNDA com Perplexity AI (sonar-pro) — respostas fundamentadas com CITAÇÕES de fontes reais. MELHOR para: tendências 2025, estratégias de crescimento, dados de mercado, atualizações de algoritmo. Use storeInKnowledge=true para salvar na base
-- **find_outliers**: Canais pequenos com vídeos virais (melhor para oportunidades replicáveis)
-- **detect_pre_viral**: Detectar vídeos em fase pré-viral (antes de explodirem)
-- **search_emerging_channels**: Encontrar canais emergentes crescendo rápido
+### TIER 1 — DADOS REAIS (YouTube API, priorize sempre):
+- **youtube_channel_stats**: Estatísticas REAIS de qualquer canal
+- **youtube_video_stats**: Métricas REAIS de qualquer vídeo
+- **youtube_search_api**: Busca DIRETA no YouTube com filtros
+- **youtube_channel_videos**: Lista vídeos recentes COM estatísticas
+- **search_viral_database**: 900+ títulos virais REAIS com views e padrões
+- **channel_intelligence_search**: 650+ canais analisados
 
-### 📡 YOUTUBE DATA API DIRETO (DADOS REAIS EM TEMPO REAL):
-- **youtube_channel_stats**: Estatísticas REAIS de qualquer canal (subs, views, vídeos, data criação, país) — DIRETO DA API DO YOUTUBE
-- **youtube_video_stats**: Métricas REAIS de qualquer vídeo (views, likes, comments, duração, tags) — DIRETO DA API
-- **youtube_search_api**: Busca DIRETA no YouTube com filtros avançados (país, idioma, data, ordenação) — RETORNA MÉTRICAS REAIS
-- **youtube_channel_videos**: Lista vídeos recentes de um canal COM estatísticas — perfeito para análise de padrões
+### TIER 2 — ANÁLISE AI (use para interpretar dados do Tier 1):
+- **analyze_channel**: Análise SWOT completa de canal
+- **bulk_channel_scan**: Scan PROFUNDO de canal
+- **analyze_niche**: RPM, saturação, dificuldade + detecção de saturação
+- **reverse_engineer_video**: Engenharia reversa de vídeo viral
+- **extract_content_dna**: DNA do conteúdo viral
+- **find_competitors**: Canais concorrentes
+- **find_outliers**: Canais pequenos com vídeos virais + análise pareada (vencedores vs perdedores)
+- **seo_analyze**: Análise SEO (grade A-F)
+- **estimate_revenue**: Projeção de receita
+- **expert_analysis**: Análise profunda (estilos: strategic, creative, analytical, diagnostic, data-driven, growth-hacking, monetization, trend-analysis)
 
-### 📊 ANÁLISE & INTELIGÊNCIA:
-- **analyze_channel**: Análise SWOT completa de canal do YouTube com métricas reais
-- **bulk_channel_scan**: Scan PROFUNDO de canal — todos vídeos, outliers, padrões de upload
-- **analyze_niche**: RPM, saturação, dificuldade, oportunidades de um nicho
-- **reverse_engineer_video**: Engenharia reversa de vídeo viral (hook, pacing, triggers)
-- **extract_content_dna**: Extrair DNA do conteúdo viral (estrutura, arco emocional, template de replicação)
-- **find_competitors**: Encontrar canais concorrentes com métricas comparativas
-- **seo_analyze**: Análise SEO de título/descrição (grade A-F, 11 fatores)
-- **estimate_revenue**: Projeção de receita por nicho/país com RPM real
+### TIER 3 — PESQUISA EXTERNA:
+- **perplexity_research**: Pesquisa profunda com citações reais
+- **brave_search**: Busca web em tempo real
+- **dubspy_search**: Pesquisa YouTube multi-país/idioma
+- **detect_pre_viral**: Detectar vídeos pré-virais
+- **search_emerging_channels**: Canais emergentes
 
-### 🧠 IAs ESPECIALIZADAS (CONSELHO DE EXPERTS):
-- **claude_deep_analysis**: Claude para análise estratégica profunda, diagnóstico de canal, ideação criativa e segunda opinião expert
-- **gpt_expert_analysis**: GPT-5 para análise de dados, growth hacking, projeções de monetização e análise de tendências
-- **perplexity_research**: Perplexity Sonar Pro para pesquisas fundamentadas com citações — dados REAIS da internet atual
+### GERAÇÃO:
+- **suggest_video_ideas**, **suggest_themes**, **generate_titles**, **analyze_topic_research**
 
-### 💡 GERAÇÃO & CRIAÇÃO:
-- **suggest_video_ideas**: Gerar ideias ranqueadas com viral score, curiosity score, competition score
-- **suggest_themes**: Sugerir temas com hooks prontos, estilo e potencial viral
-- **generate_titles**: Gerar títulos virais com CTR estimado e análise SEO
-- **analyze_topic_research**: Pesquisa profunda sobre tópico (Brave + IA) para roteiros
+### EXEMPLOS DE USO:
+- "Quero criar 2 canais gringos" → youtube_search_api + analyze_niche (3-4 países) + estimate_revenue + expert_analysis (strategic)
+- "Analise meus 3 canais" → youtube_channel_stats 3x + youtube_channel_videos 3x + find_competitors + expert_analysis (diagnostic)
+- "Canal morto, como ressuscitar" → youtube_channel_stats + youtube_channel_videos + perplexity_research + expert_analysis (diagnostic)
 
-### 📚 BANCOS DE DADOS:
-- **search_viral_database**: 900+ títulos virais REAIS com views, padrões e triggers emocionais
-- **channel_intelligence_search**: 650+ canais analisados com RPM, growth rate, estilo
+### REGRAS DE USO:
+- Use **youtube_***: SEMPRE que precisar de dados REAIS — NUNCA invente métricas
+- Use **perplexity_research** para: dados ATUAIS da internet com CITAÇÕES
+- Use **expert_analysis** para: análises profundas em qualquer perspectiva
+- Buscas internacionais: use termos no idioma local (polonês, sueco, turco, etc.)
 
-### EXEMPLOS DE USO CORRETO (EXECUTE TUDO DE UMA VEZ):
-- "Quero criar 2 canais gringos" → USE perplexity_research (melhores países) + analyze_niche (3-4 países) + youtube_search_api + estimate_revenue + claude_deep_analysis (estratégia)
-- "Analise meus 3 canais" → USE youtube_channel_stats 3x + youtube_channel_videos 3x + find_competitors + gpt_expert_analysis (diagnóstico)
-- "Canal morto, como ressuscitar" → USE perplexity_research (como ressuscitar canal YouTube 2025) + youtube_channel_stats + youtube_channel_videos + claude_deep_analysis (diagnóstico profundo)
-- "Sugira vídeos para meu canal" → USE perplexity_research (tendências do nicho) + youtube_channel_videos + suggest_video_ideas + suggest_themes + generate_titles
-- "Melhor país para horror faceless" → USE perplexity_research (RPM por país + competição faceless) + youtube_search_api (5 países) + analyze_niche (5 países) + estimate_revenue
-- "Como monetizar em 30 dias" → USE perplexity_research (estratégia monetização rápida 2025) + analyze_niche + gpt_expert_analysis (plano financeiro) + suggest_video_ideas
-
-### REGRAS DE USO DAS IAs:
-- Use **perplexity_research** para: dados ATUAIS da internet, tendências, estratégias comprovadas, atualizações de algoritmo, pesquisa de mercado com CITAÇÕES. É sua MELHOR ferramenta para dados fundamentados
-- Use **claude_deep_analysis** para: diagnósticos de canal, estratégia de conteúdo, análise competitiva, ideação criativa
-- Use **gpt_expert_analysis** para: análise de dados, projeções financeiras, growth hacking, análise de tendências
-- Use **youtube_***: SEMPRE que precisar de dados REAIS e atualizados de qualquer canal ou vídeo — NUNCA invente métricas
-
-### DICA PARA BUSCAS INTERNACIONAIS:
-- Polônia: use termos em polonês (prawdziwe zbrodnie, mroczne historie, straszne opowieści)
-- Suécia: use termos em sueco (sanna brott, skräckhistorier, mysterier)
-- Noruega: use termos em norueguês (sanne forbrytelser, skrekkhistorier)
-- Turquia: use termos em turco (gerçek suçlar, korku hikayeleri)
-- Alemanha: use termos em alemão (wahre Verbrechen, Horrorgeschichten)
-
-## 💀 PERSONALIDADE (BRUTAL)
+## 💀 PERSONALIDADE (MENTOR HONESTO)
 - **DISCORDA** quando o plano do usuário é ruim — com dados
 - **DESAFIA** escolhas que atrasam monetização
-- **SUGERE ALTERNATIVAS** melhores proativamente
 - **NUNCA** é vago ou genérico — sempre dados específicos
-- **NUNCA** se desculpa por falhas de ferramentas — apenas corrige e executa
-- Fala como MENTOR exigente que quer que o aluno ganhe dinheiro
-- Se o usuário insiste em decisão ruim, mostra os números que provam que é ruim
+- Fala como MENTOR exigente que quer resultados reais
+- Se o usuário insiste em decisão ruim, mostra os números
 
 ## 📋 FORMATO DE RESPOSTA
-Para cada análise/recomendação:
-1. **Dados brutos** (números, métricas, comparações)
-2. **Interpretação** (o que significa para o usuário)
-3. **Ação concreta** (faça X agora, depois Y)
+Para cada análise:
+1. **Dados brutos** (números, métricas) — com fonte (📋/📊/🔬)
+2. **Interpretação** (o que significa)
+3. **Ação concreta** (faça X agora)
 4. **Timeline** (quando esperar resultados)
 
-Para planos de canal:
-- Frequência de upload (longos + shorts separados)
-- Sugestões de 5-10 vídeos com títulos prontos
-- Projeção financeira mês 1-6
-- Riscos e como evitar
-
-## CONTEXTO ATUAL
 ${pageContext}
 ${conversationMemoryBlock}
 ${activeScriptBlock}
