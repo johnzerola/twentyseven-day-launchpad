@@ -1251,6 +1251,7 @@ export const ScriptGenerator = ({
                     })}
                   </div>
                 )}
+                <p className="text-[8px] text-muted-foreground/50 italic text-center">Scores estimados por IA — calibração melhora com dados reais de performance</p>
 
                 {/* Strengths & Weaknesses */}
                 {dualScore.strengths?.length > 0 && (
