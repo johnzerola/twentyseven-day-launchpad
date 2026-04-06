@@ -142,14 +142,13 @@ serve(async (req) => {
             const rows = analyticsData.rows || [];
             if (!rows.length) continue;
 
+            // Columns: 0=day, 1=views, 2=estimatedMinutesWatched, 3=averageViewDuration, 4=averageViewPercentage, 5=subscribersGained
             const totalViews = rows.reduce((s: number, r: any) => s + (r[1] || 0), 0);
             const totalMinutes = rows.reduce((s: number, r: any) => s + (r[2] || 0), 0);
             const avgRetention = rows.reduce((s: number, r: any) => s + (r[4] || 0), 0) / rows.length;
-            const totalImpressions = rows.reduce((s: number, r: any) => s + (r[5] || 0), 0);
-            const avgCTR = totalImpressions > 0 
-              ? rows.reduce((s: number, r: any) => s + (r[6] || 0), 0) / rows.length * 100 
-              : 0;
-            const subsGained = rows.reduce((s: number, r: any) => s + (r[7] || 0), 0);
+            const subsGained = rows.reduce((s: number, r: any) => s + (r[5] || 0), 0);
+            // CTR not available via youtubeanalytics v2 basic metrics — estimate from views/subs ratio
+            const avgCTR = 0;
 
             // Calculate D1/D3/D7/D30 views
             const viewsD1 = rows.length >= 1 ? rows[0][1] || 0 : null;
