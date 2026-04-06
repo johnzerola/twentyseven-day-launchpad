@@ -1,4 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
+
+const useNoIndex = () => {
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
+  }, []);
+};
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Bot, User, Send, Sparkles, Youtube, ArrowRight } from 'lucide-react';
@@ -20,6 +30,7 @@ interface Message {
 }
 
 const Onboarding = () => {
+  useNoIndex();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('channel_type');

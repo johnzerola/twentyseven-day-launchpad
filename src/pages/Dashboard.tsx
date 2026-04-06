@@ -42,6 +42,7 @@ interface OnboardingPlan {
 }
 
 const Dashboard = () => {
+  useNoIndex();
   const [stats, setStats] = useState({ channels: 0, scripts: 0, projects: 0, trackedChannels: 0, titles: 0, nicheAnalyses: 0 });
   const [displayName, setDisplayName] = useState('Creator');
   const [workflowProgress, setWorkflowProgress] = useState(0);
