@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { motion, useInView } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
+import { YouTubePlayIcon } from './YouTubePlayIcon';
 
 const useAnimatedCounter = (target: number, duration: number = 2000, start = true) => {
   const [count, setCount] = useState(0);
@@ -32,10 +33,18 @@ export const HeroSection = () => {
 
   return (
     <section className="relative pt-24 pb-20 overflow-hidden particles-bg grid-texture">
-      {/* BG effects */}
+      {/* BG effects — YouTube red glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[200px]" style={{ background: 'radial-gradient(circle, hsl(263 70% 20% / 0.25), transparent 70%)' }} />
-        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px]" style={{ background: 'radial-gradient(circle, hsl(187 94% 30% / 0.1), transparent 70%)' }} />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[200px]" style={{ background: 'radial-gradient(circle, hsl(0 72% 30% / 0.2), transparent 70%)' }} />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px]" style={{ background: 'radial-gradient(circle, hsl(142 76% 30% / 0.08), transparent 70%)' }} />
+      </div>
+
+      {/* Decorative YouTube icons */}
+      <div className="absolute top-20 right-[15%] hidden lg:block">
+        <YouTubePlayIcon size={56} opacity={0.06} />
+      </div>
+      <div className="absolute bottom-32 left-[10%] hidden lg:block">
+        <YouTubePlayIcon size={40} opacity={0.05} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -62,9 +71,9 @@ export const HeroSection = () => {
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold font-display leading-[1.05] mb-6 tracking-tight">
               {pt ? (
-                <>De 0 a monetizado no YouTube em <span className="gradient-text">27 dias.</span></>
+                <>De 0 a monetizado no <span className="text-primary">YouTube</span> em <span className="gradient-text">27 dias.</span></>
               ) : (
-                <>From 0 to monetized on YouTube in <span className="gradient-text">27 days.</span></>
+                <>From 0 to monetized on <span className="text-primary">YouTube</span> in <span className="gradient-text">27 days.</span></>
               )}
             </h1>
 
@@ -76,9 +85,9 @@ export const HeroSection = () => {
 
             {/* Trust row */}
             <div className="flex flex-wrap items-center gap-4 mb-8 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" />{pt ? 'Grátis para começar' : 'Free to start'}</span>
-              <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-emerald-400" />{pt ? 'Sem cartão de crédito' : 'No credit card'}</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" />{pt ? 'Cancele quando quiser' : 'Cancel anytime'}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" />{pt ? 'Grátis para começar' : 'Free to start'}</span>
+              <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-accent" />{pt ? 'Sem cartão de crédito' : 'No credit card'}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" />{pt ? 'Cancele quando quiser' : 'Cancel anytime'}</span>
             </div>
 
             {/* CTAs */}
@@ -89,13 +98,13 @@ export const HeroSection = () => {
                 </Button>
               </Link>
               <Button size="lg" variant="outline" className="text-base px-6 py-7 group border-border/60 hover:border-primary/40 rounded-lg" onClick={() => setShowDemo(true)}>
-                <Play className="w-4 h-4 mr-2 text-accent" />
+                <Play className="w-4 h-4 mr-2 text-primary" />
                 {pt ? 'Ver demonstração' : 'Watch demo'}
               </Button>
             </div>
           </motion.div>
 
-          {/* Right — Mockup */}
+          {/* Right — Mockup with YouTube play button */}
           <motion.div
             className="relative"
             initial={{ opacity: 0, y: 40 }}
@@ -106,9 +115,9 @@ export const HeroSection = () => {
               <div className="bg-card rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-muted/20">
                   <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                    <div className="w-3 h-3 rounded-full bg-primary/60" />
                     <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
+                    <div className="w-3 h-3 rounded-full bg-accent/60" />
                   </div>
                   <div className="flex-1 text-center">
                     <span className="text-xs text-muted-foreground bg-muted/50 px-4 py-1 rounded-full">app.monetiza27.com</span>
@@ -131,15 +140,15 @@ export const HeroSection = () => {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
                       <p className="text-[10px] text-muted-foreground">{pt ? 'Inscritos' : 'Subs'}</p>
-                      <p className="text-xl font-bold text-emerald-400">847</p>
+                      <p className="text-xl font-bold text-accent">847</p>
                     </div>
                     <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
                       <p className="text-[10px] text-muted-foreground">Views</p>
                       <p className="text-xl font-bold text-primary">32K</p>
                     </div>
                     <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
-                      <p className="text-[10px] text-muted-foreground">{pt ? 'Próxima ação' : 'Next action'}</p>
-                      <p className="text-xs font-semibold text-accent mt-1">{pt ? 'Gravar roteiro viral' : 'Record viral script'}</p>
+                      <p className="text-[10px] text-muted-foreground">{pt ? 'Receita' : 'Revenue'}</p>
+                      <p className="text-xs font-semibold text-yellow-400 mt-1">R$ 890</p>
                     </div>
                   </div>
                 </div>
@@ -151,7 +160,10 @@ export const HeroSection = () => {
               className="absolute -right-2 top-16 glass-premium rounded-xl px-3 py-2 shadow-lg"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.5 }}
             >
-              <p className="text-xs font-semibold">🎯 {pt ? 'Canal atingiu 1.000 subs' : 'Channel hit 1,000 subs'}</p>
+              <p className="text-xs font-semibold flex items-center gap-1.5">
+                <span className="text-primary">▶</span>
+                {pt ? 'Canal atingiu 1.000 subs' : 'Channel hit 1,000 subs'}
+              </p>
             </motion.div>
             <motion.div
               className="absolute -left-2 bottom-20 glass-premium rounded-xl px-3 py-2 shadow-lg"
@@ -160,6 +172,11 @@ export const HeroSection = () => {
             >
               <p className="text-xs font-semibold">💰 {pt ? 'YPP aprovado!' : 'YPP approved!'}</p>
             </motion.div>
+
+            {/* YouTube play icon decoration */}
+            <div className="absolute -top-4 -left-4">
+              <YouTubePlayIcon size={32} opacity={0.08} animate={false} />
+            </div>
           </motion.div>
         </div>
 
