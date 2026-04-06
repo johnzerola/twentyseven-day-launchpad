@@ -13,7 +13,7 @@ export const FooterSection = () => {
               <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
                 <Zap className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold font-['Space_Grotesk']">Monetiza27</span>
+              <span className="text-lg font-bold font-['Space_Grotesk']">Monetize AI</span>
             </div>
             <p className="text-sm text-muted-foreground">{t('footer.desc')}</p>
           </div>

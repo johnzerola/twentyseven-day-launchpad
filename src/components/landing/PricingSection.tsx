@@ -7,13 +7,13 @@ import { motion } from 'framer-motion';
 const plans = [
   {
     key: 'starter',
-    features: ['1 canal', '12 vídeos/mês', '20 conversas Dotti', 'Busca básica de nichos', 'Narração IA (Google TTS)'],
-    featuresEn: ['1 channel', '12 videos/month', '20 Dotti chats', 'Basic niche search', 'AI narration (Google TTS)'],
+    features: ['1 canal', '12 vídeos/mês', '20 conversas TubeBot', 'Busca básica de nichos', 'Narração IA (Google TTS)'],
+    featuresEn: ['1 channel', '12 videos/month', '20 TubeBot chats', 'Basic niche search', 'AI narration (Google TTS)'],
   },
   {
     key: 'pro',
-    features: ['3 canais', '3+ vídeos/semana', 'TTS ilimitado', 'Análise de concorrentes', 'Dotti ilimitada', 'Veo3 prompts'],
-    featuresEn: ['3 channels', '3+ videos/week', 'Unlimited TTS', 'Competitor analysis', 'Unlimited Dotti', 'Veo3 prompts'],
+    features: ['3 canais', '3+ vídeos/semana', 'TTS ilimitado', 'Análise de concorrentes', 'TubeBot ilimitado', 'Veo3 prompts'],
+    featuresEn: ['3 channels', '3+ videos/week', 'Unlimited TTS', 'Competitor analysis', 'Unlimited TubeBot', 'Veo3 prompts'],
     popular: true,
   },
   {

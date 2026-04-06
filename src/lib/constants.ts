@@ -3,7 +3,8 @@
  * Avoids duplication of VOICES, COUNTRIES, NICHES, etc.
  */
 
-export const APP_NAME = 'Monetiza27';
+export const APP_NAME = 'Monetize AI';
+export const AI_NAME = 'TubeBot';
 
 export const VOICES = [
   { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', lang: 'PT-BR', desc: 'Narração masculina natural' },

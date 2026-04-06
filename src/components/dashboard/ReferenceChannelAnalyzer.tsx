@@ -135,7 +135,7 @@ export const ReferenceChannelAnalyzer = () => {
           </SelectContent>
         </Select>
         <p className="text-[9px] text-muted-foreground">
-          A análise será salva junto com as informações do Dotti para o canal selecionado
+          A análise será salva junto com as informações do TubeBot para o canal selecionado
         </p>
       </div>
 
@@ -293,7 +293,7 @@ https://www.youtube.com/channel/UC...`}
                         )}
 
                         <p className="text-[9px] text-muted-foreground italic">
-                          ✅ Dados salvos no sistema — disponível no Dotti, Gerador de Roteiros, Títulos e Cenas
+                          ✅ Dados salvos no sistema — disponível no TubeBot, Gerador de Roteiros, Títulos e Cenas
                         </p>
                       </motion.div>
                     )}

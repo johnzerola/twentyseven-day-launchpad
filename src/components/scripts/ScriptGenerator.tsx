@@ -138,7 +138,7 @@ export const ScriptGenerator = ({
     return true;
   }, []);
 
-  // ═══════ SUGGESTION BANK (from Dotti) ═══════
+  // ═══════ SUGGESTION BANK (from TubeBot) ═══════
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -163,7 +163,7 @@ export const ScriptGenerator = ({
       setSuggestions(items);
       setLoadingSuggestions(false);
 
-      // Build channel knowledge context from saved Dotti suggestions for this channel
+      // Build channel knowledge context from saved TubeBot suggestions for this channel
       if (selectedChannelId && items.length > 0) {
         const knowledge = items
           .filter(s => s.channel_id === selectedChannelId)
@@ -777,7 +777,7 @@ export const ScriptGenerator = ({
                 >
                   <span className="flex items-center gap-1.5 font-medium text-primary">
                     <Lightbulb className="w-3.5 h-3.5" />
-                    💡 Banco de Ideias do Dotti ({suggestions.length})
+                    💡 Banco de Ideias do TubeBot ({suggestions.length})
                   </span>
                   {showSuggestions ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
                 </button>

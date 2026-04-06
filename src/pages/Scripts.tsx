@@ -176,13 +176,13 @@ const Scripts = () => {
     const outlierTopic = sessionStorage.getItem('outlier_topic');
     if (outlierTopic) { setTopic(outlierTopic); sessionStorage.removeItem('outlier_topic'); toast.success('Referência do Outlier Finder carregada!'); }
 
-    // Load from Dotti or Trend suggestion
-    const dottiTopic = sessionStorage.getItem('dotti_script_topic');
-    if (dottiTopic) {
-      setTopic(dottiTopic);
-      sessionStorage.removeItem('dotti_script_topic');
+    // Load from TubeBot or Trend suggestion
+    const tubebotTopic = sessionStorage.getItem('tubebot_script_topic');
+    if (tubebotTopic) {
+      setTopic(tubebotTopic);
+      sessionStorage.removeItem('tubebot_script_topic');
       setActiveStep('script');
-      toast.success('💡 Tema do Dotti carregado! Configure e gere o roteiro.');
+      toast.success('💡 Tema do TubeBot carregado! Configure e gere o roteiro.');
     }
 
     // Load from Outlier Replicate (full reverse engineering context)

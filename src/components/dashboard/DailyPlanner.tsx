@@ -234,8 +234,8 @@ function generateTasksFromPlan(plan: any, niche?: string, hoursPerDay?: string, 
   if (hours >= 3 && !viralMode) {
     tasks.push({
       id: 'study-algorithm',
-      title: '🧠 Estudar algoritmo (Dotti)',
-      description: 'Pergunte ao Dotti sobre uma técnica de retenção ou algoritmo',
+      title: '🧠 Estudar algoritmo (TubeBot)',
+      description: 'Pergunte ao TubeBot sobre uma técnica de retenção ou algoritmo',
       duration: '10min', category: 'learn', completed: false,
     });
     tasks.push({
