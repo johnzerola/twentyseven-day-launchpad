@@ -3820,6 +3820,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_reference_channels: {
+        Row: {
+          channel_intelligence_id: string | null
+          channel_name: string
+          created_at: string
+          id: string
+          last_scanned_at: string | null
+          latest_intel: Json | null
+          role: string
+          thumbnail: string | null
+          user_id: string
+          youtube_channel_id: string
+        }
+        Insert: {
+          channel_intelligence_id?: string | null
+          channel_name: string
+          created_at?: string
+          id?: string
+          last_scanned_at?: string | null
+          latest_intel?: Json | null
+          role?: string
+          thumbnail?: string | null
+          user_id: string
+          youtube_channel_id: string
+        }
+        Update: {
+          channel_intelligence_id?: string | null
+          channel_name?: string
+          created_at?: string
+          id?: string
+          last_scanned_at?: string | null
+          latest_intel?: Json | null
+          role?: string
+          thumbnail?: string | null
+          user_id?: string
+          youtube_channel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reference_channels_channel_intelligence_id_fkey"
+            columns: ["channel_intelligence_id"]
+            isOneToOne: false
+            referencedRelation: "channel_intelligence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_script_preferences: {
         Row: {
           avg_score_achieved: number | null
