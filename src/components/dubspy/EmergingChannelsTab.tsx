@@ -26,6 +26,10 @@ interface ChannelResult {
   avgLikeRatio: number;
   avgViewVelocity72h: number;
   uploadFrequencyDays: number;
+  goldScore?: number;
+  dataConfidence?: 'high' | 'medium' | 'low';
+  sampleSize?: number;
+  multiplier?: number;
 }
 
 interface EmergingChannelsTabProps {
@@ -42,6 +46,7 @@ const EMERGING_PRESETS = [
 
   const SORT_OPTIONS = [
   { value: 'viralScore', label: '🔥 Viral Score' },
+  { value: 'goldScore', label: '🏆 Gold Score' },
   { value: 'subscribers', label: '👥 Inscritos' },
   { value: 'maxVideoViews', label: '👁 Max Views' },
   { value: 'growthVelocity', label: '📈 Crescimento' },
@@ -475,8 +480,9 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                     </div>
                   </div>
 
-                  <div className="flex gap-4 mt-3 items-start">
+                  <div className="flex gap-4 mt-3 items-start flex-wrap">
                     <ViralScoreRing score={ch.viralScore || 0} label="Viral Score" />
+                    <ViralScoreRing score={ch.goldScore || 0} label="Gold Score" />
                     <ViralScoreRing score={ch.growthPotentialScore || 0} label="Growth" />
                     <ViralScoreRing score={ch.algorithmBoostProbability || 0} label="Algo Boost" />
                     <div className="flex flex-col gap-1 text-[10px] ml-2">
@@ -489,7 +495,21 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
                       <span className="flex items-center gap-1 text-muted-foreground">
                         <Activity className="w-3 h-3" /> V72h: {formatNumber(ch.avgViewVelocity72h || 0)}
                       </span>
+                      {ch.multiplier != null && ch.multiplier > 1 && (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          ⚡ Multiplier: {ch.multiplier}x
+                        </span>
+                      )}
                     </div>
+                    {ch.dataConfidence && (
+                      <Badge variant="outline" className={`text-[9px] h-5 self-start ${
+                        ch.dataConfidence === 'high' ? 'border-emerald-500/30 text-emerald-400' :
+                        ch.dataConfidence === 'medium' ? 'border-amber-500/30 text-amber-400' :
+                        'border-red-500/30 text-red-400'
+                      }`}>
+                        {ch.dataConfidence === 'high' ? '✓' : ch.dataConfidence === 'medium' ? '~' : '!'} {ch.sampleSize || 0} vídeos amostrados
+                      </Badge>
+                    )}
                   </div>
 
                   {ch.videos.length > 0 && (
@@ -522,9 +542,14 @@ export const EmergingChannelsTab = ({ mode }: EmergingChannelsTabProps) => {
       </div>
 
       {hasSearched && !loading && channels.length === 0 && (
-        <div className="glass rounded-xl p-12 text-center text-muted-foreground">
+        <div className="glass rounded-xl p-12 text-center text-muted-foreground space-y-3">
           <Rocket className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p>Nenhum canal encontrado. Tente outro nicho ou amplie os filtros.</p>
+          <p className="font-medium">Nenhum canal encontrado com os filtros atuais.</p>
+          <p className="text-xs max-w-md mx-auto">
+            {mode === 'emerging' 
+              ? 'Dica: tente aumentar "Max vídeos" ou "Max idade (dias)" nos filtros de canal emergente. Nichos muito competitivos têm poucos canais genuinamente novos.'
+              : 'Dica: amplie os filtros ou tente outro nicho. Canais "escapees" precisam ter crescimento de 150%+ em views/subs.'}
+          </p>
         </div>
       )}
     </div>

@@ -44,7 +44,6 @@ function daysSince(dateStr: string): number {
   return Math.max(0, (Date.now() - new Date(dateStr).getTime()) / 86400000);
 }
 
-// Generate multiple search queries using AI for better coverage
 async function generateSearchQueries(niche: string, mode: string, language: string, lovableKey: string): Promise<string[]> {
   const baseQueries = [niche];
   try {
@@ -67,7 +66,6 @@ async function generateSearchQueries(niche: string, mode: string, language: stri
   } catch (e) {
     console.error("Query generation error:", e);
   }
-  // Fallback: create variations manually
   return [
     niche,
     `${niche} 2025 2026`,
@@ -76,8 +74,8 @@ async function generateSearchQueries(niche: string, mode: string, language: stri
   ];
 }
 
-async function searchYouTubeVideos(query: string, apiKey: string, country: string, language: string, publishedAfter: string, maxResults = 50): Promise<any[]> {
-  let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&maxResults=${maxResults}&order=viewCount&publishedAfter=${publishedAfter}&key=${apiKey}`;
+async function searchYouTubeVideos(query: string, apiKey: string, country: string, language: string, publishedAfter: string, maxResults = 50, order = "viewCount"): Promise<any[]> {
+  let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&maxResults=${maxResults}&order=${order}&publishedAfter=${publishedAfter}&key=${apiKey}`;
   if (country) url += `&regionCode=${country}`;
   if (language) url += `&relevanceLanguage=${language}`;
   try {
@@ -157,13 +155,16 @@ function enrichChannels(channelMap: Record<string, any>, channelVideos: Record<s
     const publishDates = videos.map((v: any) => new Date(v.publishedAt).getTime()).sort((a: number, b: number) => b - a);
     let uploadFrequencyDays = 0;
     if (publishDates.length >= 2) {
-      const intervals = [];
+      const intervals: number[] = [];
       for (let i = 0; i < publishDates.length - 1; i++) intervals.push((publishDates[i] - publishDates[i + 1]) / 86400000);
       uploadFrequencyDays = parseFloat((intervals.reduce((a, b) => a + b, 0) / intervals.length).toFixed(1));
     }
 
     const efficiencyScore = ch.subscribers > 0 ? Math.min(100, Math.round((maxVideoViews / Math.max(ch.subscribers, 1)) * 10)) : 0;
     const growthVelocity = ch.subscribers > 0 ? Math.round((avgVideoViews / ch.subscribers) * 100) : 0;
+
+    // Multiplier: how much the best video exceeds channel average
+    const multiplier = ch.avgViews > 0 ? parseFloat((maxVideoViews / ch.avgViews).toFixed(1)) : 0;
 
     const vsViewsPerSub = Math.min(30, viewsPerSub * 3);
     const vsVelocity = Math.min(20, (avgViewVelocity72h / 10000) * 20);
@@ -176,15 +177,25 @@ function enrichChannels(channelMap: Record<string, any>, channelVideos: Record<s
     const algorithmBoostProbability = Math.min(100, Math.round(viralScore * 0.6 + (avgViewVelocity72h > 50000 ? 40 : avgViewVelocity72h > 10000 ? 20 : 0)));
     const outlierVideos = videos.filter((v: any) => ch.avgViews > 0 && v.views >= ch.avgViews * 3);
 
+    // Gold Score: multiplier * 0.4 + engagement * 0.3 + efficiency * 0.3
+    const normalizedMultiplier = Math.min(100, multiplier * 5);
+    const normalizedEngagement = Math.min(100, avgEngagement * 10);
+    const goldScore = Math.min(100, Math.round(normalizedMultiplier * 0.4 + normalizedEngagement * 0.3 + efficiencyScore * 0.3));
+
+    // Data confidence: how many videos we sampled vs total
+    const sampleSize = videos.length;
+    const dataConfidence = sampleSize >= 5 ? 'high' : sampleSize >= 2 ? 'medium' : 'low';
+
     return {
       ...ch,
       videos: videos.slice(0, 5),
       recentVideoCount: videos.length,
       avgVideoViews, maxVideoViews, avgVph, viewsPerSub, efficiencyScore,
-      outlierCount: outlierVideos.length, growthVelocity,
+      outlierCount: outlierVideos.length, growthVelocity, multiplier,
       avgEngagement, avgCommentEngagement, avgLikeRatio, avgViewVelocity72h,
       uploadFrequencyDays, viralScore, growthPotentialScore, algorithmBoostProbability,
-      isEmerging: ch.videoCount <= 20 && ch.ageDays <= 180,
+      goldScore, dataConfidence, sampleSize,
+      isEmerging: ch.videoCount <= 50 && ch.ageDays <= 365,
       isAlgorithmEscapee: growthVelocity >= 300 && ch.videoCount <= 30,
     };
   });
@@ -195,8 +206,8 @@ function applyFilters(channels: any[], params: ScanParams) {
   const { mode, minSubs, maxSubs, maxChannelVideos, minVideoViews, minEngagement, minViralScore, maxVideos, maxChannelAgeDays } = params;
 
   if (mode === "emerging") {
-    const maxVids = maxVideos || 20;
-    const maxAge = maxChannelAgeDays || 180;
+    const maxVids = maxVideos || 50;
+    const maxAge = maxChannelAgeDays || 365;
     filtered = filtered.filter(ch => ch.videoCount <= maxVids && ch.ageDays <= maxAge);
   } else if (mode === "escapees") {
     filtered = filtered.filter(ch => ch.growthVelocity >= 150);
@@ -231,24 +242,35 @@ serve(async (req) => {
 
     console.log(`DubSpy scan: mode=${mode}, niche="${niche}", country=${country}, lang=${language}`);
 
-    // Step 1: Generate multiple search queries using AI for broader coverage
+    // Step 1: Generate search queries
     const queries = GOOGLE_AI_API_KEY 
       ? await generateSearchQueries(niche, mode, language, GOOGLE_AI_API_KEY)
       : [niche, `${niche} 2026`, `${niche} como fazer`];
 
     console.log(`Generated ${queries.length} search queries:`, queries);
 
-    // Step 2: Search YouTube with multiple queries (broader coverage)
+    // Step 2: Search YouTube — use reduced maxResults for drill mode to prevent timeout
+    const maxResultsPerQuery = mode === "micro-niche-drill" ? 25 : 50;
     const after30d = new Date(Date.now() - 30 * 86400000).toISOString();
     const after90d = new Date(Date.now() - 90 * 86400000).toISOString();
     const after180d = new Date(Date.now() - 180 * 86400000).toISOString();
-    const publishedAfter = mode === "escapees" ? after30d : mode === "emerging" ? after180d : after90d;
+    const after365d = new Date(Date.now() - 365 * 86400000).toISOString();
+    const publishedAfter = mode === "escapees" ? after30d : mode === "emerging" ? after365d : after90d;
 
     // Run searches in parallel (max 3 to conserve quota)
     const searchQueries = queries.slice(0, 3);
-    const allSearchResults = await Promise.all(
-      searchQueries.map(q => searchYouTubeVideos(q, YOUTUBE_API_KEY, country, language, publishedAfter, 50))
+    const searchPromises: Promise<any[]>[] = searchQueries.map(q => 
+      searchYouTubeVideos(q, YOUTUBE_API_KEY, country, language, publishedAfter, maxResultsPerQuery)
     );
+
+    // BUG FIX #2: For emerging mode, add a secondary search with order=date to find genuinely new channels
+    if (mode === "emerging") {
+      searchPromises.push(
+        searchYouTubeVideos(niche, YOUTUBE_API_KEY, country, language, after180d, 25, "date")
+      );
+    }
+
+    const allSearchResults = await Promise.all(searchPromises);
 
     // Deduplicate videos by ID
     const seenVideoIds = new Set<string>();
@@ -263,10 +285,9 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Total unique videos found: ${allVideoItems.length} from ${searchQueries.length} queries`);
+    console.log(`Total unique videos found: ${allVideoItems.length} from ${searchPromises.length} queries (incl. date-ordered)`);
 
     if (!allVideoItems.length) {
-      // Check if all queries failed due to quota
       const quotaExceeded = allSearchResults.every(r => r.length === 0);
       return new Response(JSON.stringify({ 
         channels: [], clusters: [], 
@@ -291,7 +312,6 @@ serve(async (req) => {
     const channelIds = [...new Set((allVideoData.items || []).map((v: any) => v.snippet.channelId))] as string[];
     console.log(`Unique channels found: ${channelIds.length}`);
 
-    // Batch channel requests (max 50 per request)
     const channelBatches = [];
     for (let i = 0; i < channelIds.length; i += 50) {
       const batch = channelIds.slice(i, i + 50);
@@ -373,18 +393,19 @@ serve(async (req) => {
       }
     }
 
-    // Step 9: Micro-niche drill — discover more channels per cluster
+    // Step 9: Micro-niche drill — limited to max 3 clusters to prevent timeout
     if (mode === "micro-niche-drill" && clusters.length > 0) {
-      const drillPromises = clusters.filter(c => c.searchQuery).map(async (cluster) => {
+      const drillClusters = clusters.filter(c => c.searchQuery).slice(0, 3);
+      const drillPromises = drillClusters.map(async (cluster) => {
         try {
-          let drillUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(cluster.searchQuery)}&maxResults=10&key=${YOUTUBE_API_KEY}`;
+          let drillUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(cluster.searchQuery)}&maxResults=5&key=${YOUTUBE_API_KEY}`;
           if (country) drillUrl += `&regionCode=${country}`;
           if (language) drillUrl += `&relevanceLanguage=${language}`;
           const drillData = await fetchJSON(drillUrl);
           const drillIds = (drillData.items || []).map((i: any) => i.snippet?.channelId || i.id?.channelId).filter(Boolean);
           const newIds = drillIds.filter((id: string) => !channelIds.includes(id));
           if (newIds.length > 0) {
-            const extraCData = await fetchJSON(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${newIds.slice(0, 10).join(",")}&key=${YOUTUBE_API_KEY}`);
+            const extraCData = await fetchJSON(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,brandingSettings&id=${newIds.slice(0, 5).join(",")}&key=${YOUTUBE_API_KEY}`);
             cluster.discoveredChannels = (extraCData.items || []).map((ch: any) => ({
               id: ch.id,
               name: ch.snippet.title,
@@ -417,13 +438,12 @@ serve(async (req) => {
     };
 
     // ═══════ VIRAL ENGINE FEEDBACK LOOP ═══════
-    // Auto-feed discovered data back into knowledge bases
     try {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-      // Feed top video titles into viral_titles_db
+      // BUG FIX #1: Use ch.videos (correct field), not ch.topVideos (doesn't exist)
       const topVideos = channels
-        .flatMap((ch: any) => (ch.topVideos || []).map((v: any) => ({ ...v, channelName: ch.name, channelNiche: ch.estimatedNiche })))
+        .flatMap((ch: any) => (ch.videos || []).map((v: any) => ({ ...v, channelName: ch.name, channelNiche: niche })))
         .sort((a: any, b: any) => (b.views || 0) - (a.views || 0))
         .slice(0, 20);
 
@@ -433,7 +453,7 @@ serve(async (req) => {
           .map((v: any) => ({
             title: v.title,
             views: v.views || 0,
-            niche: v.channelNiche || niche || 'unknown',
+            niche: niche || 'unknown',
             source: 'dubspy',
             why_viral: `Discovered via DubSpy ${mode} scan. Channel: ${v.channelName}`,
             title_pattern: 'auto-detected',
@@ -455,7 +475,7 @@ serve(async (req) => {
           hook_text: v.title,
           hook_type: 'title_hook',
           retention_score: Math.min(10, Math.round(Math.log10(v.views || 1))),
-          niche: v.channelNiche || niche || 'unknown',
+          niche: niche || 'unknown',
           source_video: v.id || null,
         }));
 
@@ -468,10 +488,10 @@ serve(async (req) => {
         const patternsToInsert = clusters.slice(0, 5).map((c: any) => ({
           pattern_name: `DubSpy: ${c.name}`,
           pattern_type: 'topic_cluster',
-          template: `Cluster "${c.name}" com ${c.videoCount || 0} vídeos. Padrão detectado em ${mode} scan.`,
-          example_hooks: (c.sampleVideos || []).slice(0, 3).map((v: any) => ({ title: v, source: 'dubspy' })),
+          template: `Cluster "${c.name}" com ${c.channelIds?.length || 0} canais. Padrão detectado em ${mode} scan.`,
+          example_hooks: (c.suggestedTopics || []).slice(0, 3).map((t: any) => ({ title: t, source: 'dubspy' })),
           best_for_niches: [niche || 'unknown'],
-          effectiveness_score: Math.min(10, Math.round((c.totalViews || 0) / 500000) + 4),
+          effectiveness_score: c.opportunity === 'Alta' ? 8 : c.opportunity === 'Média' ? 6 : 4,
           source: 'dubspy_auto',
         }));
 
