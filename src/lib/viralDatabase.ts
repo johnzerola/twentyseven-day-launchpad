@@ -237,6 +237,30 @@ export const NARRATOR_ARCHETYPES: NarratorArchetype[] = [
     bestForNiches: ['curiosidades', 'ciência', 'animais', 'tecnologia', 'gaming', 'entretenimento'],
     pacingBPM: '120-140 BPM — Synthwave acelerado, batida marcante e energética',
   },
+  {
+    id: 'journalist',
+    name: 'O Jornalista Sombrio',
+    description: 'Tom sério e factual, com revelações graduais. Cria credibilidade instantânea.',
+    toneDirective: 'PERSONA: Jornalista investigativo revelando escândalos. Tom sério, factual, com gravidade na voz. Revelações graduais — cada fato mais pesado que o anterior. Cite fontes implícitas ("documentos internos mostram", "segundo fontes próximas"). Credibilidade como arma de retenção.',
+    bestForNiches: ['escândalos', 'política', 'negócios', 'documentário', 'casos reais'],
+    pacingBPM: '80-100 BPM — Piano tenso com strings sutis, tom jornalístico',
+  },
+  {
+    id: 'cinematic',
+    name: 'O Narrador Cinematográfico',
+    description: 'Voz épica, com construção de tensão longa. Parece trailer de filme.',
+    toneDirective: 'PERSONA: Narrador de trailer de filme épico. Voz GRANDIOSA, construção de tensão longa, cada frase é um frame cinematográfico. Pausas longas antes de revelações. Descreva cenários como IMAX: escala, luz, som, textura. O espectador deve VISUALIZAR cada cena como um filme de $200M.',
+    bestForNiches: ['guerras', 'desastres', 'impérios', 'épicos', 'história', 'mitologia'],
+    pacingBPM: '70-90 BPM — Orquestra cinematográfica, brass épico, percussão tribal',
+  },
+  {
+    id: 'scientist',
+    name: 'O Cientista Curioso',
+    description: 'Tom entusiasmado, cheio de "você não vai acreditar". Simplifica o complexo.',
+    toneDirective: 'PERSONA: Cientista que descobriu algo INCRÍVEL e precisa contar para alguém. Tom entusiasmado, surpreso, quase infantil na maravilha. Simplifica conceitos complexos com analogias do cotidiano. "Imagine que cada célula do seu corpo fosse uma cidade...". Dados específicos que chocam. Humor geek natural.',
+    bestForNiches: ['ciência', 'biologia', 'física', 'química', 'espaço', 'astronomia', 'IA'],
+    pacingBPM: '100-120 BPM — Electro-pop curioso, marimba, synths otimistas',
+  },
 ];
 
 // ========== SOUND DESIGN PROFILES ==========
@@ -295,4 +319,107 @@ export const REVIVAL_48H_STRATEGY: RevivalStrategy = {
 export const HOOK_STYLES = ['curiosidade', 'urgência', 'polêmica', 'storytelling', 'choque', 'empatia', 'contraintuitivo', 'arquivo_oculto'] as const;
 export const CTA_PLACEMENTS = ['início', 'meio', 'fim', 'pin_comment'] as const;
 export const CTA_TYPES = ['inscrição', 'like', 'comentário', 'compartilhar', 'playlist', 'produto'] as const;
-export const TITLE_STYLES = ['curiosidade', 'urgência', 'números', 'contraintuitivo', 'storytelling', 'polêmica', 'segredo_oculto', 'erro_fatal', 'contraste_absurdo', 'desafio_tempo', 'arquivos_nao_revelados'] as const;
+export const TITLE_STYLES = ['curiosidade', 'urgência', 'números', 'contraintuitivo', 'storytelling', 'polêmica', 'segredo_oculto', 'erro_fatal', 'contraste_absurdo', 'desafio_tempo', 'arquivos_nao_revelados', 'negatividade_aviso', 'curiosidade_inversa', 'promessa_condicional'] as const;
+
+// ========== ADDITIONAL TITLE PATTERNS V3 (Viral Engine v4.0 — Complete Formula Set) ==========
+export const VIRAL_TITLE_PATTERNS_V3: TitlePattern[] = [
+  { id: 't18', pattern: 'Pare de [Ação Comum] imediatamente', example: 'Pare de carregar seu celular à noite imediatamente', style: 'negatividade_aviso', avgCTR: 17.4 },
+  { id: 't19', pattern: 'O que acontece quando você [Ação Bizarra] por 30 dias', example: 'O que acontece quando você bebe 5L de água por 30 dias', style: 'curiosidade_inversa', avgCTR: 16.8 },
+  { id: 't20', pattern: 'Se você fizer isso 1× por dia, seu [Resultado] muda em [Tempo]', example: 'Se você fizer isso 1× por dia, seu sono muda em 2 semanas', style: 'promessa_condicional', avgCTR: 15.9 },
+];
+
+// ========== PSYCHOLOGICAL CTAs (Viral Engine v4.0) ==========
+export interface PsychologicalCTA {
+  id: string;
+  label: string;
+  text: string;
+  psychologyBasis: string;
+  bestPlacement: 'início' | 'meio' | 'fim';
+}
+
+export const PSYCHOLOGICAL_CTAS: PsychologicalCTA[] = [
+  {
+    id: 'pcta1',
+    label: 'Escassez',
+    text: '"Se você é uma das poucas pessoas que entende a gravidade deste arquivo oculto, já se inscreva — o algoritmo não vai te recomendar o próximo vazamento."',
+    psychologyBasis: 'Escassez + Exclusividade: o espectador se sente parte de um grupo seleto.',
+    bestPlacement: 'meio',
+  },
+  {
+    id: 'pcta2',
+    label: 'Emocional',
+    text: '"Se você também ficou em choque ao ver que essa tecnologia já existe, se inscreva agora antes que este vídeo saia do ar."',
+    psychologyBasis: 'Vinculação emocional: atrelar o CTA à emoção que o espectador acabou de sentir.',
+    bestPlacement: 'meio',
+  },
+  {
+    id: 'pcta3',
+    label: 'Desafio Mental',
+    text: '"No minuto 3:15, um detalhe na foto muda toda a teoria. Você percebeu qual é? Comente a sua resposta abaixo."',
+    psychologyBasis: 'Gamificação: transforma o vídeo em desafio. Infla comentários para o algoritmo.',
+    bestPlacement: 'meio',
+  },
+  {
+    id: 'pcta4',
+    label: 'Identidade',
+    text: '"Só quem tem curiosidade acima da média chega até esse ponto do vídeo. Se você é um deles, o canal foi feito pra você."',
+    psychologyBasis: 'Identidade tribal: o espectador se identifica com um grupo de "escolhidos".',
+    bestPlacement: 'fim',
+  },
+];
+
+// ========== ELITE REFERENCE CHANNELS ==========
+export interface EliteReferenceChannel {
+  id: string;
+  name: string;
+  country: 'US' | 'BR';
+  niche: string;
+  subscribers: string;
+  revenue?: string;
+  keyLessons: string[];
+}
+
+export const ELITE_REFERENCE_CHANNELS: EliteReferenceChannel[] = [
+  // 5 US Channels
+  {
+    id: 'ref_us1', name: 'MrBallen', country: 'US', niche: 'Strange/Dark Stories', subscribers: '5M+',
+    keyLessons: ['Storytelling em 3 atos com pacing milimétrico', 'Ganchos que confirmam o clique nos primeiros 10s', 'Persona sem rosto (voz = identidade)', 'Títulos com tagline de marca reconhecível'],
+  },
+  {
+    id: 'ref_us2', name: 'The Infographics Show', country: 'US', niche: 'Educação Animada', subscribers: '15M', revenue: '$100K–$300K/mês',
+    keyLessons: ['Consistência visual como identidade (cor única por canal)', 'Humor + clareza = retenção alta', 'Alta frequência sem perder qualidade', 'Thumbnails com fórmula repetível e reconhecível'],
+  },
+  {
+    id: 'ref_us3', name: 'Mr. Nightmare', country: 'US', niche: 'Horror/True Crime', subscribers: '6M+',
+    keyLessons: ['Sound design como co-narrador', 'Tom calmo cria mais medo que voz dramática', 'Histórias em 1ª pessoa aumentam imersão', 'Monetização via Patreon + Merch além do AdSense'],
+  },
+  {
+    id: 'ref_us4', name: 'WatchMojo', country: 'US', niche: 'Listas/Pop Culture', subscribers: '26M', revenue: '$120K–$334K/mês',
+    keyLessons: ['Templates repetíveis criam CTR previsível', 'Formato lista = alta retenção (curiosidade pelo #1)', 'Escalabilidade via sistema editorial', 'Sem personalidade central = liberdade total de nicho'],
+  },
+  {
+    id: 'ref_us5', name: 'Daily Dose of Internet', country: 'US', niche: 'Curadoria Viral', subscribers: '20M', revenue: '$140K–$400K/mês',
+    keyLessons: ['Curadoria de qualidade supera produção de quantidade', 'Tom neutro constrói confiança de longo prazo', 'Formato "mais um clip" = Binge Loop natural', 'Upload timing consistente treina o algoritmo'],
+  },
+  // 5 BR Channels
+  {
+    id: 'ref_br1', name: 'Fatos Desconhecidos', country: 'BR', niche: 'Curiosidades/Mistérios', subscribers: '17M+',
+    keyLessons: ['Volume diário como estratégia de SEO e discovery', 'Thumbnails intrigantes com título-gancho na imagem', 'Conteúdo evergreen = vídeos crescem por anos', 'Presença multiplataforma como motor de inscritos'],
+  },
+  {
+    id: 'ref_br2', name: 'Você Sabia?', country: 'BR', niche: 'Curiosidades/Ciência', subscribers: '14M+',
+    keyLessons: ['Quadros fixos criam audiência fiel e expectativa', 'Interação com público infla comentários organicamente', 'Conteúdo atual + atemporal balanceados', 'Marca forte sem exposição de rosto'],
+  },
+  {
+    id: 'ref_br3', name: 'INCRÍVEL', country: 'BR', niche: 'Listas/Dark Geral', subscribers: 'Milhões',
+    keyLessons: ['Modelo escalável: 1-2 pessoas + edição terceirizada', 'Vídeos 8-12min = sweet spot para AdSense mid-roll', 'Identidade visual cria recall sem rosto', 'Alta frequência = teste contínuo de formatos'],
+  },
+  {
+    id: 'ref_br4', name: 'Nostalgia', country: 'BR', niche: 'Cultura Pop/Documentário', subscribers: '14M+',
+    keyLessons: ['Alta qualidade > alta frequência para base leal', 'Vídeos longos (20min+) aumentam Session Time', 'Narração com personalidade fideliza sem rosto', 'Nicho nostalgia = viés emocional forte'],
+  },
+  {
+    id: 'ref_br5', name: 'Manual do Mundo', country: 'BR', niche: 'Ciência/Experimentos', subscribers: '15M+',
+    keyLessons: ['15 anos = autoridade de domínio no algoritmo', 'Desafios visuais criam engagement espontâneo', 'Postagem diária como disciplina editorial', 'Educação + entretenimento = RPM elevado'],
+  },
+];
