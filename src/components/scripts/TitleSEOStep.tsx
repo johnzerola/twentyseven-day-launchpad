@@ -385,7 +385,7 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-xs flex items-center gap-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-primary" /> {titles.length} Títulos — CTR Médio: {avgCTR}%
+                  <TrendingUp className="w-3.5 h-3.5 text-primary" /> {titles.length} Títulos — CTR Estimado (IA): {avgCTR}%
                 </h3>
                 <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => {
                   navigator.clipboard.writeText(titles.map(t => t.title).join('\n'));
@@ -405,8 +405,9 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <Badge className={`text-[9px] ${getStyleColor(t.style)}`}>{t.style}</Badge>
                         <span className={`text-[9px] font-bold ${t.estimatedCTR >= 20 ? 'text-emerald-400' : t.estimatedCTR >= 15 ? 'text-yellow-400' : 'text-muted-foreground'}`}>
-                          CTR: {t.estimatedCTR}%
+                          CTR est: {t.estimatedCTR}%
                         </span>
+                        <span className="text-[8px] text-muted-foreground/50">(est. IA)</span>
                         {t.psychological_trigger && (
                           <Badge variant="secondary" className="text-[8px]">🧠 {t.psychological_trigger}</Badge>
                         )}
