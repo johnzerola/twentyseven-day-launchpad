@@ -33,13 +33,11 @@ export const HeroSection = () => {
 
   return (
     <section className="relative pt-24 pb-20 overflow-hidden particles-bg grid-texture">
-      {/* BG effects — YouTube red glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[200px]" style={{ background: 'radial-gradient(circle, hsl(0 72% 30% / 0.2), transparent 70%)' }} />
         <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px]" style={{ background: 'radial-gradient(circle, hsl(142 76% 30% / 0.08), transparent 70%)' }} />
       </div>
 
-      {/* Decorative YouTube icons */}
       <div className="absolute top-20 right-[15%] hidden lg:block">
         <YouTubePlayIcon size={56} opacity={0.06} />
       </div>
@@ -49,9 +47,7 @@ export const HeroSection = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left — Copy */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            {/* Social proof avatars */}
             <motion.div className="flex items-center gap-3 mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
               <div className="flex -space-x-2.5">
                 {['M','J','A','R','L','K'].map((l, i) => (
@@ -71,9 +67,9 @@ export const HeroSection = () => {
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold font-display leading-[1.05] mb-6 tracking-tight">
               {pt ? (
-                <>De 0 a monetizado no <span className="text-primary">YouTube</span> em <span className="gradient-text">27 dias.</span></>
+                <>Monetize seu Canal do <span className="text-primary">YouTube</span> com <span className="gradient-text">IA em 27 Dias</span></>
               ) : (
-                <>From 0 to monetized on <span className="text-primary">YouTube</span> in <span className="gradient-text">27 days.</span></>
+                <>Monetize your <span className="text-primary">YouTube</span> Channel with <span className="gradient-text">AI in 27 Days</span></>
               )}
             </h1>
 
@@ -83,14 +79,12 @@ export const HeroSection = () => {
                 : 'The only AI platform that plans, scripts, narrates and analyzes your channel — from day 1 to YPP. Over 3,200 creators already monetized.'}
             </p>
 
-            {/* Trust row */}
             <div className="flex flex-wrap items-center gap-4 mb-8 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" />{pt ? 'Grátis para começar' : 'Free to start'}</span>
               <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-accent" />{pt ? 'Sem cartão de crédito' : 'No credit card'}</span>
               <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" />{pt ? 'Cancele quando quiser' : 'Cancel anytime'}</span>
             </div>
 
-            {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-start gap-4 mb-10">
               <Link to="/login">
                 <Button size="lg" className="gradient-hero border-0 glow-primary shimmer text-lg px-8 py-7 group font-semibold rounded-lg">
@@ -104,13 +98,7 @@ export const HeroSection = () => {
             </div>
           </motion.div>
 
-          {/* Right — Mockup with YouTube play button */}
-          <motion.div
-            className="relative"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-          >
+          <motion.div className="relative" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }}>
             <div className="glass-premium rounded-2xl p-1 glow-primary">
               <div className="bg-card rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-muted/20">
@@ -155,39 +143,23 @@ export const HeroSection = () => {
               </div>
             </div>
 
-            {/* Floating badges */}
-            <motion.div
-              className="absolute -right-2 top-16 glass-premium rounded-xl px-3 py-2 shadow-lg"
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.5 }}
-            >
+            <motion.div className="absolute -right-2 top-16 glass-premium rounded-xl px-3 py-2 shadow-lg" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.5 }}>
               <p className="text-xs font-semibold flex items-center gap-1.5">
                 <span className="text-primary">▶</span>
                 {pt ? 'Canal atingiu 1.000 subs' : 'Channel hit 1,000 subs'}
               </p>
             </motion.div>
-            <motion.div
-              className="absolute -left-2 bottom-20 glass-premium rounded-xl px-3 py-2 shadow-lg"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.8 }}
-              style={{ animation: 'float-anim 4s ease-in-out infinite' }}
-            >
+            <motion.div className="absolute -left-2 bottom-20 glass-premium rounded-xl px-3 py-2 shadow-lg" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.8 }} style={{ animation: 'float-anim 4s ease-in-out infinite' }}>
               <p className="text-xs font-semibold">💰 {pt ? 'YPP aprovado!' : 'YPP approved!'}</p>
             </motion.div>
 
-            {/* YouTube play icon decoration */}
             <div className="absolute -top-4 -left-4">
               <YouTubePlayIcon size={32} opacity={0.08} animate={false} />
             </div>
           </motion.div>
         </div>
 
-        {/* Stats */}
-        <motion.div
-          ref={statsRef}
-          className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
+        <motion.div ref={statsRef} className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           {[
             { value: `${days}`, suffix: pt ? ' dias' : ' days', label: pt ? 'Tempo médio para monetização' : 'Avg time to monetize' },
             { value: `${creators.toLocaleString()}`, suffix: '+', label: pt ? 'Criadores monetizados' : 'Creators monetized' },
@@ -201,7 +173,6 @@ export const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Demo modal */}
       {showDemo && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDemo(false)}>
           <div className="glass-premium rounded-2xl p-2 max-w-3xl w-full" onClick={e => e.stopPropagation()}>

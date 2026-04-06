@@ -4,20 +4,20 @@ import { motion } from 'framer-motion';
 
 const faqs = {
   pt: [
-    { q: 'Funciona mesmo que eu nunca tenha gravado um vídeo antes?', a: 'Sim. O plano de 27 dias foi projetado do zero para iniciantes. Você receberá uma missão por dia — sem jargões, sem suposições. Se você sabe usar um smartphone, consegue seguir o plano.' },
-    { q: 'E se eu não aparecer nos vídeos? Posso usar a narração IA?', a: 'Pode. Nosso módulo de Narração IA gera voz em português com qualidade profissional. Centenas de canais faceless (sem rosto) monetizaram usando só nossa plataforma.' },
-    { q: 'Em 27 dias realmente dá para monetizar?', a: 'Nossa taxa de monetização em 27 dias é de 73% entre usuários do plano Pro que seguem o plano diário. O segredo é o nicho certo + consistência + roteiros otimizados para o algoritmo. Fazemos os 3.' },
-    { q: 'O que acontece se eu não monetizar em 27 dias?', a: 'Você continua usando a plataforma. O plano se renova automaticamente até você atingir o objetivo. E nossa garantia de 7 dias garante que você não perde nada ao testar.' },
-    { q: 'Isso funciona para qualquer nicho?', a: 'Nossa IA foi treinada em 50+ nichos do YouTube brasileiro. Finance, tech, lifestyle, culinária, fitness, games — nossa busca de nicho mostrará exatamente qual sub-nicho tem menor competição e maior RPM.' },
-    { q: 'Posso cancelar quando quiser?', a: 'Sim, sem burocracia. Cancele em 1 clique no painel. Sem ligação, sem email, sem justificativa.' },
+    { q: 'É possível monetizar um canal YouTube em 27 dias com IA?', a: 'Sim. O Monetiza27 usa inteligência artificial para criar um plano personalizado dia a dia que maximiza a velocidade de crescimento. Nossa taxa de monetização em 27 dias entre usuários do plano Pro que seguem o plano diário supera 70%. A plataforma identifica o nicho certo, gera roteiros otimizados para retenção e algoritmo, e monitora o progresso rumo aos 1.000 inscritos e 4.000 horas assistidas exigidos pelo YouTube Partner Program.' },
+    { q: 'Como a IA ajuda a crescer no YouTube mais rápido?', a: 'A IA do Monetiza27 analisa canais do seu nicho, identifica padrões de vídeos que viralizam, gera roteiros com estrutura otimizada para 80% ou mais de retenção, cria títulos com alta taxa de clique (CTR) e produz narração em português automaticamente. Tudo baseado em dados reais do YouTube.' },
+    { q: 'Funciona para canal sem aparecer (faceless YouTube)?', a: 'Sim. O Monetiza27 inclui narração IA com vozes neurais em português que permitem criar vídeos profissionais sem aparecer na câmera. Centenas de canais faceless brasileiros foram monetizados usando a plataforma.' },
+    { q: 'O Monetiza27 é gratuito?', a: 'Existe um plano gratuito com 1 canal, plano 27 dias básico e 3 roteiros por mês, sem necessidade de cartão de crédito. O plano Creator Pro custa R$47 por mês e oferece 3 canais, 30 roteiros mensais, narração IA e análise de concorrentes.' },
+    { q: 'Quanto tempo leva para atingir 1.000 inscritos no YouTube com IA?', a: 'Com o plano de 27 dias do Monetiza27, a maioria dos criadores atinge 1.000 inscritos entre o dia 20 e o dia 27, desde que publiquem os vídeos recomendados pela plataforma. O resultado depende do nicho, consistência e qualidade dos vídeos.' },
+    { q: 'Qual a diferença entre Monetiza27 e outras ferramentas de IA para YouTube?', a: 'O Monetiza27 é a única plataforma com plano estruturado de 27 dias, gerador de roteiros, narração IA, análise de nicho e dashboard de progresso integrados em uma só ferramenta focada em monetização. Outras ferramentas oferecem apenas uma dessas funções isoladas.' },
   ],
   en: [
-    { q: 'Does it work even if I\'ve never recorded a video?', a: 'Yes. The 27-day plan was designed from scratch for beginners. You\'ll receive one mission per day — no jargon, no assumptions. If you can use a smartphone, you can follow the plan.' },
-    { q: 'What if I don\'t show my face? Can I use AI narration?', a: 'Yes. Our AI Narration module generates professional-quality voice. Hundreds of faceless channels monetized using only our platform.' },
-    { q: 'Can you really monetize in 27 days?', a: 'Our 27-day monetization rate is 73% among Pro plan users who follow the daily plan. The secret is the right niche + consistency + algorithm-optimized scripts. We handle all 3.' },
-    { q: 'What if I don\'t monetize in 27 days?', a: 'You keep using the platform. The plan auto-renews until you reach your goal. And our 7-day guarantee means you risk nothing testing it.' },
-    { q: 'Does this work for any niche?', a: 'Our AI was trained on 50+ YouTube niches. Finance, tech, lifestyle, cooking, fitness, games — our niche search will show exactly which sub-niche has least competition and highest RPM.' },
-    { q: 'Can I cancel anytime?', a: 'Yes, no strings attached. Cancel in 1 click from your dashboard. No calls, no emails, no justification needed.' },
+    { q: 'Can you monetize a YouTube channel in 27 days with AI?', a: 'Yes. Monetiza27 uses AI to create a personalized day-by-day plan that maximizes growth speed. Our 27-day monetization rate among Pro plan users who follow the daily plan exceeds 70%. The platform identifies the right niche, generates scripts optimized for retention and algorithm, and monitors progress toward the 1,000 subscribers and 4,000 watch hours required by the YouTube Partner Program.' },
+    { q: 'How does AI help grow on YouTube faster?', a: 'Monetiza27\'s AI analyzes channels in your niche, identifies viral video patterns, generates scripts with structure optimized for 80%+ retention, creates high click-through rate (CTR) titles, and produces narration automatically. All based on real YouTube data.' },
+    { q: 'Does it work for faceless YouTube channels?', a: 'Yes. Monetiza27 includes AI narration with neural voices that let you create professional videos without showing your face. Hundreds of faceless channels have been monetized using the platform.' },
+    { q: 'Is Monetiza27 free?', a: 'There\'s a free plan with 1 channel, basic 27-day plan, and 3 scripts/month — no credit card required. Creator Pro is $9/month and offers 3 channels, 30 scripts, AI narration, and competitor analysis.' },
+    { q: 'How long to reach 1,000 subscribers on YouTube with AI?', a: 'With Monetiza27\'s 27-day plan, most creators reach 1,000 subscribers between day 20 and day 27, as long as they publish the videos recommended by the platform.' },
+    { q: 'What\'s the difference between Monetiza27 and other YouTube AI tools?', a: 'Monetiza27 is the only platform with a structured 27-day plan, script generator, AI narration, niche analysis, and progress dashboard integrated into one tool focused on monetization. Other tools offer only one of these functions in isolation.' },
   ],
 };
 
@@ -30,9 +30,9 @@ export const FaqSection = () => {
     <section id="faq" className="py-24">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <p className="text-accent font-semibold text-sm mb-3 tracking-wider uppercase">FAQ</p>
+          <p className="text-primary font-semibold text-sm mb-3 tracking-wider uppercase">FAQ</p>
           <h2 className="text-3xl sm:text-4xl font-bold font-display">
-            {pt ? 'Perguntas Frequentes' : 'Frequently Asked Questions'}
+            {pt ? 'Perguntas Frequentes sobre IA para YouTube' : 'Frequently Asked Questions about AI for YouTube'}
           </h2>
         </motion.div>
 
@@ -41,7 +41,7 @@ export const FaqSection = () => {
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
               <AccordionItem value={`faq-${i}`} className="glass-premium rounded-xl px-6 border-0">
                 <AccordionTrigger className="text-left font-medium hover:no-underline">
-                  {faq.q}
+                  <h3 className="text-base font-medium">{faq.q}</h3>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground leading-relaxed">
                   {faq.a}
