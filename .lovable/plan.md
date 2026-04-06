@@ -1,120 +1,52 @@
 
 
-# Plano: Canais de Referência Pessoais — Sistema de Modelagem Inteligente
+# DubSpy — Diagnóstico Completo + Correções
 
-## Contexto Atual
+## O que funciona bem
 
-Hoje existe uma tabela `reference_channels` global (canais de referência do sistema) e `user_channels` (canais do próprio usuário). Mas **não existe vínculo entre o usuário e canais de referência específicos que ele escolhe como modelo**. As sugestões de vídeo (`suggest-themes`) usam apenas os dados do canal do usuário + concorrentes genéricos, sem considerar canais-modelo escolhidos pelo usuário.
+- **Multi-query AI search**: Gemini Flash-Lite gera 4 queries de busca diversas por nicho — cobertura ampla confirmada nos logs
+- **Enrichment pipeline**: Viral Score, Growth Potential, Algorithm Boost são calculados com fórmula sólida (views/sub, velocity 72h, engagement, like ratio, upload frequency)
+- **Modo Escapees**: Retornou 38 canais reais com dados ricos (ex: "Olhar Curioso" — 27 dias, 4.6M views, viral score 76)
+- **UI**: Cards com ViralScoreRing, filtros avançados, sort por 8 critérios, saved searches — bem construído
+- **Dedup**: Vídeos são deduplicados entre queries paralelas
 
-## O que vou construir (indo além do que você pediu)
+## Bugs encontrados (3 bugs reais)
 
-Não vou apenas "salvar canais de referência". Vou criar um **sistema de modelagem contínua** onde os canais de referência do usuário se tornam uma fonte ativa de inteligência que alimenta TODO o pipeline.
+### Bug 1: Feedback loop completamente quebrado
+**Linha 426**: `ch.topVideos` não existe. O campo correto é `ch.videos`. Resultado: os títulos virais descobertos pelo DubSpy NUNCA alimentam o `viral_titles_db` nem o `hook_library`. O loop de aprendizagem prometido não funciona.
 
-### Arquitetura
+### Bug 2: Modo Emerging filtra demais — 0 resultados
+Teste real: "true crime" BR → 56 canais analisados → 0 passaram nos filtros. O problema: o YouTube Search API com `order=viewCount` retorna vídeos de canais grandes (que têm >20 vídeos), e o filtro `isEmerging` exige `videoCount <= 20 AND ageDays <= 180`. Resultado: canais genuinamente novos com poucos vídeos raramente aparecem no top por views.
 
-```text
-┌─────────────────────────────────────────────────────┐
-│           user_reference_channels (nova tabela)      │
-│  user_id │ channel_id (channel_intelligence) │ role  │
-│  ───────   ─────────────────────────────────   ──── │
-│  usr_1   │ UCxxx (MrBeast)                   │ style │
-│  usr_1   │ UCyyy (Nexpo)                     │ hook  │
-│  usr_1   │ UCzzz (Leirbag)                   │ model │
-└──────────────┬──────────────────────────────────────┘
-               │
-    ┌──────────▼──────────┐
-    │  refresh-references  │  (nova edge function)
-    │  Cron ou on-demand   │
-    │                      │
-    │  1. YouTube API:     │
-    │     últimos 10 vídeos│
-    │     de cada ref      │
-    │                      │
-    │  2. Gemini analisa:  │
-    │     títulos, hooks,  │
-    │     formatos que     │
-    │     performaram      │
-    │                      │
-    │  3. Salva em         │
-    │     reference_intel  │
-    │     (JSON no vínculo)│
-    └──────────┬──────────┘
-               │
-    ┌──────────▼──────────────────────────┐
-    │  Injeção automática no pipeline:    │
-    │                                      │
-    │  suggest-themes   → "seus refs      │
-    │                      postaram X"     │
-    │  generate-script  → "modelo de hook │
-    │                      do canal Y"     │
-    │  generate-titles  → "padrão título  │
-    │                      do canal Z"     │
-    │  chat-assistant   → contexto Dotti  │
-    └─────────────────────────────────────┘
-```
+**Correção**: Adicionar uma segunda busca com `order=date` para encontrar canais realmente novos, não só os com mais views.
 
-### Diferenciais vs o que você pediu
+### Bug 3: Micro-niche-drill timeout
+O modo faz: AI query generation → 3 YouTube searches → video stats → channel stats → AI clustering → drill por cluster (mais YouTube searches). Isso excede o timeout de 60s do Edge Function. 
 
-1. **Papel por referência**: Cada canal de referência tem um `role` — o usuário pode dizer "quero modelar o ESTILO do MrBeast, os HOOKS do Nexpo e o FORMATO do Leirbag". Isso permite injeção cirúrgica.
+**Correção**: Limitar drill a máximo 3 clusters e reduzir `maxResults` por query de 50 para 25 no modo drill.
 
-2. **Intel snapshot automático**: Toda vez que o usuário gera um roteiro ou pede sugestões, o sistema verifica se os canais de referência foram atualizados nos últimos 7 dias. Se não, faz refresh silencioso dos últimos 10 vídeos.
+## Melhorias propostas
 
-3. **Padrões extraídos, não vídeos brutos**: O Gemini analisa os últimos vídeos e extrai: padrões de título, tipos de hook, duração média, formato dominante, e "o que mudou desde o último scan". Isso vira contexto compacto, não dump de dados.
+### Melhoria 1: Gold Score (prometido na spec, não implementado)
+O `viralScore` atual é bom mas não calcula o "Gold Score" prometido na spec: `multiplier * 0.4 + engagement * 0.3 + efficiency * 0.3`. Adicionar como campo separado para identificar canais pequenos com vídeos outlier.
 
-4. **Comparativo de evolução**: O sistema detecta quando um canal de referência muda de estratégia (ex: passou de vídeos de 20min para Shorts) e avisa o usuário.
+### Melhoria 2: Contagem de vídeos recentes insuficiente
+O sistema só pega vídeos dos últimos 30-180 dias via Search API (máximo ~50 por query). Para calcular `uploadFrequencyDays` corretamente, precisa do `uploads` playlist. Mas isso consumiria mais quota. 
 
-## Implementação
+**Solução pragmática**: Usar os vídeos encontrados mas indicar no UI quando os dados são baseados em amostra parcial.
 
-### 1. Migration: Tabela `user_reference_channels`
-```sql
-CREATE TABLE public.user_reference_channels (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  channel_intelligence_id uuid REFERENCES public.channel_intelligence(id) ON DELETE SET NULL,
-  youtube_channel_id text NOT NULL,
-  channel_name text NOT NULL,
-  thumbnail text,
-  role text DEFAULT 'model', -- 'model', 'style', 'hook', 'format'
-  latest_intel jsonb DEFAULT '{}',
-  last_scanned_at timestamptz,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(user_id, youtube_channel_id)
-);
-ALTER TABLE public.user_reference_channels ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own refs" ON public.user_reference_channels
-  FOR ALL USING (auth.uid() = user_id);
-```
+### Melhoria 3: Indicador de confiança dos dados
+O UI mostra `uploadFrequencyDays: 0` quando só tem 1 vídeo na amostra. Deve mostrar "—" ou "N/A" em vez de 0, e indicar quando o score é baseado em poucos vídeos.
 
-### 2. Nova Edge Function: `refresh-references`
-- Recebe `user_id` (ou executa para todos usuários com refs não escaneados há >7 dias)
-- Para cada canal de referência: busca últimos 10 vídeos via YouTube API
-- Gemini Flash extrai: `title_patterns`, `hook_types`, `avg_duration`, `format_shift`, `top_performing_elements`
-- Salva em `latest_intel` (JSON compacto ~500 chars por canal)
-
-### 3. UI: Aba "Referências" na página Channels
-- Nova tab ao lado de "Visão Geral", "Concorrentes", "Sugestões"
-- Interface para adicionar até 5 canais de referência (input URL + select role)
-- Cards mostrando: último vídeo, padrão de título, hook dominante, status do scan
-- Botão "Atualizar referências" (manual)
-
-### 4. Injeção no Pipeline
-- `suggest-themes`: Adicionar bloco de contexto "Canais de referência do usuário postaram recentemente: [títulos + performance]"
-- `chat-assistant`: Dotti recebe `reference_channels_context` no user state
-- `generate-titles`: Padrões de título dos refs como exemplos adicionais
-
-### Arquivos a editar
+## Arquivos a editar
 
 | Arquivo | Mudança |
 |---------|---------|
-| **Migration** | Criar `user_reference_channels` com RLS |
-| `supabase/functions/refresh-references/index.ts` | **Nova** — scan + extração Gemini |
-| `src/pages/Channels.tsx` | Nova aba "Referências" com CRUD |
-| `supabase/functions/suggest-themes/index.ts` | Injetar contexto dos refs |
-| `supabase/functions/chat-assistant/index.ts` | Carregar refs no user state |
+| `supabase/functions/dubspy-scan/index.ts` | Fix `topVideos→videos`, add `order=date` search for emerging, timeout-proof drill, Gold Score |
+| `src/components/dubspy/EmergingChannelsTab.tsx` | Indicador de confiança, melhor empty state |
 
-### Detalhes Técnicos
-- 5 arquivos (1 novo, 4 editados) + 1 migration
-- Limite de 5 canais de referência por usuário (controle de custo)
-- YouTube API: ~1 request por canal de referência por scan (quota mínima)
-- Gemini Flash-Lite para extração de padrões (custo ~$0.001 por scan)
+## Detalhes técnicos
+- 2 arquivos editados (1 edge function, 1 componente)
+- 0 migrations
+- Deploy + teste real com curl após correção
 
