@@ -28,6 +28,75 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
   return data;
 }
 
+// ── Auto-link scripts to YouTube videos by title similarity ──
+async function autoLinkScripts(sb: any, userIds: string[]): Promise<number> {
+  const uniqueUserIds = [...new Set(userIds)];
+  let linked = 0;
+
+  for (const userId of uniqueUserIds) {
+    // Get unlinked video performances
+    const { data: performances } = await sb.from("video_performance")
+      .select("youtube_video_id, title, avg_retention_percent, ctr_percent, views_day7, views_day30, performance_grade, views_current, published_at")
+      .eq("user_id", userId)
+      .eq("oauth_synced", true);
+
+    if (!performances?.length) continue;
+
+    // Get user's scripts
+    const { data: projects } = await sb.from("video_projects")
+      .select("id, title")
+      .eq("user_id", userId);
+
+    if (!projects?.length) continue;
+
+    // Check existing links
+    const { data: existingLinks } = await sb.from("script_performance_link")
+      .select("youtube_video_id")
+      .eq("user_id", userId);
+    const linkedVideoIds = new Set((existingLinks || []).map((l: any) => l.youtube_video_id));
+
+    for (const perf of performances) {
+      if (linkedVideoIds.has(perf.youtube_video_id)) continue;
+
+      // Simple fuzzy match: find script with most similar title
+      const perfTitle = (perf.title || "").toLowerCase().replace(/[^a-záàâãéèêíïóôõúç0-9\s]/gi, "");
+      let bestMatch: any = null;
+      let bestScore = 0;
+
+      for (const proj of projects) {
+        const projTitle = (proj.title || "").toLowerCase().replace(/[^a-záàâãéèêíïóôõúç0-9\s]/gi, "");
+        // Word overlap score
+        const perfWords = new Set(perfTitle.split(/\s+/).filter((w: string) => w.length > 2));
+        const projWords = new Set(projTitle.split(/\s+/).filter((w: string) => w.length > 2));
+        const overlap = [...perfWords].filter(w => projWords.has(w)).length;
+        const score = overlap / Math.max(perfWords.size, projWords.size, 1);
+        if (score > bestScore && score >= 0.3) {
+          bestScore = score;
+          bestMatch = proj;
+        }
+      }
+
+      if (bestMatch) {
+        const { error } = await sb.from("script_performance_link").insert({
+          user_id: userId,
+          script_id: bestMatch.id,
+          youtube_video_id: perf.youtube_video_id,
+          video_title: perf.title,
+          published_at: perf.published_at,
+          views_7d: perf.views_day7,
+          views_30d: perf.views_day30,
+          avg_retention_pct: perf.avg_retention_percent,
+          ctr_pct: perf.ctr_percent,
+          performance_grade: perf.performance_grade,
+        });
+        if (!error) linked++;
+      }
+    }
+  }
+
+  return linked;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
