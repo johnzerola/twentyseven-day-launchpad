@@ -294,7 +294,7 @@ serve(async (req) => {
       const langContext = language ? `\nIdioma do título: ${language}` : '';
       const countryContext = country ? `\nPaís alvo: ${country}` : '';
 
-      const prompt = `Gere exatamente 20 títulos virais para YouTube com CTR potencial de 15-30%.
+      const prompt = `Gere exatamente 20 títulos virais para YouTube com CTR potencial de 15-35%.
 ${niche ? `Nicho: ${niche}` : ''}
 ${topic ? `Tema específico: ${topic}` : ''}${langContext}${countryContext}
 ${competitorBlock}
@@ -307,21 +307,35 @@ ${formatsBlock}
 ${learningBlock}
 ${scriptContextBlock}
 
-REGRAS PARA CTR MÁXIMO:
-1. Cada título deve ter entre 45-65 caracteres (sweet spot para YouTube)
-2. Use números ímpares quando aplicável (7, 13, 21 performam melhor)
-3. Comece com a palavra mais impactante — a primeira palavra define o clique
-4. Misture MAIÚSCULAS estrategicamente (max 2-3 palavras) para destacar
-5. Crie curiosity gaps: o título DEVE fazer o viewer PRECISAR saber mais
-6. Use contraste emocional: "A verdade LINDA sobre [coisa terrível]"
-7. Evite clickbait puro — prometa algo que o vídeo entrega
-8. Adapte ao idioma/cultura do público-alvo${language ? ` (${language})` : ''}
-9. Cada título deve usar um padrão/estilo DIFERENTE — máxima diversidade
-10. Integre hooks comprovados nos inícios dos títulos
-11. DIFERENCIE-SE dos concorrentes acima — encontre ângulos que eles NÃO usaram
-12. Incorpore termos trending detectados pelo Brave Search
+═══ INFORMATION GAP THEORY (TEORIA DA LACUNA DE INFORMAÇÃO) ═══
+O clique NÃO é racional — é um REFLEXO EMOCIONAL. Título e thumbnail não descrevem o vídeo;
+eles criam um MISTÉRIO PERTURBADOR ou IRRESISTÍVEL. O cérebro ODEIA lacunas de informação
+e PRECISA fechá-las (Efeito Zeigarnik). Explore isso em CADA título.
 
-Para cada título, classifique o estilo e estime o CTR de 5 a 30%.`;
+═══ 5 FÓRMULAS MATEMÁTICAS DE TÍTULOS VIRAIS (use pelo menos 5 delas) ═══
+1. O SEGREDO OCULTO: "A verdade perturbadora que a [Indústria/Pessoa] escondeu"
+2. O ERRO FATAL: "Por que 99% das pessoas erram ao [Ação Comum]"
+3. CONTRASTE ABSURDO: "Como um [Objeto Simples] gerou [Resultado Milionário/Catastrófico]"
+4. DESAFIO DO TEMPO: "Eu testei [Ação] por 30 dias e meu corpo [Consequência]"
+5. ARQUIVOS NÃO REVELADOS: "As imagens que [Autoridade] tentou apagar da internet"
+
+REGRAS PARA CTR MÁXIMO:
+1. MÁXIMO 50 caracteres (para não cortar no mobile) — ideal 40-50
+2. NUNCA entregar a resposta no título — o título cria o MISTÉRIO, o vídeo entrega
+3. Use PALAVRAS DE PODER: Assustador, Proibido, Ilegal, Gênio, Estúpido, Destruiu, Vazou, Perturbador, Oculto
+4. Use números ímpares quando aplicável (7, 13, 21 performam melhor)
+5. Comece com a palavra mais impactante — a primeira palavra define o clique
+6. Misture MAIÚSCULAS estrategicamente (max 2-3 palavras) para destacar
+7. Crie curiosity gaps: o título DEVE fazer o viewer PRECISAR saber mais
+8. Use contraste emocional: "A verdade LINDA sobre [coisa terrível]"
+9. Evite clickbait puro — prometa algo que o vídeo entrega
+10. Adapte ao idioma/cultura do público-alvo${language ? ` (${language})` : ''}
+11. Cada título deve usar um padrão/estilo DIFERENTE — máxima diversidade
+12. DIFERENCIE-SE dos concorrentes acima — encontre ângulos que eles NÃO usaram
+13. Incorpore termos trending detectados pelo Brave Search
+14. Explore o Viés da Negatividade: o cérebro foca 3x mais em ameaças e erros que em positividade
+
+Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
 
       const response = await fetch(geminiUrl, {
         method: "POST",

@@ -59,14 +59,40 @@ For each variant, provide: Midjourney prompt, DALL-E 3 prompt, composition descr
     const aiResp = await _ai({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are a YouTube thumbnail expert. Output ONLY via the tool call." },
+          { role: "system", content: `You are a YouTube thumbnail DIRECTOR OF ART — not just a describer.
+Your thumbnails don't describe the video; they CREATE AN IRRESISTIBLE MYSTERY.
+
+═══ REGRA DOS 3 ELEMENTOS (OBRIGATÓRIO) ═══
+Uma thumbnail perfeita tem NO MÁXIMO 3 pontos de foco:
+- Elemento 1 (Foco Principal): Rosto/objeto. Deve ocupar 40% da tela. Se rosto, emoção EXTREMA (medo, choque, raiva).
+- Elemento 2 (Contexto/Mistério): Objeto segurado, cenário ao fundo, ou seta vermelha apontando para algo borrado.
+- Elemento 3 (Contraste/Cor): Fundo limpo, geralmente escuro. Máximo contraste.
+
+═══ TEORIA DAS CORES COMPLEMENTARES ═══
+Use contraste de cores complementares para máximo impacto:
+- Azul Marinho vs Laranja Neon
+- Vermelho Sangue vs Cyan/Turquesa  
+- Roxo Profundo vs Amarelo Elétrico
+- Verde Neon vs Magenta
+NUNCA use paleta monocromática — o contraste BRUTAL é o que faz parar o scroll.
+
+═══ INSTRUÇÕES DE PÓS-PRODUÇÃO (OBRIGATÓRIO em cada variante) ═══
+Cada variante DEVE incluir instruções técnicas de finalização:
+- Drop Shadow no elemento principal para profundidade
+- Optical Glow (cor neon) vindo de trás do objeto central
+- Radial Blur suave no fundo para direcionar visão ao centro
+- Curves: estourar contraste (pretos profundos, highlights brilhantes)
+- Motion Blur no fundo para simular velocidade/tensão
+- Inner Shadow escuro nas bordas para enquadramento dramático
+
+Output ONLY via the tool call.` },
           { role: "user", content: prompt },
         ],
         tools: [{
           type: "function",
           function: {
             name: "generate_thumbnails",
-            description: "Generate thumbnail prompt variants",
+            description: "Generate thumbnail prompt variants with post-production instructions",
             parameters: {
               type: "object",
               properties: {
@@ -78,13 +104,15 @@ For each variant, provide: Midjourney prompt, DALL-E 3 prompt, composition descr
                       style: { type: "string" },
                       midjourney_prompt: { type: "string" },
                       dalle_prompt: { type: "string" },
-                      composition: { type: "string" },
+                      composition: { type: "string", description: "Describe the 3 elements: focus, context, contrast" },
                       color_palette: { type: "array", items: { type: "string" } },
+                      complementary_contrast: { type: "string", description: "Which complementary color pair is used" },
                       emotion_target: { type: "string" },
                       expected_ctr_boost: { type: "number" },
                       face_required: { type: "boolean" },
+                      post_production_instructions: { type: "string", description: "Exact After Effects/Photoshop instructions: Drop Shadow, Optical Glow, Radial Blur, Curves, Motion Blur" },
                     },
-                    required: ["style", "midjourney_prompt", "dalle_prompt", "composition", "color_palette", "emotion_target"],
+                    required: ["style", "midjourney_prompt", "dalle_prompt", "composition", "color_palette", "emotion_target", "post_production_instructions"],
                   },
                 },
               },

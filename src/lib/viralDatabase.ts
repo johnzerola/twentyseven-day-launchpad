@@ -176,7 +176,123 @@ export const SEO_KEYWORD_PATTERNS: SEOKeywordPattern[] = [
   { id: 'seo8', pattern: 'melhores + [categoria] + [ano]', examples: ['melhores ações 2026', 'melhores notebooks 2026'], searchVolume: 'alto', competition: 'alta' },
 ];
 
-export const HOOK_STYLES = ['curiosidade', 'urgência', 'polêmica', 'storytelling', 'choque', 'empatia'] as const;
+// ========== ADDITIONAL TITLE PATTERNS (Viral Engine Master — Information Gap Theory) ==========
+export const VIRAL_TITLE_PATTERNS_V2: TitlePattern[] = [
+  { id: 't13', pattern: 'A verdade perturbadora que a [Indústria/Pessoa] escondeu', example: 'A verdade perturbadora que os bancos esconderam por 20 anos', style: 'segredo_oculto', avgCTR: 18.5 },
+  { id: 't14', pattern: 'Por que 99% das pessoas erram ao [Ação Comum]', example: 'Por que 99% das pessoas erram ao investir em cripto', style: 'erro_fatal', avgCTR: 16.2 },
+  { id: 't15', pattern: 'Como um [Objeto Simples] gerou [Resultado Milionário/Catastrófico]', example: 'Como um pen drive destruiu uma empresa de $2 bilhões', style: 'contraste_absurdo', avgCTR: 19.1 },
+  { id: 't16', pattern: 'Eu testei [Ação] por 30 dias e meu corpo [Consequência]', example: 'Eu testei jejum de 72h por 30 dias e meu corpo mudou', style: 'desafio_tempo', avgCTR: 17.8 },
+  { id: 't17', pattern: 'As imagens que [Autoridade] tentou apagar da internet', example: 'As imagens que o governo tentou apagar da internet', style: 'arquivos_nao_revelados', avgCTR: 21.3 },
+];
+
+// ========== ADDITIONAL HOOKS (Contraintuitivo + Arquivo Oculto) ==========
+export const VIRAL_HOOKS_V2: ViralHook[] = [
+  { id: 'h16', text: '"Você acha que a internet que usamos é segura? O que eu vou te mostrar agora foi classificado como Altamente Perigoso..."', style: 'arquivo_oculto', niches: ['tecnologia', 'segurança', 'mistério'], estimatedRetention: 91 },
+  { id: 'h17', text: '"Esta é a substância mais cara do mundo. E não é o ouro. Apenas 1 grama disso custa 62 trilhões de dólares..."', style: 'contraintuitivo', niches: ['ciência', 'curiosidades', 'educação'], estimatedRetention: 90 },
+  { id: 'h18', text: '"Nós achávamos que a resposta estava no espaço... até encontrarmos estas imagens no fundo do oceano."', style: 'arquivo_oculto', niches: ['ciência', 'mistério', 'documentário'], estimatedRetention: 92 },
+  { id: 'h19', text: '"Ele depositou $847.000 numa conta que abriu com $50 de saldo. E ninguém percebeu por 3 anos."', style: 'contraintuitivo', niches: ['finanças', 'true crime', 'curiosidades'], estimatedRetention: 89 },
+  { id: 'h20', text: '"O que eu vou te mostrar nos próximos 2 minutos... médicos estão pedindo para tirar do ar."', style: 'arquivo_oculto', niches: ['saúde', 'ciência', 'polêmica'], estimatedRetention: 88 },
+];
+
+// ========== BINGE LOOP CTAs (Never say goodbye — final is the next video's hook) ==========
+export const BINGE_LOOP_CTAS: CallToAction[] = [
+  { id: 'bl1', text: '"Isso explica como o evento X aconteceu. Mas existe um detalhe ainda mais bizarro sobre [Assunto Y]... Eu detalhei tudo no vídeo que está aparecendo na sua tela agora. Clica nele."', placement: 'fim', type: 'playlist', effectiveness: 10 },
+  { id: 'bl2', text: '"A resolução desse mistério foi encontrada. Mas isso levantou uma questão ainda mais sombria... Eu explico todos os detalhes nesse vídeo aqui."', placement: 'fim', type: 'playlist', effectiveness: 10 },
+  { id: 'bl3', text: '"Se você é uma das poucas pessoas que entende a gravidade deste arquivo, se inscreva agora — o algoritmo não vai te recomendar o próximo vazamento."', placement: 'meio', type: 'inscrição', effectiveness: 9 },
+  { id: 'bl4', text: '"No minuto 3:15, um detalhe na foto muda toda a teoria. Você percebeu qual é? Comente a sua resposta abaixo."', placement: 'meio', type: 'comentário', effectiveness: 9 },
+];
+
+// ========== NARRATOR ARCHETYPES ==========
+export interface NarratorArchetype {
+  id: string;
+  name: string;
+  description: string;
+  toneDirective: string;
+  bestForNiches: string[];
+  pacingBPM: string;
+}
+
+export const NARRATOR_ARCHETYPES: NarratorArchetype[] = [
+  {
+    id: 'investigator',
+    name: 'O Investigador',
+    description: 'Tom denso, pausas dramáticas, frases curtas, foco em detalhes lógicos e conspiratórios.',
+    toneDirective: 'PERSONA: Investigador criminal analisando "arquivos obscuros". Tom sério, meticuloso, quase obsessivo. Pausas dramáticas antes de revelações. Frases curtas e cortantes. Cada dado é uma "evidência". Use linguagem forense: "as evidências indicam", "o padrão se repete", "o detalhe que a maioria não percebeu".',
+    bestForNiches: ['true crime', 'mistério', 'conspiração', 'tecnologia', 'ciência'],
+    pacingBPM: '70-90 BPM — Suspense eletrônico, drones sub-bass',
+  },
+  {
+    id: 'sage',
+    name: 'O Sábio / Avô',
+    description: 'Tom acolhedor, ritmo pausado, foco em sabedoria, folclore e emoção familiar.',
+    toneDirective: 'PERSONA: Contador de causos experiente. Tom caloroso, ritmo pausado mas envolvente. Voz que lembra um avô sábio narrando histórias à beira da fogueira. Use expressões regionais, metáforas da natureza. Faça o espectador SENTIR saudade de algo que nunca viveu.',
+    bestForNiches: ['história', 'folclore', 'mitologia', 'superação', 'emocionante'],
+    pacingBPM: '60-80 BPM — Violão acústico fingerstyle, tom nostálgico e melancólico',
+  },
+  {
+    id: 'hacker',
+    name: 'O Hacker de Informação',
+    description: 'Ritmo frenético, humor ácido e inteligente, alta densidade de informação por segundo.',
+    toneDirective: 'PERSONA: Dose de fatos rápidos e inteligentes. Ritmo FRENÉTICO. Humor ácido e esperto. Cada frase carrega 2-3 informações. Zero enrolação. Entrega dopamina a cada 10 segundos. Use analogias absurdas mas precisas. Linguagem de internet nativa.',
+    bestForNiches: ['curiosidades', 'ciência', 'animais', 'tecnologia', 'gaming', 'entretenimento'],
+    pacingBPM: '120-140 BPM — Synthwave acelerado, batida marcante e energética',
+  },
+];
+
+// ========== SOUND DESIGN PROFILES ==========
+export interface SoundDesignProfile {
+  id: string;
+  niche: string;
+  bpmRange: string;
+  trilhaStyle: string;
+  sfxKeys: string[];
+  silenceTactic: string;
+}
+
+export const SOUND_DESIGN_PROFILES: SoundDesignProfile[] = [
+  { id: 'sd1', niche: 'terror', bpmRange: '50-70 BPM', trilhaStyle: 'Drone sub-bass, frequências graves 30-50Hz, cordas dissonantes', sfxKeys: ['Sub-bass drop 40Hz', 'Risers reversos', 'Batimento cardíaco crescente', 'Silêncio abrupto 1.5s'], silenceTactic: 'Cortar TODA música por 1.5s antes da revelação chave' },
+  { id: 'sd2', niche: 'mistério', bpmRange: '60-80 BPM', trilhaStyle: 'Piano esparso, pads atmosféricos, clicks metálicos', sfxKeys: ['Whoosh sutil', 'Clock ticking', 'Glitch eletrônico', 'Boom/hit suave'], silenceTactic: 'Silêncio de 1s após cada revelação — ausência de som prende atenção' },
+  { id: 'sd3', niche: 'tecnologia', bpmRange: '110-130 BPM', trilhaStyle: 'Synthwave futurista, arpejos eletrônicos, bass pulsante', sfxKeys: ['Glitch digital', 'Whoosh sci-fi', 'UI click sounds', 'Data stream SFX'], silenceTactic: 'Drop abrupto antes de dado estatístico impactante' },
+  { id: 'sd4', niche: 'finanças', bpmRange: '100-120 BPM', trilhaStyle: 'Synthwave moderado, piano corporativo com edge, bass sutil', sfxKeys: ['Cash register', 'Stock ticker', 'Boom/hit nos números', 'Riser antes de revelação'], silenceTactic: 'Pausa de 1s antes de revelar valor em dólares' },
+  { id: 'sd5', niche: 'história', bpmRange: '70-90 BPM', trilhaStyle: 'Orquestra cinematográfica, cordas épicas, percussão tribal', sfxKeys: ['Épico drums', 'Brass stabs', 'Choir pad', 'Wind/nature ambience'], silenceTactic: 'Silêncio total por 2s antes do clímax histórico' },
+  { id: 'sd6', niche: 'curiosidades', bpmRange: '120-140 BPM', trilhaStyle: 'Upbeat electro, marimba pop, bass bouncy', sfxKeys: ['Pop/ding para cada fato', 'Whoosh entre itens', 'Wrong buzzer', 'Tada/fanfare mini'], silenceTactic: 'Música para abruptamente no fato mais chocante' },
+  { id: 'sd7', niche: 'true_crime', bpmRange: '60-80 BPM', trilhaStyle: 'Piano sombrio, strings tensas, low hum constante', sfxKeys: ['Heartbeat', 'Door creak', 'Siren distant', 'Evidence camera click'], silenceTactic: 'Drop total 2s antes de nomear o suspeito/vítima' },
+  { id: 'sd8', niche: 'motivacional', bpmRange: '90-110 BPM', trilhaStyle: 'Piano inspiracional crescente, strings emotivos, drums building', sfxKeys: ['Riser épico', 'Crowd cheer sutil', 'Heartbeat to drums transition'], silenceTactic: 'Silêncio breve antes da frase de transformação' },
+];
+
+// ========== VFX EDIT TAGS (to embed in scripts) ==========
+export const VFX_EDIT_TAGS = {
+  jCut: '[J-CUT: áudio da próxima cena entra antes do vídeo]',
+  parallax3D: '[BLENDER: projeção de câmera 3D sobre imagem 2D — parallax profundo]',
+  zoomIn: '[AFTER EFFECTS: zoom-in contínuo (100% → 115% em 10s) + Camera Shake sutil]',
+  cutMusic: '[CORTAR TODA MÚSICA POR 1.5 SEGUNDOS — Silence Effect]',
+  glitch: '[INSERIR B-ROLL ACELERADO + EFEITO DE GLITCH + ZOOM-IN RÁPIDO]',
+  motionGraphics: '[AFTER EFFECTS: animação de mapa/diagrama com Trim Paths + Motion Blur]',
+  filmGrain: '[AFTER EFFECTS: textura de filme Super 8 + partículas de poeira na composição]',
+  screenDarken: '[TELA ESCURECE POR 0.5s — troca brusca de cenário]',
+  heartbeat: '[SFX: batimento cardíaco crescente + frequência sub-bass 40Hz]',
+  boomHit: '[SFX: Boom/Hit impacto + parada abrupta da música por 1s]',
+} as const;
+
+// ========== 48-HOUR REVIVAL STRATEGY ==========
+export interface RevivalStrategy {
+  triggerCondition: string;
+  actions: string[];
+  timing: string;
+}
+
+export const REVIVAL_48H_STRATEGY: RevivalStrategy = {
+  triggerCondition: 'Vídeo com 3+ dias publicado e CTR abaixo da média do canal',
+  actions: [
+    'Gerar 3 novas variações de título mais amplas (menos nichadas)',
+    'Gerar 2 novos conceitos de thumbnail com contraste de cores completamente diferente do original',
+    'Trocar título/thumb no YouTube Studio no 3º dia exato após publicação',
+    'Usar cores complementares opostas ao original para vencer "banner blindness"',
+  ],
+  timing: '3º dia após publicação — quando o YouTube testa com audiência ampla e CTR cai',
+};
+
+export const HOOK_STYLES = ['curiosidade', 'urgência', 'polêmica', 'storytelling', 'choque', 'empatia', 'contraintuitivo', 'arquivo_oculto'] as const;
 export const CTA_PLACEMENTS = ['início', 'meio', 'fim', 'pin_comment'] as const;
 export const CTA_TYPES = ['inscrição', 'like', 'comentário', 'compartilhar', 'playlist', 'produto'] as const;
-export const TITLE_STYLES = ['curiosidade', 'urgência', 'números', 'contraintuitivo', 'storytelling', 'polêmica'] as const;
+export const TITLE_STYLES = ['curiosidade', 'urgência', 'números', 'contraintuitivo', 'storytelling', 'polêmica', 'segredo_oculto', 'erro_fatal', 'contraste_absurdo', 'desafio_tempo', 'arquivos_nao_revelados'] as const;
