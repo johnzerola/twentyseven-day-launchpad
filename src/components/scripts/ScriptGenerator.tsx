@@ -150,7 +150,7 @@ export const ScriptGenerator = ({
       if (!user) return;
       setLoadingSuggestions(true);
       let query = supabase
-        .from('tubebot_suggestions')
+        .from('dotti_suggestions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -186,11 +186,11 @@ export const ScriptGenerator = ({
     setShowSuggestions(false);
     toast.success('💡 Sugestão aplicada! Ajuste e gere o roteiro.');
     // Increment used_count
-    supabase.from('tubebot_suggestions').update({ used_count: (s.used_count || 0) + 1, updated_at: new Date().toISOString() } as any).eq('id', s.id).then();
+    supabase.from('dotti_suggestions').update({ used_count: (s.used_count || 0) + 1, updated_at: new Date().toISOString() } as any).eq('id', s.id).then();
   };
 
   const deleteSuggestion = async (id: string) => {
-    await supabase.from('tubebot_suggestions').delete().eq('id', id);
+    await supabase.from('dotti_suggestions').delete().eq('id', id);
     setSuggestions(prev => prev.filter(s => s.id !== id));
     toast.success('Sugestão removida');
   };

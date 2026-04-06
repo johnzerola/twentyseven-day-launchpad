@@ -535,7 +535,7 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
   const confirmSaveSuggestion = async () => {
     if (!editingSuggestion || !userId) return;
     try {
-      await supabase.from('tubebot_suggestions').insert({
+      await supabase.from('dotti_suggestions').insert({
         user_id: userId,
         title: editingSuggestion.title,
         content: editingSuggestion.content,
