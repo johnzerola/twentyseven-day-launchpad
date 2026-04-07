@@ -158,21 +158,50 @@ const DISCOVERY_TOOL = {
   },
 };
 
-async function discoverNiche(niche: string, apiKey: string, existingHandles: Set<string>): Promise<any[]> {
+async function discoverNiche(niche: string, apiKey: string, existingHandles: Set<string>, mode?: string): Promise<any[]> {
   const existingList = existingHandles.size > 0
-    ? `\n\nCANAIS JÁ NO BANCO (NÃO repetir):\n${[...existingHandles].slice(0, 50).join(', ')}`
+    ? `\n\nCANAIS JÁ NO BANCO (NÃO repetir):\n${[...existingHandles].slice(0, 80).join(', ')}`
     : '';
 
-  const res = await callGeminiOpenAICompat(apiKey, {
-    model: "google/gemini-2.5-flash",
-    messages: [
-      {
-        role: "system",
-        content: `You are a YouTube competitive intelligence expert with deep knowledge of successful channels across all niches and languages. You know channel handles, subscriber counts, content styles, and growth trajectories. Focus on channels that are CURRENTLY active (uploaded in last 3 months) and growing.`
-      },
-      {
-        role: "user",
-        content: `Discover 15-20 YouTube channels in this niche: "${niche}"
+  const isDarkMode = mode === "dark_mega";
+  const systemPrompt = isDarkMode
+    ? `You are the world's foremost expert on faceless YouTube channels, especially "dark" niches. You have encyclopedic knowledge of channels with 1M+ subscribers that never show a face — they use narration, stock footage, AI-generated visuals, animation, text-on-screen, or compilation formats. You know channels across ALL languages. You focus on channels whose individual videos regularly exceed 150K views. You know channels in: true crime, horror, mysteries, dark psychology, animal stories, animal world, curiosities, ASMR, relaxation, sleep stories, nature documentaries, survival, conspiracy, paranormal, history, mythology, science, and similar "dark" or atmospheric niches.`
+    : `You are a YouTube competitive intelligence expert with deep knowledge of successful channels across all niches and languages. You know channel handles, subscriber counts, content styles, and growth trajectories. Focus on channels that are CURRENTLY active (uploaded in last 3 months) and growing.`;
+
+  const userPrompt = isDarkMode
+    ? `Discover 20-25 faceless YouTube channels in this category: "${niche}"
+
+HARD REQUIREMENTS:
+1. ALL channels must have 1,000,000+ subscribers (1M+)
+2. ALL channels must be FACELESS — no person shows their face on camera
+3. ALL channels must have videos that regularly get 150,000+ views
+4. ALL channels must be REAL, currently active, verifiable on YouTube
+5. Provide EXACT YouTube handles in @ format
+6. These are channels that use: narration over footage, stock footage, AI visuals, animation, text overlays, compilation, documentary-style, atmospheric/ambient content
+
+TYPES TO INCLUDE:
+- Dark storytelling / true crime narration (MrBallen style)
+- Horror / creepypasta narration channels
+- Mystery / unsolved cases channels
+- Dark history / forgotten events
+- Animal stories / animal world / nature documentaries (faceless)
+- Curiosities / "did you know" / facts channels (faceless)
+- ASMR / relaxation / ambient / sleep channels
+- Dark psychology / manipulation / body language (faceless)
+- Survival stories / disaster documentaries
+- Paranormal / conspiracy deep-dives
+- Science / space / ocean exploration (faceless)
+- Mythology / folklore / legends
+- Military / war documentaries (faceless)
+- Medical mysteries / forensic science (faceless)
+
+INCLUDE channels from ALL languages: English, Portuguese, Spanish, French, German, Italian, Russian, Japanese, Korean, Hindi, Arabic, Turkish, Indonesian
+
+WHY THEY SUCCEED: For each channel, explain exactly WHY their videos get so many views — what psychological triggers, storytelling techniques, visual patterns, and audience hooks they use.
+${existingList}
+
+Return ALL channels via the tool call.`
+    : `Discover 15-20 YouTube channels in this niche: "${niche}"
 
 REQUIREMENTS:
 - Prioritize FACELESS channels (narration, animation, compilation, documentary style)
@@ -184,8 +213,13 @@ REQUIREMENTS:
 - Mix of established and emerging channels
 ${existingList}
 
-Return channels via the tool call with accurate data.`
-      },
+Return channels via the tool call with accurate data.`;
+
+  const res = await callGeminiOpenAICompat(apiKey, {
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
     ],
     tools: [DISCOVERY_TOOL],
     tool_choice: { type: "function", function: { name: "return_discovered_channels" } },
@@ -268,7 +302,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { niches: customNiches, maxNiches = 6, verifyWithYouTube = true } = body;
+    const { niches: customNiches, maxNiches = 6, verifyWithYouTube = true, mode } = body;
 
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
@@ -307,7 +341,7 @@ serve(async (req) => {
         console.log(`[DISCOVER] Scanning: ${niche}`);
 
         // Step 1: Gemini discovers channels (no YouTube API cost)
-        const discovered = await discoverNiche(niche, GOOGLE_AI_API_KEY, existingHandles);
+        const discovered = await discoverNiche(niche, GOOGLE_AI_API_KEY, existingHandles, mode);
         console.log(`[DISCOVER] ${niche}: ${discovered.length} channels found by Gemini`);
 
         if (discovered.length === 0) continue;
