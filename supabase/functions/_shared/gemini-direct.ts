@@ -35,7 +35,7 @@ async function fetchWithRetry(
 ): Promise<globalThis.Response> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const res = await fetch(url, init);
-    if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
+    if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429 && res.status !== 403)) {
       return res;
     }
     // Check if quota exhausted (not just temporary rate limit)
