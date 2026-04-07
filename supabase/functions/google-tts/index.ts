@@ -323,7 +323,10 @@ serve(async (req) => {
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const GOOGLE_TTS_API_KEY_2 = Deno.env.get('GOOGLE_TTS_API_KEY_2');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    // All Google API keys to try in order
+    const googleKeys = [GOOGLE_AI_API_KEY, GOOGLE_TTS_API_KEY_2].filter(Boolean) as string[];
     const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
 
     // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
