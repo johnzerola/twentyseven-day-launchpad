@@ -274,6 +274,49 @@ serve(async (req) => {
     // ── Phase 2: Auto-link videos to scripts via title similarity ──
     const linkedCount = await autoLinkScripts(sb, tokens.map((t: any) => t.user_id));
 
+    // ── Phase 2.5: Populate output_performance_feedback ──
+    // Links real CTR/retention back to generated titles, hooks, thumbnails
+    let feedbackInserted = 0;
+    for (const r of results.filter((r: any) => !r.error && r.videoId)) {
+      try {
+        // Find linked script
+        const { data: link } = await sb.from("script_performance_link")
+          .select("script_id, user_id")
+          .eq("youtube_video_id", r.videoId)
+          .maybeSingle();
+        if (!link?.script_id) continue;
+
+        // Get project details (title = output)
+        const { data: proj } = await sb.from("video_projects")
+          .select("title, niche, language")
+          .eq("id", link.script_id)
+          .maybeSingle();
+        if (!proj) continue;
+
+        // Get predicted scores from content_thesis if available
+        const { data: thesis } = await sb.from("content_thesis")
+          .select("confidence_score")
+          .eq("video_project_id", link.script_id)
+          .maybeSingle();
+
+        await sb.from("output_performance_feedback").upsert({
+          user_id: link.user_id,
+          output_type: "title",
+          output_content: proj.title,
+          script_id: link.script_id,
+          youtube_video_id: r.videoId,
+          predicted_ctr: thesis?.confidence_score ? thesis.confidence_score / 10 : null,
+          predicted_retention: null,
+          actual_ctr: r.ctr || null,
+          actual_retention: r.retention || null,
+          actual_views: r.views || null,
+          niche: proj.niche,
+          language: proj.language,
+        }, { onConflict: "id" });
+        feedbackInserted++;
+      } catch { /* skip */ }
+    }
+
     // ── Phase 3: AUTO FEEDBACK LOOP ──
     // Automatically trigger extract-user-learnings + self-learning-worker
     // to close the loop without manual intervention
