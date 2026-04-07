@@ -3,6 +3,30 @@
 
 export const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
+/** Retry a fetch call with exponential backoff on 429/5xx errors */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  maxRetries = 3,
+  label = "Gemini"
+): Promise<globalThis.Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, init);
+    if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
+      return res;
+    }
+    // 429 or 5xx → retry with backoff
+    if (attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 15000);
+      console.warn(`[${label}] ${res.status} on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${Math.round(delay)}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    } else {
+      return res; // return the failed response on last attempt
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 export function sanitizeUnicode(text: string): string {
   return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
              .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
