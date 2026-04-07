@@ -480,16 +480,16 @@ serve(async (req) => {
 
       switch (p) {
         case "content_dna":
-          report.content_dna = await phase1ContentDNA(sb, GOOGLE_AI_API_KEY, channelLimit);
+          report.content_dna = await phase1ContentDNA(sbAdmin, GOOGLE_AI_API_KEY, channelLimit);
           break;
         case "viral_patterns":
-          report.viral_patterns = await phase2ViralPatterns(sb, GOOGLE_AI_API_KEY);
+          report.viral_patterns = await phase2ViralPatterns(sbAdmin, GOOGLE_AI_API_KEY);
           break;
         case "score_calibration":
-          report.score_calibration = await phase3ScoreCalibration(sb);
+          report.score_calibration = await phase3ScoreCalibration(sbAdmin);
           break;
         case "embeddings":
-          report.embeddings = await phase4Embeddings(sb, GOOGLE_AI_API_KEY, embeddingLimit);
+          report.embeddings = await phase4Embeddings(sbAdmin, GOOGLE_AI_API_KEY, embeddingLimit);
           break;
       }
 
@@ -498,7 +498,7 @@ serve(async (req) => {
     }
 
     // Log execution
-    await sb.from("execution_logs").insert({
+    await sbAdmin.from("execution_logs").insert({
       function_name: "data-seeding-engine",
       success: true,
       metadata: report,
