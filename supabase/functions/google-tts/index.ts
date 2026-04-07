@@ -323,7 +323,10 @@ serve(async (req) => {
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const GOOGLE_TTS_API_KEY_2 = Deno.env.get('GOOGLE_TTS_API_KEY_2');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    // All Google API keys to try in order
+    const googleKeys = [GOOGLE_AI_API_KEY, GOOGLE_TTS_API_KEY_2].filter(Boolean) as string[];
     const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
 
     // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
@@ -335,34 +338,35 @@ serve(async (req) => {
 
     console.log(`TTS requested: voice=${selectedVoice}, engine=${useGeminiEngine ? 'gemini' : 'gcloud'}, lang=${language}, chars=${text.length}`);
 
-    // ══════ ENGINE 1: Google Cloud TTS (primary for standard voices) ══════
-    if (!useGeminiEngine && GOOGLE_AI_API_KEY) {
-      try {
-        const result = await synthesizeWithGoogleCloudTTS(
-          text, GOOGLE_AI_API_KEY, selectedVoice, langConfig.code, speakingRate, pitch,
-        );
-        if (returnBinary) {
-          return new Response(result.buffer, {
-            headers: { ...corsHeaders, 'Content-Type': result.mimeType },
-          });
+    // ══════ ENGINE 1: Google Cloud TTS (try all keys) ══════
+    if (!useGeminiEngine) {
+      for (const key of googleKeys) {
+        try {
+          const result = await synthesizeWithGoogleCloudTTS(
+            text, key, selectedVoice, langConfig.code, speakingRate, pitch,
+          );
+          if (returnBinary) {
+            return new Response(result.buffer, {
+              headers: { ...corsHeaders, 'Content-Type': result.mimeType },
+            });
+          }
+          const audioBase64 = base64Encode(result.buffer);
+          return new Response(JSON.stringify({
+            audioBase64, mimeType: result.mimeType, engine: 'google-cloud-tts',
+            voice: selectedVoice, languageCode: langConfig.code, chunks: 1, characterCount: text.length,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (gcloudErr) {
+          const reason = gcloudErr instanceof Error ? gcloudErr.message : 'GCLOUD_TTS_FAILED';
+          console.warn('Google Cloud TTS failed with key:', reason, '— trying next key');
         }
-        const audioBase64 = base64Encode(result.buffer);
-        return new Response(JSON.stringify({
-          audioBase64, mimeType: result.mimeType, engine: 'google-cloud-tts',
-          voice: selectedVoice, languageCode: langConfig.code, chunks: 1, characterCount: text.length,
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      } catch (gcloudErr) {
-        const reason = gcloudErr instanceof Error ? gcloudErr.message : 'GCLOUD_TTS_FAILED';
-        console.warn('Google Cloud TTS failed:', reason, '— trying Gemini TTS fallback');
-        // Fall through to Gemini TTS
       }
     }
 
-    // ══════ ENGINE 2: Gemini TTS (primary for Gemini voices, fallback for Cloud TTS) ══════
-    if (GOOGLE_AI_API_KEY) {
+    // ══════ ENGINE 2: Gemini TTS (try all keys) ══════
+    for (const key of googleKeys) {
       try {
         const geminiVoice = useGeminiEngine ? selectedVoice : 'Charon';
-        const wavBytes = await synthesizeWithGeminiTTSRetry(text, GOOGLE_AI_API_KEY, geminiVoice, speakingRate, voiceStyle);
+        const wavBytes = await synthesizeWithGeminiTTSRetry(text, key, geminiVoice, speakingRate, voiceStyle);
         if (returnBinary) {
           return new Response(wavBytes, {
             headers: { ...corsHeaders, 'Content-Type': 'audio/wav', 'Content-Length': String(wavBytes.length) },
@@ -375,7 +379,7 @@ serve(async (req) => {
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       } catch (geminiErr) {
         const reason = geminiErr instanceof Error ? geminiErr.message : 'GEMINI_TTS_FAILED';
-        console.warn('Gemini TTS failed:', reason, '— trying ElevenLabs fallback');
+        console.warn('Gemini TTS failed with key:', reason, '— trying next');
       }
     }
 
