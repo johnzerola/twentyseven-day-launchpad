@@ -34,6 +34,17 @@ interface AudioProcessorProps {
 
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
 
+const NARRATION_WPM: Record<string, number> = {
+  'português': 170,
+  'inglês': 175,
+  'english': 175,
+  'espanhol': 172,
+  'alemão': 160,
+  'polonês': 155,
+  'turco': 165,
+  'japonês': 145,
+};
+
 const PHASE_LABELS: Record<ProcessingPhase, string> = {
   idle: '',
   uploading: 'Enviando áudio...',
@@ -150,27 +161,36 @@ export const AudioProcessor = ({
   }, []);
 
   const generateSyncedScenes = async () => {
-    if (!effectiveAudioFile) { toast.error('Selecione um arquivo de áudio ou gere narração na etapa Voz'); return; }
     const cleanScript = getCleanNarration();
     if (!cleanScript) { toast.error('Gere um roteiro primeiro'); return; }
 
     setPhase('uploading');
     try {
-      const audioDurationSeconds = await getAudioDurationSeconds(effectiveAudioFile);
+      const wordCount = cleanScript.split(/\s+/).filter(Boolean).length;
+      const estimatedDurationSeconds = Math.max(1, Math.round((wordCount / (NARRATION_WPM[language.toLowerCase()] || 170)) * 60));
 
-      // Upload audio to storage
-      const mimeType = effectiveAudioFile.type || 'audio/wav';
-      const ext = effectiveAudioFile.name.split('.').pop() || 'wav';
-      const storagePath = `audio-uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(storagePath, effectiveAudioFile, { contentType: mimeType });
-      
-      if (uploadError) throw new Error(`Erro ao enviar áudio: ${uploadError.message}`);
-      
-      const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
-      const audioUrl = urlData.publicUrl;
+      let audioDurationSeconds = estimatedDurationSeconds;
+      let audioUrl: string | undefined;
+      let mimeType: string | undefined;
+
+      if (effectiveAudioFile) {
+        audioDurationSeconds = await getAudioDurationSeconds(effectiveAudioFile);
+
+        mimeType = effectiveAudioFile.type || 'audio/wav';
+        const ext = effectiveAudioFile.name.split('.').pop() || 'wav';
+        const storagePath = `audio-uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(storagePath, effectiveAudioFile, { contentType: mimeType });
+
+        if (uploadError) throw new Error(`Erro ao enviar áudio: ${uploadError.message}`);
+
+        const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
+        audioUrl = urlData.publicUrl;
+      } else {
+        toast.info('Sem áudio válido: usando o roteiro para sincronizar as cenas com duração estimada.');
+      }
 
       // STEP 1: Transcribe (returns chunks info)
       setPhase('transcribing');

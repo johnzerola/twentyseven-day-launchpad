@@ -302,13 +302,13 @@ ${pastRejectionBlock}
 
 ⚠️ FORMATO DE SAÍDA:
 RETORNE APENAS o roteiro COMPLETO com suas edições integradas.
-APENAS texto de narração pura. ZERO anotações, ZERO marcações, ZERO comentários. Valores em $.
+APENAS texto de narração pura. ZERO anotações, ZERO marcações, ZERO comentários. ZERO VFX, SFX, música, câmera, cenas, EXTRAS, títulos ou blocos SEO. Valores em $.
 
 ${YPP_2025_REFINE_DIRECTIVE}
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
-    const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. Retorne o roteiro COMPLETO.`;
+    const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. NÃO resuma. Preserve ou EXPANDA até atingir no mínimo ${tw} palavras de narração pura. Retorne o roteiro COMPLETO.`;
 
     // ═══ PRIMARY: Gemini 2.5 Pro via Direct API ═══
     console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from GEMINI 2.5 PRO (direct)...`);
@@ -321,7 +321,7 @@ REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
         {
           primaryModel: "gemini-2.5-pro",
           fallbackModel: "gemini-2.5-flash",
-          maxTokens: 16000,
+          maxTokens: 32000,
           label: `PHASE-2 REFINE runId=${runId}`,
         },
       );
