@@ -1,101 +1,55 @@
 
-# Plano de Implementação — Melhorias Prioritárias do Monetiza27
 
-## Resumo
-11 melhorias organizadas em 4 fases de execução, priorizadas por impacto e dependência.
+# Plan: Fix Script Generation Pipeline (Roteiro → Voz → Cenas)
 
----
+## Problems Identified
 
-## Fase 1 — Correções Imediatas (Quick Wins)
+### 1. Broken Gateway URL in Scene Generation
+**File**: `supabase/functions/transcribe-and-generate-scenes/index.ts` (line 34)
+The `GATEWAY_URL` is hardcoded to the literal string `"GEMINI_COMPAT_URL"` — not a real URL. This means:
+- The `callAI()` helper at line 38-87 always fails on gateway calls
+- Audio transcription via gateway (line 217) always fails
+- Scene generation via `callAI()` (line 602) always fails
+- The system falls back to direct Gemini, which hits the same 429 quota limits
 
-### 1.1 Corrigir import duplicado em chat-assistant
-- **Arquivo:** `supabase/functions/chat-assistant/index.ts`
-- **Problema:** Linha 1 importa `callGeminiOpenAICompat, generateEmbedding`, linha 2 importa `callGeminiOpenAICompat` novamente — causa erro de deploy
-- **Fix:** Remover linha 2, manter apenas linha 1
+**Fix**: Replace `"GEMINI_COMPAT_URL"` with the proper Lovable AI Gateway URL (`https://ai.gateway.lovable.dev/v1/chat/completions`) and use `LOVABLE_API_KEY` for authentication instead of `GOOGLE_AI_API_KEY`.
 
-### 1.2 Thumbnail com geração de imagem real
-- **Arquivo:** `supabase/functions/generate-thumbnail-prompt/index.ts` — adicionar modo `generate_image: true` que, além de retornar prompts, chama o Gemini image gen (mesmo padrão do `generate-segment-image`)
-- **Arquivo:** `src/components/scripts/ThumbnailGenerator.tsx` — adicionar botão "Gerar Imagem" por variante que chama a nova função, exibe preview base64, e permite download/upload ao storage bucket `media`
-- **Modelo:** `google/gemini-3.1-flash-image-preview` com `modalities: ["image", "text"]`
+### 2. Script Still Outputting Non-Narration Content
+Despite the "100% narration" rule added previously, the prompt still contains references to `SCENE_BLUEPRINT` parsing and `---EXTRAS---` sections in the output. The `cleanAll()` function strips some of these, but the AI still wastes tokens generating them, reducing the narration word count.
 
----
+**Fix**: Strengthen the cleaning logic in the frontend and ensure the prompt's EXTRAS section (titles, tags, thumbnails) is clearly separated so it doesn't bleed into narration text.
 
-## Fase 2 — Closed-Loop (YouTube OAuth → Performance → Aprendizado)
+### 3. Audio Duration Shorter Than Expected (20min instead of 40min)
+The `getCleanText()` function in `VoiceGeneratorStep.tsx` strips markdown headers, bold text, and formatting — but it also strips the `---EXTRAS---` section markers and everything after section headers like `## Títulos`. However, the `getCleanNarration()` in `Scripts.tsx` (line 635-641) does a more thorough job of cutting at title/tag sections. The voice generator is NOT using `getCleanNarration()` — it uses its own less thorough `getCleanText()`.
 
-### 2.1 Conectar YouTube OAuth → video_performance real
-- **Arquivo novo:** `supabase/functions/sync-oauth-performance/index.ts`
-- Usa `youtube_oauth_tokens` para buscar métricas reais via YouTube Analytics API (CTR, retenção, impressões)
-- Popula a tabela `video_performance` com dados D1/D3/D7/D30 reais (campos `ctr_percent`, `avg_retention_percent`, `avg_view_duration_seconds`)
-- Cruza com `script_performance_link` para vincular roteiros a resultados
+**Root cause**: The voice step receives the full `script` prop which includes EXTRAS (titles, tags, etc.), but `getCleanText()` doesn't strip those sections. More critically, the script word count itself may be short because the AI is spending tokens on non-narration content.
 
-### 2.2 Closed-loop: métricas → calibração de scores
-- **Arquivo:** `supabase/functions/extract-user-learnings/index.ts` — estender para consumir dados OAuth reais (não apenas YouTube Data API pública)
-- **Arquivo:** `supabase/functions/backtest-scores/index.ts` — alimentar `score_calibration` comparando `predicted_viral_score` vs views reais D7
-- Resultado: pesos do title-score e script-score se auto-ajustam com dados reais
+**Fix**: 
+- Pass the clean narration text (from `getCleanNarration()`) to the voice step instead of raw script
+- OR enhance `getCleanText()` in `VoiceGeneratorStep.tsx` to strip EXTRAS sections
 
----
+### 4. Google API Quota Exhaustion Without Proper Fallback in TTS
+The `google-tts` edge function uses `GOOGLE_AI_API_KEY` directly without the `fetchWithRetry`/fallback mechanism from `gemini-direct.ts`. When quota is exhausted, TTS fails and falls back to ElevenLabs or browser synthesis.
 
-## Fase 3 — Refatoração Estrutural
-
-### 3.1 Refazer chat-assistant em módulos
-Quebrar o arquivo de 1.847 linhas em partes importáveis dentro do mesmo diretório (Edge Functions não suportam imports entre funções, mas suportam `_shared/`):
-- `supabase/functions/_shared/tubebot-tools.ts` — definições dos 19 tools (TUBEBOT_TOOLS)
-- `supabase/functions/_shared/tubebot-executor.ts` — função `executeTool()` com todo o switch/case
-- `supabase/functions/_shared/tubebot-system-prompt.ts` — system prompt e contexto
-- `supabase/functions/chat-assistant/index.ts` — reduzido a ~200 linhas: auth, context injection, AI loop
-
-### 3.2 Consolidar edge functions similares
-Fundir pares redundantes (reduzir de 100+ para ~70):
-- `find-competitors` + `find-competitors-ai` → manter apenas `find-competitors-ai`
-- `generate-30day-plan` + `generate-adaptive-plan` → unificar em `generate-plan` existente
-- `seed-reference-channels` + `seed-elite-knowledge` + `seed-complete-knowledge` → `data-seeding-engine` (já existe)
-- `generate-script` + `generate-script-short` → unificar com param `format: "short" | "long"`
-- Deletar funções não utilizadas: `auto-intelligence-cron`, `daily-data-ingestion`, `evolve-patterns`, `calibrate-knowledge`
+**Fix**: Add retry logic to the Gemini TTS call in `google-tts/index.ts`.
 
 ---
 
-## Fase 4 — Fortalecimento dos Diferenciais
+## Implementation Steps
 
-### 4.1 Anti-Slop Engine — documentar e expor
-- Já existe no prompt do `generate-script` — extrair as 13 "Soul Signals" para `_shared/anti-slop-rules.ts`
-- Reutilizar em `generate-titles`, `generate-thumbnail-prompt`, `chat-assistant`
-- Adicionar badge "Anti-Slop ✓" no UI quando roteiro passa validação
+### Step 1: Fix `transcribe-and-generate-scenes` Gateway
+- Replace `GATEWAY_URL = "GEMINI_COMPAT_URL"` with `GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"`
+- Change the `callAI` function to use `LOVABLE_API_KEY` for the gateway `Authorization` header instead of `GOOGLE_AI_API_KEY`
+- Keep Gemini direct as fallback (already implemented)
 
-### 4.2 Audio mastering pipeline — manter e ampliar
-- Pipeline de 12 estágios já funciona via Web Audio API — sem mudanças necessárias
-- Adicionar preset "YouTube Shorts" otimizado para mobile speakers (boost 2-4kHz)
+### Step 2: Fix Voice Duration — Pass Clean Narration
+- In `Scripts.tsx`, pass the cleaned narration text to `VoiceGeneratorStep` via a new prop or by enhancing the existing `script` prop
+- Update `VoiceGeneratorStep.tsx` `getCleanText()` to also strip EXTRAS sections (titles, thumbnails, tags, description) using the same markers as `getCleanNarration()`
 
-### 4.3 Title Score statistical engine — manter
-- Abordagem baseada em dados com `viral_titles_db` já é sólida — sem mudanças
+### Step 3: Add Retry to Google TTS
+- In `google-tts/index.ts`, add a retry mechanism for `GEMINI_TTS_429` errors before falling back to ElevenLabs
 
-### 4.4 Smart Knowledge Retrieval (RAG) — manter
-- `match_knowledge` com pgvector funciona — sem mudanças
+### Step 4: Deploy and Verify
+- Deploy `transcribe-and-generate-scenes`, `google-tts`, and `generate-script`
+- Test the full pipeline end-to-end
 
-### 4.5 Channel Voice Profile — manter
-- `learn-channel-voice` já persiste DNA do canal — sem mudanças
-
----
-
-## Arquivos Modificados/Criados
-
-| Ação | Arquivo |
-|------|---------|
-| Edit (1 linha) | `supabase/functions/chat-assistant/index.ts` |
-| Edit | `supabase/functions/generate-thumbnail-prompt/index.ts` |
-| Edit | `src/components/scripts/ThumbnailGenerator.tsx` |
-| Create | `supabase/functions/sync-oauth-performance/index.ts` |
-| Create | `supabase/functions/_shared/tubebot-tools.ts` |
-| Create | `supabase/functions/_shared/tubebot-executor.ts` |
-| Create | `supabase/functions/_shared/tubebot-system-prompt.ts` |
-| Create | `supabase/functions/_shared/anti-slop-rules.ts` |
-| Refactor | `supabase/functions/chat-assistant/index.ts` (reduce to ~200 lines) |
-| Delete | ~8 redundant edge functions |
-| Edit | `supabase/config.toml` (add sync-oauth-performance) |
-
-## Ordem de Execução
-1. Fix import duplicado (5 min)
-2. Thumbnail com imagem real (30 min)
-3. sync-oauth-performance + closed-loop (45 min)
-4. Refatorar chat-assistant em módulos (40 min)
-5. Consolidar/deletar edge functions redundantes (30 min)
-6. Anti-Slop compartilhado (15 min)
