@@ -492,6 +492,26 @@ export async function callGeminiStreaming(
       console.log(`[${opts.label || 'Gemini'}] Streaming with ${model}`);
       return new Response(geminiSseToOpenAi(res.body!));
     }
+    // Quota exhausted → try Lovable Gateway
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      console.log(`[${opts.label || 'Gemini'}] Quota exhausted, falling back to Lovable Gateway`);
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (lovableKey) {
+        const fallbackRes = await fetch(LOVABLE_GATEWAY, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
+          body: JSON.stringify({
+            model: `google/${model}`,
+            messages: [{ role: "system", content: system }, { role: "user", content: userMsg }],
+            stream: true,
+            max_tokens: opts.maxTokens || 16384,
+          }),
+        });
+        if (fallbackRes.ok && fallbackRes.body) {
+          return new Response(fallbackRes.body, { headers: { "Content-Type": "text/event-stream" } });
+        }
+      }
+    }
     const t = await res.text();
     console.error(`[${opts.label || 'Gemini'}] ${model} streaming error ${res.status}:`, t);
     if (model === models[models.length - 1]) throw new Error(`Gemini streaming error: ${res.status}`);
