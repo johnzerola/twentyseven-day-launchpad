@@ -618,17 +618,28 @@ Identifique e aplique UM destes mecanismos no hook:
 - confession: Revelar segredo/erro pessoal que gera empatia e curiosidade
 - transformation: Prometer mudança tangível e específica para o espectador
 
-REGRAS: Hook devastador (5-8s) + 3 OPEN LOOPS. APENAS texto falado. Valores em $. ZERO anotações.
-Seu texto deve soar como um HUMANO apaixonado pelo assunto, não como uma IA escrevendo sobre ele.`;
+REGRAS ABSOLUTAS DO HOOK:
+1. Hook DEVASTADOR nos primeiros 5-8 segundos — uma frase que IMPEDE o scroll
+2. 3 OPEN LOOPS que criam necessidade física de continuar assistindo
+3. APENAS texto falado — ZERO anotações, ZERO tags, ZERO indicações técnicas
+4. Valores monetários em $ com números ESPECÍFICOS e estranhos ($2.347.891 > "milhões")
+5. Cada frase deve soar como um HUMANO obcecado pelo assunto
+6. O hook deve criar uma PROMESSA IMPLÍCITA — o espectador sabe O QUE vai ganhar se ficar
+7. Use SHOW DON'T TELL: "As mãos dele tremiam" > "Ele estava nervoso"
+8. Inclua pelo menos 1 DETALHE SENSORIAL micro-específico (textura, cheiro, temperatura)
+9. O primeiro open loop deve ser ABERTO nos primeiros 15 segundos
+10. O hook deve funcionar como um TRAILER de cinema — mostra o melhor sem entregar
+
+ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cada open loop com detalhes que prendem.`;
 
         hookText = await callGeminiWithFallback(
           GOOGLE_AI_API_KEY,
           hookSystemPrompt,
-          `Hook + Open Loops para vídeo de ${duration}min sobre: "${topic}"\nRetorne APENAS texto de narração.`,
+          `Escreva os primeiros 90 SEGUNDOS de narração para um vídeo de ${duration}min sobre: "${topic}".\n\nO hook deve ser IMPOSSÍVEL de ignorar. Desenvolva 3 open loops com profundidade.\nRetorne APENAS texto de narração pura — zero tags, zero anotações.`,
           {
             primaryModel: "gemini-2.5-pro",
             fallbackModel: "gemini-2.5-flash",
-            maxTokens: 2000,
+            maxTokens: 4000,
             label: `PHASE-0 HOOK runId=${runId}`,
           },
         );
