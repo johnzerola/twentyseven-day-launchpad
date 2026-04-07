@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const AI_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /**
  * SELF-LEARNING WORKER
@@ -118,35 +119,61 @@ serve(async (req) => {
       }
     }
 
-    // ═══ STEP 3: Calibrate weights based on accumulated errors ═══
+    // ═══ STEP 3: Calibrate weights with DECAY-WEIGHTED averaging ═══
+    // Recent data points matter more than old ones
     const { data: errorData } = await sb.from("prediction_vs_result")
-      .select("niche, predicted_viral_score, prediction_error_score, error_breakdown, hook_type")
+      .select("niche, predicted_viral_score, prediction_error_score, error_breakdown, hook_type, created_at")
       .gt("real_views", 0)
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(300);
 
     if (errorData && errorData.length >= 5) {
-      // Group errors by niche
-      const nicheErrors: Record<string, { errors: number[], overCount: number, underCount: number, count: number }> = {};
-      
+      const nicheErrors: Record<string, { errors: { value: number; weight: number }[], overCount: number, underCount: number, count: number, hookErrors: Record<string, number[]> }> = {};
+      const now = Date.now();
+
       for (const row of errorData) {
         const n = row.niche || 'general';
-        if (!nicheErrors[n]) nicheErrors[n] = { errors: [], overCount: 0, underCount: 0, count: 0 };
-        nicheErrors[n].errors.push(row.prediction_error_score || 0);
+        if (!nicheErrors[n]) nicheErrors[n] = { errors: [], overCount: 0, underCount: 0, count: 0, hookErrors: {} };
+
+        // Decay weight: recent data weighs more (half-life = 14 days)
+        const ageMs = now - new Date(row.created_at).getTime();
+        const ageDays = ageMs / 86400000;
+        const weight = Math.pow(0.5, ageDays / 14); // Exponential decay
+
+        nicheErrors[n].errors.push({ value: row.prediction_error_score || 0, weight });
         nicheErrors[n].count++;
         const breakdown = row.error_breakdown as any;
         if (breakdown?.direction === 'over') nicheErrors[n].overCount++;
         else nicheErrors[n].underCount++;
+
+        // Track per-hook-type errors for granular calibration
+        const hookType = row.hook_type || 'unknown';
+        if (!nicheErrors[n].hookErrors[hookType]) nicheErrors[n].hookErrors[hookType] = [];
+        nicheErrors[n].hookErrors[hookType].push(row.prediction_error_score || 0);
       }
 
       for (const [niche, data] of Object.entries(nicheErrors)) {
         if (data.count < 3) continue;
-        
-        const avgError = data.errors.reduce((a, b) => a + b, 0) / data.errors.length;
+
+        // Weighted average error (recent data weighs more)
+        const totalWeight = data.errors.reduce((s, e) => s + e.weight, 0);
+        const avgError = data.errors.reduce((s, e) => s + e.value * e.weight, 0) / totalWeight;
+
         const biasDirection = data.overCount > data.underCount ? -1 : 1;
         const biasAmount = Math.round(avgError * 0.3 * biasDirection * 100) / 100;
         const confidence = Math.min(data.count / 20, 1);
         const weightAdj = avgError > 30 ? 0.7 : avgError > 20 ? 0.85 : avgError > 10 ? 0.95 : 1.0;
+
+        // Per-hook-type calibration data
+        const hookCalibration: Record<string, { avg_error: number; count: number }> = {};
+        for (const [hookType, errors] of Object.entries(data.hookErrors)) {
+          if (errors.length >= 2) {
+            hookCalibration[hookType] = {
+              avg_error: Math.round((errors.reduce((s, e) => s + e, 0) / errors.length) * 100) / 100,
+              count: errors.length,
+            };
+          }
+        }
 
         await sb.from("score_calibration").upsert({
           score_type: "viral_probability",
@@ -157,7 +184,12 @@ serve(async (req) => {
           samples_count: data.count,
           avg_error: Math.round(avgError * 100) / 100,
           last_calibrated_at: new Date().toISOString(),
-          metadata: { over_predictions: data.overCount, under_predictions: data.underCount },
+          metadata: {
+            over_predictions: data.overCount,
+            under_predictions: data.underCount,
+            decay_half_life_days: 14,
+            hook_calibration: hookCalibration,
+          },
         }, { onConflict: "score_type,niche" });
 
         results.calibrated++;
@@ -171,6 +203,30 @@ serve(async (req) => {
             .eq("id", entry.id);
         }
       }
+
+      // ═══ STEP 3.5: HOOK-LEVEL FEEDBACK — Feed winning/losing hooks back ═══
+      try {
+        const { data: recentLinks } = await sb.from("script_performance_link")
+          .select("hook_text, hook_type, niche, avg_retention_pct, views_7d, ctr_pct")
+          .not("hook_text", "is", null)
+          .gt("avg_retention_pct", 0)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        for (const link of (recentLinks || [])) {
+          if (link.avg_retention_pct >= 55) {
+            // High performer → upsert to hook_library
+            await sb.from("hook_library").upsert({
+              hook_text: (link.hook_text || '').slice(0, 500),
+              hook_type: link.hook_type || 'unknown',
+              niche: link.niche || 'general',
+              retention_score: Math.min(10, Math.round(link.avg_retention_pct / 8)),
+              source: 'real_performance_data',
+            }, { onConflict: 'hook_text' }).catch(() => {});
+          }
+        }
+        results.hooks_updated = (recentLinks || []).filter((l: any) => l.avg_retention_pct >= 55).length;
+      } catch (e) { console.warn("Hook feedback error:", e); }
 
       // Generate AI meta-insight about calibration
       if (GOOGLE_AI_API_KEY && results.calibrated >= 2) {
