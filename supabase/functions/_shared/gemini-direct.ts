@@ -18,11 +18,11 @@ async function fallbackToLovableGateway(body: {
   if (!lovableKey) throw new Error("Both GOOGLE_AI_API_KEY quota exhausted and LOVABLE_API_KEY not configured");
   
   console.log(`[Gemini→Lovable] Falling back to Lovable AI Gateway with model ${body.model}`);
-  const res = await fetch(LOVABLE_GATEWAY, {
+  const res = await fetchWithRetry(LOVABLE_GATEWAY, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
     body: JSON.stringify(body),
-  });
+  }, 2, `LovableGateway-${body.model}`);
   return res;
 }
 
@@ -70,6 +70,10 @@ async function fetchWithRetry(
 export function sanitizeUnicode(text: string): string {
   return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
              .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+}
+
+function shouldFallbackToLovableGateway(res: Response): boolean {
+  return res.status === 429;
 }
 
 /** Map OpenAI-style model names to Gemini model names */
@@ -216,7 +220,7 @@ export async function callGeminiOpenAICompat(
     }, 3, `Gemini-tools-${model}`);
     
     if (!res.ok) {
-      if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      if (shouldFallbackToLovableGateway(res)) {
         return fallbackToLovableGateway(body);
       }
       const t = await res.text();
@@ -248,7 +252,7 @@ export async function callGeminiOpenAICompat(
   }, 3, `Gemini-std-${model}`);
 
   if (!res.ok) {
-    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+    if (shouldFallbackToLovableGateway(res)) {
       return fallbackToLovableGateway(body);
     }
     const t = await res.text();
@@ -333,12 +337,12 @@ async function streamGeminiAsOpenAI(apiKey: string, model: string, geminiBody: a
   }, 3, `Gemini-stream-${model}`);
 
   if (!res.ok) {
-    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+    if (shouldFallbackToLovableGateway(res)) {
       // Fallback: stream via Lovable Gateway
       console.log(`[streamGemini] Quota exhausted, falling back to Lovable Gateway streaming`);
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (lovableKey) {
-        const fallbackRes = await fetch(LOVABLE_GATEWAY, {
+        const fallbackRes = await fetchWithRetry(LOVABLE_GATEWAY, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
           body: JSON.stringify({
@@ -348,7 +352,7 @@ async function streamGeminiAsOpenAI(apiKey: string, model: string, geminiBody: a
               : geminiBody.contents.map((c: any) => ({ role: c.role === "model" ? "assistant" : "user", content: c.parts[0]?.text || "" })),
             stream: true,
           }),
-        });
+        }, 2, `LovableGateway-stream-${model}`);
         if (fallbackRes.ok && fallbackRes.body) {
           return new Response(fallbackRes.body, { headers: { "Content-Type": "text/event-stream" } });
         }
@@ -429,7 +433,7 @@ export async function callGemini(
     }),
   }, 3, `Gemini-callDirect-${model}`);
   if (!res.ok) {
-    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+    if (shouldFallbackToLovableGateway(res)) {
       // Fallback to Lovable Gateway for non-streaming callGemini
       console.log(`[callGemini] Quota exhausted, falling back to Lovable Gateway`);
       const fallbackRes = await fallbackToLovableGateway({
@@ -493,11 +497,11 @@ export async function callGeminiStreaming(
       return new Response(geminiSseToOpenAi(res.body!));
     }
     // Quota exhausted → try Lovable Gateway
-    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+    if (shouldFallbackToLovableGateway(res)) {
       console.log(`[${opts.label || 'Gemini'}] Quota exhausted, falling back to Lovable Gateway`);
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (lovableKey) {
-        const fallbackRes = await fetch(LOVABLE_GATEWAY, {
+        const fallbackRes = await fetchWithRetry(LOVABLE_GATEWAY, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
           body: JSON.stringify({
@@ -506,7 +510,7 @@ export async function callGeminiStreaming(
             stream: true,
             max_tokens: opts.maxTokens || 16384,
           }),
-        });
+        }, 2, `LovableGateway-streamFallback-${model}`);
         if (fallbackRes.ok && fallbackRes.body) {
           return new Response(fallbackRes.body, { headers: { "Content-Type": "text/event-stream" } });
         }
