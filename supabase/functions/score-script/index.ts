@@ -62,6 +62,7 @@ Avalie este roteiro com nota de 1 a 10 (INTEIRO, sem decimais).
 ═══ SEU PAPEL: FASE 3 — JUIZ IMPLACÁVEL ═══
 - Você NÃO é autor (Fase 1) nem editor (Fase 2)
 - Sua ÚNICA missão: avaliar com HONESTIDADE BRUTAL
+- IMPORTANTE: Este roteiro é NARRAÇÃO PURA (sem tags técnicas de VFX/SFX). Avalie a QUALIDADE DA ESCRITA, não a presença de marcações técnicas.
 
 CRITÉRIOS:
 - Hook (primeiros 30s): Impossível de ignorar? Ou genérico e previsível?
@@ -69,19 +70,10 @@ CRITÉRIOS:
 - Emoção: Escalada emocional? Contraste? Gatilhos psicológicos? Ou texto morto?
 - Fluidez: Tom conversacional? Ritmo natural? Ou leitura robótica?
 - Payoff: Final conecta ao hook? Satisfatório? Ou anticlimático?
+- CTA: O final tem um gancho para o próximo vídeo (Binge Loop)? Ou é uma despedida genérica?
 - Originalidade: Traz algo novo? Ou qualquer IA geraria isso?
 
 ═══ VIRAL ENGINE — CRITÉRIOS ADICIONAIS (PESO ALTO) ═══
-
-🎵 SOUND DESIGN TAGS:
-- O roteiro contém tags de áudio? ([ÁUDIO:], [TRILHA:], [SFX:], [CORTAR MÚSICA])
-- Mínimo 3 tags de Sound Design por roteiro longform
-- Se ausentes: penalize 0.5-1 ponto no score geral — Sound Design é 50% do sucesso
-
-🎬 VFX EDIT TAGS:
-- O roteiro contém tags de edição? ([J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL])
-- Mínimo 5 tags VFX por roteiro longform
-- Se ausentes: penalize 0.5-1 ponto — em canais faceless, pacing depende 100% da edição
 
 🔄 BINGE LOOP (FINAL):
 - O roteiro termina com despedida ("obrigado por assistir", "tchau", "deixe o like")? → PENALIZE 1 ponto
@@ -114,7 +106,6 @@ PENALIZE FORTEMENTE:
 - Conclusões que apenas resumem o que já foi dito
 - Falta de personalidade / voz autoral
 - Conteúdo que seria flagado como "baixo esforço" pelo YPP 2025
-- Ausência de Sound Design tags e VFX Edit tags
 - Final com despedida em vez de Binge Loop
 - Conectores lineares ("E", "Então") em vez de "Mas/Portanto"
 
@@ -126,6 +117,7 @@ ESCALA:
 8: Muito bom, alto potencial viral — retém 75%+
 9-10: Excepcional, referência de qualidade — alguém compartilharia
 
+IMPORTANTE: Avalie o roteiro INTEIRO, incluindo o meio e o final. Não avalie apenas o começo.
 Seja BRUTALMENTE HONESTO. A maioria dos roteiros fica entre 5-7.`;
 
 serve(async (req) => {
@@ -152,7 +144,15 @@ serve(async (req) => {
     console.log(`[PHASE-3 SCORE] runId=${runId} Slop: score=${slopResult.slopScore} penalty=${slopResult.slopPenalty} patterns=[${slopResult.details.join(', ')}]`);
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const scriptText = script.slice(0, 12000);
+    // For long scripts, extract beginning + middle + end to ensure full coverage
+    let scriptText = script;
+    if (script.length > 30000) {
+      const beginning = script.slice(0, 10000);
+      const midStart = Math.floor(script.length / 2) - 5000;
+      const middle = script.slice(midStart, midStart + 10000);
+      const ending = script.slice(-10000);
+      scriptText = `${beginning}\n\n[... SEÇÃO DO MEIO DO ROTEIRO ...]\n\n${middle}\n\n[... SEÇÃO FINAL DO ROTEIRO ...]\n\n${ending}`;
+    }
 
     // ═══ Fetch calibration data from real results ═══
     let calibrationContext = '';
@@ -204,11 +204,10 @@ serve(async (req) => {
   "flow_score": number (1-10),
   "payoff_score": number (1-10),
   "originality_score": number (1-10),
+  "cta_score": number (1-10, quality of the ending/binge loop),
   "ypp_monetizable": boolean,
   "jenga_score": number (1-10),
   "ai_slop_detected": boolean,
-  "sound_design_tags_count": number (how many [ÁUDIO:], [TRILHA:], [SFX:], [CORTAR MÚSICA] tags found),
-  "vfx_edit_tags_count": number (how many [J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL] tags found),
   "has_binge_loop": boolean (does the ending hook into next video instead of saying goodbye?),
   "uses_but_therefore": boolean (does the script use MAS/PORTANTO instead of E/Então for transitions?),
   "hook_mechanism_detected": string (one of: "curiosity_gap", "threat_warning", "social_proof", "contradiction", "identity_trigger", "time_pressure", "confession", "transformation", "unknown"),

@@ -98,6 +98,7 @@ const Scripts = () => {
   const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
+  const [selectedTitle, setSelectedTitle] = useState('');
   const [showIntelligence, setShowIntelligence] = useState(false);
   const [retentionPrediction, setRetentionPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
@@ -548,7 +549,7 @@ const Scripts = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Login required');
     const { data: proj } = await supabase.from('video_projects').insert({
-      user_id: user.id, title: topic || 'Script Project', script: script.slice(0, 500), niche: niche || undefined,
+      user_id: user.id, title: topic || 'Script Project', script: script, niche: niche || undefined,
       video_type: videoType,
     } as any).select('id').single();
     if (!proj) throw new Error('Failed to create project');
@@ -1255,6 +1256,7 @@ const Scripts = () => {
                   <TitleSEOStep
                     topic={topic} niche={niche} language={language}
                     script={script} videoStyle={videoStyle} syncedScenes={syncedScenes}
+                    onTitleSelected={(title) => setSelectedTitle(title)}
                   />
                   <StepNavButtons currentStep="titles" onNavigate={setActiveStep} />
                 </motion.div>
@@ -1264,7 +1266,7 @@ const Scripts = () => {
               {activeStep === 'titles' && script && (
                 <motion.div key="thumbnail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                   className="bg-card border border-border rounded-xl p-5 mt-4">
-                  <ThumbnailGenerator videoTitle={topic} niche={niche} />
+                  <ThumbnailGenerator videoTitle={selectedTitle || topic} niche={niche} />
                 </motion.div>
               )}
 

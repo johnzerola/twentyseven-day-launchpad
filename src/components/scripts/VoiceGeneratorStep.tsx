@@ -60,7 +60,7 @@ const TTS_HEADERS = {
 };
 
 // Max chars per chunk to avoid memory limit on edge function
-const MAX_CHUNK_CHARS = 800;
+const MAX_CHUNK_CHARS = 2000;
 
 /**
  * Concatenate multiple WAV blobs into a single valid WAV file.
@@ -243,7 +243,9 @@ export const VoiceGeneratorStep = ({
 
         // Binary response (audio/wav or audio/mpeg)
         if (contentType.startsWith('audio/')) {
-          return response.blob();
+          const blob = await response.blob();
+          // Tag the blob with its actual mime type for proper concatenation
+          return new Blob([blob], { type: contentType.split(';')[0] });
         }
 
         // JSON response (legacy base64 path)
@@ -254,7 +256,7 @@ export const VoiceGeneratorStep = ({
         const mime = data.mimeType || 'audio/mpeg';
         const url = `data:${mime};base64,${data.audioBase64}`;
         const res = await fetch(url);
-        return res.blob();
+        return new Blob([await res.blob()], { type: mime });
       } catch (err) {
         if (attempt < retries) {
           await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
@@ -305,8 +307,16 @@ export const VoiceGeneratorStep = ({
       setProgress(100);
       setProgressLabel('Finalizando...');
 
-      // Properly concatenate WAV PCM data with a single header
-      const finalBlob = await concatenateWavBlobs(audioBlobs);
+      // Detect audio format — if all blobs are MP3, just concatenate binary; if WAV, use WAV concatenation
+      const firstType = audioBlobs[0]?.type || '';
+      let finalBlob: Blob;
+      if (firstType.includes('mpeg') || firstType.includes('mp3')) {
+        // MP3 binary concatenation — most players handle concatenated MP3 frames
+        finalBlob = new Blob(audioBlobs, { type: 'audio/mpeg' });
+      } else {
+        // WAV PCM concatenation with proper header
+        finalBlob = await concatenateWavBlobs(audioBlobs);
+      }
       const objectUrl = URL.createObjectURL(finalBlob);
       setAudioUrl(objectUrl);
       onAudioGenerated(finalBlob, objectUrl);
