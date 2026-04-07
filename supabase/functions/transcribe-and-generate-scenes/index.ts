@@ -31,18 +31,20 @@ serve(async (req) => {
   try {
     const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || "";
-    const GATEWAY_URL = "GEMINI_COMPAT_URL";
-    if (!GOOGLE_AI_API_KEY && !GOOGLE_AI_KEY) throw new Error("Nenhuma API key configurada (GOOGLE_AI_API_KEY ou GOOGLE_AI_API_KEY).");
+    const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+    if (!GOOGLE_AI_API_KEY && !GOOGLE_AI_KEY && !LOVABLE_API_KEY) throw new Error("Nenhuma API key configurada.");
 
     // Helper: call Lovable AI Gateway (preferred) with Gemini direct fallback
     async function callAI(messages: {role: string; content: string}[], options: { tools?: any[]; tool_choice?: any; temperature?: number; max_tokens?: number } = {}): Promise<any> {
       const model = "google/gemini-2.5-flash";
       // Try Lovable Gateway first
-      if (GOOGLE_AI_API_KEY) {
+      const gatewayKey = LOVABLE_API_KEY || GOOGLE_AI_API_KEY;
+      if (gatewayKey) {
         try {
           const resp = await fetch(GATEWAY_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GOOGLE_AI_API_KEY}` },
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${gatewayKey}` },
             body: JSON.stringify({
               model,
               messages,
