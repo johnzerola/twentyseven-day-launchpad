@@ -77,12 +77,12 @@ interface ScriptGeneratorProps {
 }
 
 const SPEECH_RATES: Record<string, number> = {
-  'português': 170, 'inglês': 175, 'espanhol': 172,
-  'polonês': 155, 'alemão': 160, 'turco': 165, 'japonês': 145,
-  'francês': 170, 'italiano': 170, 'tcheco': 155, 'holandês': 165,
-  'coreano': 150, 'hindi': 160, 'árabe': 155, 'indonésio': 170,
-  'tailandês': 150, 'vietnamita': 155, 'romeno': 165, 'húngaro': 155,
-  'sueco': 165, 'norueguês': 165, 'dinamarquês': 165, 'finlandês': 150,
+  'português': 150, 'inglês': 160, 'espanhol': 155,
+  'polonês': 145, 'alemão': 140, 'turco': 150, 'japonês': 130,
+  'francês': 155, 'italiano': 155, 'tcheco': 145, 'holandês': 150,
+  'coreano': 135, 'hindi': 145, 'árabe': 140, 'indonésio': 150,
+  'tailandês': 140, 'vietnamita': 145, 'romeno': 150, 'húngaro': 145,
+  'sueco': 150, 'norueguês': 150, 'dinamarquês': 150, 'finlandês': 140,
 };
 
 type WizardStep = 0 | 1 | 2 | 3;

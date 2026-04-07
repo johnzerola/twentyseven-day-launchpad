@@ -35,14 +35,14 @@ interface AudioProcessorProps {
 type ProcessingPhase = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'done';
 
 const NARRATION_WPM: Record<string, number> = {
-  'português': 170,
-  'inglês': 175,
-  'english': 175,
-  'espanhol': 172,
-  'alemão': 160,
-  'polonês': 155,
-  'turco': 165,
-  'japonês': 145,
+  'português': 150,
+  'inglês': 160,
+  'english': 160,
+  'espanhol': 155,
+  'alemão': 140,
+  'polonês': 145,
+  'turco': 150,
+  'japonês': 130,
 };
 
 const PHASE_LABELS: Record<ProcessingPhase, string> = {
