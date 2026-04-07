@@ -369,6 +369,10 @@ serve(async (req) => {
             subscribers: ch.estimated_subscribers || 0,
             avg_views: ch.estimated_avg_views || 0,
             growth_rate: ch.growth_rate || "steady",
+            impact_tier: (ch.estimated_subscribers || 0) >= 10000000 ? 'S'
+              : (ch.estimated_subscribers || 0) >= 1000000 ? 'A'
+              : (ch.estimated_subscribers || 0) >= 100000 ? 'B'
+              : (ch.estimated_subscribers || 0) >= 10000 ? 'C' : 'F',
             upload_frequency: ch.upload_frequency || "weekly",
             visual_style_notes: ch.visual_style_notes || null,
             viral_patterns: {
