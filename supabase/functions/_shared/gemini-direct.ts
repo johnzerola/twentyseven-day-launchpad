@@ -1,7 +1,30 @@
-// Shared Gemini Direct API helpers — bypass Lovable AI Gateway
-// Uses GOOGLE_AI_API_KEY for direct access to Gemini models
+// Shared Gemini Direct API helpers — with Lovable AI Gateway fallback
+// Uses GOOGLE_AI_API_KEY for direct access, falls back to LOVABLE_API_KEY on quota exhaustion
 
 export const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const LOVABLE_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+/** Check if a 429 is a quota exhaustion (not just rate limit) */
+function isQuotaExhausted(responseText: string): boolean {
+  return responseText.includes("RESOURCE_EXHAUSTED") || responseText.includes("exceeded your current quota");
+}
+
+/** Fallback to Lovable AI Gateway (OpenAI-compatible) */
+async function fallbackToLovableGateway(body: {
+  model: string; messages: any[]; tools?: any[]; tool_choice?: any;
+  stream?: boolean; temperature?: number; max_tokens?: number; response_format?: any;
+}): Promise<globalThis.Response> {
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableKey) throw new Error("Both GOOGLE_AI_API_KEY quota exhausted and LOVABLE_API_KEY not configured");
+  
+  console.log(`[Gemini→Lovable] Falling back to Lovable AI Gateway with model ${body.model}`);
+  const res = await fetch(LOVABLE_GATEWAY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
+    body: JSON.stringify(body),
+  });
+  return res;
+}
 
 /** Retry a fetch call with exponential backoff on 429/5xx errors */
 async function fetchWithRetry(
@@ -15,13 +38,30 @@ async function fetchWithRetry(
     if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
       return res;
     }
-    // 429 or 5xx → retry with backoff
+    // Check if quota exhausted (not just temporary rate limit)
+    if (res.status === 429) {
+      const bodyText = await res.text();
+      if (isQuotaExhausted(bodyText)) {
+        console.warn(`[${label}] Quota exhausted, will try fallback`);
+        // Return a special response so caller knows to fallback
+        return new Response(bodyText, { status: 429, headers: { "X-Quota-Exhausted": "true" } });
+      }
+      // Temporary rate limit — retry with backoff
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 15000);
+        console.warn(`[${label}] 429 on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      return new Response(bodyText, { status: 429 });
+    }
+    // 5xx — retry with backoff
     if (attempt < maxRetries) {
       const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 15000);
       console.warn(`[${label}] ${res.status} on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${Math.round(delay)}ms`);
       await new Promise(r => setTimeout(r, delay));
     } else {
-      return res; // return the failed response on last attempt
+      return res;
     }
   }
   throw new Error("Unreachable");
@@ -176,6 +216,9 @@ export async function callGeminiOpenAICompat(
     }, 3, `Gemini-tools-${model}`);
     
     if (!res.ok) {
+      if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+        return fallbackToLovableGateway(body);
+      }
       const t = await res.text();
       console.error(`Gemini ${model} error ${res.status}:`, t.slice(0, 500));
       return new Response(JSON.stringify({ error: `Gemini error: ${res.status}` }), { status: res.status });
@@ -205,6 +248,9 @@ export async function callGeminiOpenAICompat(
   }, 3, `Gemini-std-${model}`);
 
   if (!res.ok) {
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      return fallbackToLovableGateway(body);
+    }
     const t = await res.text();
     console.error(`Gemini ${model} error ${res.status}:`, t.slice(0, 500));
     return new Response(JSON.stringify({ error: `Gemini error: ${res.status}` }), { status: res.status });
@@ -287,6 +333,27 @@ async function streamGeminiAsOpenAI(apiKey: string, model: string, geminiBody: a
   }, 3, `Gemini-stream-${model}`);
 
   if (!res.ok) {
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      // Fallback: stream via Lovable Gateway
+      console.log(`[streamGemini] Quota exhausted, falling back to Lovable Gateway streaming`);
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (lovableKey) {
+        const fallbackRes = await fetch(LOVABLE_GATEWAY, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
+          body: JSON.stringify({
+            model: `google/${model}`,
+            messages: geminiBody.systemInstruction 
+              ? [{ role: "system", content: geminiBody.systemInstruction.parts[0].text }, ...geminiBody.contents.map((c: any) => ({ role: c.role === "model" ? "assistant" : "user", content: c.parts[0]?.text || "" }))]
+              : geminiBody.contents.map((c: any) => ({ role: c.role === "model" ? "assistant" : "user", content: c.parts[0]?.text || "" })),
+            stream: true,
+          }),
+        });
+        if (fallbackRes.ok && fallbackRes.body) {
+          return new Response(fallbackRes.body, { headers: { "Content-Type": "text/event-stream" } });
+        }
+      }
+    }
     const t = await res.text();
     console.error(`Gemini streaming ${model} error ${res.status}:`, t.slice(0, 500));
     return new Response(JSON.stringify({ error: `Gemini streaming error: ${res.status}` }), { status: res.status });
@@ -362,6 +429,21 @@ export async function callGemini(
     }),
   }, 3, `Gemini-callDirect-${model}`);
   if (!res.ok) {
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      // Fallback to Lovable Gateway for non-streaming callGemini
+      console.log(`[callGemini] Quota exhausted, falling back to Lovable Gateway`);
+      const fallbackRes = await fallbackToLovableGateway({
+        model: `google/${model}`, messages: [
+          { role: "system", content: system },
+          { role: "user", content: userMsg },
+        ],
+        temperature: opts.temperature ?? 0.8,
+        max_tokens: opts.maxTokens || 8192,
+      });
+      if (!fallbackRes.ok) throw new Error(`LOVABLE_GATEWAY_ERROR_${fallbackRes.status}`);
+      const fallbackData = await fallbackRes.json();
+      return fallbackData.choices?.[0]?.message?.content || '';
+    }
     const t = await res.text();
     console.error(`Gemini ${model} error ${res.status}:`, t);
     throw new Error(`GEMINI_ERROR_${res.status}`);
@@ -409,6 +491,26 @@ export async function callGeminiStreaming(
     if (res.ok) {
       console.log(`[${opts.label || 'Gemini'}] Streaming with ${model}`);
       return new Response(geminiSseToOpenAi(res.body!));
+    }
+    // Quota exhausted → try Lovable Gateway
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      console.log(`[${opts.label || 'Gemini'}] Quota exhausted, falling back to Lovable Gateway`);
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (lovableKey) {
+        const fallbackRes = await fetch(LOVABLE_GATEWAY, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
+          body: JSON.stringify({
+            model: `google/${model}`,
+            messages: [{ role: "system", content: system }, { role: "user", content: userMsg }],
+            stream: true,
+            max_tokens: opts.maxTokens || 16384,
+          }),
+        });
+        if (fallbackRes.ok && fallbackRes.body) {
+          return new Response(fallbackRes.body, { headers: { "Content-Type": "text/event-stream" } });
+        }
+      }
     }
     const t = await res.text();
     console.error(`[${opts.label || 'Gemini'}] ${model} streaming error ${res.status}:`, t);
