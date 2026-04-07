@@ -3,6 +3,30 @@
 
 export const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
+/** Retry a fetch call with exponential backoff on 429/5xx errors */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  maxRetries = 3,
+  label = "Gemini"
+): Promise<globalThis.Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, init);
+    if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
+      return res;
+    }
+    // 429 or 5xx → retry with backoff
+    if (attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 15000);
+      console.warn(`[${label}] ${res.status} on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${Math.round(delay)}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    } else {
+      return res; // return the failed response on last attempt
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 export function sanitizeUnicode(text: string): string {
   return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
              .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
@@ -145,11 +169,11 @@ export async function callGeminiOpenAICompat(
       return streamGeminiAsOpenAI(apiKey, model, geminiBody);
     }
 
-    const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
+    const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(geminiBody),
-    });
+    }, 3, `Gemini-tools-${model}`);
     
     if (!res.ok) {
       const t = await res.text();
@@ -174,11 +198,11 @@ export async function callGeminiOpenAICompat(
     return streamGeminiAsOpenAI(apiKey, model, geminiBody);
   }
 
-  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
+  const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(geminiBody),
-  });
+  }, 3, `Gemini-std-${model}`);
 
   if (!res.ok) {
     const t = await res.text();
@@ -256,11 +280,11 @@ function convertGeminiToOpenAI(geminiData: any): any {
 
 /** Stream Gemini response as OpenAI SSE format */
 async function streamGeminiAsOpenAI(apiKey: string, model: string, geminiBody: any): Promise<Response> {
-  const res = await fetch(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
+  const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(geminiBody),
-  });
+  }, 3, `Gemini-stream-${model}`);
 
   if (!res.ok) {
     const t = await res.text();
@@ -328,7 +352,7 @@ export async function callGemini(
   };
   if (opts.jsonMode) genConfig.responseMimeType = "application/json";
 
-  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
+  const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -336,7 +360,7 @@ export async function callGemini(
       contents: [{ role: "user", parts: [{ text: u }] }],
       generationConfig: genConfig,
     }),
-  });
+  }, 3, `Gemini-callDirect-${model}`);
   if (!res.ok) {
     const t = await res.text();
     console.error(`Gemini ${model} error ${res.status}:`, t);
@@ -373,7 +397,7 @@ export async function callGeminiStreaming(
   const u = sanitizeUnicode(userMsg);
 
   for (const model of models) {
-    const res = await fetch(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
+    const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -381,7 +405,7 @@ export async function callGeminiStreaming(
         contents: [{ role: "user", parts: [{ text: u }] }],
         generationConfig: { temperature: 0.8, maxOutputTokens: opts.maxTokens || 16384 },
       }),
-    });
+    }, 3, `Gemini-streamFallback-${model}`);
     if (res.ok) {
       console.log(`[${opts.label || 'Gemini'}] Streaming with ${model}`);
       return new Response(geminiSseToOpenAi(res.body!));
@@ -396,14 +420,14 @@ export async function callGeminiStreaming(
 /** Generate text embedding using Google's text-embedding-004 model */
 export async function generateEmbedding(apiKey: string, text: string): Promise<number[] | null> {
   try {
-    const res = await fetch(`${GEMINI_BASE}/text-embedding-004:embedContent?key=${apiKey}`, {
+    const res = await fetchWithRetry(`${GEMINI_BASE}/text-embedding-004:embedContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "models/text-embedding-004",
         content: { parts: [{ text: sanitizeUnicode(text.slice(0, 2000)) }] },
       }),
-    });
+    }, 2, "Gemini-embedding");
     if (!res.ok) return null;
     const data = await res.json();
     const embedding = data.embedding?.values;
