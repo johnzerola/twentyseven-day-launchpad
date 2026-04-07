@@ -356,6 +356,7 @@ serve(async (req) => {
       success: true,
       synced: results.filter(r => !r.error).length,
       linked: linkedCount,
+      feedback_inserted: feedbackInserted,
       errors: results.filter(r => r.error).length,
       feedbackLoop: feedbackResults,
       results,
