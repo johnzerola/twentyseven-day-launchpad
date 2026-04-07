@@ -333,6 +333,27 @@ async function streamGeminiAsOpenAI(apiKey: string, model: string, geminiBody: a
   }, 3, `Gemini-stream-${model}`);
 
   if (!res.ok) {
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      // Fallback: stream via Lovable Gateway
+      console.log(`[streamGemini] Quota exhausted, falling back to Lovable Gateway streaming`);
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (lovableKey) {
+        const fallbackRes = await fetch(LOVABLE_GATEWAY, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
+          body: JSON.stringify({
+            model: `google/${model}`,
+            messages: geminiBody.systemInstruction 
+              ? [{ role: "system", content: geminiBody.systemInstruction.parts[0].text }, ...geminiBody.contents.map((c: any) => ({ role: c.role === "model" ? "assistant" : "user", content: c.parts[0]?.text || "" }))]
+              : geminiBody.contents.map((c: any) => ({ role: c.role === "model" ? "assistant" : "user", content: c.parts[0]?.text || "" })),
+            stream: true,
+          }),
+        });
+        if (fallbackRes.ok && fallbackRes.body) {
+          return new Response(fallbackRes.body, { headers: { "Content-Type": "text/event-stream" } });
+        }
+      }
+    }
     const t = await res.text();
     console.error(`Gemini streaming ${model} error ${res.status}:`, t.slice(0, 500));
     return new Response(JSON.stringify({ error: `Gemini streaming error: ${res.status}` }), { status: res.status });
