@@ -2,10 +2,22 @@ import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const _ai = async (body: any) => {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const _ai = async (body: any, retries = 3) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
-  const res = await callGeminiOpenAICompat(apiKey, body);
-  return res;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const res = await callGeminiOpenAICompat(apiKey, body);
+    if (res.status === 429 && attempt < retries - 1) {
+      const wait = Math.min(2000 * Math.pow(2, attempt), 15000);
+      console.log(`Rate limited (429), retrying in ${wait}ms (attempt ${attempt + 1}/${retries})`);
+      await sleep(wait);
+      continue;
+    }
+    return res;
+  }
+  // Should not reach here, but just in case
+  return await callGeminiOpenAICompat(apiKey, body);
 };
 
 const corsHeaders = {
@@ -267,7 +279,19 @@ Respond in JSON:
         ],
       });
 
-    if (!aiRes.ok) throw new Error(`AI error: ${aiRes.status}`);
+    if (!aiRes.ok) {
+      if (aiRes.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Aguarde alguns segundos e tente novamente." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiRes.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`AI error: ${aiRes.status}`);
+    }
     const aiData = await aiRes.json();
     const content = aiData.choices?.[0]?.message?.content || '{}';
     const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
