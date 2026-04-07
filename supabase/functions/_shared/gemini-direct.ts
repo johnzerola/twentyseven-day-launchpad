@@ -2,7 +2,7 @@
 // Uses GOOGLE_AI_API_KEY for direct access, falls back to LOVABLE_API_KEY on quota exhaustion
 
 export const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const LOVABLE_GATEWAY = "https://api.lovable.dev/v1/chat/completions";
+const LOVABLE_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 /** Check if a 429 is a quota exhaustion (not just rate limit) */
 function isQuotaExhausted(responseText: string): boolean {
