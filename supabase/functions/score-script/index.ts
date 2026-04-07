@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callGemini } from "../_shared/gemini-direct.ts";
+import { calibrateScore, getCalibrationStatus } from "../_shared/calibration-engine.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -462,21 +463,41 @@ serve(async (req) => {
       } catch (e) { console.warn("Skill scoring save error:", e); }
     }
 
-    // Determine calibration status
-    const hasCalibration = calibrationContext.length > 0;
+    // Apply post-score calibration from real data
+    let calibratedCombinedScore = combinedScore;
+    let calibrationMeta: any = {};
+    try {
+      const calResult = await calibrateScore(sb, "viral_probability", niche || "general", combinedScore);
+      calibratedCombinedScore = Math.round(calResult.calibrated * 10) / 10;
+      const calStatus = await getCalibrationStatus(sb, niche || "general");
+      calibrationMeta = {
+        original_score: combinedScore,
+        calibrated_score: calibratedCombinedScore,
+        adjustment: calResult.adjustment,
+        calibration_confidence: calResult.confidence,
+        has_real_data: calStatus.hasRealData,
+        real_samples: calStatus.sampleCount,
+        avg_prediction_error: calStatus.avgError,
+        source: calResult.source,
+      };
+    } catch (e) { console.warn("Calibration error:", e); }
+
+    const hasCalibration = calibrationMeta.has_real_data || calibrationContext.length > 0;
     const calibrationStatus = hasCalibration ? 'calibrated' : 'uncalibrated';
     const calibrationNote = hasCalibration
-      ? 'Scores ajustados com base em dados reais de calibração por nicho.'
+      ? `Scores calibrados com ${calibrationMeta.real_samples || 0} amostras reais (erro médio: ${calibrationMeta.avg_prediction_error || '?'}%).`
       : '⚠️ Score sem calibração real para este nicho — use como referência, não como previsão.';
 
     return new Response(JSON.stringify({
       approved,
-      combinedScore,
+      combinedScore: calibratedCombinedScore,
+      rawCombinedScore: combinedScore,
       gpt_score: gpt,
       gemini_score: gemini,
-      confidence_source: 'ai_estimate',
+      confidence_source: hasCalibration ? 'real_data_calibrated' : 'ai_estimate',
       calibration_status: calibrationStatus,
       calibration_note: calibrationNote,
+      calibration: calibrationMeta,
       hook_mechanism_detected: gptScore?.hook_mechanism_detected || geminiScore?.hook_mechanism_detected || 'unknown',
       hook_mechanism_strength: gptScore?.hook_mechanism_strength || geminiScore?.hook_mechanism_strength || 0,
       slop_score: slopResult.slopScore,
