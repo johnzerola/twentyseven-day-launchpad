@@ -152,7 +152,15 @@ serve(async (req) => {
     console.log(`[PHASE-3 SCORE] runId=${runId} Slop: score=${slopResult.slopScore} penalty=${slopResult.slopPenalty} patterns=[${slopResult.details.join(', ')}]`);
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const scriptText = script.slice(0, 12000);
+    // For long scripts, extract beginning + middle + end to ensure full coverage
+    let scriptText = script;
+    if (script.length > 30000) {
+      const beginning = script.slice(0, 10000);
+      const midStart = Math.floor(script.length / 2) - 5000;
+      const middle = script.slice(midStart, midStart + 10000);
+      const ending = script.slice(-10000);
+      scriptText = `${beginning}\n\n[... SEÇÃO DO MEIO DO ROTEIRO ...]\n\n${middle}\n\n[... SEÇÃO FINAL DO ROTEIRO ...]\n\n${ending}`;
+    }
 
     // ═══ Fetch calibration data from real results ═══
     let calibrationContext = '';
@@ -204,11 +212,10 @@ serve(async (req) => {
   "flow_score": number (1-10),
   "payoff_score": number (1-10),
   "originality_score": number (1-10),
+  "cta_score": number (1-10, quality of the ending/binge loop),
   "ypp_monetizable": boolean,
   "jenga_score": number (1-10),
   "ai_slop_detected": boolean,
-  "sound_design_tags_count": number (how many [ÁUDIO:], [TRILHA:], [SFX:], [CORTAR MÚSICA] tags found),
-  "vfx_edit_tags_count": number (how many [J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL] tags found),
   "has_binge_loop": boolean (does the ending hook into next video instead of saying goodbye?),
   "uses_but_therefore": boolean (does the script use MAS/PORTANTO instead of E/Então for transitions?),
   "hook_mechanism_detected": string (one of: "curiosity_gap", "threat_warning", "social_proof", "contradiction", "identity_trigger", "time_pressure", "confession", "transformation", "unknown"),

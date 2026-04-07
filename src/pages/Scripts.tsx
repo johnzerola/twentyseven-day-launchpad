@@ -548,7 +548,7 @@ const Scripts = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Login required');
     const { data: proj } = await supabase.from('video_projects').insert({
-      user_id: user.id, title: topic || 'Script Project', script: script.slice(0, 500), niche: niche || undefined,
+      user_id: user.id, title: topic || 'Script Project', script: script, niche: niche || undefined,
       video_type: videoType,
     } as any).select('id').single();
     if (!proj) throw new Error('Failed to create project');
