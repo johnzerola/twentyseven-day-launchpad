@@ -226,8 +226,8 @@ serve(async (req) => {
     const userScoreMsg = `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}`;
 
     const [gptResult, geminiResult] = await Promise.allSettled([
-      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 4096 }),
-      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 4096 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 8192 }),
+      callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 8192 }),
     ]);
 
     const parseScore = (result: PromiseSettledResult<string>, name: string) => {
@@ -250,7 +250,10 @@ serve(async (req) => {
     const gptScore = parseScore(gptResult, "EvalA");
     const geminiScore = parseScore(geminiResult, "EvalB");
 
-    if (!gptScore && !geminiScore) throw new Error("Both AI evaluations failed");
+    if (!gptScore && !geminiScore) {
+      console.error(`[PHASE-3 SCORE] runId=${runId} Both evaluators returned invalid or empty JSON`);
+      throw new Error("Both AI evaluations failed");
+    }
 
     // Apply slop penalty to raw scores
     let gpt = gptScore?.score || 5;
