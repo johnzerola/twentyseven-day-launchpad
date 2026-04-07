@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callGemini } from "../_shared/gemini-direct.ts";
 import { calibrateScore, getCalibrationStatus } from "../_shared/calibration-engine.ts";
+import { predictRetention } from "../_shared/retention-predictor.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -488,6 +489,27 @@ serve(async (req) => {
       ? `Scores calibrados com ${calibrationMeta.real_samples || 0} amostras reais (erro médio: ${calibrationMeta.avg_prediction_error || '?'}%).`
       : '⚠️ Score sem calibração real para este nicho — use como referência, não como previsão.';
 
+    // ═══ RETENTION PREDICTION — second-by-second curve ═══
+    let retentionPrediction: any = null;
+    try {
+      const wordCount = script.split(/\s+/).length;
+      const estimatedDuration = Math.round(wordCount / 2.5); // ~150 wpm = 2.5 wps
+      
+      // Fetch real benchmarks for this niche
+      let realBenchmarks: { avg_retention: number; sample_count: number } | undefined;
+      try {
+        const { data: bench } = await sb.from("mv_niche_benchmarks")
+          .select("avg_retention, sample_count")
+          .ilike("niche", `%${niche || ''}%`)
+          .limit(1);
+        if (bench?.[0]?.avg_retention) {
+          realBenchmarks = { avg_retention: bench[0].avg_retention, sample_count: bench[0].sample_count };
+        }
+      } catch { /* fallback */ }
+
+      retentionPrediction = predictRetention(script, estimatedDuration, niche || 'default', realBenchmarks);
+    } catch (e) { console.warn("Retention prediction error:", e); }
+
     return new Response(JSON.stringify({
       approved,
       combinedScore: calibratedCombinedScore,
@@ -524,6 +546,18 @@ serve(async (req) => {
       strengths: allStrengths,
       weaknesses: allWeaknesses,
       improvements: allImprovements,
+      retention_prediction: retentionPrediction ? {
+        avg_predicted_retention: retentionPrediction.avg_predicted_retention,
+        grade: retentionPrediction.grade,
+        hook_strength: retentionPrediction.hook_strength,
+        pattern_interrupts: retentionPrediction.pattern_interrupt_count,
+        open_loops: retentionPrediction.open_loop_count,
+        binge_loop: retentionPrediction.binge_loop_detected,
+        emotion_transitions: retentionPrediction.emotion_transitions,
+        estimated_avd_seconds: retentionPrediction.estimated_avd_seconds,
+        drop_zones: retentionPrediction.drop_zones,
+        curve_summary: retentionPrediction.curve.filter((_: any, i: number) => i % 6 === 0), // every 30s
+      } : null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

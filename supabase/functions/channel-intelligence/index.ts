@@ -1,6 +1,7 @@
 import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { analyzeCompetitiveGaps } from "../_shared/competitive-gap-analyzer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -399,6 +400,67 @@ USE esta base para fazer recomendações ESPECÍFICAS e ACIONÁVEIS. Compare o c
       console.error("Auto-learn channel error:", e);
     }
 
+    // ════════ 7. COMPETITIVE GAP ANALYSIS ════════
+    let gapAnalysis: any = null;
+    try {
+      // Fetch niche benchmarks from DB
+      const detectedNiche = report.nicheAnalysis?.detectedNiche || 'general';
+      const { data: nicheBench } = await sb.from("mv_niche_benchmarks")
+        .select("avg_views, avg_retention, avg_viral_score, sample_count")
+        .ilike("niche", `%${detectedNiche}%`)
+        .limit(1);
+
+      const { data: topChannels } = await sb.from("channel_intelligence")
+        .select("avg_views, subscribers")
+        .eq("niche", detectedNiche)
+        .order("avg_views", { ascending: false })
+        .limit(1);
+
+      const { data: topPatterns } = await sb.from("content_dna")
+        .select("title_structure, views")
+        .eq("niche", detectedNiche)
+        .order("views", { ascending: false })
+        .limit(10);
+
+      const patternAgg: Record<string, { total: number; count: number }> = {};
+      for (const p of (topPatterns || [])) {
+        const key = p.title_structure || 'unknown';
+        if (!patternAgg[key]) patternAgg[key] = { total: 0, count: 0 };
+        patternAgg[key].total += p.views || 0;
+        patternAgg[key].count++;
+      }
+      const topPats = Object.entries(patternAgg)
+        .map(([pattern, d]) => ({ pattern, avg_views: Math.round(d.total / d.count), frequency: d.count }))
+        .sort((a, b) => b.avg_views - a.avg_views);
+
+      const bench = nicheBench?.[0];
+      const topCh = topChannels?.[0];
+      const totalVideos = shortVideos.length + midVideos.length + longVideos.length;
+
+      gapAnalysis = analyzeCompetitiveGaps(
+        {
+          avg_views: Math.round(avgViews),
+          subscribers: subs,
+          upload_frequency_days: avgDaysBetween || 7,
+          avg_engagement_rate: videoMetrics.length > 0 ? videoMetrics.reduce((s, v) => s + v.engagementRate / 100, 0) / videoMetrics.length : 0.03,
+          short_ratio: totalVideos > 0 ? shortVideos.length / totalVideos : 0,
+          long_ratio: totalVideos > 0 ? longVideos.length / totalVideos : 0,
+          outlier_ratio: videoMetrics.length > 0 ? outliers.length / videoMetrics.length : 0,
+          niche: detectedNiche,
+        },
+        {
+          niche_avg_views: bench?.avg_views || Math.round(avgViews * 1.5),
+          niche_avg_subs: topCh?.subscribers || subs * 2,
+          niche_avg_upload_freq: 5,
+          niche_avg_engagement: 0.04,
+          niche_avg_retention: bench?.avg_retention || undefined,
+          top_channel_views: topCh?.avg_views || Math.round(avgViews * 5),
+          top_channel_subs: topCh?.subscribers || subs * 5,
+        },
+        topPats
+      );
+    } catch (e) { console.warn("Gap analysis error:", e); }
+
     return new Response(JSON.stringify({
       channel: {
         id: channelId,
@@ -426,6 +488,7 @@ USE esta base para fazer recomendações ESPECÍFICAS e ACIONÁVEIS. Compare o c
       outliers: outliers.slice(0, 5),
       recentVideos: videoMetrics.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()).slice(0, 10),
       report,
+      competitive_gaps: gapAnalysis,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

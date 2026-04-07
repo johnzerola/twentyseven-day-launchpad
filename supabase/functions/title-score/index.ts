@@ -38,6 +38,73 @@ serve(async (req) => {
     // ═══ SCORE EACH TITLE ═══
     const scored = titles.map((title: string) => scoreTitle(title, stats, niche));
 
+    // ═══ CTR PREDICTION FROM REAL DATA ═══
+    // Cross-reference with output_performance_feedback for real CTR data
+    let ctrPredictionData: any = null;
+    try {
+      const { data: feedbackData } = await sb.from("output_performance_feedback")
+        .select("output_content, actual_ctr, actual_retention, actual_views, niche")
+        .eq("output_type", "title")
+        .not("actual_ctr", "is", null)
+        .gt("actual_ctr", 0)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (feedbackData && feedbackData.length >= 5) {
+        // Build CTR benchmarks from real data
+        const nicheFiltered = niche
+          ? feedbackData.filter((f: any) => f.niche?.toLowerCase().includes(niche.toLowerCase()))
+          : feedbackData;
+        const allCTRs = (nicheFiltered.length >= 3 ? nicheFiltered : feedbackData).map((f: any) => f.actual_ctr);
+        const avgCTR = allCTRs.reduce((s: number, c: number) => s + c, 0) / allCTRs.length;
+        const topCTRs = [...allCTRs].sort((a, b) => b - a).slice(0, Math.ceil(allCTRs.length * 0.25));
+        const avgTopCTR = topCTRs.reduce((s: number, c: number) => s + c, 0) / topCTRs.length;
+
+        // Analyze which title features correlate with high CTR
+        const highCTR = feedbackData.filter((f: any) => f.actual_ctr >= avgTopCTR);
+        const lowCTR = feedbackData.filter((f: any) => f.actual_ctr < avgCTR);
+
+        const featureCorrelation: Record<string, { high: number; low: number }> = {
+          has_number: { high: 0, low: 0 },
+          has_question: { high: 0, low: 0 },
+          has_caps: { high: 0, low: 0 },
+          short_title: { high: 0, low: 0 },
+        };
+        for (const f of highCTR) {
+          const t = f.output_content || '';
+          if (/\d/.test(t)) featureCorrelation.has_number.high++;
+          if (/\?/.test(t)) featureCorrelation.has_question.high++;
+          if (/[A-Z]{2,}/.test(t)) featureCorrelation.has_caps.high++;
+          if (t.length < 50) featureCorrelation.short_title.high++;
+        }
+        for (const f of lowCTR) {
+          const t = f.output_content || '';
+          if (/\d/.test(t)) featureCorrelation.has_number.low++;
+          if (/\?/.test(t)) featureCorrelation.has_question.low++;
+          if (/[A-Z]{2,}/.test(t)) featureCorrelation.has_caps.low++;
+          if (t.length < 50) featureCorrelation.short_title.low++;
+        }
+
+        ctrPredictionData = {
+          avg_ctr: Math.round(avgCTR * 100) / 100,
+          top_25_avg_ctr: Math.round(avgTopCTR * 100) / 100,
+          sample_count: feedbackData.length,
+          niche_sample_count: nicheFiltered.length,
+          feature_correlation: featureCorrelation,
+          data_source: "real_youtube_analytics",
+        };
+
+        // Add CTR prediction to each scored title
+        for (const s of scored) {
+          const pctScore = s.percentage;
+          // Interpolate CTR prediction between low and high based on title score
+          const predictedCTR = avgCTR + (avgTopCTR - avgCTR) * Math.min(1, pctScore / 85);
+          s.predicted_ctr = Math.round(predictedCTR * 100) / 100;
+          s.ctr_confidence = feedbackData.length >= 20 ? 'high' : feedbackData.length >= 10 ? 'medium' : 'low';
+        }
+      }
+    } catch (e) { console.warn("CTR prediction error:", e); }
+
     // ═══ NICHE BENCHMARK FROM REAL DATA ═══
     let nicheBenchmark: any = null;
     try {
@@ -80,6 +147,7 @@ serve(async (req) => {
         total_titles_analyzed: viralTitles.length,
       },
       niche_benchmark: nicheBenchmark,
+      ctr_prediction: ctrPredictionData,
       data_quality: {
         tier: dataQuality,
         gold_titles: goldCount,
