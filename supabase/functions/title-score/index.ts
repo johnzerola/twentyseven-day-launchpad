@@ -38,6 +38,35 @@ serve(async (req) => {
     // ═══ SCORE EACH TITLE ═══
     const scored = titles.map((title: string) => scoreTitle(title, stats, niche));
 
+    // ═══ NICHE BENCHMARK FROM REAL DATA ═══
+    let nicheBenchmark: any = null;
+    try {
+      const { data: benchmarks } = await sb.from("mv_niche_benchmarks")
+        .select("*")
+        .ilike("niche", `%${niche || ''}%`)
+        .limit(5);
+      if (benchmarks?.length) {
+        nicheBenchmark = {
+          by_format: benchmarks.reduce((acc: any, b: any) => {
+            acc[b.format] = {
+              avg_retention: b.avg_retention,
+              avg_views: b.avg_views,
+              avg_viral_score: b.avg_viral_score,
+              sample_count: b.sample_count,
+            };
+            return acc;
+          }, {}),
+          data_source: "real_performance_data",
+        };
+      }
+    } catch { /* fallback to no benchmark */ }
+
+    // ═══ QUALITY-WEIGHTED CONTEXT ═══
+    // Prioritize gold/silver titles over unverified
+    const goldCount = viralTitles.filter((t: any) => t.views >= 1000000).length;
+    const totalCount = viralTitles.length;
+    const dataQuality = goldCount > 50 ? "high" : goldCount > 10 ? "medium" : "low";
+
     return new Response(JSON.stringify({
       scores: scored,
       benchmarks: {
@@ -49,6 +78,17 @@ serve(async (req) => {
         question_usage_rate: `${Math.round(stats.questionRate * 100)}%`,
         caps_usage_rate: `${Math.round(stats.capsRate * 100)}%`,
         total_titles_analyzed: viralTitles.length,
+      },
+      niche_benchmark: nicheBenchmark,
+      data_quality: {
+        tier: dataQuality,
+        gold_titles: goldCount,
+        total_titles: totalCount,
+        note: dataQuality === "high"
+          ? "Benchmarks baseados em dados reais de alta qualidade."
+          : dataQuality === "medium"
+            ? "Mix de dados reais e estimativas IA."
+            : "⚠️ Poucos dados reais — scores são estimativas.",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

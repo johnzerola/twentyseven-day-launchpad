@@ -480,6 +480,7 @@ export type Database = {
           created_at: string | null
           growth_rate: string
           id: string
+          impact_tier: string | null
           is_faceless: boolean
           is_monetized: boolean
           language: string
@@ -503,6 +504,7 @@ export type Database = {
           created_at?: string | null
           growth_rate?: string
           id?: string
+          impact_tier?: string | null
           is_faceless?: boolean
           is_monetized?: boolean
           language?: string
@@ -526,6 +528,7 @@ export type Database = {
           created_at?: string | null
           growth_rate?: string
           id?: string
+          impact_tier?: string | null
           is_faceless?: boolean
           is_monetized?: boolean
           language?: string
@@ -741,6 +744,7 @@ export type Database = {
           open_loop_count: number | null
           pacing: string | null
           psychological_triggers: string[] | null
+          quality_tier: string | null
           replication_template: string | null
           retention_hooks: Json | null
           source: string | null
@@ -785,6 +789,7 @@ export type Database = {
           open_loop_count?: number | null
           pacing?: string | null
           psychological_triggers?: string[] | null
+          quality_tier?: string | null
           replication_template?: string | null
           retention_hooks?: Json | null
           source?: string | null
@@ -829,6 +834,7 @@ export type Database = {
           open_loop_count?: number | null
           pacing?: string | null
           psychological_triggers?: string[] | null
+          quality_tier?: string | null
           replication_template?: string | null
           retention_hooks?: Json | null
           source?: string | null
@@ -4535,6 +4541,7 @@ export type Database = {
           duration_seconds: number | null
           emotional_triggers: string[] | null
           id: string
+          impact_score: number | null
           language: string | null
           likes: number | null
           niche: string | null
@@ -4553,6 +4560,7 @@ export type Database = {
           duration_seconds?: number | null
           emotional_triggers?: string[] | null
           id?: string
+          impact_score?: number | null
           language?: string | null
           likes?: number | null
           niche?: string | null
@@ -4571,6 +4579,7 @@ export type Database = {
           duration_seconds?: number | null
           emotional_triggers?: string[] | null
           id?: string
+          impact_score?: number | null
           language?: string | null
           likes?: number | null
           niche?: string | null
