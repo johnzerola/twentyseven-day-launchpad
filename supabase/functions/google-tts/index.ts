@@ -6,7 +6,75 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ── Gemini TTS voices (30 prebuilt) ──
+// ── Google Cloud TTS language codes mapped from user-facing names ──
+const LANG_MAP: Record<string, { code: string; voices: { name: string; label: string; gender: string }[] }> = {
+  'português': {
+    code: 'pt-BR',
+    voices: [
+      { name: 'pt-BR-Neural2-B', label: 'Lucas (Masculino Neural)', gender: 'MALE' },
+      { name: 'pt-BR-Neural2-C', label: 'Ana (Feminino Neural)', gender: 'FEMALE' },
+      { name: 'pt-BR-Neural2-A', label: 'Pedro (Masculino Neural 2)', gender: 'MALE' },
+      { name: 'pt-BR-Wavenet-B', label: 'Rafael (Masculino Wavenet)', gender: 'MALE' },
+      { name: 'pt-BR-Wavenet-C', label: 'Camila (Feminino Wavenet)', gender: 'FEMALE' },
+      { name: 'pt-BR-Standard-B', label: 'Bruno (Masculino Standard)', gender: 'MALE' },
+    ],
+  },
+  'inglês': {
+    code: 'en-US',
+    voices: [
+      { name: 'en-US-Neural2-D', label: 'James (Male Neural)', gender: 'MALE' },
+      { name: 'en-US-Neural2-F', label: 'Sarah (Female Neural)', gender: 'FEMALE' },
+      { name: 'en-US-Neural2-A', label: 'Alex (Male Neural 2)', gender: 'MALE' },
+      { name: 'en-US-Neural2-C', label: 'Emma (Female Neural 2)', gender: 'FEMALE' },
+      { name: 'en-US-Wavenet-D', label: 'David (Male Wavenet)', gender: 'MALE' },
+      { name: 'en-US-Wavenet-F', label: 'Lily (Female Wavenet)', gender: 'FEMALE' },
+    ],
+  },
+  'english': {
+    code: 'en-US',
+    voices: [
+      { name: 'en-US-Neural2-D', label: 'James (Male Neural)', gender: 'MALE' },
+      { name: 'en-US-Neural2-F', label: 'Sarah (Female Neural)', gender: 'FEMALE' },
+    ],
+  },
+  'espanhol': {
+    code: 'es-ES',
+    voices: [
+      { name: 'es-ES-Neural2-B', label: 'Carlos (Masculino Neural)', gender: 'MALE' },
+      { name: 'es-ES-Neural2-A', label: 'María (Feminino Neural)', gender: 'FEMALE' },
+    ],
+  },
+  'alemão': {
+    code: 'de-DE',
+    voices: [
+      { name: 'de-DE-Neural2-B', label: 'Hans (Männlich Neural)', gender: 'MALE' },
+      { name: 'de-DE-Neural2-C', label: 'Anna (Weiblich Neural)', gender: 'FEMALE' },
+    ],
+  },
+  'polonês': {
+    code: 'pl-PL',
+    voices: [
+      { name: 'pl-PL-Wavenet-B', label: 'Jan (Męski Wavenet)', gender: 'MALE' },
+      { name: 'pl-PL-Wavenet-A', label: 'Ewa (Żeński Wavenet)', gender: 'FEMALE' },
+    ],
+  },
+  'turco': {
+    code: 'tr-TR',
+    voices: [
+      { name: 'tr-TR-Wavenet-B', label: 'Mehmet (Erkek Wavenet)', gender: 'MALE' },
+      { name: 'tr-TR-Wavenet-C', label: 'Ayşe (Kadın Wavenet)', gender: 'FEMALE' },
+    ],
+  },
+  'japonês': {
+    code: 'ja-JP',
+    voices: [
+      { name: 'ja-JP-Neural2-C', label: 'Kenji (男性 Neural)', gender: 'MALE' },
+      { name: 'ja-JP-Neural2-B', label: 'Yuki (女性 Neural)', gender: 'FEMALE' },
+    ],
+  },
+};
+
+// ── Gemini TTS voices (30 prebuilt) — used as secondary engine ──
 const GEMINI_VOICES: { name: string; label: string; gender: string; style: string }[] = [
   { name: 'Zephyr', label: 'Zephyr (Bright)', gender: 'FEMALE', style: 'bright' },
   { name: 'Puck', label: 'Puck (Upbeat)', gender: 'MALE', style: 'upbeat' },
@@ -40,17 +108,9 @@ const GEMINI_VOICES: { name: string; label: string; gender: string; style: strin
   { name: 'Sulafat', label: 'Sulafat (Warm)', gender: 'FEMALE', style: 'warm' },
 ];
 
-// Default voice per language for narration style
-const LANG_DEFAULT_VOICE: Record<string, string> = {
-  'português': 'Charon',
-  'inglês': 'Charon',
-  'english': 'Charon',
-  'espanhol': 'Orus',
-  'alemão': 'Schedar',
-  'polonês': 'Rasalgethi',
-  'turco': 'Algieba',
-  'japonês': 'Iapetus',
-};
+function isGeminiVoice(voiceName: string): boolean {
+  return GEMINI_VOICES.some(v => v.name === voiceName);
+}
 
 // ── WAV header creation (PCM s16le → WAV) ──
 function createWavHeader(dataLength: number, sampleRate = 24000, channels = 1, bitsPerSample = 16): Uint8Array {
@@ -58,39 +118,27 @@ function createWavHeader(dataLength: number, sampleRate = 24000, channels = 1, b
   const view = new DataView(header);
   const byteRate = sampleRate * channels * (bitsPerSample / 8);
   const blockAlign = channels * (bitsPerSample / 8);
-
-  // RIFF header
-  writeString(view, 0, 'RIFF');
+  const writeStr = (offset: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+  writeStr(0, 'RIFF');
   view.setUint32(4, 36 + dataLength, true);
-  writeString(view, 8, 'WAVE');
-  // fmt sub-chunk
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // sub-chunk size
-  view.setUint16(20, 1, true); // PCM format
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
   view.setUint16(22, channels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
   view.setUint16(32, blockAlign, true);
   view.setUint16(34, bitsPerSample, true);
-  // data sub-chunk
-  writeString(view, 36, 'data');
+  writeStr(36, 'data');
   view.setUint32(40, dataLength, true);
-
   return new Uint8Array(header);
-}
-
-function writeString(view: DataView, offset: number, str: string) {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i));
-  }
 }
 
 function pcmToWav(pcmBase64: string): Uint8Array {
   const binaryStr = atob(pcmBase64);
   const pcmBytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
-    pcmBytes[i] = binaryStr.charCodeAt(i);
-  }
+  for (let i = 0; i < binaryStr.length; i++) pcmBytes[i] = binaryStr.charCodeAt(i);
   const wavHeader = createWavHeader(pcmBytes.length);
   const wav = new Uint8Array(wavHeader.length + pcmBytes.length);
   wav.set(wavHeader, 0);
@@ -98,22 +146,16 @@ function pcmToWav(pcmBase64: string): Uint8Array {
   return wav;
 }
 
-// ── Gemini TTS via Generative Language API ──
+// ── Gemini TTS via Generative Language API (secondary engine) ──
 async function synthesizeWithGeminiTTS(
-  text: string,
-  apiKey: string,
-  voiceName: string,
-  speakingRate: number,
-  voiceStyle?: string,
+  text: string, apiKey: string, voiceName: string, speakingRate: number, voiceStyle?: string,
 ): Promise<Uint8Array> {
-  // Build style instruction based on voiceStyle and speakingRate
   const VOICE_STYLE_PROMPTS: Record<string, string> = {
-    'dopaminergico': 'Read this narration with INTENSE energy and magnetic charisma. Your voice must captivate — convey wonder, urgency, and raw emotion. Vary your pace DRAMATICALLY: slow down for revelations, speed up for excitement. Use vocal emphasis on key words. Make the listener FEEL every sentence. Deliver like a world-class documentary narrator who makes people unable to stop listening. Your voice should create DOPAMINE — anticipation, surprise, and reward in every phrase:\n',
-    'misterioso': 'Read this narration with a mysterious, conspiratorial tone. Speak as if sharing secrets. Lower your voice for revelations. Use dramatic pauses before key moments. Create tension and intrigue with every sentence. The listener should feel like they are uncovering hidden truths:\n',
-    'calmo': 'Read this narration with calm authority and warmth. Speak clearly and steadily, with gentle emphasis on important points. Your voice should be soothing yet engaging, like a trusted mentor sharing wisdom. Use measured pacing with thoughtful pauses:\n',
-    'energetico': 'Read this narration with HIGH ENERGY and enthusiasm! Your voice should be dynamic, punchy, and exciting. Vary your tempo — fast for action, brief pauses for impact. Make every sentence feel urgent and important. Channel the energy of the best YouTube creators:\n',
+    'dopaminergico': 'Read this narration with INTENSE energy and magnetic charisma. Vary your pace DRAMATICALLY. Deliver like a world-class documentary narrator:\n',
+    'misterioso': 'Read this narration with a mysterious, conspiratorial tone. Use dramatic pauses before key moments:\n',
+    'calmo': 'Read this narration with calm authority and warmth. Speak clearly and steadily:\n',
+    'energetico': 'Read this narration with HIGH ENERGY and enthusiasm! Your voice should be dynamic and punchy:\n',
   };
-
   let stylePrefix = VOICE_STYLE_PROMPTS[voiceStyle || ''] || '';
   if (!stylePrefix) {
     if (speakingRate < 0.9) stylePrefix = 'Read slowly and deliberately:\n';
@@ -122,7 +164,6 @@ async function synthesizeWithGeminiTTS(
 
   const model = 'gemini-2.5-flash-preview-tts';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -130,36 +171,24 @@ async function synthesizeWithGeminiTTS(
       contents: [{ parts: [{ text: `${stylePrefix}${text}` }] }],
       generationConfig: {
         responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName },
-          },
-        },
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
       },
     }),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error('Gemini TTS error:', response.status, errText);
+    console.error(`Gemini TTS error: ${response.status}`, errText);
     throw new Error(`GEMINI_TTS_${response.status}`);
   }
-
-  const result = await response.json();
-  const audioData = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  const data = await response.json();
+  const audioData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   if (!audioData) throw new Error('GEMINI_TTS_NO_AUDIO');
-
-  // Convert raw PCM (s16le 24kHz mono) to WAV
   return pcmToWav(audioData);
 }
 
-// ── Retry wrapper for Gemini TTS (handles 429 quota errors) ──
 async function synthesizeWithGeminiTTSRetry(
-  text: string,
-  apiKey: string,
-  voiceName: string,
-  speakingRate: number,
-  voiceStyle?: string,
+  text: string, apiKey: string, voiceName: string, speakingRate: number, voiceStyle?: string,
 ): Promise<Uint8Array> {
   const maxRetries = 3;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -179,51 +208,87 @@ async function synthesizeWithGeminiTTSRetry(
   throw new Error('GEMINI_TTS_RETRIES_EXHAUSTED');
 }
 
-// ── ElevenLabs fallback ──
-const ELEVENLABS_FALLBACK_VOICES = {
-  MALE: 'onwK4e9ZLuTAKqWW03F9',
-  FEMALE: 'EXAVITQu4vr4xnSDxMaL',
-};
+// ── Google Cloud TTS (primary engine — separate quota from Gemini) ──
+async function synthesizeWithGoogleCloudTTS(
+  text: string, apiKey: string, voiceName: string, languageCode: string, speakingRate: number, pitch: number,
+): Promise<{ buffer: Uint8Array; mimeType: string }> {
+  const MAX_CHARS = 4500;
+  const chunks: string[] = [];
+  if (text.length <= MAX_CHARS) {
+    chunks.push(text);
+  } else {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    let current = '';
+    for (const s of sentences) {
+      if ((current + s).length > MAX_CHARS && current) { chunks.push(current.trim()); current = ''; }
+      current += s;
+    }
+    if (current.trim()) chunks.push(current.trim());
+  }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
+  console.log(`Google Cloud TTS: ${chunks.length} chunks, voice=${voiceName}, lang=${languageCode}`);
+  const audioBuffers: ArrayBuffer[] = [];
+
+  for (const chunk of chunks) {
+    const ttsResponse = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text: chunk },
+          voice: { languageCode, name: voiceName },
+          audioConfig: { audioEncoding: 'MP3', speakingRate: speakingRate || 1.0, pitch: pitch || 0, sampleRateHertz: 24000 },
+        }),
+      }
+    );
+    if (!ttsResponse.ok) {
+      const errText = await ttsResponse.text();
+      console.error('Google Cloud TTS error:', ttsResponse.status, errText);
+      throw new Error(`GCLOUD_TTS_${ttsResponse.status}`);
+    }
+    const result = await ttsResponse.json();
+    const binaryString = atob(result.audioContent);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    audioBuffers.push(bytes.buffer);
+  }
+
+  let totalLength = 0;
+  for (const buf of audioBuffers) totalLength += buf.byteLength;
+  const merged = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const buf of audioBuffers) { merged.set(new Uint8Array(buf), offset); offset += buf.byteLength; }
+
+  return { buffer: merged, mimeType: 'audio/mpeg' };
 }
 
+// ── ElevenLabs fallback ──
+const ELEVENLABS_FALLBACK_VOICES = { MALE: 'onwK4e9ZLuTAKqWW03F9', FEMALE: 'EXAVITQu4vr4xnSDxMaL' };
+
+function clamp(value: number, min: number, max: number) { return Math.min(Math.max(value, min), max); }
+
 async function synthesizeWithElevenLabs(
-  text: string,
-  apiKey: string,
-  speakingRate: number,
-  gender: 'MALE' | 'FEMALE',
+  text: string, apiKey: string, speakingRate: number, gender: 'MALE' | 'FEMALE',
 ): Promise<{ buffer: ArrayBuffer; mimeType: string }> {
   const voiceId = ELEVENLABS_FALLBACK_VOICES[gender] || ELEVENLABS_FALLBACK_VOICES.MALE;
   const response = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
     {
       method: 'POST',
-      headers: {
-        'xi-api-key': apiKey,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
         model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.55,
-          similarity_boost: 0.8,
-          style: 0.2,
-          use_speaker_boost: true,
-          speed: clamp(speakingRate || 1, 0.7, 1.2),
-        },
+        voice_settings: { stability: 0.55, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true, speed: clamp(speakingRate || 1, 0.7, 1.2) },
       }),
     },
   );
-
   if (!response.ok) {
     const errText = await response.text();
     console.error('ElevenLabs TTS error:', response.status, errText);
     throw new Error(`ELEVENLABS_TTS_${response.status}`);
   }
-
   return { buffer: await response.arrayBuffer(), mimeType: 'audio/mpeg' };
 }
 
@@ -235,91 +300,115 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // List voices action
+    // ── List voices ──
     if (action === 'list_voices') {
+      const { language, engine } = body;
+      // If user explicitly requests Gemini voices
+      if (engine === 'gemini') {
+        return new Response(JSON.stringify({
+          languageCode: 'auto',
+          voices: GEMINI_VOICES.map(v => ({ name: v.name, label: v.label, gender: v.gender })),
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      // Default: Google Cloud TTS voices
+      const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
       return new Response(JSON.stringify({
-        languageCode: 'auto',
-        voices: GEMINI_VOICES.map(v => ({ name: v.name, label: v.label, gender: v.gender })),
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        languageCode: langConfig.code,
+        voices: langConfig.voices,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Generate audio
-    const { text, language, voiceName, speakingRate = 1.0, voiceStyle, returnBinary } = body;
+    // ── Generate audio ──
+    const { text, language, voiceName, speakingRate = 1.0, pitch = 0, voiceStyle, returnBinary } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
-
-    const defaultVoice = LANG_DEFAULT_VOICE[language?.toLowerCase()] || 'Charon';
-    const isOldVoiceName = voiceName?.includes('-') && voiceName?.includes('Neural');
-    const selectedVoice = isOldVoiceName ? defaultVoice : (voiceName || defaultVoice);
-    const selectedVoiceMeta = GEMINI_VOICES.find(v => v.name === selectedVoice);
-    const fallbackGender = selectedVoiceMeta?.gender === 'FEMALE' ? 'FEMALE' : 'MALE';
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
 
-    console.log(`TTS requested: voice=${selectedVoice}, lang=${language}, chars=${text.length}, binary=${!!returnBinary}`);
+    // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
+    const useGeminiEngine = isGeminiVoice(voiceName);
+    const selectedVoice = voiceName || langConfig.voices[0].name;
+    const fallbackGender = useGeminiEngine
+      ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
+      : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');
 
-    // ── Try Gemini TTS (primary) ──
-    try {
-      if (!GOOGLE_AI_API_KEY) throw new Error('GEMINI_TTS_UNAVAILABLE');
-      const wavBytes = await synthesizeWithGeminiTTSRetry(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate, voiceStyle);
+    console.log(`TTS requested: voice=${selectedVoice}, engine=${useGeminiEngine ? 'gemini' : 'gcloud'}, lang=${language}, chars=${text.length}`);
 
-      // Return binary directly to save memory (no base64 encoding)
-      if (returnBinary) {
-        return new Response(wavBytes, {
-          headers: { ...corsHeaders, 'Content-Type': 'audio/wav', 'Content-Length': String(wavBytes.length) },
-        });
-      }
-
-      const audioBase64 = base64Encode(wavBytes);
-      return new Response(JSON.stringify({
-        audioBase64, mimeType: 'audio/wav', engine: 'gemini-tts',
-        voice: selectedVoice, languageCode: 'auto', chunks: 1, characterCount: text.length,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } catch (geminiError) {
-      const fallbackReason = geminiError instanceof Error ? geminiError.message : 'GEMINI_TTS_FAILED';
-      console.warn('Gemini TTS failed, trying fallback:', fallbackReason);
-
-      // ── ElevenLabs fallback ──
-      if (ELEVENLABS_API_KEY) {
-        try {
-          const result = await synthesizeWithElevenLabs(text, ELEVENLABS_API_KEY, speakingRate, fallbackGender as 'MALE' | 'FEMALE');
-
-          if (returnBinary) {
-            return new Response(result.buffer, {
-              headers: { ...corsHeaders, 'Content-Type': result.mimeType },
-            });
-          }
-
-          const audioBase64 = base64Encode(new Uint8Array(result.buffer));
-          return new Response(JSON.stringify({
-            audioBase64, mimeType: result.mimeType, engine: 'elevenlabs',
-            voice: selectedVoice, languageCode: 'auto', chunks: 1, characterCount: text.length, fallbackReason,
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // ══════ ENGINE 1: Google Cloud TTS (primary for standard voices) ══════
+    if (!useGeminiEngine && GOOGLE_AI_API_KEY) {
+      try {
+        const result = await synthesizeWithGoogleCloudTTS(
+          text, GOOGLE_AI_API_KEY, selectedVoice, langConfig.code, speakingRate, pitch,
+        );
+        if (returnBinary) {
+          return new Response(result.buffer, {
+            headers: { ...corsHeaders, 'Content-Type': result.mimeType },
           });
-        } catch (elevenError) {
-          console.warn('ElevenLabs fallback failed:', elevenError instanceof Error ? elevenError.message : elevenError);
         }
+        const audioBase64 = base64Encode(result.buffer);
+        return new Response(JSON.stringify({
+          audioBase64, mimeType: result.mimeType, engine: 'google-cloud-tts',
+          voice: selectedVoice, languageCode: langConfig.code, chunks: 1, characterCount: text.length,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } catch (gcloudErr) {
+        const reason = gcloudErr instanceof Error ? gcloudErr.message : 'GCLOUD_TTS_FAILED';
+        console.warn('Google Cloud TTS failed:', reason, '— trying Gemini TTS fallback');
+        // Fall through to Gemini TTS
       }
-
-      // ── Browser synthesis fallback ──
-      return new Response(JSON.stringify({
-        use_browser_synthesis: true, engine: 'browser-synthesis',
-        text, languageCode: 'auto', voice: selectedVoice,
-        characterCount: text.length, fallbackReason,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
+
+    // ══════ ENGINE 2: Gemini TTS (primary for Gemini voices, fallback for Cloud TTS) ══════
+    if (GOOGLE_AI_API_KEY) {
+      try {
+        const geminiVoice = useGeminiEngine ? selectedVoice : 'Charon';
+        const wavBytes = await synthesizeWithGeminiTTSRetry(text, GOOGLE_AI_API_KEY, geminiVoice, speakingRate, voiceStyle);
+        if (returnBinary) {
+          return new Response(wavBytes, {
+            headers: { ...corsHeaders, 'Content-Type': 'audio/wav', 'Content-Length': String(wavBytes.length) },
+          });
+        }
+        const audioBase64 = base64Encode(wavBytes);
+        return new Response(JSON.stringify({
+          audioBase64, mimeType: 'audio/wav', engine: 'gemini-tts',
+          voice: geminiVoice, languageCode: 'auto', chunks: 1, characterCount: text.length,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } catch (geminiErr) {
+        const reason = geminiErr instanceof Error ? geminiErr.message : 'GEMINI_TTS_FAILED';
+        console.warn('Gemini TTS failed:', reason, '— trying ElevenLabs fallback');
+      }
+    }
+
+    // ══════ ENGINE 3: ElevenLabs fallback ══════
+    if (ELEVENLABS_API_KEY) {
+      try {
+        const result = await synthesizeWithElevenLabs(text, ELEVENLABS_API_KEY, speakingRate, fallbackGender as 'MALE' | 'FEMALE');
+        if (returnBinary) {
+          return new Response(result.buffer, {
+            headers: { ...corsHeaders, 'Content-Type': result.mimeType },
+          });
+        }
+        const audioBase64 = base64Encode(new Uint8Array(result.buffer));
+        return new Response(JSON.stringify({
+          audioBase64, mimeType: result.mimeType, engine: 'elevenlabs',
+          voice: selectedVoice, languageCode: 'auto', chunks: 1, characterCount: text.length,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } catch (elevenErr) {
+        console.warn('ElevenLabs fallback failed:', elevenErr instanceof Error ? elevenErr.message : elevenErr);
+      }
+    }
+
+    // ══════ ENGINE 4: Browser synthesis (last resort) ══════
+    return new Response(JSON.stringify({
+      use_browser_synthesis: true, engine: 'browser-synthesis',
+      text, languageCode: langConfig.code, voice: selectedVoice,
+      characterCount: text.length, fallbackReason: 'ALL_ENGINES_FAILED',
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
   } catch (e) {
     console.error('google-tts error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Erro desconhecido' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
