@@ -62,6 +62,7 @@ Avalie este roteiro com nota de 1 a 10 (INTEIRO, sem decimais).
 ═══ SEU PAPEL: FASE 3 — JUIZ IMPLACÁVEL ═══
 - Você NÃO é autor (Fase 1) nem editor (Fase 2)
 - Sua ÚNICA missão: avaliar com HONESTIDADE BRUTAL
+- IMPORTANTE: Este roteiro é NARRAÇÃO PURA (sem tags técnicas de VFX/SFX). Avalie a QUALIDADE DA ESCRITA, não a presença de marcações técnicas.
 
 CRITÉRIOS:
 - Hook (primeiros 30s): Impossível de ignorar? Ou genérico e previsível?
@@ -69,19 +70,10 @@ CRITÉRIOS:
 - Emoção: Escalada emocional? Contraste? Gatilhos psicológicos? Ou texto morto?
 - Fluidez: Tom conversacional? Ritmo natural? Ou leitura robótica?
 - Payoff: Final conecta ao hook? Satisfatório? Ou anticlimático?
+- CTA: O final tem um gancho para o próximo vídeo (Binge Loop)? Ou é uma despedida genérica?
 - Originalidade: Traz algo novo? Ou qualquer IA geraria isso?
 
 ═══ VIRAL ENGINE — CRITÉRIOS ADICIONAIS (PESO ALTO) ═══
-
-🎵 SOUND DESIGN TAGS:
-- O roteiro contém tags de áudio? ([ÁUDIO:], [TRILHA:], [SFX:], [CORTAR MÚSICA])
-- Mínimo 3 tags de Sound Design por roteiro longform
-- Se ausentes: penalize 0.5-1 ponto no score geral — Sound Design é 50% do sucesso
-
-🎬 VFX EDIT TAGS:
-- O roteiro contém tags de edição? ([J-CUT], [BLENDER:], [AFTER EFFECTS:], [B-ROLL])
-- Mínimo 5 tags VFX por roteiro longform
-- Se ausentes: penalize 0.5-1 ponto — em canais faceless, pacing depende 100% da edição
 
 🔄 BINGE LOOP (FINAL):
 - O roteiro termina com despedida ("obrigado por assistir", "tchau", "deixe o like")? → PENALIZE 1 ponto
@@ -114,7 +106,6 @@ PENALIZE FORTEMENTE:
 - Conclusões que apenas resumem o que já foi dito
 - Falta de personalidade / voz autoral
 - Conteúdo que seria flagado como "baixo esforço" pelo YPP 2025
-- Ausência de Sound Design tags e VFX Edit tags
 - Final com despedida em vez de Binge Loop
 - Conectores lineares ("E", "Então") em vez de "Mas/Portanto"
 
@@ -126,6 +117,7 @@ ESCALA:
 8: Muito bom, alto potencial viral — retém 75%+
 9-10: Excepcional, referência de qualidade — alguém compartilharia
 
+IMPORTANTE: Avalie o roteiro INTEIRO, incluindo o meio e o final. Não avalie apenas o começo.
 Seja BRUTALMENTE HONESTO. A maioria dos roteiros fica entre 5-7.`;
 
 serve(async (req) => {
