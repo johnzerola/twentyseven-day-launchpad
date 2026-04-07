@@ -38,12 +38,17 @@ async function fetchWithRetry(
     if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429 && res.status !== 403)) {
       return res;
     }
+    // 403 PERMISSION_DENIED — immediate fallback, no retry
+    if (res.status === 403) {
+      const bodyText = await res.text();
+      console.warn(`[${label}] 403 Permission Denied, will try fallback`);
+      return new Response(bodyText, { status: 403 });
+    }
     // Check if quota exhausted (not just temporary rate limit)
     if (res.status === 429) {
       const bodyText = await res.text();
       if (isQuotaExhausted(bodyText)) {
         console.warn(`[${label}] Quota exhausted, will try fallback`);
-        // Return a special response so caller knows to fallback
         return new Response(bodyText, { status: 429, headers: { "X-Quota-Exhausted": "true" } });
       }
       // Temporary rate limit — retry with backoff
