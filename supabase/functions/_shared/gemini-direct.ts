@@ -408,6 +408,21 @@ export async function callGemini(
     }),
   }, 3, `Gemini-callDirect-${model}`);
   if (!res.ok) {
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      // Fallback to Lovable Gateway for non-streaming callGemini
+      console.log(`[callGemini] Quota exhausted, falling back to Lovable Gateway`);
+      const fallbackRes = await fallbackToLovableGateway({
+        model: `google/${model}`, messages: [
+          { role: "system", content: system },
+          { role: "user", content: userMsg },
+        ],
+        temperature: opts.temperature ?? 0.8,
+        max_tokens: opts.maxTokens || 8192,
+      });
+      if (!fallbackRes.ok) throw new Error(`LOVABLE_GATEWAY_ERROR_${fallbackRes.status}`);
+      const fallbackData = await fallbackRes.json();
+      return fallbackData.choices?.[0]?.message?.content || '';
+    }
     const t = await res.text();
     console.error(`Gemini ${model} error ${res.status}:`, t);
     throw new Error(`GEMINI_ERROR_${res.status}`);
