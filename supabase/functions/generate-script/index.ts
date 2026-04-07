@@ -446,16 +446,18 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
     }
 
     // ========== Speech rate ==========
+    // WPM calibrated for YouTube narration (slightly slower than conversational speech)
+    // Values bumped ~15% to compensate for AI tendency to under-deliver word count
     const speechRates: Record<string, number> = {
-      'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
-      'alemão': 140, 'polonês': 145, 'turco': 150, 'japonês': 130,
-      'francês': 155, 'italiano': 155, 'tcheco': 145, 'holandês': 150,
-      'coreano': 135, 'hindi': 145, 'árabe': 140, 'indonésio': 150,
+      'português': 170, 'inglês': 180, 'english': 180, 'espanhol': 175,
+      'alemão': 160, 'polonês': 165, 'turco': 170, 'japonês': 150,
+      'francês': 175, 'italiano': 175, 'tcheco': 165, 'holandês': 170,
+      'coreano': 155, 'hindi': 165, 'árabe': 160, 'indonésio': 170,
     };
-    const wpm = speechRates[language?.toLowerCase()] || 150;
+    const wpm = speechRates[language?.toLowerCase()] || 170;
     const dur = parseInt(duration) || 15;
     const targetWords = dur * wpm;
-    const minWords = Math.round(targetWords * 0.85);
+    const minWords = Math.round(targetWords * 0.95);
 
     // ========== Style guides ==========
     const styleGuides: Record<string, string> = {
@@ -778,37 +780,16 @@ ${YPP_2025_DIRECTIVE}
 
 ${ANTI_SLOP_DIRECTIVE}
 
-═══ SOUND DESIGN DIRECTIVE (OBRIGATÓRIO) ═══
-Você DEVE inserir tags de Sound Design no roteiro. O áudio é 50% do sucesso de um canal Dark/Faceless.
-
-MAPEAMENTO DE BPM POR NICHO:
-- Terror/Mistério: 50-70 BPM — Drone sub-bass, frequências graves 30-50Hz
-- True Crime: 60-80 BPM — Piano sombrio, strings tensas
-- Tecnologia/Cripto: 110-130 BPM — Synthwave futurista
-- Finanças: 100-120 BPM — Synthwave moderado com piano
-- História/Mitologia: 70-90 BPM — Orquestra cinematográfica
-- Curiosidades/Entretenimento: 120-140 BPM — Upbeat electro
-- Motivacional/Superação: 90-110 BPM — Piano inspiracional crescente
-
-TAGS DE ÁUDIO OBRIGATÓRIAS (insira no mínimo 3 por roteiro):
-- [ÁUDIO: Frequência baixa (Drone sub-bass) — Tensão] — para momentos de suspense
-- [ÁUDIO: Boom/Hit impacto + parada abrupta da música por 1s] — para revelações
-- [TRILHA: Synthwave 120 BPM] ou [TRILHA: Violão acústico 80 BPM] — para estabelecer ritmo
-- [CORTAR TODA MÚSICA POR 1.5 SEGUNDOS] — Silêncio tático antes de informação chave (a AUSÊNCIA de som prende a atenção)
-- [SFX: Batimento cardíaco crescente] — para escalada de tensão
-- [SFX: Glitch + distorção rápida] — para pattern interrupts visuais
-
-═══ VFX EDIT TAGS DIRECTIVE (OBRIGATÓRIO) ═══
-Como o canal não tem rosto, o ritmo depende 100% da edição. INSIRA tags de edição VFX:
-
-- [J-CUT] — O áudio da próxima cena entra ANTES do vídeo. Use a cada transição de parágrafo.
-- [BLENDER: projeção de câmera 3D sobre imagem 2D — parallax profundo] — Para dar vida a imagens estáticas.
-- [AFTER EFFECTS: zoom-in contínuo (100% → 115% em 10s) + Camera Shake sutil] — Para forçar foco visual pós-gancho.
-- [AFTER EFFECTS: animação de mapa com Trim Paths + Motion Blur] — Para motion graphics.
-- [INSERIR B-ROLL ACELERADO + EFEITO DE GLITCH] — Para micro-hooks visuais.
-- [TELA ESCURECE 0.5s — troca brusca de cenário] — Para mudanças de ato.
-
-Insira pelo menos 5 tags VFX distribuídas pelo roteiro nos momentos de maior impacto.
+═══ REGRA CRÍTICA: SOMENTE TEXTO DE NARRAÇÃO ═══
+O roteiro DEVE conter EXCLUSIVAMENTE texto falado pelo narrador.
+NÃO inclua NENHUMA das seguintes tags ou anotações:
+- Tags de áudio: [ÁUDIO:], [SFX:], [TRILHA:], [CORTAR MÚSICA], [BPM]
+- Tags de edição: [J-CUT], [BLENDER:], [AFTER EFFECTS:], [VFX], [B-ROLL]
+- Indicações de cena: [CENA:], [VISUAL:], [CÂMERA:]
+- Timestamps ou marcações técnicas
+- Descrições de imagens, cenários ou enquadramentos
+O texto deve ser 100% narração pura — como se fosse um audiobook.
+As cenas visuais e o design de som serão gerados em etapas SEPARADAS do pipeline.
 
 ═══ NARRATOR ARCHETYPE (PERSONA NARRATIVA — 6 ARQUÉTIPOS) ═══
 ${nicheLC.includes('crime') || nicheLC.includes('mistério') || nicheLC.includes('conspiração') || nicheLC.includes('terror') ? 
@@ -871,11 +852,16 @@ REGRAS:
 - 15-20 tags SEO
 - Descrição otimizada
 
-Após EXTRAS, adicione ---SCENE_BLUEPRINT--- com JSON array de blocos (~30-45s cada):
-[{"block":1,"narrative_summary":"...","mood":"tense","visual_hint":"...","camera_suggestion":"...","characters_present":[]}]
----END_SCENE_BLUEPRINT---
+NÃO inclua SCENE_BLUEPRINT nem JSON de cenas. Apenas EXTRAS com títulos, thumbnails, tags e descrição.
 
-⚠️ DEVE ter ${targetWords}+ palavras para ${dur} minutos COMPLETOS.
+⚠️ REGRA DE DURAÇÃO INVIOLÁVEL:
+- ALVO: ${targetWords} palavras para ${dur} minutos COMPLETOS
+- MÍNIMO ABSOLUTO: ${minWords} palavras (abaixo disso = roteiro REJEITADO)
+- Se o roteiro tiver menos de ${minWords} palavras, CONTINUE ESCREVENDO até atingir o alvo
+- CADA minuto do vídeo = ~${wpm} palavras de narração pura
+- O roteiro COMPLETO deve cobrir TODA a duração solicitada, do início ao fim
+- NÃO encurte, NÃO resuma, NÃO pule seções para economizar palavras
+- Se necessário, adicione mais camadas narrativas, exemplos, histórias paralelas ou aprofundamentos
 `}
 
 ═══ EMOTION MAP (obrigatório para longform >5min) ═══
