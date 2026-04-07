@@ -216,6 +216,9 @@ export async function callGeminiOpenAICompat(
     }, 3, `Gemini-tools-${model}`);
     
     if (!res.ok) {
+      if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+        return fallbackToLovableGateway(body);
+      }
       const t = await res.text();
       console.error(`Gemini ${model} error ${res.status}:`, t.slice(0, 500));
       return new Response(JSON.stringify({ error: `Gemini error: ${res.status}` }), { status: res.status });
@@ -245,6 +248,9 @@ export async function callGeminiOpenAICompat(
   }, 3, `Gemini-std-${model}`);
 
   if (!res.ok) {
+    if (res.status === 429 && res.headers.get("X-Quota-Exhausted")) {
+      return fallbackToLovableGateway(body);
+    }
     const t = await res.text();
     console.error(`Gemini ${model} error ${res.status}:`, t.slice(0, 500));
     return new Response(JSON.stringify({ error: `Gemini error: ${res.status}` }), { status: res.status });
