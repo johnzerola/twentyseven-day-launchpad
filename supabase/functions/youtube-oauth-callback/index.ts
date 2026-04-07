@@ -5,7 +5,7 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
-    const userId = url.searchParams.get("state");
+    const stateB64 = url.searchParams.get("state");
     const error = url.searchParams.get("error");
 
     if (error) {
@@ -14,11 +14,53 @@ serve(async (req) => {
       });
     }
 
-    if (!code || !userId) {
+    if (!code || !stateB64) {
       return new Response(redirectHtml("Parâmetros inválidos."), {
         headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
+
+    // Decode and validate the signed state token
+    let statePayload: { userId: string; nonce: string; exp: number };
+    try {
+      const decoded = atob(stateB64.replace(/-/g, "+").replace(/_/g, "/"));
+      statePayload = JSON.parse(decoded);
+    } catch {
+      return new Response(redirectHtml("Estado inválido."), {
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      });
+    }
+
+    const { userId, nonce, exp } = statePayload;
+
+    // Check expiration
+    if (!userId || !nonce || !exp || Date.now() > exp) {
+      return new Response(redirectHtml("Token expirado. Tente novamente."), {
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Verify the nonce exists in the database and belongs to the user
+    const { data: stateRow, error: stateError } = await supabase
+      .from("oauth_state_tokens")
+      .select("id")
+      .eq("nonce", nonce)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (stateError || !stateRow) {
+      return new Response(redirectHtml("Token inválido. Tente novamente."), {
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      });
+    }
+
+    // Delete the used nonce to prevent replay
+    await supabase.from("oauth_state_tokens").delete().eq("nonce", nonce);
 
     const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET")!;
@@ -58,11 +100,6 @@ serve(async (req) => {
         headers: { "Content-Type": "text/html; charset=UTF-8" },
       });
     }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString();
 

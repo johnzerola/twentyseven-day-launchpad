@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,11 +10,30 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Validate the caller is authenticated
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await sb.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub as string;
+
     const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
     if (!clientId) throw new Error("GOOGLE_OAUTH_CLIENT_ID not configured");
-
-    const { userId } = await req.json();
-    if (!userId) throw new Error("userId is required");
 
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/youtube-oauth-callback`;
 
@@ -22,6 +42,23 @@ serve(async (req) => {
       "https://www.googleapis.com/auth/youtube.readonly",
     ];
 
+    // Generate a signed state token to prevent CSRF
+    const nonce = crypto.randomUUID();
+    const statePayload = JSON.stringify({ userId, nonce, exp: Date.now() + 10 * 60 * 1000 });
+    // Encode as base64url
+    const stateB64 = btoa(statePayload).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+    // Store the nonce in the database for verification
+    const sbAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    await sbAdmin.from("oauth_state_tokens").upsert({
+      nonce,
+      user_id: userId,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    });
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -29,7 +66,7 @@ serve(async (req) => {
       scope: scopes.join(" "),
       access_type: "offline",
       prompt: "consent",
-      state: userId,
+      state: stateB64,
     });
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
@@ -39,7 +76,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("youtube-oauth-start error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

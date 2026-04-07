@@ -2149,6 +2149,30 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_state_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          nonce: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          nonce: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          nonce?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_plans: {
         Row: {
           channel_analysis_json: Json | null

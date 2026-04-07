@@ -439,11 +439,32 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Auth check: require valid JWT
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await sb.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { phase, channelLimit = 50, embeddingLimit = 100 } = await req.json().catch(() => ({}));
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
-    const sb = createClient(
+    // Use service role for data operations
+    const sbAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
@@ -459,16 +480,16 @@ serve(async (req) => {
 
       switch (p) {
         case "content_dna":
-          report.content_dna = await phase1ContentDNA(sb, GOOGLE_AI_API_KEY, channelLimit);
+          report.content_dna = await phase1ContentDNA(sbAdmin, GOOGLE_AI_API_KEY, channelLimit);
           break;
         case "viral_patterns":
-          report.viral_patterns = await phase2ViralPatterns(sb, GOOGLE_AI_API_KEY);
+          report.viral_patterns = await phase2ViralPatterns(sbAdmin, GOOGLE_AI_API_KEY);
           break;
         case "score_calibration":
-          report.score_calibration = await phase3ScoreCalibration(sb);
+          report.score_calibration = await phase3ScoreCalibration(sbAdmin);
           break;
         case "embeddings":
-          report.embeddings = await phase4Embeddings(sb, GOOGLE_AI_API_KEY, embeddingLimit);
+          report.embeddings = await phase4Embeddings(sbAdmin, GOOGLE_AI_API_KEY, embeddingLimit);
           break;
       }
 
@@ -477,7 +498,7 @@ serve(async (req) => {
     }
 
     // Log execution
-    await sb.from("execution_logs").insert({
+    await sbAdmin.from("execution_logs").insert({
       function_name: "data-seeding-engine",
       success: true,
       metadata: report,
