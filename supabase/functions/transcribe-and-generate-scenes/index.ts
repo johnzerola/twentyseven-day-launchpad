@@ -104,9 +104,9 @@ serve(async (req) => {
     // ═══ ACTION: start — transcribe only, return chunks ═══
     if (action === "start") {
       const { audioUrl, audioMimeType, script, videoStyle, customStyleNotes, referenceImageUrls, characters, language, niche, sceneBlueprintFromScript, audioDurationSeconds } = body;
-      if (!audioUrl) throw new Error("audioUrl obrigatório.");
 
       const cleanScript = (script || "").slice(0, 30000);
+      if (!audioUrl && !cleanScript.trim()) throw new Error("Áudio ou roteiro obrigatório.");
       const resolvedMime = audioMimeType || "audio/mp3";
       const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
       const requestedAudioDuration = Number(audioDurationSeconds);
@@ -213,12 +213,13 @@ RULES:
 - Return ONLY the JSON array, no markdown, no explanation`;
 
         // Try Lovable AI Gateway with audio URL (multimodal)
-        if (GOOGLE_AI_API_KEY) {
+        const gatewayKey = LOVABLE_API_KEY || GOOGLE_AI_API_KEY;
+        if (gatewayKey) {
           try {
             console.log("Trying audio transcription via AI Gateway (multimodal)...");
             const gatewayResp = await fetch(GATEWAY_URL, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GOOGLE_AI_API_KEY}` },
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${gatewayKey}` },
               body: JSON.stringify({
                 model: "google/gemini-2.5-flash",
                 messages: [{

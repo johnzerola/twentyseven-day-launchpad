@@ -857,13 +857,10 @@ REGRAS:
 9. Se o tema permitir, use analogias fortes e imagens mentais
 10. Se houver nomes, fatos ou datas, trate com precisão e consistência
 
-📝 NO FINAL, após "---EXTRAS---":
-- 5 títulos CTR 30%+
-- 5 ideias thumbnail
-- 15-20 tags SEO
-- Descrição otimizada
-
-NÃO inclua SCENE_BLUEPRINT nem JSON de cenas. Apenas EXTRAS com títulos, thumbnails, tags e descrição.
+📝 SAÍDA FINAL:
+- Retorne SOMENTE o roteiro completo em narração pura
+- NÃO inclua títulos, thumbnails, tags, descrição, EXTRAS, SCENE_BLUEPRINT ou qualquer bloco técnico
+- NÃO inclua VFX, SFX, trilha, indicações visuais, câmera ou edição
 
 ⚠️ REGRA DE DURAÇÃO INVIOLÁVEL:
 - ALVO: ${targetWords} palavras para ${dur} minutos COMPLETOS
@@ -931,7 +928,7 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     const userMessage = isShort
       ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
-      : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. ROTEIRO LIMPO.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece!`;
+      : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras de NARRAÇÃO PURA. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. PROIBIDO qualquer tag técnica, VFX, música, cena, EXTRAS ou metadado.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece imediatamente pelo roteiro.`;
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from AI gateway...`);
 
@@ -942,7 +939,7 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       {
         primaryModel: "gemini-2.5-pro",
         fallbackModel: "gemini-2.5-flash",
-        maxTokens: 16000,
+        maxTokens: 32000,
         label: `PHASE-1 DRAFT runId=${runId}`,
       },
     );

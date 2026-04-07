@@ -77,12 +77,12 @@ interface ScriptGeneratorProps {
 }
 
 const SPEECH_RATES: Record<string, number> = {
-  'português': 150, 'inglês': 160, 'espanhol': 155,
-  'polonês': 145, 'alemão': 140, 'turco': 150, 'japonês': 130,
-  'francês': 155, 'italiano': 155, 'tcheco': 145, 'holandês': 150,
-  'coreano': 135, 'hindi': 145, 'árabe': 140, 'indonésio': 150,
-  'tailandês': 140, 'vietnamita': 145, 'romeno': 150, 'húngaro': 145,
-  'sueco': 150, 'norueguês': 150, 'dinamarquês': 150, 'finlandês': 140,
+  'português': 170, 'inglês': 175, 'espanhol': 172,
+  'polonês': 155, 'alemão': 160, 'turco': 165, 'japonês': 145,
+  'francês': 170, 'italiano': 170, 'tcheco': 155, 'holandês': 165,
+  'coreano': 150, 'hindi': 160, 'árabe': 155, 'indonésio': 170,
+  'tailandês': 150, 'vietnamita': 155, 'romeno': 165, 'húngaro': 155,
+  'sueco': 165, 'norueguês': 165, 'dinamarquês': 165, 'finlandês': 150,
 };
 
 type WizardStep = 0 | 1 | 2 | 3;
@@ -226,7 +226,24 @@ export const ScriptGenerator = ({
 
   const cleanBlueprintFromScript = (text: string): string => text.replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---\s*/g, '').trim();
   const cleanShortMeta = (text: string): string => text.replace(/---SHORT_META---[\s\S]*?---END_SHORT_META---\s*/g, '').trim();
-  const cleanAll = (text: string) => cleanShortMeta(cleanBlueprintFromScript(cleanScoresFromScript(text)));
+  const cleanAll = (text: string) => {
+    let clean = cleanShortMeta(cleanBlueprintFromScript(cleanScoresFromScript(text || '')));
+    const endMarkers = [
+      '## Títulos', '## TÍTULOS', '## Sugestões de Título', '**Títulos**', '**TÍTULOS**',
+      '## Tags', '## TAGS', '## SEO', '## Thumbnail', '## THUMBNAIL', '## Descrição', '## DESCRIÇÃO',
+      '## EXTRAS', '---EXTRAS---', '--- EXTRAS ---', '## Ideias de Thumbnail', 'SCENE_BLUEPRINT',
+    ];
+    for (const marker of endMarkers) {
+      const idx = clean.indexOf(marker);
+      if (idx > 0) clean = clean.slice(0, idx);
+    }
+    return clean
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\[(?:ÁUDIO|AUDIO|SFX|MÚSICA|MUSICA|TRILHA|BPM|J-CUT|BLENDER|AFTER EFFECTS|VFX|B-ROLL|CENA|VISUAL|CÂMERA|CAMERA)[^\]]*\]/gi, '')
+      .replace(/^\s*[-•●]\s*/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
 
   const streamFromFunction = async (fnName: string, body: any, onDelta: (text: string) => void): Promise<string> => {
     const headers = await getAuthHeaders();
@@ -394,7 +411,15 @@ export const ScriptGenerator = ({
       parseScorecard(refinedRaw);
       const refinedBlueprint = parseSceneBlueprint(refinedRaw);
       if (refinedBlueprint.length > 0) setSceneBlueprintJson(refinedBlueprint);
-      setScript(cleanAll(refinedRaw));
+      const cleanedRefined = cleanAll(refinedRaw);
+      const refinedWords = cleanedRefined.split(/\s+/).filter(Boolean).length;
+      const draftWords = draftScript.split(/\s+/).filter(Boolean).length;
+      if (videoType === 'long' && refinedWords < Math.round(targetWords * 0.85) && draftWords > refinedWords) {
+        setScript(draftScript);
+        toast.warning('O refinamento encurtou demais o roteiro; mantive a versão mais longa.');
+      } else {
+        setScript(cleanedRefined);
+      }
       setPhaseLabel('');
       toast.success('🧠 Gemini Pro melhorou os pontos fracos! Revise e clique em "Avaliar".');
 
