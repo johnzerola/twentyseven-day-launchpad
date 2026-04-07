@@ -965,7 +965,14 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
   } catch (e) {
     console.error("generate-script error:", e);
-    return errResp(e instanceof Error ? e.message : "Unknown error", 500);
+    const message = e instanceof Error ? e.message : "Unknown error";
+    if (message.includes("429")) {
+      return errResp("Rate limit. Aguarde alguns segundos e tente novamente.", 429);
+    }
+    if (message.includes("402")) {
+      return errResp("Créditos insuficientes.", 402);
+    }
+    return errResp(message, 500);
   }
 });
 
