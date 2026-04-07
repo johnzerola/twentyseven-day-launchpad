@@ -928,7 +928,7 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
 
     const userMessage = isShort
       ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
-      : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMínimo ${targetWords} palavras de NARRAÇÃO PURA. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. PROIBIDO qualquer tag técnica, VFX, música, cena, EXTRAS ou metadado.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nComece imediatamente pelo roteiro.`;
+      : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMeta ideal: ${targetWords} palavras. Mínimo absoluto: ${minWords} palavras de NARRAÇÃO PURA. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. PROIBIDO qualquer tag técnica, VFX, música, cena, EXTRAS ou metadado.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nSe perceber que ainda não cobriu ${duration} minutos completos, CONTINUE expandindo com desenvolvimento, aprofundamento, callbacks e payoff final até atingir a duração. Comece imediatamente pelo roteiro.`;
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from AI gateway...`);
 

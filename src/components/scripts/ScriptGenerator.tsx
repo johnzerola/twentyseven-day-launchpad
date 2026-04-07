@@ -499,7 +499,7 @@ export const ScriptGenerator = ({
 
     try {
       const { data, error } = await supabase.functions.invoke('score-script', {
-        body: { script: textToScore.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
+        body: { script: textToScore, niche, style, language, topic, phaseId: phaseIdRef.current },
       });
 
       if (error) {
@@ -527,7 +527,7 @@ export const ScriptGenerator = ({
           // Re-score the improved version
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
           const { data: reScoreData, error: reScoreError } = await supabase.functions.invoke('score-script', {
-            body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
+            body: { script: improvedText, niche, style, language, topic, phaseId: phaseIdRef.current },
           });
           if (reScoreError) console.warn('Re-score failed:', reScoreError);
           
@@ -577,7 +577,7 @@ export const ScriptGenerator = ({
           // Re-score
           setPhaseLabel('🛡️ Re-avaliando roteiro melhorado...');
           const { data: reScoreData, error: reScoreError2 } = await supabase.functions.invoke('score-script', {
-            body: { script: improvedText.slice(0, 12000), niche, style, language, topic, phaseId: phaseIdRef.current },
+            body: { script: improvedText, niche, style, language, topic, phaseId: phaseIdRef.current },
           });
           if (reScoreError2) console.warn('Re-score failed:', reScoreError2);
           

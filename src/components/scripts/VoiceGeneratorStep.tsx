@@ -271,8 +271,6 @@ export const VoiceGeneratorStep = ({
   const generateAudio = async () => {
     const text = getCleanText();
     if (!text) { toast.error('Roteiro vazio'); return; }
-    if (text.length > 50000) { toast.error('Roteiro muito longo (máx 50.000 caracteres)'); return; }
-
     setGenerating(true);
     setProgress(0);
     abortRef.current = false;

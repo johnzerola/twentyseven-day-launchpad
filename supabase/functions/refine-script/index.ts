@@ -308,7 +308,7 @@ ${YPP_2025_REFINE_DIRECTIVE}
 
 REGRAS: Mínimo ${tw} palavras. Idioma: ${language || 'português'}.`;
 
-    const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script.slice(0, 25000)}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. NÃO resuma. Preserve ou EXPANDA até atingir no mínimo ${tw} palavras de narração pura. Retorne o roteiro COMPLETO.`;
+    const userMessage = `ROTEIRO PARA EDITAR:\n\n${draft_script}\n\nMISSÃO PRINCIPAL: Os primeiros 30 SEGUNDOS são sua prioridade #1 — reescreva o hook para ser DIRETO AO PONTO, com ação imediata e zero enrolação. O espectador deve sentir que NÃO PODE sair. No resto do texto, faça edições cirúrgicas para intensificar emoção, naturalidade e ritmo. A história é INTOCÁVEL. NÃO resuma. Preserve ou EXPANDA até atingir no mínimo ${tw} palavras de narração pura. Se o texto recebido já estiver próximo ou acima da meta, mantenha a cobertura total do roteiro inteiro, incluindo meio, clímax e resolução. Retorne o roteiro COMPLETO.`;
 
     // ═══ PRIMARY: Gemini 2.5 Pro via Direct API ═══
     console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from GEMINI 2.5 PRO (direct)...`);
