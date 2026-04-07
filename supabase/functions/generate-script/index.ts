@@ -449,12 +449,12 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
     // WPM calibrated for YouTube narration (slightly slower than conversational speech)
     // Values bumped ~15% to compensate for AI tendency to under-deliver word count
     const speechRates: Record<string, number> = {
-      'português': 170, 'inglês': 180, 'english': 180, 'espanhol': 175,
-      'alemão': 160, 'polonês': 165, 'turco': 170, 'japonês': 150,
-      'francês': 175, 'italiano': 175, 'tcheco': 165, 'holandês': 170,
-      'coreano': 155, 'hindi': 165, 'árabe': 160, 'indonésio': 170,
+      'português': 150, 'inglês': 160, 'english': 160, 'espanhol': 155,
+      'alemão': 140, 'polonês': 145, 'turco': 150, 'japonês': 130,
+      'francês': 155, 'italiano': 155, 'tcheco': 145, 'holandês': 150,
+      'coreano': 135, 'hindi': 145, 'árabe': 140, 'indonésio': 150,
     };
-    const wpm = speechRates[language?.toLowerCase()] || 170;
+    const wpm = speechRates[language?.toLowerCase()] || 150;
     const dur = parseInt(duration) || 15;
     const targetWords = dur * wpm;
     const minWords = Math.round(targetWords * 0.95);
