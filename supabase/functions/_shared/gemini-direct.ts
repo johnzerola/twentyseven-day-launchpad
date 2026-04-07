@@ -73,7 +73,7 @@ export function sanitizeUnicode(text: string): string {
 }
 
 function shouldFallbackToLovableGateway(res: Response): boolean {
-  return res.status === 429;
+  return res.status === 429 || res.status === 403;
 }
 
 /** Map OpenAI-style model names to Gemini model names */
