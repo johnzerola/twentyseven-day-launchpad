@@ -186,7 +186,19 @@ export const VoiceGeneratorStep = ({
   };
 
   const getCleanText = () => {
-    return script
+    let clean = script;
+    // Strip EXTRAS sections (titles, tags, thumbnails, SEO, description)
+    const endMarkers = [
+      '## Títulos', '## TÍTULOS', '## Sugestões de Título', '**Títulos**', '**TÍTULOS**',
+      '## Tags', '## SEO', '## Thumbnail', '## THUMBNAIL', '## Descrição', '## DESCRIÇÃO',
+      '---EXTRAS---', '--- EXTRAS ---', '## EXTRAS',
+      'SCENE_BLUEPRINT', '## Cenas', '## CENAS',
+    ];
+    for (const marker of endMarkers) {
+      const idx = clean.indexOf(marker);
+      if (idx > 0) clean = clean.slice(0, idx);
+    }
+    return clean
       .replace(/^#+\s.*$/gm, '')
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/\*([^*]+)\*/g, '$1')
@@ -194,6 +206,11 @@ export const VoiceGeneratorStep = ({
       .replace(/---+/g, '')
       .replace(/```[\s\S]*?```/g, '')
       .replace(/^\s*[-•●]\s*/gm, '')
+      .replace(/\[ÁUDIO:.*?\]/gi, '')
+      .replace(/\[SFX:.*?\]/gi, '')
+      .replace(/\[MÚSICA:.*?\]/gi, '')
+      .replace(/\[J-CUT.*?\]/gi, '')
+      .replace(/\[BLENDER:.*?\]/gi, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   };

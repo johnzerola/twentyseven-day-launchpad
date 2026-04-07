@@ -153,6 +153,32 @@ async function synthesizeWithGeminiTTS(
   return pcmToWav(audioData);
 }
 
+// ── Retry wrapper for Gemini TTS (handles 429 quota errors) ──
+async function synthesizeWithGeminiTTSRetry(
+  text: string,
+  apiKey: string,
+  voiceName: string,
+  speakingRate: number,
+  voiceStyle?: string,
+): Promise<Uint8Array> {
+  const maxRetries = 3;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await synthesizeWithGeminiTTS(text, apiKey, voiceName, speakingRate, voiceStyle);
+    } catch (err: any) {
+      const is429 = err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED');
+      if (is429 && attempt < maxRetries) {
+        const delay = Math.min(2000 * Math.pow(2, attempt) + Math.random() * 1000, 15000);
+        console.warn(`Gemini TTS 429, retry ${attempt + 1}/${maxRetries} in ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('GEMINI_TTS_RETRIES_EXHAUSTED');
+}
+
 // ── ElevenLabs fallback ──
 const ELEVENLABS_FALLBACK_VOICES = {
   MALE: 'onwK4e9ZLuTAKqWW03F9',
@@ -237,7 +263,7 @@ serve(async (req) => {
     // ── Try Gemini TTS (primary) ──
     try {
       if (!GOOGLE_AI_API_KEY) throw new Error('GEMINI_TTS_UNAVAILABLE');
-      const wavBytes = await synthesizeWithGeminiTTS(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate, voiceStyle);
+      const wavBytes = await synthesizeWithGeminiTTSRetry(text, GOOGLE_AI_API_KEY, selectedVoice, speakingRate, voiceStyle);
 
       // Return binary directly to save memory (no base64 encoding)
       if (returnBinary) {
