@@ -120,9 +120,10 @@ interface TitleSEOStepProps {
   script: string;
   videoStyle: string;
   syncedScenes: any[];
+  onTitleSelected?: (title: string) => void;
 }
 
-export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, syncedScenes }: TitleSEOStepProps) => {
+export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, syncedScenes, onTitleSelected }: TitleSEOStepProps) => {
   const [activeTab, setActiveTab] = useState<'generate' | 'ab-test' | 'seo-desc' | 'seo-audit'>('generate');
   const [loading, setLoading] = useState(false);
   const [titles, setTitles] = useState<TitleSuggestion[]>([]);
@@ -219,7 +220,10 @@ export const TitleSEOStep = ({ topic, niche, language, script, videoStyle, synce
     setTitles(prev => prev.map((t, i) => {
       if (i === index) {
         const liked = !t.liked;
-        if (liked) saveLearn(t, 'chosen');
+        if (liked) {
+          saveLearn(t, 'chosen');
+          onTitleSelected?.(t.title);
+        }
         return { ...t, liked };
       }
       return t;
