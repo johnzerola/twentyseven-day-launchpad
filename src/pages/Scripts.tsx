@@ -633,10 +633,31 @@ const Scripts = () => {
   }, [selectedHook, selectedCTA, selectedStructure]);
 
   const getCleanNarration = useCallback((): string => {
-    let clean = script;
-    const endMarkers = ['## Títulos', '## TÍTULOS', '## Sugestões de Título', '**Títulos**', '**TÍTULOS**', '## Tags', '## SEO', '## Thumbnail', '## THUMBNAIL'];
-    for (const marker of endMarkers) { const idx = clean.indexOf(marker); if (idx > 0) clean = clean.slice(0, idx); }
-    clean = clean.replace(/^#+\s.*/gm, '').replace(/\*\*.*?\*\*/g, '').replace(/\[[\d:]+\]/g, '').replace(/[*_#>`~]/g, '').replace(/\n{3,}/g, '\n\n');
+    let clean = script || '';
+    const endMarkers = [
+      '## Títulos', '## TÍTULOS', '## Sugestões de Título', '**Títulos**', '**TÍTULOS**',
+      '## Tags', '## TAGS', '## SEO', '## Thumbnail', '## THUMBNAIL',
+      '## Descrição', '## DESCRIÇÃO', '## EXTRAS', '---EXTRAS---', '--- EXTRAS ---',
+      'SCENE_BLUEPRINT', '## Cenas', '## CENAS', '## Ideias de Thumbnail',
+    ];
+    for (const marker of endMarkers) {
+      const idx = clean.indexOf(marker);
+      if (idx > 0) clean = clean.slice(0, idx);
+    }
+
+    clean = clean
+      .replace(/---SCORES---[\s\S]*?---END_SCORES---/gi, '')
+      .replace(/---SCENE_BLUEPRINT---[\s\S]*?---END_SCENE_BLUEPRINT---/gi, '')
+      .replace(/---SHORT_META---[\s\S]*?---END_SHORT_META---/gi, '')
+      .replace(/^#+\s.*$/gm, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\[(?:ÁUDIO|AUDIO|SFX|MÚSICA|MUSICA|TRILHA|BPM|J-CUT|BLENDER|AFTER EFFECTS|VFX|B-ROLL|CENA|VISUAL|CÂMERA|CAMERA)[^\]]*\]/gi, '')
+      .replace(/^\s*[-•●]\s*/gm, '')
+      .replace(/[*_#>`~]/g, '')
+      .replace(/\n{3,}/g, '\n\n');
+
     return clean.trim();
   }, [script]);
 
@@ -969,7 +990,7 @@ const Scripts = () => {
               {/* Step 2: Voice / Narration */}
               {activeStep === 'voice' && script && (
                 <VoiceGeneratorStep
-                  script={script}
+                  script={getCleanNarration()}
                   language={language}
                   onAudioGenerated={(blob, url) => {
                     setGeneratedAudioBlob(blob);
