@@ -167,26 +167,21 @@ Return ONLY valid JSON with these keys:
 - revival_needed (boolean — true if a 48h revival was recommended)
 - revival_video_title (string or null — which video needs revival)`;
 
-    const resp = await fetch(`${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: "application/json" },
-      }),
+    const aiResp = await callGeminiOpenAICompat(GOOGLE_AI_API_KEY, {
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4,
+      max_tokens: 4096,
     });
 
-    if (!resp.ok) {
-      const errText = await resp.text();
-      console.error("Gemini error:", resp.status, errText);
-      throw new Error(`AI error: ${resp.status}`);
+    if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      console.error("AI error:", aiResp.status, errText);
+      const status = aiResp.status === 429 ? 429 : 500;
+      throw new Error(`AI error: ${aiResp.status}`);
     }
-    const aiData = await resp.json();
-    const raw = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    console.log("Gemini raw length:", raw.length, "first 200 chars:", raw.slice(0, 200));
-    if (!raw) {
-      console.error("Full Gemini response:", JSON.stringify(aiData).slice(0, 500));
-    }
+    const aiData = await aiResp.json();
+    const raw = aiData.choices?.[0]?.message?.content || "";
 
     let result;
     try {
