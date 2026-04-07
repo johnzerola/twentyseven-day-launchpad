@@ -2241,6 +2241,69 @@ export type Database = {
         }
         Relationships: []
       }
+      output_performance_feedback: {
+        Row: {
+          actual_ctr: number | null
+          actual_retention: number | null
+          actual_views: number | null
+          created_at: string | null
+          format: string | null
+          id: string
+          language: string | null
+          niche: string | null
+          output_content: string | null
+          output_type: string
+          predicted_ctr: number | null
+          predicted_retention: number | null
+          prediction_error_ctr: number | null
+          prediction_error_retention: number | null
+          script_id: string | null
+          updated_at: string | null
+          user_id: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          actual_ctr?: number | null
+          actual_retention?: number | null
+          actual_views?: number | null
+          created_at?: string | null
+          format?: string | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          output_content?: string | null
+          output_type: string
+          predicted_ctr?: number | null
+          predicted_retention?: number | null
+          prediction_error_ctr?: number | null
+          prediction_error_retention?: number | null
+          script_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          actual_ctr?: number | null
+          actual_retention?: number | null
+          actual_views?: number | null
+          created_at?: string | null
+          format?: string | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          output_content?: string | null
+          output_type?: string
+          predicted_ctr?: number | null
+          predicted_retention?: number | null
+          prediction_error_ctr?: number | null
+          prediction_error_retention?: number | null
+          script_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       planner_cards: {
         Row: {
           column_id: string
@@ -4703,6 +4766,22 @@ export type Database = {
           avg_viral_score: number | null
           niche: string | null
           total_videos: number | null
+        }
+        Relationships: []
+      }
+      mv_niche_benchmarks: {
+        Row: {
+          avg_attention_score: number | null
+          avg_hook_strength: number | null
+          avg_retention: number | null
+          avg_views: number | null
+          avg_viral_score: number | null
+          format: string | null
+          language: string | null
+          niche: string | null
+          sample_count: number | null
+          top_retention: number | null
+          top_views: number | null
         }
         Relationships: []
       }
