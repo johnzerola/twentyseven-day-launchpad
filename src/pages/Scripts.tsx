@@ -101,6 +101,7 @@ const Scripts = () => {
   const [channelVisualProfile, setChannelVisualProfile] = useState<string | null>(null);
   const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
   const [wizardConfigured, setWizardConfigured] = useState(false);
+  const [voiceStyle, setVoiceStyle] = useState('dopaminergico');
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [selectedTitle, setSelectedTitle] = useState('');
@@ -744,6 +745,7 @@ const Scripts = () => {
             setStyle(config.scriptStyle);
             setLanguage(config.language);
             setVideoStyle(config.visualStyle);
+            setVoiceStyle(config.voiceStyle);
             setWizardConfigured(true);
             // Trigger AutoPilot directly
             setTimeout(() => {
@@ -763,6 +765,7 @@ const Scripts = () => {
             language={language}
             videoType={videoType}
             videoStyle={videoStyle}
+            voiceStyle={voiceStyle}
             onScriptGenerated={(s) => { setScript(s); loadHistory(); }}
             onAudioGenerated={(blob, url) => { setGeneratedAudioBlob(blob); setGeneratedAudioUrl(url); }}
             onScenesGenerated={(scenes) => setSyncedScenes(scenes)}
