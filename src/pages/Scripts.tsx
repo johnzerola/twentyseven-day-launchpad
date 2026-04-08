@@ -733,6 +733,24 @@ const Scripts = () => {
           </div>
         )}
 
+        {/* 🎬 Video Creation Wizard */}
+        <VideoCreationWizard
+          disabled={loading}
+          onLaunch={(config: WizardConfig) => {
+            setTopic(config.topic);
+            setNiche(config.niche);
+            setDuration(config.duration);
+            setStyle(config.scriptStyle);
+            setLanguage(config.language);
+            setVideoStyle(config.visualStyle);
+            // Trigger AutoPilot after state update
+            setTimeout(() => {
+              const btn = document.getElementById('autopilot-launch-btn');
+              if (btn) btn.click();
+            }, 300);
+          }}
+        />
+
         {/* Auto Pilot Engine */}
         <AutoPilotEngine
           topic={topic}
