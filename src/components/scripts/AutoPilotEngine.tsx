@@ -302,7 +302,7 @@ export const AutoPilotEngine = ({
             Authorization: `Bearer ${ANON_KEY}`,
           },
           body: JSON.stringify({
-            text: chunk, language, voiceStyle: 'dopaminergico',
+            text: chunk, language, voiceStyle: voiceStyleProp || 'dopaminergico',
             speakingRate: 1.0, returnBinary: true,
           }),
           signal: controller.signal,
