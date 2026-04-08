@@ -401,6 +401,48 @@ const NicheExplorer = () => {
                 ))}
               </div>
 
+              {/* ⚡ Monetization Speed Card */}
+              {(() => {
+                const NICHE_SPEED: Record<string, { days: number; rpm: string; reason: string }> = {
+                  'finanças': { days: 21, rpm: '$10-25', reason: 'RPM alto + afiliados bancários de aprovação instantânea' },
+                  'investimento': { days: 21, rpm: '$10-25', reason: 'RPM alto + afiliados bancários de aprovação instantânea' },
+                  'tecnologia': { days: 18, rpm: '$8-20', reason: 'RPM alto + afiliados SaaS pagam desde o dia 1' },
+                  'ia': { days: 18, rpm: '$8-20', reason: 'RPM alto + afiliados SaaS pagam desde o dia 1' },
+                  'saúde': { days: 25, rpm: '$3-8', reason: 'RPM médio + Amazon afiliados' },
+                  'fitness': { days: 25, rpm: '$3-8', reason: 'RPM médio + Amazon afiliados' },
+                  'true crime': { days: 35, rpm: '$2-5', reason: 'RPM médio + dependente de ads' },
+                  'horror': { days: 30, rpm: '$2-5', reason: 'RPM médio + Amazon/Audible afiliados' },
+                  'terror': { days: 30, rpm: '$2-5', reason: 'RPM médio + Amazon/Audible afiliados' },
+                  'curiosidades': { days: 40, rpm: '$1-3', reason: 'RPM baixo + afiliados limitados' },
+                  'história': { days: 40, rpm: '$1-3', reason: 'RPM baixo + afiliados limitados' },
+                  'gaming': { days: 28, rpm: '$3-7', reason: 'RPM médio + hardware afiliados' },
+                  'motivacional': { days: 45, rpm: '$0.50-2', reason: 'RPM muito baixo + afiliados limitados' },
+                  'educação': { days: 35, rpm: '$3-8', reason: 'RPM médio + Udemy/Hotmart afiliados' },
+                };
+                const nicheKey = Object.keys(NICHE_SPEED).find(k => niche.toLowerCase().includes(k));
+                const speed = nicheKey ? NICHE_SPEED[nicheKey] : { days: 30, rpm: '$2-8', reason: 'Estimativa média baseada em dados gerais' };
+                return (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-chart-2/10 to-primary/10 border border-chart-2/30 rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-chart-2/20 flex items-center justify-center">
+                          <Zap className="w-5 h-5 text-chart-2" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">⚡ Monetização estimada em <span className="text-chart-2">{speed.days} dias</span></p>
+                          <p className="text-[10px] text-muted-foreground">com dedicação de 3 vídeos/semana | RPM estimado: {speed.rpm}</p>
+                        </div>
+                      </div>
+                      <Badge className="text-[9px] bg-chart-2/20 text-chart-2 border-chart-2/30">
+                        {speed.days <= 21 ? '🔥 Rápido' : speed.days <= 30 ? '⚡ Médio' : '🐢 Lento'}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2 ml-13">{speed.reason}</p>
+                  </motion.div>
+                );
+              })()}
+
               {/* Radar + Revenue Split */}
               <div className="grid lg:grid-cols-2 gap-4">
                 {radarData.length > 0 && (
