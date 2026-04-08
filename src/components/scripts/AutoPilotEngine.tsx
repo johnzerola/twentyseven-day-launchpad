@@ -317,7 +317,12 @@ export const AutoPilotEngine = ({
             const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
             blobs.push(await r.blob());
           } else if (data.use_browser_synthesis) {
-            throw new Error('All TTS engines failed — browser fallback');
+            // Browser fallback is acceptable — continue pipeline with estimated duration
+            console.warn('TTS: browser synthesis fallback (all cloud engines unavailable)');
+            updateStep('voice', { status: 'done', error: 'Usando síntese do navegador (engines cloud indisponíveis)' });
+            onStepChange('voice');
+            // Skip remaining chunks — browser synthesis will be handled by AudioProcessor
+            break;
           }
         }
       }
@@ -341,10 +346,23 @@ export const AutoPilotEngine = ({
     // Step 3: Generate Scenes
     updateStep('scenes', { status: 'running' });
     try {
-      const { data, error } = await supabase.functions.invoke('generate-synced-prompts', {
-        body: { script: generatedScript, videoStyle, characters: [], language, niche: useNiche },
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const scenesResp = await fetch(`${SUPABASE_URL}/functions/v1/generate-synced-prompts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ANON_KEY,
+          Authorization: `Bearer ${ANON_KEY}`,
+        },
+        body: JSON.stringify({ script: generatedScript, videoStyle, characters: [], language, niche: useNiche }),
+        signal: controller.signal,
       });
-      if (error) throw error;
+      if (!scenesResp.ok) {
+        const errBody = await scenesResp.text().catch(() => '');
+        throw new Error(`Scenes ${scenesResp.status}: ${errBody.slice(0, 200)}`);
+      }
+      const data = await scenesResp.json();
       const scenes = data?.scenes || data?.syncedScenes || [];
       if (scenes.length > 0) {
         onScenesGenerated(scenes);
