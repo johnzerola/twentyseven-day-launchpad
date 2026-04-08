@@ -36,6 +36,7 @@ import { PipelineStepper, type PipelineStep } from '@/components/scripts/Pipelin
 import { StepNavButtons } from '@/components/scripts/StepNavButtons';
 import { ProductionPack } from '@/components/scripts/ProductionPack';
 import { AffiliateLinksGenerator } from '@/components/scripts/AffiliateLinksGenerator';
+import { AutoPilotEngine } from '@/components/scripts/AutoPilotEngine';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
@@ -730,6 +731,23 @@ const Scripts = () => {
             <ScriptComparator />
           </div>
         )}
+
+        {/* Auto Pilot Engine */}
+        <AutoPilotEngine
+          topic={topic}
+          niche={niche}
+          duration={duration}
+          style={style}
+          language={language}
+          videoType={videoType}
+          videoStyle={videoStyle}
+          onScriptGenerated={(s) => { setScript(s); loadHistory(); }}
+          onAudioGenerated={(blob, url) => { setGeneratedAudioBlob(blob); setGeneratedAudioUrl(url); }}
+          onScenesGenerated={(scenes) => setSyncedScenes(scenes)}
+          onTitlesGenerated={() => {}}
+          onStepChange={(step) => setActiveStep(step)}
+          disabled={loading}
+        />
 
         {/* Pipeline Stepper — sticky navigation */}
         <PipelineStepper

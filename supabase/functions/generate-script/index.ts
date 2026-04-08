@@ -898,6 +898,44 @@ REGRAS:
 Cada bloco de ~45-60s DEVE ter uma EMOÇÃO PRIMÁRIA diferente do bloco anterior:
 Bloco 1: [CURIOSIDADE/CHOQUE] → Bloco 2: [TENSÃO/MEDO] → Bloco 3: [EMPATIA/TRISTEZA] → Bloco 4: [ESPERANÇA/ALÍVIO] → Bloco 5: [CHOQUE/REVELAÇÃO] → ...
 REGRA: NUNCA dois blocos consecutivos com a mesma emoção primária.
+
+═══ 🧬 EMOTIONAL INTENSITY ENGINE — DOPAMINA MAGNÉTICA (OBRIGATÓRIO) ═══
+
+O cérebro humano VICIA em conteúdo que alterna emoções rapidamente. Este motor garante retenção 80%+.
+
+📍 MARCADORES EMOCIONAIS (insira no texto para guiar narração e edição):
+Insira marcadores [EMOÇÃO: tipo] a cada 45-60 segundos no roteiro:
+- [EMOÇÃO: choque] → Antes de revelações impossíveis. Técnica: pausa de 0.5s + fato devastador
+- [EMOÇÃO: dopamina] → Após resolver um loop ou antes de "e fica melhor...". Técnica: energia crescente
+- [EMOÇÃO: tensão] → Antes de perigo/conflito. Técnica: frases cada vez mais curtas, ritmo acelerado
+- [EMOÇÃO: compaixão] → Momentos humanos. Técnica: detalhe íntimo + pausa reflexiva
+- [EMOÇÃO: medo] → Ameaça real/existencial. Técnica: descrição sensorial do perigo
+- [EMOÇÃO: esperança] → Luz no fim do túnel. Técnica: mudança de tom de grave para luminoso
+- [EMOÇÃO: raiva] → Injustiça/traição. Técnica: ritmo acelerado + dados específicos da injustiça
+- [EMOÇÃO: euforia] → Vitória/conquista. Técnica: crescendo de energia + números específicos
+
+🔄 EMOTIONAL WHIPLASH AMPLIFICADO:
+- Alterne emoções OPOSTAS em transições rápidas (2-3 frases):
+  Exemplo: compaixão → choque → esperança → devastação
+- O contraste emocional é o que cria MEMÓRIA e VÍCIO no canal
+- Cada transição emocional deve ser abrupta mas LÓGICA na narrativa
+- Máximo 3 whiplashes por roteiro — impacto vem da raridade estratégica
+
+🧲 GATILHOS DOPAMINÉRGICOS (insira pelo menos 1 a cada 2 minutos):
+1. "E aqui é onde fica realmente insano..." (promessa de escalada)
+2. Número ESPECÍFICO e impossível que contradiz expectativa
+3. Mini-payoff que resolve 1 loop e abre 2 novos
+4. Detalhe sensorial tão vívido que o espectador SENTE (textura, temperatura, cheiro)
+5. Momento de vulnerabilidade genuína do narrador
+6. Contraste "todo mundo pensa X... mas na verdade Y"
+
+⚡ CADÊNCIA EMOCIONAL POR MINUTO:
+- Minuto 1: CHOQUE puro (hook) → garante que o espectador fica
+- Minuto 2-3: CURIOSIDADE + mini-revelações → constrói investimento
+- Minuto 4-5: TENSÃO crescente → o espectador está preso
+- Minuto 6-7: EMOTIONAL WHIPLASH → contraste emocional cria memória
+- Minuto 8+: DOPAMINA em cascata → cada revelação maior que a anterior
+- Últimos 60s: EUFORIA + BINGE HOOK → o espectador PRECISA do próximo vídeo
 O espectador precisa de VARIAÇÃO emocional — monotonia = saída.
 
 ═══ CHECKLIST FINAL (AUTO-REVISÃO OBRIGATÓRIA ANTES DE ENVIAR) ═══

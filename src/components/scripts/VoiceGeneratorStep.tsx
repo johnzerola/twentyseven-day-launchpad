@@ -34,10 +34,16 @@ const TTS_LANGUAGES = [
 ];
 
 const VOICE_STYLES = [
-  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Carisma intenso, variação dramática, urgência narrativa — MrBeast style', color: 'border-primary bg-primary/10' },
-  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Suspense envolvente, pausas calculadas, tom grave e intrigante', color: 'border-chart-4 bg-chart-4/10' },
-  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Alto impacto, ritmo acelerado, entusiasmo contagiante', color: 'border-destructive bg-destructive/10' },
-  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Voz serena, autoritativa e profissional — documentário', color: 'border-chart-2 bg-chart-2/10' },
+  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Carisma magnético, whisper→shout, adrenalina pura — vicia o ouvinte', color: 'border-primary bg-primary/10' },
+  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Near-whisper + silêncios tensos, revelações que arrepiam', color: 'border-chart-4 bg-chart-4/10' },
+  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Explosivo, ritmo hip-hop, energia contagiante que acelera o coração', color: 'border-destructive bg-destructive/10' },
+  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Autoridade BBC/Netflix, gravidade serena, confiança absoluta', color: 'border-chart-2 bg-chart-2/10' },
+];
+
+const EMOTIONAL_INTENSITIES = [
+  { value: 'normal', label: 'Normal', emoji: '😐', desc: 'Narração padrão sem instruções emocionais extras' },
+  { value: 'alta', label: 'Alta', emoji: '🔥', desc: 'Variação emocional amplificada, pausas dramáticas antes de revelações' },
+  { value: 'maxima', label: 'Máxima', emoji: '⚡', desc: 'Todas as técnicas: whisper, shout, cracks vocais, adrenalina pura' },
 ];
 
 // Voice preview phrases per language
@@ -154,6 +160,7 @@ export const VoiceGeneratorStep = ({
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');
   const [voiceStyle, setVoiceStyle] = useState('dopaminergico');
+  const [emotionalIntensity, setEmotionalIntensity] = useState('maxima');
   const [speakingRate, setSpeakingRate] = useState(1.0);
   const [pitch, setPitch] = useState(0);
   const [generating, setGenerating] = useState(false);
@@ -466,7 +473,29 @@ export const VoiceGeneratorStep = ({
         </div>
       </div>
 
-      {/* Language Selection */}
+      {/* Emotional Intensity Selector */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+          🧬 Intensidade Emocional
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {EMOTIONAL_INTENSITIES.map(ei => (
+            <button
+              key={ei.value}
+              onClick={() => setEmotionalIntensity(ei.value)}
+              className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-center ${
+                emotionalIntensity === ei.value
+                  ? 'border-primary bg-primary/10 shadow-md scale-[1.02]'
+                  : 'border-border hover:border-primary/30'
+              }`}
+            >
+              <span className="text-xl">{ei.emoji}</span>
+              <span className="text-xs font-semibold">{ei.label}</span>
+              <span className="text-[9px] text-muted-foreground leading-tight">{ei.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-muted-foreground uppercase">Idioma da Narração</label>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
