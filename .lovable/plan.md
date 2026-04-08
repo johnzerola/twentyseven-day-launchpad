@@ -1,90 +1,84 @@
 
 
-# Plan: Full Pipeline Restoration — Script → Audio → Scenes → Titles/Thumbnails
+# Plan: Fix Script Generation Pipeline — Quality & Duration Regressions
 
-## Root Cause Analysis
+## Diagnosis
 
-After comparing the old working version with the current code, I identified these concrete regressions:
+After comparing the current codebase with the old system behavior, I found these concrete issues:
 
-### 1. TTS Engine Failure (Audio Not Generating)
-- **Google Cloud TTS**: Returns 403 (billing not enabled on the Google project)
-- **Gemini TTS**: Returns 429 (quota exhausted — shares quota with script generation)
-- **ElevenLabs**: Returns 401 (free tier blocked)
-- **Result**: All three engines fail → returns `use_browser_synthesis: true` → no audio blob → scenes can't sync
+### Problem 1: Scripts reach ~50% of target duration (40min target → 20min output)
+**Root cause**: LLM output token limits. Even with `maxOutputTokens: 32000`, Gemini 2.5 Pro rarely outputs more than ~4,000-5,000 words in a single call. A 40-min script needs ~6,000 words (150 WPM × 40). The model simply stops writing when it reaches its natural generation limit.
 
-### 2. Script Score Truncated at 12,000 chars
-- `score-script/index.ts` line 155: `const scriptText = script.slice(0, 12000);`
-- A 40-minute script at 150 WPM = ~6,000 words = ~36,000 chars
-- Only 33% of the script is evaluated — the ending, CTA, and climax are NEVER scored
+**The old system worked** because it used shorter targets (15-25 min). At 40+ min, a single LLM call can't produce enough text.
 
-### 3. Score Prompt Still Asks for VFX/SFX Tags
-- `score-script` SCORE_PROMPT (lines 76-84) penalizes scripts for NOT having `[ÁUDIO:]`, `[SFX:]`, `[J-CUT]`, `[BLENDER:]` tags
-- But `generate-script` now correctly forbids these tags
-- **Result**: Scripts are penalized for following the rules
+### Problem 2: Score-script "Both AI evaluations failed" error
+**Root cause**: The `callGemini` function falls back to Lovable Gateway on 403/429, but the Lovable Gateway model mapping (`mapModel`) maps many models to `gemini-2.5-pro`/`gemini-2.5-flash` which may also fail. The scoring sends the FULL script (up to 30K chars) which can exceed context/token limits on some models.
 
-### 4. Project Save Truncates Script
-- `getOrCreateProject()` line 551: `script: script.slice(0, 500)`
-- Only 500 characters of a 36,000-char script are saved
-- Reopening a project loses the entire script
+### Problem 3: Refine-script can SHRINK the script
+The refiner operates as a single pass — if the LLM decides to "polish" by shortening, the output can be significantly shorter. The current guard (`refinedWords < 85% target`) falls back to the draft, but doesn't try to EXPAND.
 
-### 5. ThumbnailGenerator Uses Raw Topic, Not Final Title
-- Line 1267: `<ThumbnailGenerator videoTitle={topic} niche={niche} />`
-- Uses `topic` (e.g., "O que acontece se...") instead of the selected winning title
-- TitleSEOStep doesn't expose `selectedWinningTitle` to parent
-
-### 6. WAV Concatenation Issues for Long Audio
-- `VoiceGeneratorStep` chunks at 800 chars — a 40-min script (~36,000 chars) = 45 chunks
-- WAV concatenation of 45 chunks can fail or produce glitchy audio
-- No MP3 concatenation support — Google Cloud TTS returns MP3, not WAV
+### Problem 4: Model routing not optimized for Lovable credits
+The system always tries direct Google AI API first, only falling back to Lovable Gateway on failure. The user wants to USE their Lovable credits (GPT-5 and Gemini via gateway) as PRIMARY.
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Fix TTS with Lovable AI Gateway Fallback
-**File**: `supabase/functions/google-tts/index.ts`
+### Step 1: Multi-Act Script Generation for 40-60 min scripts
+**File**: `supabase/functions/generate-script/index.ts`
 
-The Lovable AI Gateway supports Gemini TTS models and has its own quota. Add it as a fallback between Gemini direct and ElevenLabs:
-- After Google Cloud TTS fails (403 billing) and before Gemini direct (429 quota), try calling Gemini TTS through the Lovable AI Gateway using `LOVABLE_API_KEY`
-- The gateway URL is `https://ai.gateway.lovable.dev/v1/chat/completions` — but TTS needs direct `generativelanguage.googleapis.com`. Instead, use `callGeminiOpenAICompat` from `gemini-direct.ts` to route text-to-speech as a chat completion with audio response modality
+For scripts >25 min, split generation into sequential "acts":
+- Act 1: Generate hook + first ~15 min (Phase 0 hook already exists, expand to full Act 1)
+- Act 2: Continue from Act 1's ending, generate next ~15 min
+- Act 3+: Continue until target duration is met
 
-Since the Lovable Gateway doesn't directly support TTS audio modality, the actual fix is:
-- Keep Google Cloud TTS as primary (will work once billing is enabled)
-- Keep Gemini TTS with retry as secondary
-- Keep ElevenLabs as tertiary
-- **Increase chunk size** from 800 to 2000 chars to reduce API calls (fewer 429 hits)
-- Add proper **MP3 binary concatenation** support (Google Cloud TTS returns MP3)
+Each act receives the ENDING of the previous act as context to maintain narrative continuity. Use `callGeminiStreaming` for each act and concatenate the streaming outputs.
 
-### Step 2: Fix Score-Script — Remove 12K Truncation + VFX Penalty
+Key changes:
+- Add `multiActGeneration()` function that loops until `wordCount >= minWords`
+- Each act's prompt includes: "Continue this narrative from where it left off. The story so far ends with: [last 500 words]. Write the NEXT ~{actWords} words."
+- Stream each act to the client sequentially
+- Cap at 4 acts max (safety limit)
+
+### Step 2: Route through Lovable AI Gateway as PRIMARY
+**File**: `supabase/functions/_shared/gemini-direct.ts`
+
+Invert the fallback order:
+- PRIMARY: Lovable AI Gateway (`ai.gateway.lovable.dev`) using `LOVABLE_API_KEY` — this uses the user's credits and supports both `google/gemini-2.5-pro` and `openai/gpt-5`
+- FALLBACK: Direct Google AI API using `GOOGLE_AI_API_KEY`
+
+Changes:
+- In `callGeminiStreaming()`: Try Lovable Gateway first, fall back to direct API
+- In `callGemini()`: Same — Lovable first, direct second
+- In `callGeminiWithFallback()`: Same pattern
+- Keep `callGeminiOpenAICompat()` routing logic (already supports both)
+
+### Step 3: Fix scoring to use GPT-5 + Gemini (different models)
 **File**: `supabase/functions/score-script/index.ts`
 
-- Remove `script.slice(0, 12000)` — pass the full script (or if too large for context, split into beginning/middle/end blocks and score each)
-- Remove the VFX/SFX/sound design tag penalty from `SCORE_PROMPT` (lines 76-84, 117-118) since the script generator now correctly produces pure narration
-- Remove `has_binge_loop` and `uses_but_therefore` from the JSON schema (or keep them but don't penalize for missing tags)
+Currently both evaluators use `gemini-2.5-flash`. Change to:
+- Evaluator A: `openai/gpt-5-mini` via Lovable Gateway (strict)  
+- Evaluator B: `google/gemini-2.5-flash` via Lovable Gateway (creative)
 
-### Step 3: Fix Project Save — Store Full Script
-**File**: `src/pages/Scripts.tsx`
+This gives genuine "dual AI" evaluation and avoids the same model giving similar scores. Also use Lovable Gateway as primary for both.
 
-- Change `script: script.slice(0, 500)` to `script: script` in `getOrCreateProject()`
-- Also store `duration`, `niche`, `videoStyle`, `language` in the project
+### Step 4: Anti-shrink guard in refine-script
+**File**: `supabase/functions/refine-script/index.ts`
 
-### Step 4: Fix ThumbnailGenerator — Use Winning Title
-**Files**: `src/components/scripts/TitleSEOStep.tsx`, `src/pages/Scripts.tsx`
+Add explicit instruction in the prompt: "The output MUST have AT LEAST {target_words} words. If the input has more words than the target, PRESERVE the full length. NEVER summarize or cut content."
 
-- Add `onTitleSelected` callback prop to `TitleSEOStep`
-- Track `selectedTitle` state in `Scripts.tsx`
-- Pass `selectedTitle || topic` to `ThumbnailGenerator`
+Also add a secondary expansion pass: if refined output < 90% of draft length AND draft >= target, return the draft unchanged (already exists but threshold should be 90%, not 85%).
 
-### Step 5: Fix Audio Chunk Size + MP3 Concatenation
-**File**: `src/components/scripts/VoiceGeneratorStep.tsx`
+### Step 5: Improve scoring prompt to train for 20/20
+**File**: `supabase/functions/score-script/index.ts`
 
-- Increase `MAX_CHUNK_CHARS` from 800 to 2000 (reduces API calls from 45 to ~18 for a 40-min script)
-- Add MP3 binary concatenation path (for Google Cloud TTS which returns MP3)
-- The existing WAV concatenation is correct for Gemini TTS
+Enhance the `SCORE_PROMPT` to include clearer criteria for high scores (9-10) and make the scoring more actionable:
+- Add examples of what a 9/10 hook looks like vs a 6/10
+- Make each weakness map to a specific, actionable fix
+- The "improvements" array should be surgical instructions, not vague suggestions
 
-### Step 6: Deploy and Verify Edge Functions
-- Deploy `google-tts`, `score-script`, `generate-script`
-- Test with curl to verify each function works
+### Step 6: Deploy all updated edge functions
+Deploy: `generate-script`, `refine-script`, `score-script`, and the shared `gemini-direct.ts`
 
 ---
 
@@ -92,9 +86,8 @@ Since the Lovable Gateway doesn't directly support TTS audio modality, the actua
 
 | File | Change |
 |------|--------|
-| `supabase/functions/score-script/index.ts` | Remove 12K truncation, remove VFX/SFX penalty |
-| `supabase/functions/google-tts/index.ts` | Increase chunk tolerance, improve error handling |
-| `src/pages/Scripts.tsx` | Fix project save (full script), add selectedTitle state, pass to ThumbnailGenerator |
-| `src/components/scripts/TitleSEOStep.tsx` | Add onTitleSelected callback |
-| `src/components/scripts/VoiceGeneratorStep.tsx` | Increase MAX_CHUNK_CHARS to 2000, add MP3 concatenation |
+| `supabase/functions/_shared/gemini-direct.ts` | Invert fallback: Lovable Gateway PRIMARY, direct API FALLBACK |
+| `supabase/functions/generate-script/index.ts` | Multi-act generation for 40-60 min scripts |
+| `supabase/functions/refine-script/index.ts` | Anti-shrink guard at 90%, stronger prompt |
+| `supabase/functions/score-script/index.ts` | Use GPT-5-mini + Gemini via Lovable Gateway, improved scoring criteria |
 
