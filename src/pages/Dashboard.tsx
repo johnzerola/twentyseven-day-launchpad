@@ -58,6 +58,35 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Auto-sync OAuth performance on mount (closed-loop every 48h)
+  useEffect(() => {
+    const syncOAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        // Check if user has OAuth tokens
+        const { data: tokens } = await supabase
+          .from('youtube_oauth_tokens' as any)
+          .select('id, last_synced_at')
+          .eq('user_id', session.user.id)
+          .limit(1)
+          .maybeSingle();
+        if (!tokens) return;
+        // Only sync if >48h since last sync
+        const lastSync = (tokens as any)?.last_synced_at;
+        if (lastSync) {
+          const hoursSince = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60);
+          if (hoursSince < 48) return;
+        }
+        console.log('Auto-syncing OAuth performance...');
+        await supabase.functions.invoke('sync-oauth-performance', {});
+      } catch (err) {
+        console.warn('Auto OAuth sync skipped:', err);
+      }
+    };
+    syncOAuth();
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();

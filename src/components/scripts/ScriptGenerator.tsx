@@ -903,8 +903,8 @@ export const ScriptGenerator = ({
                     <option key={d} value={String(d)}>{d}s (~{Math.round(d * wpm / 60)} palavras)</option>
                   ))
                 ) : (
-                  [5, 10, 15, 20, 30, 40, 60].map(d => (
-                    <option key={d} value={String(d)}>{d} min (~{d * wpm} palavras)</option>
+                  [5, 10, 15, 20, 25, 30, 40, 45, 50, 60].map(d => (
+                    <option key={d} value={String(d)}>{d} min (~{d * wpm} palavras){d >= 40 ? ' 🎬' : ''}</option>
                   ))
                 )}
               </select>

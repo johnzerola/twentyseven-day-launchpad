@@ -746,6 +746,9 @@ const Scripts = () => {
           onScenesGenerated={(scenes) => setSyncedScenes(scenes)}
           onTitlesGenerated={() => {}}
           onStepChange={(step) => setActiveStep(step)}
+          onTopicChange={(t) => setTopic(t)}
+          onNicheChange={(n) => setNiche(n)}
+          onDurationChange={(d) => setDuration(d)}
           disabled={loading}
         />
 

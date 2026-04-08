@@ -420,6 +420,60 @@ serve(async (req) => {
       }
     }
 
+    // ══════ ENGINE 2.5: Gemini TTS via Lovable AI Gateway (separate quota) ══════
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (LOVABLE_API_KEY) {
+      try {
+        console.log('Trying Lovable AI Gateway TTS fallback...');
+        const geminiVoice = useGeminiEngine ? selectedVoice : 'Charon';
+        const VOICE_STYLE_PROMPTS_GATEWAY: Record<string, string> = {
+          'dopaminergico': 'Read with INTENSE energy and MAGNETIC charisma. Build tension with pauses before reveals. WHISPER on shocking moments. SHOUT on reveals. Vary pace DRAMATICALLY.',
+          'misterioso': 'Read with a DEEP mysterious, conspiratorial tone. Drop to near-WHISPER on dark moments. Let SILENCE hang before key reveals.',
+          'energetico': 'Read with EXPLOSIVE HIGH ENERGY. Every sentence should feel like the MOST IMPORTANT thing ever said. Punchy, RHYTHMIC delivery.',
+          'calmo': 'Read with calm authority and warmth. Speak with quiet CONFIDENCE — every word carries weight.',
+        };
+        const styleInstr = VOICE_STYLE_PROMPTS_GATEWAY[voiceStyle || ''] || '';
+        const ttsPrompt = styleInstr ? `${styleInstr}\n\nNarrate this text:\n${text}` : `Narrate this text with professional quality:\n${text}`;
+
+        const gatewayRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            modalities: ['AUDIO'],
+            audio: { voice: geminiVoice },
+            messages: [{ role: 'user', content: ttsPrompt }],
+          }),
+        });
+
+        if (gatewayRes.ok) {
+          const gData = await gatewayRes.json();
+          const audioContent = gData.choices?.[0]?.message?.audio?.data;
+          if (audioContent) {
+            const wavBytes = pcmToWav(audioContent);
+            if (returnBinary) {
+              return new Response(wavBytes, {
+                headers: { ...corsHeaders, 'Content-Type': 'audio/wav', 'Content-Length': String(wavBytes.length) },
+              });
+            }
+            const audioBase64 = base64Encode(wavBytes);
+            return new Response(JSON.stringify({
+              audioBase64, mimeType: 'audio/wav', engine: 'lovable-gateway-tts',
+              voice: geminiVoice, languageCode: 'auto', chunks: 1, characterCount: text.length,
+            }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+        } else {
+          const errText = await gatewayRes.text();
+          console.warn('Lovable Gateway TTS failed:', gatewayRes.status, errText.slice(0, 200));
+        }
+      } catch (gwErr) {
+        console.warn('Lovable Gateway TTS error:', gwErr instanceof Error ? gwErr.message : gwErr);
+      }
+    }
+
     // ══════ ENGINE 3: ElevenLabs fallback ══════
     if (ELEVENLABS_API_KEY) {
       try {
