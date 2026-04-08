@@ -39,9 +39,10 @@ const FORMAT_OPTIONS = [
     value: 'shorts' as const,
     icon: Zap,
     label: 'Shorts Only',
-    desc: 'Meta: 10M views engajadas em 90 dias. Upload diário de 2-3 shorts.',
+    desc: '⚠️ Shorts pagam R$0.05-0.50/1K views. Para monetizar em 30 dias, inclua pelo menos 2 longforms/semana.',
     ypp: '10M views (Shorts)',
     best: 'Crescimento rápido, faceless, compilações',
+    warning: '📊 Dados reais: Shorts RPM = R$0.05-0.50/1K views vs Longform RPM = R$2-25/1K views.',
   },
   {
     value: 'long' as const,
