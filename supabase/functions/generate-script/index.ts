@@ -139,6 +139,17 @@ SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 7):
 - Fale DIRETAMENTE com o espectador em tom íntimo
 - NUNCA use "Mas espera!" — formas orgânicas apenas
 
+📍 RETENTION CHECKPOINTS (OBRIGATÓRIO — a cada 45-60 segundos de narração, ~110-150 palavras):
+- Insira um comentário no roteiro: [EDITOR: pattern interrupt aqui — corte, zoom, nova cena, ou dado chocante]
+- Esses checkpoints são NÃO-NEGOCIÁVEIS em todo roteiro gerado
+- Eles servem como guia para o editor de vídeo manter a atenção
+
+🔗 BINGE HOOK OBRIGATÓRIO (final de todo roteiro):
+- O roteiro DEVE terminar com uma frase que conecta ao próximo vídeo potencial
+- Formato: "E se você quiser entender [tópico relacionado], eu já fiz um vídeo sobre isso — o link tá aqui em cima."
+- Mesmo que o vídeo ainda não exista, inclua o gancho — ele será o próximo vídeo a criar
+- YouTube recompensa canais onde viewers assistem mais de um vídeo na sessão
+
 🎯 CURIOSITY GAPS (Loops Abertos):
 - Abra um loop ANTES de fechar o anterior (máximo 3 simultâneos)
 - Todo loop DEVE ser fechado antes do final
