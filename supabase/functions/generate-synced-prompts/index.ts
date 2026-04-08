@@ -314,30 +314,65 @@ ${sceneTexts}
 
 Respond with ONLY valid JSON: {"scenes":[{"sceneIndex":0,"sceneDurationSeconds":8,"startTime":0,"endTime":8,"visualPrompt":"text","negativePrompt":"text","cameraAngle":"text","lensSpec":"text","lightingSetup":"text","audioDirection":"text","mood":"text","charactersInScene":["name"],"transitionNote":"text","environment":{"locationName":"text","locationType":"text","timeOfDay":"text","weather":"text","lightSource":"text","shadowDirection":"text","shadowIntensity":"text","colorTemperature":"text","dominantColors":["color"],"atmosphericElements":"text","surfaceTextures":"text","depthLayers":"text","framingComposition":"text","architecturalDetails":"text","natureLandscape":"text","propsDressing":"text","continuityNotes":"text"}}]}`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GOOGLE_AI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemContent }] },
-        contents: [{ role: "user", parts: [{ text: userContent }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 32768,
-          responseMimeType: "application/json",
+    let rawContent: string;
+
+    if (LOVABLE_API_KEY) {
+      // Use Lovable AI Gateway (no external API key needed)
+      const gatewayRes = await fetch("https://api.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
         },
-      }),
-    });
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemContent },
+            { role: "user", content: userContent },
+          ],
+          temperature: 0.7,
+          max_tokens: 32768,
+          response_format: { type: "json_object" },
+        }),
+      });
 
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("Synced prompts error:", response.status, t);
-      if (response.status === 429) return errResp("Rate limit.", 429);
-      throw new Error("Failed to generate synced prompts");
+      if (!gatewayRes.ok) {
+        const t = await gatewayRes.text();
+        console.error("Lovable Gateway error:", gatewayRes.status, t);
+        if (gatewayRes.status === 429) return errResp("Rate limit.", 429);
+        throw new Error("Failed to generate synced prompts");
+      }
+
+      const gatewayData = await gatewayRes.json();
+      rawContent = gatewayData.choices?.[0]?.message?.content;
+      if (!rawContent) throw new Error("No content in Gateway response");
+    } else {
+      // Fallback to direct Gemini API
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GOOGLE_AI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemContent }] },
+          contents: [{ role: "user", parts: [{ text: userContent }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 32768,
+            responseMimeType: "application/json",
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const t = await response.text();
+        console.error("Synced prompts error:", response.status, t);
+        if (response.status === 429) return errResp("Rate limit.", 429);
+        throw new Error("Failed to generate synced prompts");
+      }
+
+      const data = await response.json();
+      rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawContent) throw new Error("No content in Gemini response");
     }
-
-    const data = await response.json();
-    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawContent) throw new Error("No content in Gemini response");
     const parsed = JSON.parse(rawContent);
 
     // ═══ DarkPlanner v3 Post-Processing: FULL Veo3 Policy Filter ═══
