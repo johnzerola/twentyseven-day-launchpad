@@ -218,11 +218,11 @@ serve(async (req) => {
     const scorePromptB = SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR B (CRITERIOSO). Seja independente. Valorize ORIGINALIDADE e EMOÇÃO.\n\n" + jsonSchema;
 
     const [evalAResult, evalBResult] = await Promise.allSettled([
-      // Evaluator A: GPT-5-mini via Lovable Gateway (strict)
+      // Evaluator A: GPT-5 via Lovable Gateway (strict, high reasoning)
       callLovableAI(scorePromptA, userScoreMsg, { 
-        model: 'openai/gpt-5-mini', temperature: 0.3, maxTokens: 8192, jsonMode: true 
+        model: 'openai/gpt-5', temperature: 0.3, maxTokens: 8192, jsonMode: true 
       }).catch(async (e) => {
-        console.warn(`[PHASE-3 SCORE] GPT-5-mini failed, falling back to Gemini:`, e);
+        console.warn(`[PHASE-3 SCORE] GPT-5 failed, falling back to Gemini:`, e);
         return callGemini(GOOGLE_AI_API_KEY!, scorePromptA, userScoreMsg, { 
           model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 8192 
         });
