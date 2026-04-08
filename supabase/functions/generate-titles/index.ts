@@ -10,6 +10,51 @@ const corsHeaders = {
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
 
+// Helper: call AI via Lovable Gateway (preferred) or direct Gemini
+async function callAI(prompt: string, systemPrompt: string, apiKey: string, lovableKey: string | undefined, opts?: { temperature?: number }): Promise<string> {
+  const temp = opts?.temperature ?? 0.9;
+  
+  if (lovableKey) {
+    const res = await fetch("https://api.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        temperature: temp,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("Lovable Gateway error:", res.status, t);
+      throw new Error(`AI error: ${res.status}`);
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  // Fallback: direct Gemini
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: `SYSTEM: ${systemPrompt}\n\n${prompt}` }] }],
+      generationConfig: { temperature: temp, responseMimeType: "application/json" },
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("Gemini error:", res.status, t);
+    throw new Error(`AI error: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
 // ========== HELPER: Search YouTube for competing videos ==========
 async function searchYouTubeCompetitors(topic: string, niche: string, language: string, YOUTUBE_API_KEY: string): Promise<string> {
   try {
