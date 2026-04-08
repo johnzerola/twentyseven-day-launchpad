@@ -1306,6 +1306,15 @@ const Scripts = () => {
                 </motion.div>
               )}
 
+              {/* Step 7: Monetize */}
+              {activeStep === 'monetize' && script && (
+                <motion.div key="monetize" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <AffiliateLinksGenerator topic={topic} niche={niche} />
+                  <StepNavButtons currentStep="monetize" onNavigate={setActiveStep} />
+                </motion.div>
+              )}
+
               {/* Script Performance Tracker - always visible when script exists */}
               {script && (
                 <motion.div key="perf-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
