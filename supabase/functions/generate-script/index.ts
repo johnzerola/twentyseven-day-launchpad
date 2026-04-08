@@ -264,6 +264,7 @@ serve(async (req) => {
     // ═══ SMART KNOWLEDGE RETRIEVAL (RAG + Re-Ranking) ═══
     // Instead of 13 fixed queries, use semantic search + re-ranking for relevant knowledge
     let smartKnowledgeBlock = '';
+    let ragFailed = false;
     try {
       const skrAbort = new AbortController();
       const skrTimeout = setTimeout(() => skrAbort.abort(), 15000); // 15s max
@@ -283,8 +284,14 @@ serve(async (req) => {
           smartKnowledgeBlock = skrData.knowledge.join('\n');
           console.log(`[SMART-RAG] runId=${runId} ${skrData.stats?.final_count} relevant snippets in ${skrData.stats?.duration_ms}ms`);
         }
+      } else {
+        ragFailed = true;
+        console.warn(`[SMART-RAG] runId=${runId} returned ${skrRes.status}`);
       }
-    } catch (e) { console.warn("[SMART-RAG] Failed or timed out, using fallback:", e); }
+    } catch (e) {
+      ragFailed = true;
+      console.warn("[SMART-RAG] Failed or timed out, using fallback:", e);
+    }
 
     // ═══ ESSENTIAL QUERIES (always needed, small payload) ═══
     const [voiceRes, backtestRes, channelRes, userPrefsRes] = await Promise.all([
@@ -350,7 +357,7 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
         .select("insight")
         .eq("source", "dual_score_rejection")
         .order("created_at", { ascending: false })
-        .limit(8);
+        .limit(15);
       
       if (rejections && rejections.length > 0) {
         const patterns: Record<string, number> = {};
@@ -360,6 +367,10 @@ Use estas correções para calibrar suas previsões e evitar os mesmos erros.\n`
         for (const r of rejections) {
           try {
             const data = JSON.parse(r.insight);
+            // Quality gate: only learn from truly bad scripts (combined_score <= 10)
+            // Borderline rejections from weak evaluators would contaminate creative direction
+            const combinedScore = data.combined_score ?? data.score ?? 999;
+            if (combinedScore > 10) continue;
             // Aggregate weakness patterns
             for (const w of (data.weaknesses || [])) {
               const key = w.slice(0, 60);
@@ -1120,8 +1131,30 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
     }
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client...`);
+    // If RAG failed, prepend a metadata SSE event so frontend can show warning
+    if (ragFailed) {
+      const metaEvent = new TextEncoder().encode(`data: ${JSON.stringify({ _meta: { rag_failed: true } })}\n\n`);
+      const originalStream = phase1Res.body!;
+      const metaStream = new ReadableStream({
+        async start(controller) {
+          controller.enqueue(metaEvent);
+          const reader = originalStream.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              controller.enqueue(value);
+            }
+          } finally { controller.close(); }
+        }
+      });
+      return new Response(metaStream, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream", "X-Rag-Status": "failed" },
+      });
+    }
+
     return new Response(phase1Res.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream", "X-Rag-Status": "ok" },
     });
 
   } catch (e) {

@@ -260,6 +260,12 @@ export const ScriptGenerator = ({
       throw new Error(errBody?.error || `Erro na função ${fnName} (${resp.status})`);
     }
 
+    // Check RAG status header
+    const ragStatus = resp.headers.get('X-Rag-Status');
+    if (ragStatus === 'failed') {
+      toast.warning('⚠️ Base de conhecimento indisponível — roteiro gerado sem dados contextuais');
+    }
+
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -279,6 +285,13 @@ export const ScriptGenerator = ({
         if (json === '[DONE]') break;
         try {
           const p = JSON.parse(json);
+          // Skip RAG metadata events
+          if (p._meta) {
+            if (p._meta.rag_failed) {
+              toast.warning('⚠️ Base de conhecimento indisponível — roteiro gerado sem dados contextuais');
+            }
+            continue;
+          }
           const c = p.choices?.[0]?.delta?.content;
           if (c) { fullText += c; onDelta(fullText); }
         } catch { buffer = line + '\n' + buffer; break; }
