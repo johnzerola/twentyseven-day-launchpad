@@ -1,110 +1,68 @@
 
 
-# Plano: Motor de Monetização Completo — 10 Seções
+# Plano: Modo Piloto Automático + Emoções Dopaminérgicas
 
-Este é um projeto massivo com 10 seções interdependentes. Dado o tamanho, vou dividir em **3 fases de implementação**, seguindo a prioridade exata que você definiu.
+O sistema já tem o motor de monetização das 10 seções implementado. O que falta, baseado no seu pedido, são duas coisas:
 
----
-
-## Fase 1 — Receita Imediata + Anti-Abandono (Seções 6, 4, 1)
-
-### 1. AffiliateLinksGenerator (Seção 6)
-- Criar componente `src/components/scripts/AffiliateLinksGenerator.tsx`
-- Tab "💰 Monetizar Agora" na página Scripts (após aprovação do roteiro)
-- Auto-detecta nicho do script, mostra 5 programas de afiliados ranqueados com comissão, tempo de aprovação, botão "Copiar link"
-- Gera snippet de descrição pronto para colar no YouTube
-- Calculadora de receita estimada (0.5% conversão × views estimadas)
-- Tabela hardcoded de 6 nichos com ~5 programas cada (finanças, tech, saúde, terror, educação, gaming)
-
-### 2. Consistency Guardian (Seção 4)
-- Nova edge function `consistency-guardian` — roda quando Dashboard carrega
-- Lógica: calcula dias desde último script, busca trending topic do nicho
-- 3 níveis: CONSISTENCY_BREAK (>2 dias), MOMENTUM_LOST (>5 dias), OK
-- Banner full-width no topo do Dashboard com botão "Gerar agora" que pre-preenche Scripts
-- Componente `src/components/dashboard/ConsistencyGuardian.tsx`
-
-### 3. 4-Level Monetization Track (Seção 1)
-- Componente `src/components/dashboard/MonetizationTrack.tsx`
-- Barra horizontal com 4 níveis: Primeira Receita → Micro Sponsorship → YPP Early → YPP Full
-- Status: locked/in_progress/unlocked com lógica baseada em ações do usuário
-- Exibido no topo do Tracker30Days e no Dashboard
+1. **Botão "Modo Piloto Automático"** — 1 clique gera tudo: roteiro, áudio, cenas, título, SEO, descrição, thumbnail
+2. **Emoções dopaminérgicas intensificadas** nos roteiros e na voz
 
 ---
 
-## Fase 2 — Feedback Loop + Thumbnails Reais (Seções 7, 5, 3)
+## 1. Modo Piloto Automático (Scripts page)
 
-### 4. 48h Post-Upload Diagnostic (Seção 7)
-- Componente `src/components/dashboard/PostUploadDiagnostic.tsx`
-- Quando vídeo linkado tem <48h: puxa CTR, AVD, retenção 30s via OAuth (ou input manual)
-- 4 diagnósticos: CTR CRITICAL (<3.5%), Hook fraco (ret 30s <60%), Retenção média (<40%), SUCCESS (>5% CTR + >50% ret)
-- Tab "Diagnóstico ao Vivo" no Tracker
-- Sem OAuth: mostra campos para input manual + explica como encontrar os dados no YouTube Studio
+Adicionar botão "🚀 Gerar Tudo Automaticamente" na página Scripts que executa o pipeline completo em sequência:
 
-### 5. Thumbnail Image Generation (Seção 5)
-- O ThumbnailGenerator já tem `generateImage()` que chama `generate-thumbnail-prompt` com `generate_image: true`
-- Verificar se o edge function já suporta geração real via Lovable AI (gemini-3.1-flash-image-preview)
-- Se não, adicionar branch no edge function para gerar imagem real via Lovable AI gateway
-- Adicionar nota "O primeiro frame do seu vídeo deve mostrar exatamente o que está no thumbnail"
+**Fluxo automático:**
+1. Gerar roteiro (edge function `generate-script`)
+2. Gerar áudio/voz (edge function `google-tts` com estilo dopaminérgico)
+3. Extrair personagens (edge function `extract-characters`)
+4. Gerar cenas visuais sincronizadas (edge function `audio-to-scenes` ou `generate-synced-prompts`)
+5. Gerar títulos + SEO (edge function `generate-titles` + `seo-analyzer`)
+6. Gerar thumbnail (edge function `generate-thumbnail-prompt`)
+7. Mostrar tudo pronto no Production Pack
 
-### 6. 30-Day Plan Rebuild (Seção 3)
-- Reescrever o system prompt em `generate-30day-plan/index.ts`
-- Estrutura hardcoded: Days 1-3 (Launch Setup), 4-7 (Dual Launch), 8-14 (CTR War), 15-21 (Hype Strategy), 22-28 (Micro Sponsorship), 29-30 (YPP Check)
-- Media Kit Generator como novo componente para Days 22-28
-- Auto-cálculo de pricing baseado em avg views
+**Componente novo:** `src/components/scripts/AutoPilotEngine.tsx`
+- Barra de progresso com 7 etapas visuais
+- Cada etapa mostra status: pendente, processando, concluído, erro
+- Se uma etapa falha, continua com as próximas e marca como "manual"
+- Ao final, navega automaticamente para a aba "Títulos & SEO" mostrando o Production Pack completo
 
----
-
-## Fase 3 — Inteligência + Warnings (Seções 9, 8, 2, 10, 11)
-
-### 7. Hype Feature (Seção 9)
-- Seção "Hype Strategy" no Tracker para dias 15-30
-- Task type HYPE_PUSH com Community Post template auto-gerado
-- Hype Score no ScriptPerformanceTracker com countdown de 7 dias
-
-### 8. Niche Monetization Speed (Seção 8)
-- Score "⚡ Velocidade de Monetização" no NicheExplorer
-- Fórmula: RPM + affiliate availability + sponsorship accessibility + competition inverse
-- Estimativas hardcoded por nicho (finanças 21d, tech 18d, etc.)
-
-### 9. Algorithm Levers in Prompts (Seção 2)
-- Widget "Algorithm Score" na página Scripts com CTR potential, retention risks, binge path
-- Injetar "[EDITOR: pattern interrupt]" a cada 45-60s nos scripts gerados
-- Binge hook obrigatório no final de cada script
-- Atualizar system prompts em `generate-script/index.ts`
-
-### 10. Kill Warnings (Seção 10)
-- 5 warnings hardcoded no TrackerWizard, Onboarding e Script Generator
-- Modal obrigatório para "Shorts only" strategy
-- YPP alert no dual-score evaluation para conteúdo AI-sounding
-- Horário ideal de publicação baseado em OAuth ou default 17h-20h
-
-### 11. Knowledge Base Update (Seção 11)
-- Atualizar `MONETIZATION_KNOWLEDGE` em `monetization-coach/index.ts` com dados 2025-2026
+**Integração:** Botão no topo da página Scripts, ao lado de "Gerar Roteiro". Requer apenas: tópico + nicho preenchidos.
 
 ---
 
-## Detalhes Técnicos
+## 2. Emoções Dopaminérgicas Intensificadas
 
-**Arquivos novos a criar:**
-- `src/components/scripts/AffiliateLinksGenerator.tsx`
-- `src/components/dashboard/ConsistencyGuardian.tsx`
-- `src/components/dashboard/MonetizationTrack.tsx`
-- `src/components/dashboard/PostUploadDiagnostic.tsx`
-- `src/components/dashboard/MediaKitGenerator.tsx`
-- `supabase/functions/consistency-guardian/index.ts`
+### No Roteiro (edge function `generate-script`)
+Adicionar ao system prompt um bloco `EMOTIONAL_INTENSITY_ENGINE`:
+- Mapa de emoções obrigatório: cada bloco de 45-60s DEVE alternar entre curiosidade, choque, compaixão e dopamina
+- Instruções de "emotional whiplash" amplificadas
+- Marcadores `[EMOÇÃO: choque]`, `[EMOÇÃO: dopamina]`, `[EMOÇÃO: tensão]` no roteiro para guiar o editor
 
-**Arquivos a editar:**
-- `src/pages/Scripts.tsx` — adicionar tab Monetizar + Algorithm Score widget
-- `src/pages/Dashboard.tsx` — adicionar ConsistencyGuardian banner + MonetizationTrack
-- `src/pages/Tracker30Days.tsx` — MonetizationTrack + Hype tasks + PostUploadDiagnostic tab
-- `src/pages/NicheExplorer.tsx` — Monetization Speed score
-- `supabase/functions/generate-30day-plan/index.ts` — rebuild system prompt
-- `supabase/functions/generate-script/index.ts` — retention checkpoints + binge hooks
-- `supabase/functions/monetization-coach/index.ts` — knowledge base update
-- `src/components/scripts/ThumbnailGenerator.tsx` — real image generation
-- `src/components/tracker/TrackerWizard.tsx` — kill warnings
+### Na Voz (edge function `google-tts`)
+Expandir os `VOICE_STYLE_PROMPTS` no Gemini TTS com instruções emocionais mais ricas:
+- Dopaminérgico: adicionar "Build tension with pauses before reveals. Whisper on shocking moments. SHOUT on reveals. Your voice should make listeners feel ADRENALINE."
+- Misterioso: adicionar "Drop to near-whisper on dark moments. Let silence hang for 0.5s before key reveals."
+- Energético: adicionar "Every sentence should feel like the most important thing ever said. Punchy, rhythmic, infectious."
 
-**Nenhuma migração de banco necessária** — toda a lógica usa tabelas existentes (saved_scripts, video_performance, onboarding_plans, etc.) e dados hardcoded.
+### No Frontend (VoiceGeneratorStep)
+Adicionar selector "Intensidade Emocional" com 3 níveis:
+- Normal (atual)
+- Alta (instruções emocionais extras no prompt TTS)
+- Máxima (todas as técnicas ativas + marcadores emocionais no texto)
 
-**Sem dependências externas novas** — usa Lovable AI gateway para thumbnails e Gemini para planos.
+---
+
+## Arquivos a criar
+- `src/components/scripts/AutoPilotEngine.tsx`
+
+## Arquivos a editar
+- `src/pages/Scripts.tsx` — integrar AutoPilotEngine
+- `supabase/functions/generate-script/index.ts` — adicionar EMOTIONAL_INTENSITY_ENGINE ao prompt
+- `supabase/functions/google-tts/index.ts` — expandir voice style prompts com emoções
+- `src/components/scripts/VoiceGeneratorStep.tsx` — selector de intensidade emocional
+- `src/components/scripts/PipelineStepper.tsx` — indicador visual de auto-pilot ativo
+
+## Sem migrações de banco necessárias
 
