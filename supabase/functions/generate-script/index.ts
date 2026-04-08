@@ -930,7 +930,174 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       ? `Escreva um SHORT VIRAL de ${Math.round(dur * 60)}s sobre: "${topic}"\nAlvo: ${targetWords} palavras. Hook de CHOQUE em 2s. Ritmo frenético. ROTEIRO LIMPO.\nComece!`
       : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMeta ideal: ${targetWords} palavras. Mínimo absoluto: ${minWords} palavras de NARRAÇÃO PURA. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. PROIBIDO qualquer tag técnica, VFX, música, cena, EXTRAS ou metadado.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nSe perceber que ainda não cobriu ${duration} minutos completos, CONTINUE expandindo com desenvolvimento, aprofundamento, callbacks e payoff final até atingir a duração. Comece imediatamente pelo roteiro.`;
 
-    console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming from AI gateway...`);
+    // ═══════════════════════════════════════════════════════
+    // MULTI-ACT GENERATION for 25+ min scripts
+    // Single LLM call maxes out at ~4-5K words. For 40+ min
+    // we need ~6K+ words, so we generate in sequential acts.
+    // ═══════════════════════════════════════════════════════
+    const needsMultiAct = dur >= 25 && !isShort;
+    
+    if (needsMultiAct) {
+      console.log(`[PHASE-1 DRAFT] runId=${runId} Multi-act generation for ${dur}min (target: ${targetWords} words, min: ${minWords})`);
+      
+      // Generate Act 1 (hook + first ~15 min)
+      const act1Words = Math.min(Math.round(targetWords * 0.45), 3000);
+      const act1Message = `Escreva a PRIMEIRA PARTE (Atos 1-2) de um roteiro de ${duration}min sobre: "${topic}"\n\nEsta é a PARTE 1 de um roteiro longo. Escreva ~${act1Words} palavras cobrindo:\n- Hook DEVASTADOR (primeiros 30s)\n- Setup completo + stakes\n- Escalada inicial até o primeiro grande turning point\n- TERMINE com um cliffhanger forte — o leitor PRECISA do próximo ato\n\nNÃO conclua a história. NÃO faça resolução. Pare no momento de MÁXIMA TENSÃO.\n${hookText ? 'USE O HOOK PRÉ-GERADO como base.' : ''}\nComece imediatamente pelo roteiro.`;
+      
+      const act1Res = await callGeminiStreaming(
+        GOOGLE_AI_API_KEY,
+        systemPrompt,
+        act1Message,
+        { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `PHASE-1 ACT1 runId=${runId}` },
+      );
+
+      if (!act1Res.ok) {
+        const errText = await act1Res.text();
+        console.error(`[PHASE-1 ACT1] runId=${runId} error:`, act1Res.status, errText);
+        if (act1Res.status === 429) return errResp("Rate limit. Aguarde alguns segundos.", 429);
+        if (act1Res.status === 402) return errResp("Créditos insuficientes.", 402);
+        throw new Error(`AI gateway error: ${act1Res.status}`);
+      }
+
+      // Collect Act 1 text while streaming to client
+      const act1Reader = act1Res.body!.getReader();
+      const dec = new TextDecoder();
+      const enc = new TextEncoder();
+      let act1Text = '';
+
+      // Create a transform stream that captures text while forwarding to client
+      const multiActStream = new ReadableStream({
+        async start(ctrl) {
+          // Stream Act 1
+          let sseBuffer = '';
+          while (true) {
+            const { done, value } = await act1Reader.read();
+            if (done) break;
+            const chunk = dec.decode(value, { stream: true });
+            ctrl.enqueue(enc.encode(chunk));
+            sseBuffer += chunk;
+            
+            // Extract text from SSE events
+            const lines = sseBuffer.split('\n');
+            sseBuffer = lines.pop() || '';
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr || jsonStr === '[DONE]') continue;
+              try {
+                const p = JSON.parse(jsonStr);
+                const text = p.choices?.[0]?.delta?.content;
+                if (text) act1Text += text;
+              } catch {}
+            }
+          }
+          // Process remaining buffer
+          if (sseBuffer.trim()) {
+            for (const line of sseBuffer.split('\n')) {
+              if (!line.startsWith('data: ')) continue;
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr && jsonStr !== '[DONE]') {
+                try { const p = JSON.parse(jsonStr); const t = p.choices?.[0]?.delta?.content; if (t) act1Text += t; } catch {}
+              }
+            }
+          }
+
+          const act1WordCount = act1Text.split(/\s+/).filter(Boolean).length;
+          console.log(`[PHASE-1 ACT1] runId=${runId} Act 1 complete: ${act1WordCount} words`);
+
+          // Check if we need more acts
+          if (act1WordCount >= minWords) {
+            console.log(`[PHASE-1 DRAFT] runId=${runId} Act 1 already meets target (${act1WordCount} >= ${minWords})`);
+            ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+            ctrl.close();
+            return;
+          }
+
+          // Generate Act 2 (continuation)
+          const remainingWords = targetWords - act1WordCount;
+          const last500Words = act1Text.split(/\s+/).slice(-500).join(' ');
+          
+          const act2Message = `CONTINUAÇÃO DO ROTEIRO — PARTE 2\n\nO roteiro até agora termina com:\n"${last500Words}"\n\nContinue a narrativa de EXATAMENTE onde parou. Escreva ~${remainingWords} palavras cobrindo:\n- Desenvolvimento e escalada da tensão\n- CLÍMAX — o momento que justifica o vídeo\n- RESOLUÇÃO satisfatória\n- Binge Loop no final (gancho para próximo vídeo, NUNCA despedida)\n\nMANTENHA o mesmo tom, voz e estilo do texto anterior.\nNÃO repita o que já foi escrito. NÃO faça resumo do que aconteceu.\nComece EXATAMENTE de onde o texto parou, como se fosse a continuação natural.\nRetorne APENAS texto de narração pura.`;
+
+          console.log(`[PHASE-1 ACT2] runId=${runId} Starting Act 2 (${remainingWords} words needed)...`);
+
+          try {
+            const act2Res = await callGeminiStreaming(
+              GOOGLE_AI_API_KEY,
+              systemPrompt,
+              act2Message,
+              { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `PHASE-1 ACT2 runId=${runId}` },
+            );
+
+            if (act2Res.ok && act2Res.body) {
+              // Stream separator
+              ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
+              
+              const act2Reader = act2Res.body.getReader();
+              let act2WordCount = 0;
+              let act2Buffer = '';
+              
+              while (true) {
+                const { done, value } = await act2Reader.read();
+                if (done) break;
+                const chunk = dec.decode(value, { stream: true });
+                ctrl.enqueue(enc.encode(chunk));
+                act2Buffer += chunk;
+                
+                const lines2 = act2Buffer.split('\n');
+                act2Buffer = lines2.pop() || '';
+                for (const line of lines2) {
+                  if (!line.startsWith('data: ')) continue;
+                  const jsonStr = line.slice(6).trim();
+                  if (jsonStr && jsonStr !== '[DONE]') {
+                    try { const p = JSON.parse(jsonStr); const t = p.choices?.[0]?.delta?.content; if (t) act2WordCount += t.split(/\s+/).filter(Boolean).length; } catch {}
+                  }
+                }
+              }
+              console.log(`[PHASE-1 ACT2] runId=${runId} Act 2 complete: ~${act2WordCount} words (total: ~${act1WordCount + act2WordCount})`);
+
+              // Check if we need Act 3
+              const totalWords = act1WordCount + act2WordCount;
+              if (totalWords < minWords && dur >= 35) {
+                const act3Remaining = targetWords - totalWords;
+                console.log(`[PHASE-1 ACT3] runId=${runId} Still short (${totalWords}/${minWords}), generating Act 3...`);
+                
+                try {
+                  const act3Res = await callGeminiStreaming(
+                    GOOGLE_AI_API_KEY,
+                    systemPrompt,
+                    `CONTINUAÇÃO FINAL — PARTE 3\n\nO roteiro precisa de mais ~${act3Remaining} palavras para atingir ${dur} minutos.\n\nContinue de onde parou. Adicione:\n- Aprofundamento narrativo com novas camadas\n- Callbacks a elementos plantados no início\n- Clímax expandido com mais detalhes\n- Resolução completa e satisfatória\n- Binge Loop final\n\nRetorne APENAS texto de narração pura. NÃO repita conteúdo anterior.`,
+                    { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `PHASE-1 ACT3 runId=${runId}` },
+                  );
+                  if (act3Res.ok && act3Res.body) {
+                    ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
+                    const act3Reader = act3Res.body.getReader();
+                    while (true) {
+                      const { done, value } = await act3Reader.read();
+                      if (done) break;
+                      ctrl.enqueue(enc.encode(dec.decode(value, { stream: true })));
+                    }
+                    console.log(`[PHASE-1 ACT3] runId=${runId} Act 3 complete`);
+                  }
+                } catch (e) { console.warn(`[PHASE-1 ACT3] runId=${runId} Act 3 failed:`, e); }
+              }
+            }
+          } catch (e) {
+            console.warn(`[PHASE-1 ACT2] runId=${runId} Act 2 failed:`, e);
+          }
+
+          ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+          ctrl.close();
+        }
+      });
+
+      return new Response(multiActStream, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // ═══ SINGLE-ACT GENERATION (for scripts < 25 min) ═══
+    console.log(`[PHASE-1 DRAFT] runId=${runId} Single-act generation for ${dur}min`);
 
     const phase1Res = await callGeminiStreaming(
       GOOGLE_AI_API_KEY,
