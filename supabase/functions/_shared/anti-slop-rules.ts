@@ -102,4 +102,4 @@ EDIÇÃO — ANCORAGEM VISUAL (Regra dos 3-5s):
 - Pattern interrupts visuais a cada 20-30 segundos
 - Lip-sync em momentos de ênfase para avatares
 - NUNCA mais de 5s com mesma imagem estática
-`;`;
+`;
