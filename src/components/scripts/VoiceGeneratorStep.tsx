@@ -34,10 +34,16 @@ const TTS_LANGUAGES = [
 ];
 
 const VOICE_STYLES = [
-  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Carisma intenso, variação dramática, urgência narrativa — MrBeast style', color: 'border-primary bg-primary/10' },
-  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Suspense envolvente, pausas calculadas, tom grave e intrigante', color: 'border-chart-4 bg-chart-4/10' },
-  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Alto impacto, ritmo acelerado, entusiasmo contagiante', color: 'border-destructive bg-destructive/10' },
-  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Voz serena, autoritativa e profissional — documentário', color: 'border-chart-2 bg-chart-2/10' },
+  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Carisma magnético, whisper→shout, adrenalina pura — vicia o ouvinte', color: 'border-primary bg-primary/10' },
+  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Near-whisper + silêncios tensos, revelações que arrepiam', color: 'border-chart-4 bg-chart-4/10' },
+  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Explosivo, ritmo hip-hop, energia contagiante que acelera o coração', color: 'border-destructive bg-destructive/10' },
+  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Autoridade BBC/Netflix, gravidade serena, confiança absoluta', color: 'border-chart-2 bg-chart-2/10' },
+];
+
+const EMOTIONAL_INTENSITIES = [
+  { value: 'normal', label: 'Normal', emoji: '😐', desc: 'Narração padrão sem instruções emocionais extras' },
+  { value: 'alta', label: 'Alta', emoji: '🔥', desc: 'Variação emocional amplificada, pausas dramáticas antes de revelações' },
+  { value: 'maxima', label: 'Máxima', emoji: '⚡', desc: 'Todas as técnicas: whisper, shout, cracks vocais, adrenalina pura' },
 ];
 
 // Voice preview phrases per language

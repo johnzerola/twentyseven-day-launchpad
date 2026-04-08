@@ -151,10 +151,47 @@ async function synthesizeWithGeminiTTS(
   text: string, apiKey: string, voiceName: string, speakingRate: number, voiceStyle?: string,
 ): Promise<Uint8Array> {
   const VOICE_STYLE_PROMPTS: Record<string, string> = {
-    'dopaminergico': 'Read this narration with INTENSE energy and magnetic charisma. Vary your pace DRAMATICALLY. Deliver like a world-class documentary narrator:\n',
-    'misterioso': 'Read this narration with a mysterious, conspiratorial tone. Use dramatic pauses before key moments:\n',
-    'calmo': 'Read this narration with calm authority and warmth. Speak clearly and steadily:\n',
-    'energetico': 'Read this narration with HIGH ENERGY and enthusiasm! Your voice should be dynamic and punchy:\n',
+    'dopaminergico': `Read this narration with INTENSE energy and MAGNETIC charisma — like MrBeast meets top documentary narrator.
+CRITICAL EMOTIONAL TECHNIQUES:
+- Build tension with 0.3-0.5 second pauses before EVERY major reveal
+- WHISPER on shocking moments (drop volume 40%, slow pace 20%)
+- SHOUT with rising pitch on reveals and "impossível" moments
+- Vary pace DRAMATICALLY: rapid-fire facts → sudden slow dramatic pause → explosive reveal
+- Your voice should make listeners feel ADRENALINE and DOPAMINE
+- Every sentence transition should feel like a mini-rollercoaster
+- Use rhythmic patterns: short-short-short-LONG, building like music
+- On emotional moments, let your voice CRACK slightly — vulnerability is magnetic
+- Match the emotion markers in the text: [EMOÇÃO: choque] = gasp + pause, [EMOÇÃO: dopamina] = excited crescendo
+Read with the passion of someone who DISCOVERED something incredible and CANNOT WAIT to share it:\n`,
+    'misterioso': `Read this narration with a DEEP mysterious, conspiratorial tone that makes listeners lean in closer.
+CRITICAL EMOTIONAL TECHNIQUES:
+- Drop to near-WHISPER on dark moments — so quiet listeners turn up volume
+- Let SILENCE hang for 0.5-0.8 seconds before key reveals — the anticipation IS the content
+- Speak as if sharing a SECRET that could get you in trouble
+- On revelation moments, shift from whisper to normal volume SUDDENLY — the contrast creates chills
+- Use descending pitch patterns for dread, ascending for hope
+- Breathe audibly before shocking facts — listeners mirror your tension
+- Pacing: deliberate... measured... then suddenly RAPID when danger arrives
+Read like a detective who just found the missing piece of the puzzle:\n`,
+    'calmo': `Read this narration with calm authority, warmth, and the gravitas of a BBC/Netflix documentary narrator.
+EMOTIONAL TECHNIQUES:
+- Speak with quiet CONFIDENCE — every word carries weight
+- Use measured pauses that give the listener time to ABSORB
+- On emotional moments, let genuine warmth seep into your voice
+- Maintain steady rhythm but SLOW DOWN on the most important revelations
+- Your calmness should create TRUST — the listener believes every word
+Read like David Attenborough discovering something that fills him with quiet wonder:\n`,
+    'energetico': `Read this narration with EXPLOSIVE HIGH ENERGY and infectious enthusiasm!
+CRITICAL EMOTIONAL TECHNIQUES:
+- Every sentence should feel like the MOST IMPORTANT thing ever said
+- Punchy, RHYTHMIC delivery — like a hip-hop flow meets TED talk
+- ACCELERATE on exciting sequences, creating breathless urgency
+- Use STACCATO rhythm for lists and reveals: "First. This. Then. THAT."
+- Laugh or gasp naturally at genuinely surprising moments
+- Your energy should be CONTAGIOUS — listeners should feel their heart rate increase
+- On climactic moments, build a CRESCENDO — each word louder and faster
+- Match [EMOÇÃO: dopamina] markers with peak energy bursts
+Read like you just won the lottery AND discovered the meaning of life:\n`,
   };
   let stylePrefix = VOICE_STYLE_PROMPTS[voiceStyle || ''] || '';
   if (!stylePrefix) {
