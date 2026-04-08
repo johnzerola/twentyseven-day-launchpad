@@ -1,54 +1,52 @@
 
+# Plano: Multi-Atos Robusto para 40-60 Minutos
 
-# Plan: Fix 5 Critical Bugs in Script Pipeline
+## Diagnóstico dos Problemas Atuais
 
-## Current State Assessment
+O sistema multi-atos já existe para scripts ≥25min, mas falha em atingir 40-60min por:
 
-After inspecting the code, here's what I found:
+1. **Cap artificial no Ato 1**: `Math.min(targetWords * 0.45, 3000)` — limita a 3000 palavras máximo
+2. **Máximo de 3 atos**: Para 60min precisamos de ~9000 palavras. Com ~4000 palavras/ato (limite do LLM), precisamos de 3-5 atos
+3. **Contexto insuficiente entre atos**: Apenas 500 palavras do ato anterior são passadas
+4. **Sem planejamento narrativo**: Os atos são gerados "cegamente" — cada ato não sabe o arco completo
+5. **Ato 3 só ativa se `dur >= 35`**: Deveria ativar sempre que faltar palavras
 
-- **BUG 1 (score-script model)**: The code at line 223 already says `openai/gpt-5` — it was fixed in a previous session. However, `openai/gpt-4o` is **not available** on the Lovable AI Gateway. The available models are: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.2`. **`openai/gpt-5` is already the strongest available option** — no change needed here.
+## Solução: Motor de Atos Dinâmico com Planejamento Narrativo
 
-- **BUG 2 (generate-ideas model)**: Line 165 already says `google/gemini-2.5-pro` — also already fixed. No change needed.
-
-- **BUG 3 (deprecated auth)**: CONFIRMED — line 29 uses `getClaims()` which doesn't exist in Supabase JS v2. This causes auth failures silently. **Must fix.**
-
-- **BUG 4 (silent RAG failure)**: CONFIRMED — line 287 catches the error with just `console.warn` and no flag is propagated. Since the response is SSE-streamed, I'll inject a custom header `X-Rag-Status: failed` and also prefix the stream with a metadata SSE event so the frontend can show a toast.
-
-- **BUG 5 (rejection learning contamination)**: CONFIRMED — line 349-353 fetches all `dual_score_rejection` learnings with no score filter. Must add a quality gate.
-
-## Changes
-
-### File 1: `supabase/functions/generate-ideas/index.ts`
-- **Lines 27-34**: Replace `getClaims()` auth with standard `getUser()` pattern:
-```ts
-const { data: userData, error: userError } = await _authSb.auth.getUser();
-if (userError || !userData?.user) {
-  return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
-    status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+### Mudança 1: Planejamento de Arco Narrativo (pre-flight)
+Antes de gerar, fazer uma chamada rápida (não-streaming, flash) para criar um **outline de atos**:
 ```
+Para um roteiro de 60min sobre "X":
+- Ato 1 (0-15min): Setup + Hook — ~2500 palavras
+- Ato 2 (15-30min): Escalada + Turning Point — ~2500 palavras  
+- Ato 3 (30-45min): Clímax + Complicação — ~2500 palavras
+- Ato 4 (45-60min): Resolução + Binge Loop — ~1500 palavras
+```
+Esse outline guia cada geração subsequente.
 
-### File 2: `supabase/functions/generate-script/index.ts`
-- **Lines 266-287 (RAG block)**: Add a `let ragFailed = false;` variable before the try block. Set `ragFailed = true` in the catch. Also set it if `skrRes` is not ok.
-- **Line 1123 (streaming response)**: Add `X-Rag-Status` header to the response: `"X-Rag-Status": ragFailed ? "failed" : "ok"`
-- **Lines 349-353 (rejection learnings query)**: Add filter to only fetch learnings where the combined score was truly bad. Since `ai_learning.insight` is a JSON string containing scores, parse and filter client-side: skip any rejection where `combined_score > 10` during the aggregation loop (lines 360-372).
+### Mudança 2: Loop Dinâmico de Atos (substituir código fixo de 3 atos)
+- Substituir o bloco fixo (Act1 → Act2 → maybe Act3) por um **loop** que gera atos até atingir `minWords`
+- Máximo de 6 atos (safety)
+- Cada ato recebe: outline do ato atual + últimas 800 palavras do ato anterior + contagem de palavras restante
 
-### File 3: `src/components/scripts/ScriptGenerator.tsx`
-- **Lines 362-378 (after streaming)**: After the `streamFromFunction` call, check the response headers for `X-Rag-Status: failed` and show a toast warning: "⚠️ Base de conhecimento indisponível — roteiro gerado sem dados contextuais". This requires modifying `streamFromFunction` to also return headers, or using the existing pattern to detect it.
+### Mudança 3: Tokens e Caps
+- Remover cap de 3000 no ato 1
+- Cada ato usa `maxTokens: 16384` (mantém, suficiente para ~4000-5000 palavras)
+- Ato final recebe instrução explícita de RESOLUÇÃO + BINGE LOOP
 
-Actually, since `streamFromFunction` likely uses `supabase.functions.invoke` or a direct fetch, I need to check how it works to pass headers back. Let me note: I'll add the RAG warning as a **first SSE data line** (e.g., `data: {"_meta":{"rag_failed":true}}`) that the frontend parser can detect and show a toast, which is simpler than modifying the streaming utility.
+### Mudança 4: RAG metadata no multi-act stream
+- Injetar `_meta` event no início do multiActStream (como já feito no single-act)
 
-### Deployment
-Redeploy: `generate-ideas`, `generate-script`
+## Arquivos Modificados
 
-## Summary
+### `supabase/functions/generate-script/index.ts`
+- Linhas 949-1107: Refatorar bloco multi-atos
+- Adicionar chamada de planejamento narrativo (pre-flight)
+- Implementar loop dinâmico de atos
+- Injetar RAG metadata
 
-| Bug | Status | Action |
-|-----|--------|--------|
-| BUG 1 (scoring model) | Already `gpt-5` | No change needed |
-| BUG 2 (ideas model) | Already `gemini-2.5-pro` | No change needed |
-| BUG 3 (deprecated auth) | Real bug | Fix `getClaims` → `getUser` |
-| BUG 4 (silent RAG failure) | Real bug | Add `ragFailed` flag + SSE meta event + frontend toast |
-| BUG 5 (rejection contamination) | Real bug | Filter rejections with `combined_score > 10` |
-
+## Impacto
+- Scripts de 40min: 3-4 atos (~6000-7000 palavras)
+- Scripts de 60min: 4-5 atos (~8500-9000 palavras)
+- Qualidade narrativa superior com outline guiando cada ato
+- Custo: 1 chamada flash extra (outline) + mais atos = ~2-3x custo atual para scripts longos
