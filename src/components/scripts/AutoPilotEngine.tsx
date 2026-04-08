@@ -376,7 +376,7 @@ export const AutoPilotEngine = ({
     updateStep('thumbnail', { status: 'running' });
     try {
       const { error } = await supabase.functions.invoke('generate-thumbnail-prompt', {
-        body: { title: useTopic, niche: useNiche, script: generatedScript.slice(0, 2000) },
+        body: { video_title: useTopic, niche: useNiche, script_context: generatedScript.slice(0, 2000) },
       });
       if (error) throw error;
       updateStep('thumbnail', { status: 'done' });

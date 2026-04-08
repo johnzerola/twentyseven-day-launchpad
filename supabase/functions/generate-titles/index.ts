@@ -10,6 +10,51 @@ const corsHeaders = {
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
 
+// Helper: call AI via Lovable Gateway (preferred) or direct Gemini
+async function callAI(prompt: string, systemPrompt: string, apiKey: string, lovableKey: string | undefined, opts?: { temperature?: number }): Promise<string> {
+  const temp = opts?.temperature ?? 0.9;
+  
+  if (lovableKey) {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        temperature: temp,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("Lovable Gateway error:", res.status, t);
+      throw new Error(`AI error: ${res.status}`);
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  // Fallback: direct Gemini
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: `SYSTEM: ${systemPrompt}\n\n${prompt}` }] }],
+      generationConfig: { temperature: temp, responseMimeType: "application/json" },
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("Gemini error:", res.status, t);
+    throw new Error(`AI error: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
 // ========== HELPER: Search YouTube for competing videos ==========
 async function searchYouTubeCompetitors(topic: string, niche: string, language: string, YOUTUBE_API_KEY: string): Promise<string> {
   try {
@@ -152,10 +197,11 @@ serve(async (req) => {
 
     const body = await req.json();
     const { type = "generate" } = body;
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+    if (!LOVABLE_API_KEY && !GOOGLE_AI_API_KEY) throw new Error("No AI API key configured");
 
-    const geminiUrl = `${GEMINI_URL}?key=${GOOGLE_AI_API_KEY}`;
+    const geminiUrl = `${GEMINI_URL}?key=${GOOGLE_AI_API_KEY || ''}`;
     const geminiHeaders = { "Content-Type": "application/json" };
 
     // ========== SAVE LEARNING (feedback loop) ==========
@@ -344,26 +390,16 @@ REGRAS PARA CTR MÁXIMO:
 
 Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
 
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: geminiHeaders,
-        body: JSON.stringify({
-          contents: [
-            { role: "user", parts: [{ text: `SYSTEM: Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}` }] },
-          ],
-          generationConfig: { temperature: 0.9, responseMimeType: "application/json" },
-        }),
-      });
+      const systemMsg = `Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}`;
+      const userMsg = `${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}`;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Gemini error:", response.status, errText);
-        if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI error: ${response.status}`);
+      let content: string;
+      try {
+        content = await callAI(userMsg, systemMsg, GOOGLE_AI_API_KEY || '', LOVABLE_API_KEY, { temperature: 0.9 });
+      } catch (err: any) {
+        if (err.message?.includes('429')) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        throw err;
       }
-
-      const result = await response.json();
-      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!content) throw new Error("No content in response");
       const parsed = JSON.parse(content);
 
