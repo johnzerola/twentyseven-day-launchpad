@@ -100,6 +100,7 @@ const Scripts = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [channelVisualProfile, setChannelVisualProfile] = useState<string | null>(null);
   const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
+  const [wizardConfigured, setWizardConfigured] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [selectedTitle, setSelectedTitle] = useState('');
@@ -733,7 +734,7 @@ const Scripts = () => {
           </div>
         )}
 
-        {/* 🎬 Video Creation Wizard */}
+        {/* 🎬 Video Creation Wizard — OBRIGATÓRIO antes de gerar */}
         <VideoCreationWizard
           disabled={loading}
           onLaunch={(config: WizardConfig) => {
@@ -743,7 +744,8 @@ const Scripts = () => {
             setStyle(config.scriptStyle);
             setLanguage(config.language);
             setVideoStyle(config.visualStyle);
-            // Trigger AutoPilot after state update
+            setWizardConfigured(true);
+            // Trigger AutoPilot directly
             setTimeout(() => {
               const btn = document.getElementById('autopilot-launch-btn');
               if (btn) btn.click();
@@ -751,25 +753,27 @@ const Scripts = () => {
           }}
         />
 
-        {/* Auto Pilot Engine */}
-        <AutoPilotEngine
-          topic={topic}
-          niche={niche}
-          duration={duration}
-          style={style}
-          language={language}
-          videoType={videoType}
-          videoStyle={videoStyle}
-          onScriptGenerated={(s) => { setScript(s); loadHistory(); }}
-          onAudioGenerated={(blob, url) => { setGeneratedAudioBlob(blob); setGeneratedAudioUrl(url); }}
-          onScenesGenerated={(scenes) => setSyncedScenes(scenes)}
-          onTitlesGenerated={() => {}}
-          onStepChange={(step) => setActiveStep(step)}
-          onTopicChange={(t) => setTopic(t)}
-          onNicheChange={(n) => setNiche(n)}
-          onDurationChange={(d) => setDuration(d)}
-          disabled={loading}
-        />
+        {/* Auto Pilot Engine — só aparece após wizard configurado */}
+        {wizardConfigured && (
+          <AutoPilotEngine
+            topic={topic}
+            niche={niche}
+            duration={duration}
+            style={style}
+            language={language}
+            videoType={videoType}
+            videoStyle={videoStyle}
+            onScriptGenerated={(s) => { setScript(s); loadHistory(); }}
+            onAudioGenerated={(blob, url) => { setGeneratedAudioBlob(blob); setGeneratedAudioUrl(url); }}
+            onScenesGenerated={(scenes) => setSyncedScenes(scenes)}
+            onTitlesGenerated={() => {}}
+            onStepChange={(step) => setActiveStep(step)}
+            onTopicChange={(t) => setTopic(t)}
+            onNicheChange={(n) => setNiche(n)}
+            onDurationChange={(d) => setDuration(d)}
+            disabled={loading}
+          />
+        )}
 
         {/* Pipeline Stepper — sticky navigation */}
         <PipelineStepper
