@@ -24,6 +24,7 @@ interface AutoPilotEngineProps {
   language: string;
   videoType: 'long' | 'short';
   videoStyle: string;
+  voiceStyle?: string;
   onScriptGenerated: (script: string) => void;
   onAudioGenerated: (blob: Blob, url: string) => void;
   onScenesGenerated: (scenes: any[]) => void;
