@@ -409,8 +409,14 @@ const Dashboard = () => {
             {/* Script Performance History */}
             <ScriptPerformanceHistory />
 
+            {/* Distribution Phase Tracker — YouTube Algorithm Visibility */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
+              className="glass rounded-xl p-5">
+              <DistributionPhaseTracker />
+            </motion.div>
+
             {/* Video Performance Tracker — Feedback Loop */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}
               className="glass rounded-xl p-5">
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-primary" /> Performance Loop — Feedback Real
