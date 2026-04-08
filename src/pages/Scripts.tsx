@@ -672,6 +672,7 @@ const Scripts = () => {
     characters: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles',
     prompts: syncedScenes.length > 0,
     titles: false,
+    monetize: false,
   };
 
   return (
