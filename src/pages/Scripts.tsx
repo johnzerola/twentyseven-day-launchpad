@@ -35,6 +35,7 @@ import { ScriptPerformanceTracker } from '@/components/dashboard/ScriptPerforman
 import { PipelineStepper, type PipelineStep } from '@/components/scripts/PipelineStepper';
 import { StepNavButtons } from '@/components/scripts/StepNavButtons';
 import { ProductionPack } from '@/components/scripts/ProductionPack';
+import { AffiliateLinksGenerator } from '@/components/scripts/AffiliateLinksGenerator';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
@@ -672,6 +673,7 @@ const Scripts = () => {
     characters: characters.length > 0 || activeStep === 'prompts' || activeStep === 'titles',
     prompts: syncedScenes.length > 0,
     titles: false,
+    monetize: false,
   };
 
   return (
@@ -1301,6 +1303,15 @@ const Scripts = () => {
                     characters={characters}
                     generatedAudioUrl={generatedAudioUrl}
                   />
+                </motion.div>
+              )}
+
+              {/* Step 7: Monetize */}
+              {activeStep === 'monetize' && script && (
+                <motion.div key="monetize" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <AffiliateLinksGenerator topic={topic} niche={niche} />
+                  <StepNavButtons currentStep="monetize" onNavigate={setActiveStep} />
                 </motion.div>
               )}
 

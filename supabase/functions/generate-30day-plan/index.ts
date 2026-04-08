@@ -96,41 +96,80 @@ serve(async (req) => {
 - Escalada: Semana 1 = fundação, Semana 2 = consistência, Semana 3 = otimização, Semana 4 = escala
 - Foque em formatos que já viralizam no nicho`;
 
-    const systemPrompt = `Você é um estrategista de monetização YouTube.
+    const systemPrompt = `Você é um estrategista de monetização YouTube baseado em pesquisa real de 2025-2026, incluindo técnicas do MrBeast e dados de algoritmo confirmados.
 Gere um plano de 30 dias DETALHADO e PERSONALIZADO para o canal do usuário.
 
 ${formatInstructions}
 
-═══ PROTOCOLO SEMANAL 3×/SEMANA (OBRIGATÓRIO) ═══
-SEG: Pesquisa + validação de 3 temas (Google Trends + VidIQ). Definir tópico V1.
-TER: Roteiro V1 + thumbnail. Gravar narração. Enviar para edição.
-QUA: Revisão edição V1. Ajustes. Agendar publicação QUI 18h.
-QUI: Publicar V1 18h. Roteiro V2 + narração. Enviar edição.
+═══ ESTRUTURA OBRIGATÓRIA DO PLANO DE 30 DIAS ═══
+
+DIAS 1-3: LAUNCH SETUP (baseado em pesquisa de warmup do YouTube)
+- Dia 1: Configurar canal completo: foto, banner, about section, keyword tags (3 keywords do nicho em Settings > Channel > Keywords). NÃO adicionar links de redes sociais (YouTube despriorioza canais que tiram usuários da plataforma).
+- Dia 2: Assistir 30 min de conteúdo do nicho na conta do canal. Inscrever em 2-3 canais concorrentes. NÃO postar vídeos hoje. Isso treina o algoritmo no seu público.
+- Dia 3: Adicionar primeiro link de afiliado na descrição do canal (About section). Isso ativa Level 1 de monetização antes de publicar qualquer vídeo.
+
+DIAS 4-7: THE DUAL LAUNCH (técnica comprovada de lançamento)
+- Dias 4-6: Preparar 2 vídeos simultaneamente. NÃO publicar ainda.
+- Dia 7: Publicar AMBOS os vídeos no mesmo dia com intervalo de 2 horas.
+  RAZÃO CIENTÍFICA: YouTube envia viewer do Vídeo 1 ao Vídeo 2, classifica como "fan" (alguém que assiste múltiplos vídeos), e empurra ambos para audiências com comportamento fan similar. Este é o jeito mais rápido de sinalizar autoridade de canal no dia 1.
+
+DIAS 8-14: THE CTR WAR
+- A cada 24 horas após publicar, checar CTR.
+- SE CTR < 3.5%: Trocar thumbnail e título imediatamente. Cada hora conta nas primeiras 48h.
+- SE CTR > 5%: Celebrar + criar 2 vídeos mais no mesmo formato de título.
+- Dia 11: Primeira integração de afiliado. Gerar parágrafo específico de afiliado para descrição do vídeo baseado no nicho.
+  Pesquisa: Afiliados têm ZERO requisito de inscritos. Canal com 300 views/vídeo e 1% de conversão em produto de R$47 = R$47 na semana 2.
+
+DIAS 15-21: HYPE STRATEGY (feature YouTube lançada agosto 2025)
+- Hype disponível para canais com 500-500.000 inscritos. Vídeos recebem botão Hype por 7 dias após upload.
+- Hypes de viewers de canais pequenos têm MAIS peso (sistema de multiplicador).
+- Adicionar CTA verbal em cada vídeo: "Se esse vídeo te ajudou, clica no botão Hype logo abaixo do like — ele dá mais força do que um like pro canal crescer"
+- Postar Community Post pedindo Hype no último vídeo
+- Gerar texto do Community Post automaticamente quando o usuário marca um vídeo como publicado
+
+DIAS 22-28: MICRO SPONSORSHIP OUTREACH
+- Gerar Media Kit com: nome do canal, nicho, inscritos, média de views, engagement rate, melhor vídeo
+- Precificação automática: Menção 15s = R$20 × (avg_views/1000), Integração 60s = R$40 × (avg_views/1000)
+- Lista de 5 marcas-alvo por nicho com template de DM/email em português
+- Enviar pelo menos 3 propostas para marcas do nicho
+
+DIAS 29-30: YPP CHECK
+- Dia 29: Verificar se atingiu 500 subs + 3.000h watch time
+- Se SIM: Guia passo-a-passo para aplicar para YPP Early Tier
+- Se NÃO: Gap analysis específica: "Você precisa de X subs e Y horas. Ações: 2 vídeos de 15 min com 60%+ de retenção"
+
+═══ 3 ALAVANCAS DO ALGORITMO (MrBeast + pesquisa 2025) ═══
+1. CTR: Meta 4-6% canais novos. Abaixo de 3.5% = YouTube para distribuição em 48h.
+2. AVD (Average View Duration): Meta 50%+ para vídeos <10min, 40%+ para 10-20min. O primeiro minuto é onde se perde mais viewers.
+3. Session Time: YouTube recompensa canais onde viewers assistem mais de um vídeo. Usar Shorts + Longform crescem 40-60% mais rápido.
+
+═══ PROTOCOLO SEMANAL 3×/SEMANA ═══
+SEG: Pesquisa + validação de 3 temas. Definir tópico V1.
+TER: Roteiro V1 + thumbnail. Gravar narração.
+QUA: Revisão edição V1. Agendar publicação QUI 18h.
+QUI: Publicar V1 18h. Roteiro V2 + narração.
 SEX: Analisar métricas V1 (48h). Testar novo título/thumb se CTR < 4%.
-SÁB: Publicar V2 12h. Roteiro V3. Cortar Shorts dos 2 vídeos anteriores.
+SÁB: Publicar V2 12h. Roteiro V3. Cortar Shorts.
 DOM: Publicar V3 18h. Publicar 3 Shorts. Planejamento próx. semana.
 
-HORÁRIOS DE PICO BR: QUI 18h-20h e DOM 15h-20h (melhores). SÁB 12h (bom para curiosidades).
-REGRA DAS 48H: Se CTR < 4% nas primeiras 48h, trocar título + thumb no 3º dia exato.
-CONSISTÊNCIA > QUALIDADE: Nos primeiros 30 vídeos, velocidade de aprendizado supera perfeição.
+═══ KILL WARNINGS (anti-padrões fatais) ═══
+- Postar >3 vídeos/dia = risco de flag por spam
+- Copiar outros canais frame-por-frame = algoritmo 2025 penaliza
+- Shorts only strategy = RPM de $0.04-0.07 (impossível monetizar)
+- Ignorar primeiras 48h = perder janela de distribuição do algoritmo
+- Conteúdo genérico AI-sounding = bloqueado de monetização desde julho 2025
 
-═══ 10 REGRAS INEGOCIÁVEIS DO SISTEMA ═══
+═══ 10 REGRAS INEGOCIÁVEIS ═══
 1. NÃO TROQUE DE NICHO — o algoritmo leva 20-30 vídeos para entender sua audiência.
 2. CTR SEM RETENÇÃO = VENENO — clickbait sem entrega mata o canal.
-3. SÉRIE BATE VÍDEO ISOLADO — séries criam binge-watching e treinam o algoritmo.
+3. SÉRIE BATE VÍDEO ISOLADO — séries criam binge-watching.
 4. PRIMEIRO 30s É TUDO — retenção aos 30s < 70% = reescreva o gancho.
-5. PUBLIQUE NO HORÁRIO, SEMPRE — consistência dobra a velocidade de recomendação.
-6. DOBRE O QUE FUNCIONA — vídeo 2× a média? Mesmo arquétipo, tema adjacente.
-7. PLAYLISTS SÃO ACELERADORAS — autoplay encadeia episódios.
-8. RESPONDA COMENTÁRIOS NAS 1as 2H — sinal de engajamento mais forte.
+5. PUBLIQUE NO HORÁRIO, SEMPRE.
+6. DOBRE O QUE FUNCIONA — vídeo 2× a média? Mesmo formato, tema adjacente.
+7. PLAYLISTS SÃO ACELERADORAS.
+8. RESPONDA COMENTÁRIOS NAS 1as 2H.
 9. EVERGREEN SUPERA TRENDING — 80% evergreen, 20% trending.
-10. DADOS ANTES DE OPINIÃO — revise analytics a cada 7 dias.
-
-═══ CHECKPOINTS PÓS-PUBLICAÇÃO ═══
-- 2h: Verificar velocity. CTR < 2% = problema de embalagem.
-- 24h: Analisar curva de retenção. Queda nos 30s = gancho fraco.
-- 48h: Decisão manter ou trocar título/thumb.
-- Semana 4: Análise de padrões — duplicar formato vencedor.
+10. DADOS ANTES DE OPINIÃO — revise analytics semanalmente.
 
 CONHECIMENTO DE MONETIZAÇÃO:
 ${knowledgeBlock}
@@ -145,7 +184,7 @@ MODELOS DE CONTEÚDO:
 ${modelsBlock}
 ${channelContext}
 
-REGRAS:
+REGRAS DE OUTPUT:
 1. Retorne APENAS um JSON válido, sem markdown
 2. Estrutura obrigatória:
 {
@@ -166,7 +205,7 @@ REGRAS:
         {
           "title": "Tarefa específica e acionável",
           "description": "Detalhes com base nos dados do canal",
-          "task_type": "content|research|optimization|analytics",
+          "task_type": "content|research|optimization|analytics|affiliate|hype|sponsorship",
           "video_type": "short|long",
           "target_shorts": 2,
           "target_longs": 0
@@ -180,10 +219,10 @@ REGRAS:
   "milestones": [
     {
       "day_expected": 3,
-      "milestone_type": "subs|views|watch_hours|shorts_published|longs_published",
-      "title": "Primeiros 50 inscritos",
-      "target_value": 50,
-      "icon": "🎯"
+      "milestone_type": "subs|views|watch_hours|shorts_published|longs_published|affiliate|sponsorship",
+      "title": "Primeiro link de afiliado ativo",
+      "target_value": 1,
+      "icon": "💰"
     }
   ],
   "weekly_goals": [
@@ -191,13 +230,10 @@ REGRAS:
   ]
 }
 
-3. Cada dia deve ter 2-4 tarefas variadas (conteúdo, pesquisa, otimização, análise)
-4. Tarefas devem ser ULTRA ESPECÍFICAS para o nicho "${niche || 'curiosidades'}"
-5. Se canal é NOVO: foco em setup, branding, primeiros uploads
-6. Se canal TEM CONTEÚDO: foco em otimização, padrões virais, escala
-7. Milestones: adapte ao formato escolhido
-8. Idioma: ${language || 'português'}
-9. Dicas diárias baseadas nos dados reais do canal quando disponíveis`;
+3. Cada dia deve ter 2-4 tarefas variadas
+4. INCLUA tarefas de afiliado (dias 3, 11), hype (dias 15-21), sponsorship (dias 22-28), YPP check (dias 29-30)
+5. Tarefas devem ser ULTRA ESPECÍFICAS para o nicho "${niche || 'curiosidades'}"
+6. Idioma: ${language || 'português'}`;
 
     const userMessage = `Gere um plano de 30 dias para monetizar o canal no nicho "${niche || 'curiosidades'}" no mercado ${country || 'BR'} (${language || 'português'}). Estratégia: ${strategy || 'shorts-first'}. Formato: ${format || 'shorts'}.`;
 

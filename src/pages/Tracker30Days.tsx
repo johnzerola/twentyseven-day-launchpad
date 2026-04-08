@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { YPPProgressDashboard } from '@/components/dashboard/YPPProgressDashboard';
 import { PredictionVsReality } from '@/components/dashboard/PredictionVsReality';
+import { MonetizationTrack } from '@/components/dashboard/MonetizationTrack';
+import { PostUploadDiagnostic } from '@/components/dashboard/PostUploadDiagnostic';
+import { MediaKitGenerator } from '@/components/dashboard/MediaKitGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrackerWizard } from '@/components/tracker/TrackerWizard';
 
@@ -367,6 +370,8 @@ export default function Tracker30Days() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Monetization Track */}
+        <MonetizationTrack />
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -616,12 +621,12 @@ export default function Tracker30Days() {
           {/* Right Sidebar */}
           <div className="space-y-4">
             <Tabs defaultValue="ypp" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
+              <TabsList className="w-full grid grid-cols-5">
                 <TabsTrigger value="ypp" className="text-xs">YPP</TabsTrigger>
                 <TabsTrigger value="milestones" className="text-xs">Marcos</TabsTrigger>
-                <TabsTrigger value="calibration" className="text-xs">
-                  <Brain className="w-3 h-3 mr-1" />IA
-                </TabsTrigger>
+                <TabsTrigger value="diagnostic" className="text-xs">48h</TabsTrigger>
+                <TabsTrigger value="mediakit" className="text-xs">Media Kit</TabsTrigger>
+                <TabsTrigger value="calibration" className="text-xs">IA</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ypp" className="mt-3">
@@ -660,6 +665,14 @@ export default function Tracker30Days() {
                     </CardContent>
                   </Card>
                 ))}
+              </TabsContent>
+
+              <TabsContent value="diagnostic" className="mt-3">
+                <PostUploadDiagnostic niche={plan?.niche} />
+              </TabsContent>
+
+              <TabsContent value="mediakit" className="mt-3">
+                <MediaKitGenerator niche={plan?.niche} />
               </TabsContent>
 
               <TabsContent value="calibration" className="mt-3">
