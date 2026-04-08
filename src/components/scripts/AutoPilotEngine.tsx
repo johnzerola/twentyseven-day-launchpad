@@ -149,7 +149,7 @@ function getCleanNarration(script: string): string {
 }
 
 export const AutoPilotEngine = ({
-  topic, niche, duration, style, language, videoType, videoStyle,
+  topic, niche, duration, style, language, videoType, videoStyle, voiceStyle: voiceStyleProp,
   onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange,
   onTopicChange, onNicheChange, onDurationChange,
   disabled,
