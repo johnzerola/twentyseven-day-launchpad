@@ -96,7 +96,7 @@ interface VideoCreationWizardProps {
 }
 
 export const VideoCreationWizard = ({ onLaunch, disabled }: VideoCreationWizardProps) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [loadingAutoTopic, setLoadingAutoTopic] = useState(false);
 
   // Config
