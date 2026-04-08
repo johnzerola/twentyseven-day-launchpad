@@ -34,6 +34,7 @@ import { RetentionCurveAnalyzer } from '@/components/scripts/RetentionCurveAnaly
 import { ScriptPerformanceTracker } from '@/components/dashboard/ScriptPerformanceTracker';
 import { PipelineStepper, type PipelineStep } from '@/components/scripts/PipelineStepper';
 import { StepNavButtons } from '@/components/scripts/StepNavButtons';
+import { ProductionPack } from '@/components/scripts/ProductionPack';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
@@ -1280,6 +1281,25 @@ const Scripts = () => {
                     niche={niche}
                     videoType={videoType}
                     language={language}
+                  />
+                </motion.div>
+              )}
+
+              {/* Production Pack — everything in one place */}
+              {activeStep === 'titles' && script && (
+                <motion.div key="production-pack" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="mt-4">
+                  <ProductionPack
+                    topic={topic}
+                    script={script}
+                    selectedTitle={selectedTitle}
+                    niche={niche}
+                    language={language}
+                    videoStyle={videoStyle}
+                    duration={duration}
+                    syncedScenes={syncedScenes}
+                    characters={characters}
+                    generatedAudioUrl={generatedAudioUrl}
                   />
                 </motion.div>
               )}
