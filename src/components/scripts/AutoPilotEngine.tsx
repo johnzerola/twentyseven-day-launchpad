@@ -317,7 +317,12 @@ export const AutoPilotEngine = ({
             const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
             blobs.push(await r.blob());
           } else if (data.use_browser_synthesis) {
-            throw new Error('All TTS engines failed — browser fallback');
+            // Browser fallback is acceptable — continue pipeline with estimated duration
+            console.warn('TTS: browser synthesis fallback (all cloud engines unavailable)');
+            updateStep('voice', { status: 'done', error: 'Usando síntese do navegador (engines cloud indisponíveis)' });
+            onStepChange('voice');
+            // Skip remaining chunks — browser synthesis will be handled by AudioProcessor
+            break;
           }
         }
       }
