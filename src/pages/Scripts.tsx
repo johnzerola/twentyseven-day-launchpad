@@ -100,6 +100,7 @@ const Scripts = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [channelVisualProfile, setChannelVisualProfile] = useState<string | null>(null);
   const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
+  const [wizardConfigured, setWizardConfigured] = useState(false);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [selectedTitle, setSelectedTitle] = useState('');
