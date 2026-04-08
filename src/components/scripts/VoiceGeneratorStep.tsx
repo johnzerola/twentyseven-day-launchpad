@@ -160,6 +160,7 @@ export const VoiceGeneratorStep = ({
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');
   const [voiceStyle, setVoiceStyle] = useState('dopaminergico');
+  const [emotionalIntensity, setEmotionalIntensity] = useState('maxima');
   const [speakingRate, setSpeakingRate] = useState(1.0);
   const [pitch, setPitch] = useState(0);
   const [generating, setGenerating] = useState(false);
@@ -472,7 +473,29 @@ export const VoiceGeneratorStep = ({
         </div>
       </div>
 
-      {/* Language Selection */}
+      {/* Emotional Intensity Selector */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+          🧬 Intensidade Emocional
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {EMOTIONAL_INTENSITIES.map(ei => (
+            <button
+              key={ei.value}
+              onClick={() => setEmotionalIntensity(ei.value)}
+              className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-center ${
+                emotionalIntensity === ei.value
+                  ? 'border-primary bg-primary/10 shadow-md scale-[1.02]'
+                  : 'border-border hover:border-primary/30'
+              }`}
+            >
+              <span className="text-xl">{ei.emoji}</span>
+              <span className="text-xs font-semibold">{ei.label}</span>
+              <span className="text-[9px] text-muted-foreground leading-tight">{ei.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-muted-foreground uppercase">Idioma da Narração</label>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
