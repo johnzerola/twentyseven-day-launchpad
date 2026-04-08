@@ -318,7 +318,7 @@ Respond with ONLY valid JSON: {"scenes":[{"sceneIndex":0,"sceneDurationSeconds":
 
     if (LOVABLE_API_KEY) {
       // Use Lovable AI Gateway (no external API key needed)
-      const gatewayRes = await fetch("https://api.lovable.dev/v1/chat/completions", {
+      const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
