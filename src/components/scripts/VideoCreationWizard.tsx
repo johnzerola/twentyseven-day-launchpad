@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Rocket, Mic, Users, Palette, Sparkles, ChevronRight, Loader2, Brain, Film, Check } from 'lucide-react';
+import { Rocket, Mic, Palette, Sparkles, Loader2, Brain, Film, Check, ChevronRight, Globe, Clock, FileText, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,56 +24,52 @@ const NICHES = [
   { value: 'relacionamentos', label: 'Relacionamentos', emoji: '❤️' },
   { value: 'animal_survival', label: 'Animal Survival', emoji: '🐾' },
   { value: 'gaming', label: 'Gaming', emoji: '🎮' },
+  { value: 'geopolítica', label: 'Geopolítica', emoji: '🌍' },
 ];
 
 const VOICE_STYLES = [
-  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Energia magnética, whisper→shout', color: 'border-primary bg-primary/10 text-primary' },
-  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Sussurros + silêncios tensos', color: 'border-chart-4 bg-chart-4/10 text-chart-4' },
-  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Explosivo, ritmo contagiante', color: 'border-destructive bg-destructive/10 text-destructive' },
-  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Autoridade BBC/Netflix', color: 'border-chart-2 bg-chart-2/10 text-chart-2' },
+  { value: 'dopaminergico', label: 'Dopaminérgico', emoji: '⚡', desc: 'Energia magnética, whisper→shout' },
+  { value: 'misterioso', label: 'Misterioso', emoji: '🌑', desc: 'Sussurros + silêncios tensos' },
+  { value: 'energetico', label: 'Energético', emoji: '🔥', desc: 'Explosivo, ritmo contagiante' },
+  { value: 'calmo', label: 'Calmo', emoji: '🧘', desc: 'Autoridade BBC/Netflix' },
+  { value: 'narrativo', label: 'Narrativo', emoji: '📖', desc: 'Storytelling envolvente' },
+  { value: 'suspense', label: 'Suspense', emoji: '😰', desc: 'Tensão crescente, pausas' },
 ];
 
 const SCRIPT_STYLES = [
-  { value: 'dopaminérgico', label: '🧠 Dopaminérgico', desc: 'Open loops, curiosity gaps' },
-  { value: 'cinematográfico', label: '🎬 Cinematográfico', desc: 'Tensão narrativa estilo filme' },
-  { value: 'storytelling', label: '📖 Storytelling', desc: 'Personagens e plot twists' },
-  { value: 'documentário', label: '📹 Documentário', desc: 'Investigação profunda' },
-  { value: 'mrbeast', label: '🔥 MrBeast Style', desc: 'Alta energia, desafios' },
-  { value: 'narração', label: '🎙️ Narração', desc: 'Tom autoritário e misterioso' },
+  { value: 'dopaminérgico', label: 'Dopaminérgico', emoji: '🧠', desc: 'Open loops, curiosity gaps' },
+  { value: 'cinematográfico', label: 'Cinematográfico', emoji: '🎬', desc: 'Tensão narrativa estilo filme' },
+  { value: 'storytelling', label: 'Storytelling', emoji: '📖', desc: 'Personagens e plot twists' },
+  { value: 'documentário', label: 'Documentário', emoji: '📹', desc: 'Investigação profunda' },
+  { value: 'mrbeast', label: 'MrBeast Style', emoji: '🔥', desc: 'Alta energia, desafios' },
+  { value: 'narração', label: 'Narração', emoji: '🎙️', desc: 'Tom autoritário e misterioso' },
 ];
 
 const VISUAL_STYLES = [
-  { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Estilo Netflix' },
-  { value: 'realista', label: '📷 Hyper Real 8K', desc: 'Fotorrealismo extremo' },
-  { value: 'anime', label: '⛩️ Anime Epic', desc: 'Anime dinâmico' },
-  { value: '2d', label: '🎨 Kurzgesagt', desc: 'Motion graphics 2D' },
-  { value: '3d', label: '🧊 Pixar World', desc: 'Render 3D estilizado' },
-  { value: 'dark', label: '🌑 Cyberpunk Neon', desc: 'Neon futurista' },
-  { value: 'comic', label: '💥 Comic Book', desc: 'Estilo Marvel/DC' },
-  { value: 'documentary_bbc', label: '📹 BBC Documentary', desc: 'NatGeo cinematográfico' },
-  { value: 'animal_chase', label: '🐾 Animal Chase', desc: 'Hiper-realista 120fps' },
+  { value: 'cinematográfico', label: 'Cinematic Dark', emoji: '🎬', desc: 'Netflix' },
+  { value: 'realista', label: 'Hyper Real 8K', emoji: '📷', desc: 'Fotorrealismo' },
+  { value: 'anime', label: 'Anime Epic', emoji: '⛩️', desc: 'Anime dinâmico' },
+  { value: '2d', label: 'Kurzgesagt', emoji: '🎨', desc: 'Motion graphics' },
+  { value: '3d', label: 'Pixar World', emoji: '🧊', desc: '3D estilizado' },
+  { value: 'dark', label: 'Cyberpunk Neon', emoji: '🌑', desc: 'Neon futurista' },
+  { value: 'comic', label: 'Comic Book', emoji: '💥', desc: 'Marvel/DC' },
+  { value: 'documentary_bbc', label: 'BBC Documentary', emoji: '📹', desc: 'NatGeo' },
+  { value: 'animal_chase', label: 'Animal Chase', emoji: '🐾', desc: '120fps' },
 ];
 
 const DURATIONS = [
-  { value: '8', label: '8 min', desc: 'Curto' },
-  { value: '15', label: '15 min', desc: 'Padrão' },
-  { value: '25', label: '25 min', desc: 'Médio' },
-  { value: '40', label: '40 min', desc: 'Longo' },
-  { value: '60', label: '60 min', desc: 'Super-Vídeo' },
+  { value: '8', label: '8 min' },
+  { value: '15', label: '15 min' },
+  { value: '25', label: '25 min' },
+  { value: '40', label: '40 min' },
+  { value: '60', label: '60 min' },
 ];
 
 const LANGUAGES = [
-  { value: 'português', label: '🇧🇷 Português' },
-  { value: 'inglês', label: '🇺🇸 English' },
-  { value: 'espanhol', label: '🇪🇸 Español' },
+  { value: 'português', label: '🇧🇷 PT' },
+  { value: 'inglês', label: '🇺🇸 EN' },
+  { value: 'espanhol', label: '🇪🇸 ES' },
 ];
-
-type WizardStep = 'topic' | 'voice' | 'visual' | 'confirm';
-
-interface VideoCreationWizardProps {
-  onLaunch: (config: WizardConfig) => void;
-  disabled?: boolean;
-}
 
 export interface WizardConfig {
   topic: string;
@@ -94,12 +90,16 @@ interface GlobalChar {
   role: string | null;
 }
 
+interface VideoCreationWizardProps {
+  onLaunch: (config: WizardConfig) => void;
+  disabled?: boolean;
+}
+
 export const VideoCreationWizard = ({ onLaunch, disabled }: VideoCreationWizardProps) => {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<WizardStep>('topic');
   const [loadingAutoTopic, setLoadingAutoTopic] = useState(false);
 
-  // Config state
+  // Config
   const [topic, setTopic] = useState('');
   const [niche, setNiche] = useState('curiosidades');
   const [duration, setDuration] = useState('15');
@@ -113,6 +113,12 @@ export const VideoCreationWizard = ({ onLaunch, disabled }: VideoCreationWizardP
   useEffect(() => {
     if (open) loadCharacters();
   }, [open]);
+
+  // Auto-map niche to visual style
+  useEffect(() => {
+    if (niche === 'animal_survival') setVisualStyle('animal_chase');
+    if (niche === 'terror' || niche === 'true_crime') setVisualStyle('dark');
+  }, [niche]);
 
   const loadCharacters = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -159,18 +165,9 @@ export const VideoCreationWizard = ({ onLaunch, disabled }: VideoCreationWizardP
     if (!topic.trim()) { toast.error('Defina um tópico'); return; }
     onLaunch({ topic, niche, duration, scriptStyle, voiceStyle, visualStyle, language, character });
     setOpen(false);
-    setStep('topic');
   };
 
-  const STEPS: { key: WizardStep; label: string; icon: React.ReactNode }[] = [
-    { key: 'topic', label: 'Tópico', icon: <Sparkles className="w-4 h-4" /> },
-    { key: 'voice', label: 'Voz', icon: <Mic className="w-4 h-4" /> },
-    { key: 'visual', label: 'Visual', icon: <Palette className="w-4 h-4" /> },
-    { key: 'confirm', label: 'Lançar', icon: <Rocket className="w-4 h-4" /> },
-  ];
-
-  const stepIdx = STEPS.findIndex(s => s.key === step);
-  const canNext = step === 'topic' ? topic.trim().length > 0 : true;
+  const isReady = topic.trim().length > 0;
 
   if (!open) {
     return (
@@ -192,298 +189,218 @@ export const VideoCreationWizard = ({ onLaunch, disabled }: VideoCreationWizardP
       animate={{ opacity: 1, y: 0 }}
       className="bg-card border border-border rounded-xl overflow-hidden shadow-xl"
     >
-      {/* Step indicator */}
-      <div className="flex items-center gap-1 p-3 bg-muted/30 border-b border-border">
-        {STEPS.map((s, i) => (
-          <button
-            key={s.key}
-            onClick={() => setStep(s.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              step === s.key
-                ? 'bg-primary text-primary-foreground shadow'
-                : i < stepIdx
-                ? 'bg-primary/20 text-primary'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            {i < stepIdx ? <Check className="w-3 h-3" /> : s.icon}
-            <span className="hidden sm:inline">{s.label}</span>
-          </button>
-        ))}
-        <div className="flex-1" />
-        <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground text-xs px-2">✕</button>
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/10 to-chart-4/10 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Film className="w-5 h-5 text-primary" />
+          <h2 className="font-bold text-sm">Configurar Novo Vídeo</h2>
+        </div>
+        <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground text-sm px-2">✕</button>
       </div>
 
-      <div className="p-4 space-y-4">
-        <AnimatePresence mode="wait">
-          {/* ─── STEP 1: Topic & Niche ─── */}
-          {step === 'topic' && (
-            <motion.div key="topic" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" /> Sobre o que é o vídeo?
-              </h3>
+      <div className="p-4 space-y-5 max-h-[70vh] overflow-y-auto">
 
-              {/* Niche chips */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Nicho</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {NICHES.map(n => (
-                    <button
-                      key={n.value}
-                      onClick={() => setNiche(n.value)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                        niche === n.value
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                    >
-                      {n.emoji} {n.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* ─── 1. TEMA ─── */}
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-primary" /> 1. Tema do Vídeo
+          </h3>
 
-              {/* Topic input + auto */}
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Tópico do vídeo</label>
-                <div className="flex gap-2">
-                  <Input
-                    value={topic}
-                    onChange={e => setTopic(e.target.value)}
-                    placeholder="Ex: O golpe financeiro que ninguém percebeu..."
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={autoTopic}
-                    disabled={loadingAutoTopic}
-                    className="gap-1 shrink-0"
-                  >
-                    {loadingAutoTopic ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
-                    IA
-                  </Button>
-                </div>
-              </div>
-
-              {/* Script style + Duration + Language */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Estilo do roteiro</label>
-                  <select
-                    value={scriptStyle}
-                    onChange={e => setScriptStyle(e.target.value)}
-                    className="w-full rounded-lg bg-muted border border-border px-2 py-1.5 text-xs"
-                  >
-                    {SCRIPT_STYLES.map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Duração</label>
-                  <select
-                    value={duration}
-                    onChange={e => setDuration(e.target.value)}
-                    className="w-full rounded-lg bg-muted border border-border px-2 py-1.5 text-xs"
-                  >
-                    {DURATIONS.map(d => (
-                      <option key={d.value} value={d.value}>{d.label} — {d.desc}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Idioma</label>
-                  <select
-                    value={language}
-                    onChange={e => setLanguage(e.target.value)}
-                    className="w-full rounded-lg bg-muted border border-border px-2 py-1.5 text-xs"
-                  >
-                    {LANGUAGES.map(l => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ─── STEP 2: Voice Style ─── */}
-          {step === 'voice' && (
-            <motion.div key="voice" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Mic className="w-4 h-4 text-primary" /> Escolha o estilo de voz
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {VOICE_STYLES.map(v => (
-                  <button
-                    key={v.value}
-                    onClick={() => setVoiceStyle(v.value)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${
-                      voiceStyle === v.value
-                        ? v.color + ' shadow-sm'
-                        : 'border-border bg-muted/30 hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className="text-lg mb-1">{v.emoji}</div>
-                    <div className="text-xs font-semibold">{v.label}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{v.desc}</div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Character selection */}
-              {globalChars.length > 0 && (
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block flex items-center gap-1">
-                    <Users className="w-3 h-3" /> Personagem / Avatar (opcional)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setCharacter('')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        !character ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                    >
-                      Nenhum
-                    </button>
-                    {globalChars.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => setCharacter(c.name)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                          character === c.name
-                            ? 'bg-primary/20 text-primary border border-primary/30'
-                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        }`}
-                      >
-                        {c.photo_url && (
-                          <img src={c.photo_url} alt={c.name} className="w-5 h-5 rounded-full object-cover" />
-                        )}
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* ─── STEP 3: Visual Style ─── */}
-          {step === 'visual' && (
-            <motion.div key="visual" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Palette className="w-4 h-4 text-primary" /> Estilo visual das cenas
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                {VISUAL_STYLES.map(v => (
-                  <button
-                    key={v.value}
-                    onClick={() => setVisualStyle(v.value)}
-                    className={`p-2.5 rounded-xl border-2 text-center transition-all ${
-                      visualStyle === v.value
-                        ? 'border-primary bg-primary/10 shadow-sm'
-                        : 'border-border bg-muted/30 hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className="text-base">{v.label.split(' ')[0]}</div>
-                    <div className="text-[10px] font-medium mt-0.5">{v.label.split(' ').slice(1).join(' ')}</div>
-                    <div className="text-[9px] text-muted-foreground mt-0.5">{v.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ─── STEP 4: Confirm & Launch ─── */}
-          {step === 'confirm' && (
-            <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Rocket className="w-4 h-4 text-primary" /> Confirme e lance o vídeo
-              </h3>
-
-              <div className="bg-muted/50 rounded-xl p-4 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tópico</span>
-                  <span className="font-medium text-right max-w-[60%] truncate">{topic}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Nicho</span>
-                  <span className="font-medium">{NICHES.find(n => n.value === niche)?.emoji} {NICHES.find(n => n.value === niche)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Roteiro</span>
-                  <span className="font-medium">{SCRIPT_STYLES.find(s => s.value === scriptStyle)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Voz</span>
-                  <span className="font-medium">{VOICE_STYLES.find(v => v.value === voiceStyle)?.emoji} {VOICE_STYLES.find(v => v.value === voiceStyle)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Visual</span>
-                  <span className="font-medium">{VISUAL_STYLES.find(v => v.value === visualStyle)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Duração</span>
-                  <span className="font-medium">{duration} min</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Idioma</span>
-                  <span className="font-medium">{LANGUAGES.find(l => l.value === language)?.label}</span>
-                </div>
-                {character && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Personagem</span>
-                    <span className="font-medium">🧑 {character}</span>
-                  </div>
-                )}
-              </div>
-
-              <Button
-                onClick={handleLaunch}
-                disabled={disabled}
-                size="lg"
-                className="w-full gap-2 bg-gradient-to-r from-primary to-chart-4 hover:from-primary/90 hover:to-chart-4/90 text-primary-foreground shadow-lg"
+          {/* Niche chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {NICHES.map(n => (
+              <button
+                key={n.value}
+                onClick={() => setNiche(n.value)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                  niche === n.value
+                    ? 'bg-primary text-primary-foreground shadow-sm scale-105'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
               >
-                <Rocket className="w-5 h-5" />
-                🚀 Gerar Vídeo Completo Automaticamente
-              </Button>
+                {n.emoji} {n.label}
+              </button>
+            ))}
+          </div>
 
-              <p className="text-[10px] text-muted-foreground text-center">
-                O sistema vai gerar: roteiro → narração → cenas visuais → títulos → thumbnail
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Navigation */}
-        <div className="flex justify-between pt-2 border-t border-border/30">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const prev = STEPS[stepIdx - 1];
-              if (prev) setStep(prev.key);
-            }}
-            disabled={stepIdx === 0}
-            className="text-xs"
-          >
-            ← Voltar
-          </Button>
-          {step !== 'confirm' && (
+          {/* Topic input */}
+          <div className="flex gap-2">
+            <Input
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="Ex: O golpe financeiro que ninguém percebeu..."
+              className="flex-1"
+            />
             <Button
-              size="sm"
-              onClick={() => {
-                const next = STEPS[stepIdx + 1];
-                if (next) setStep(next.key);
-              }}
-              disabled={!canNext}
-              className="text-xs gap-1"
+              variant="outline" size="icon"
+              onClick={autoTopic}
+              disabled={loadingAutoTopic}
+              title="IA sugere tema trending"
             >
-              Próximo <ChevronRight className="w-3 h-3" />
+              {loadingAutoTopic ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
             </Button>
+          </div>
+
+          {/* Duration + Language row */}
+          <div className="flex gap-2 items-center">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              <div className="flex gap-1">
+                {DURATIONS.map(d => (
+                  <button
+                    key={d.value}
+                    onClick={() => setDuration(d.value)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                      duration === d.value
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 ml-auto">
+              <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+              {LANGUAGES.map(l => (
+                <button
+                  key={l.value}
+                  onClick={() => setLanguage(l.value)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                    language === l.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 2. ESTILO DO ROTEIRO ─── */}
+        <section className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-primary" /> 2. Estilo do Roteiro
+          </h3>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {SCRIPT_STYLES.map(s => (
+              <button
+                key={s.value}
+                onClick={() => setScriptStyle(s.value)}
+                className={`p-2 rounded-lg border text-center transition-all ${
+                  scriptStyle === s.value
+                    ? 'border-primary bg-primary/10 shadow-sm'
+                    : 'border-border bg-muted/30 hover:bg-muted/50'
+                }`}
+              >
+                <div className="text-base">{s.emoji}</div>
+                <div className="text-[9px] font-semibold mt-0.5 leading-tight">{s.label}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── 3. VOZ ─── */}
+        <section className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Mic className="w-3.5 h-3.5 text-primary" /> 3. Estilo de Voz
+          </h3>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {VOICE_STYLES.map(v => (
+              <button
+                key={v.value}
+                onClick={() => setVoiceStyle(v.value)}
+                className={`p-2 rounded-lg border text-center transition-all ${
+                  voiceStyle === v.value
+                    ? 'border-chart-2 bg-chart-2/10 shadow-sm'
+                    : 'border-border bg-muted/30 hover:bg-muted/50'
+                }`}
+              >
+                <div className="text-base">{v.emoji}</div>
+                <div className="text-[9px] font-semibold mt-0.5 leading-tight">{v.label}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Character */}
+          {globalChars.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <Users className="w-3.5 h-3.5 text-muted-foreground" />
+              <button
+                onClick={() => setCharacter('')}
+                className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                  !character ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                Sem avatar
+              </button>
+              {globalChars.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setCharacter(c.name)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
+                    character === c.name ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {c.photo_url && <img src={c.photo_url} alt="" className="w-4 h-4 rounded-full" />}
+                  {c.name}
+                </button>
+              ))}
+            </div>
           )}
-        </div>
+        </section>
+
+        {/* ─── 4. VISUAL ─── */}
+        <section className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Palette className="w-3.5 h-3.5 text-primary" /> 4. Estilo Visual
+          </h3>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+            {VISUAL_STYLES.map(v => (
+              <button
+                key={v.value}
+                onClick={() => setVisualStyle(v.value)}
+                className={`p-2 rounded-lg border text-center transition-all ${
+                  visualStyle === v.value
+                    ? 'border-chart-4 bg-chart-4/10 shadow-sm'
+                    : 'border-border bg-muted/30 hover:bg-muted/50'
+                }`}
+              >
+                <div className="text-base">{v.emoji}</div>
+                <div className="text-[9px] font-semibold mt-0.5 leading-tight">{v.label}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── SUMMARY + LAUNCH ─── */}
+        <section className="space-y-3 pt-2 border-t border-border/50">
+          {/* Mini summary */}
+          <div className="flex flex-wrap gap-1.5">
+            {topic.trim() && <Badge variant="secondary" className="text-[10px]">📝 {topic.slice(0, 40)}{topic.length > 40 ? '…' : ''}</Badge>}
+            <Badge variant="secondary" className="text-[10px]">{NICHES.find(n => n.value === niche)?.emoji} {NICHES.find(n => n.value === niche)?.label}</Badge>
+            <Badge variant="secondary" className="text-[10px]">⏱️ {duration}min</Badge>
+            <Badge variant="secondary" className="text-[10px]">{VOICE_STYLES.find(v => v.value === voiceStyle)?.emoji} {VOICE_STYLES.find(v => v.value === voiceStyle)?.label}</Badge>
+            <Badge variant="secondary" className="text-[10px]">{VISUAL_STYLES.find(v => v.value === visualStyle)?.emoji} {VISUAL_STYLES.find(v => v.value === visualStyle)?.label}</Badge>
+          </div>
+
+          <Button
+            onClick={handleLaunch}
+            disabled={disabled || !isReady}
+            size="lg"
+            className="w-full gap-2 bg-gradient-to-r from-primary to-chart-4 hover:from-primary/90 hover:to-chart-4/90 text-primary-foreground shadow-lg text-sm"
+          >
+            <Rocket className="w-5 h-5" />
+            🚀 Gerar Vídeo Completo Automaticamente
+          </Button>
+
+          <p className="text-[10px] text-muted-foreground text-center">
+            Roteiro → Narração → Cenas Visuais → Títulos → Thumbnail — tudo automático
+          </p>
+        </section>
       </div>
     </motion.div>
   );
