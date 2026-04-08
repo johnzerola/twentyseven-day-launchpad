@@ -1,9 +1,9 @@
 import { memo } from 'react';
-import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight, Mic } from 'lucide-react';
+import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight, Mic, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-export type PipelineStep = 'script' | 'voice' | 'style' | 'characters' | 'prompts' | 'titles';
+export type PipelineStep = 'script' | 'voice' | 'style' | 'characters' | 'prompts' | 'titles' | 'monetize';
 
 const STEPS: { key: PipelineStep; label: string; shortLabel: string; icon: any; desc: string }[] = [
   { key: 'script', label: 'Roteiro', shortLabel: '1', icon: FileText, desc: 'Gere o roteiro com IA' },
@@ -12,6 +12,7 @@ const STEPS: { key: PipelineStep; label: string; shortLabel: string; icon: any; 
   { key: 'characters', label: 'Personagens', shortLabel: '4', icon: Users, desc: 'Defina personagens visuais' },
   { key: 'prompts', label: 'Cenas', shortLabel: '5', icon: Image, desc: 'Prompts visuais sincronizados' },
   { key: 'titles', label: 'Títulos & SEO', shortLabel: '6', icon: Sparkles, desc: 'Otimização para YouTube' },
+  { key: 'monetize', label: 'Monetizar', shortLabel: '7', icon: DollarSign, desc: 'Afiliados + receita dia 1' },
 ];
 
 interface PipelineStepperProps {
