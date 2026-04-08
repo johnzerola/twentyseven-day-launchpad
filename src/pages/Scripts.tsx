@@ -37,6 +37,7 @@ import { StepNavButtons } from '@/components/scripts/StepNavButtons';
 import { ProductionPack } from '@/components/scripts/ProductionPack';
 import { AffiliateLinksGenerator } from '@/components/scripts/AffiliateLinksGenerator';
 import { AutoPilotEngine } from '@/components/scripts/AutoPilotEngine';
+import { VideoCreationWizard, type WizardConfig } from '@/components/scripts/VideoCreationWizard';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
