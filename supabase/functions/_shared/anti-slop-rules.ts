@@ -70,11 +70,36 @@ export const ANTI_SLOP_FOR_TITLES = `
 `;
 
 export const ANTI_SLOP_FOR_THUMBNAILS = `
-🚫 ANTI-SLOP PARA THUMBNAILS:
+🚫 ANTI-SLOP PARA THUMBNAILS (DARK CHANNEL STRATEGY 2026):
+- REGRA ATUAL: Máximo 1-2 elementos na imagem (simplicidade MATA thumbnails complexas)
 - NUNCA use mais de 3 palavras de texto overlay
-- NUNCA use fundo branco genérico
-- NUNCA use layout centrado simétrico (assimetria cria tensão)
+- NUNCA use fundo branco genérico sem elemento focal
+- NUNCA use layout simétrico centralizado (assimetria cria TENSÃO)
 - O rosto/objeto principal DEVE transmitir emoção EXTREMA
-- Cores complementares são OBRIGATÓRIAS para contraste
+- Cores que CONVERTEM: Branco, Amarelo e Vermelho (testado em milhares de canais)
 - A thumbnail deve ser legível em 1 segundo em tela de celular
+- ESTRATÉGIA VENCEDORA "Thumbnail Modelada": Pegue capa viral + troque personagens com IA + mantenha psicologia da imagem
+- Contraste de cores complementares é OBRIGATÓRIO
+`;
+
+export const DARK_CHANNEL_CONTENT_RULES = `
+═══ 🎯 REGRAS DE CONTEÚDO DARK CHANNEL 2026 ═══
+
+VALOR HUMANO OBRIGATÓRIO (YouTube pune a falta):
+- Roteiro com PERSPECTIVA autoral (não compilação de fatos)
+- Curadoria INTELECTUAL: selecionar, organizar, CONECTAR informações
+- Humor, ironia, opinião forte — sinais de criador real
+- Narrativa ÚNICA mesmo baseada em fatos de terceiros
+
+MODELO "MONEY CHANNEL":
+- Nicho hiper-segmentado com RPM alto (>$8)
+- Vídeos curtos/médios AFUNILAM para "Super-Vídeo" de 40-60min
+- Session Time é a métrica secreta — mantenha viewers NO YouTube
+- IP Sintético: avatar/personagem recorrente gera conexão parasocial
+
+EDIÇÃO — ANCORAGEM VISUAL (Regra dos 3-5s):
+- Trocar estímulo visual a cada 3-5 segundos
+- Pattern interrupts visuais a cada 20-30 segundos
+- Lip-sync em momentos de ênfase para avatares
+- NUNCA mais de 5s com mesma imagem estática
 `;
