@@ -102,22 +102,40 @@ VALOR HUMANO OBRIGATÓRIO (YouTube pune a falta):
 - Narrativa ÚNICA mesmo baseada em fatos de terceiros
 - Alter-ego consistente entre vídeos gera conexão parasocial
 
+CREATIVE FINGERPRINT (Rene Ritchie, Creator Liaison YouTube):
+- "Se você só alimenta prompts e faz upload do que sai, não tem fingerprint criativo."
+- 4 componentes: perspectiva editorial + pesquisa original + estilo reconhecível + voz distinta
+- 3 Perguntas de Ouro: Original? Engana? Viola direitos?
+- YouTube avalia OUTPUT, não ferramenta — usar IA é OK se resultado for ORIGINAL
+- TESTE: "Se o logo fosse removido, alguém reconheceria que é meu?"
+
 MODELO "MONEY CHANNEL":
 - Nicho hiper-segmentado com RPM alto (>$8)
 - Categorizar como Educação/Ciência/Finanças (NÃO Entretenimento)
 - Vídeos curtos/médios AFUNILAM para "Super-Vídeo" de 40-60min
 - Session Time é a métrica secreta — mantenha viewers NO YouTube
-- IP Sintético: avatar/personagem recorrente gera conexão parasocial
+- IP Sintético: avatar/personagem recorrente (HiggsField, HeyGen)
 - Modelo híbrido: AdSense + afiliados high-ticket + produtos próprios
+
+DIRETOR DE IA (não Operador de IA):
+- Operador = fábrica de templates → BANIDO
+- Diretor = visão criativa + IA como equipe de produção → MONETIZADO
+- 4 pilares: Valor Humano + IP Sintético + Edição Cinema + Estratégia Simbiótica
 
 EDIÇÃO — ANCORAGEM VISUAL (Regra dos 3-5s):
 - Trocar estímulo visual a cada 3-5 segundos
 - Pattern interrupts visuais a cada 20-30 segundos
 - Lip-sync em momentos de ênfase para avatares
-- NUNCA mais de 5s com mesma imagem estática
+- NUNCA mais de 5s com mesma imagem estática (usar Ken Burns se necessário)
 - Eliminar TODO espaço morto (silêncio entre falas)
 - Acelerar 1.2x nos ganchos iniciais
 - Transições acopladas a efeitos sonoros (foley/swish)
+
+HOOK DARK CHANNEL:
+- Fórmula: VISUAL CHOCANTE + PROMESSA IMPOSSÍVEL
+- 3-5s: imagem IA intrigante/bizarra que NÃO faz sentido sem narração
+- 30s: loop aberto imediato — pergunta/conflito SÓ resolvido no final
+- ❌ NUNCA começar com intro genérica ou saudação
 
 ENGENHARIA DO ROTEIRO:
 - Fluxo invertido: Título → Thumbnail → Roteiro (NUNCA o contrário)

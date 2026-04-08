@@ -508,6 +508,100 @@ MODELO DE NEGÓCIO:
 `;
 
 // ─────────────────────────────────────────────────────────────
+// PILAR 8: CREATIVE FINGERPRINT & DIRETOR DE IA (Estudo Documentário 2026)
+// ─────────────────────────────────────────────────────────────
+
+export const CREATIVE_FINGERPRINT_2026 = `
+═══ 🧬 CREATIVE FINGERPRINT — O CONCEITO QUE UNE TUDO ═══
+
+FONTE: Rene Ritchie (Creator Liaison oficial do YouTube, 2026)
+"Se você só alimenta prompts e faz upload do que sai, não tem fingerprint criativo."
+
+DEFINIÇÃO: É a soma de elementos que torna um canal ÚNICO e reconhecível, mesmo sem rosto.
+
+OS 4 COMPONENTES DO CREATIVE FINGERPRINT:
+1. PERSPECTIVA EDITORIAL CONSISTENTE — opinião, ângulo, tom recorrente
+2. PESQUISA ORIGINAL — vai além de Google/Wikipedia, traz dados únicos
+3. ESTILO DE PRODUÇÃO RECONHECÍVEL — edição, design de som, ritmo
+4. VOZ NARRATIVA DISTINTA — seja humana ou IP sintético consistente
+
+AS 3 PERGUNTAS DE OURO DO REVISOR YOUTUBE:
+(Aplicadas por revisores humanos + algoritmo para aprovar monetização)
+1. Este conteúdo é ORIGINAL e VALIOSO para o espectador?
+2. Ele tenta ENGANAR, MANIPULAR ou causar DANO?
+3. Ele viola DIREITOS AUTORAIS ou regras da comunidade?
+
+REGRA OFICIAL: "It's not the tool that's important. It's the quality of the work that matters."
+- YouTube avalia o OUTPUT, não a ferramenta
+- Canal 100% sem IA pode ser desmonetizado por "reused content"
+- Canal usando IA intensivamente pode ser monetizado se resultado for ORIGINAL
+- "Reused Content" e "AI Content" NÃO são a mesma categoria
+
+═══ ⚔️ DIRETOR DE IA vs. OPERADOR DE IA ═══
+
+OPERADOR DE IA (CONDENADO):
+- Trata IA como fábrica de conteúdo genérico em massa
+- Produz "AI Slop": volume sem qualidade, templates idênticos
+- Alvo da purga 2025: 16 canais, 4.7B views terminados em Jan/2026
+- MILHÕES de canais banidos durante 2025
+- Modelo baseado em volume e baixo esforço = INCOMPATÍVEL com YouTube 2026
+
+DIRETOR DE IA (VENCEDOR):
+- Usa IA como MULTIPLICADOR da própria visão criativa
+- 4 pilares de excelência:
+  1. Roteirização com Valor Humano (pesquisa + perspectiva + curadoria)
+  2. IP Sintético (avatar recorrente = conexão parasocial)
+  3. Edição Cinematográfica (ancoragem visual + ritmo + emoção)
+  4. Estratégia Simbiótica (shorts → Money Video → Session Time)
+- Ferramentas de IP: HiggsField, HeyGen (avatares consistentes)
+- Resultado: negócio de mídia sustentável, não canal de conteúdo
+
+═══ 📋 ANTI-RISK CHECKLIST (4 Perguntas de Valor Humano) ═══
+
+Antes de publicar QUALQUER vídeo, responda SIM a todas:
+1. ☐ IDEIA ORIGINAL? (Você fez a pesquisa ou só pediu à IA?)
+2. ☐ CURADORIA SIGNIFICATIVA? (Você selecionou e dirigiu elementos visuais/sonoros?)
+3. ☐ PERSPECTIVA ÚNICA? (Seu vídeo diz algo que 100 outros não dizem?)
+4. ☐ TEM "FINGERPRINT"? (Se o logo fosse removido, alguém reconheceria que é seu?)
+
+Se QUALQUER resposta for NÃO → refazer antes de publicar.
+`;
+
+// ─────────────────────────────────────────────────────────────
+// PILAR 9: HOOK FORMULA DARK CHANNEL
+// ─────────────────────────────────────────────────────────────
+
+export const HOOK_FORMULA_DARK = `
+═══ 🎣 HOOK FORMULA PARA CANAIS DARK (Sem Rosto) ═══
+
+PROBLEMA: Sem carisma humano → gancho precisa ser 110% visual + narrativo
+
+FÓRMULA: VISUAL CHOCANTE + PROMESSA IMPOSSÍVEL DE IGNORAR
+
+PRIMEIROS 3-5 SEGUNDOS (Disjuntor de Atenção):
+- Começar com imagem IA INTRIGANTE, BIZARRA ou esteticamente DESLUMBRANTE
+- A imagem NÃO deve fazer sentido imediato sem a narração
+- Objetivo: interromper o scroll inconsciente
+
+PRIMEIROS 30 SEGUNDOS (Validação da Promessa):
+- Loop aberto IMEDIATO na narração
+- Criar pergunta/conflito que SÓ será resolvido no final
+- Exemplo: "Esta IA previu o mercado de ações com 99% de precisão por 3 dias,
+  e no quarto dia, ela enviou uma única palavra: 'Corra'."
+
+TÉCNICA DE MISTÉRIO VISUAL EXTREMO:
+- A imagem de abertura deve gerar DISSONÂNCIA com a narração
+- O espectador fica porque precisa ENTENDER a conexão
+- Isso compra os primeiros 15-30s de retenção críticos
+
+ANTI-PATTERNS DE HOOK:
+- ❌ Introdução genérica sobre o tema ("Hoje vamos falar sobre...")
+- ❌ Saudação ("E aí galera, beleza?")
+- ❌ Contextualização longa antes do gancho
+- ❌ Imagem que entrega o conteúdo inteiro
+`;
+
+// ─────────────────────────────────────────────────────────────
 // INJECTION BLOCK — Prompt consolidado para geração de scripts
 // ─────────────────────────────────────────────────────────────
 
@@ -524,8 +618,12 @@ ${WHAT_WORKS_2026}
 
 ${MONETIZATION_RISK_FRAMEWORK}
 
+${CREATIVE_FINGERPRINT_2026}
+
+${HOOK_FORMULA_DARK}
+
 ═══ 🎯 INSTRUÇÃO FINAL PARA O ROTEIRISTA ═══
-Você NÃO é um gerador de texto. Você é um DIRETOR CRIATIVO de elite.
+Você NÃO é um gerador de texto. Você é um DIRETOR DE IA de elite.
 Seu roteiro deve parecer que foi escrito por uma produtora de cinema independente, não por um bot.
 Cada frase deve ter PROPÓSITO. Cada transição deve ter RITMO. Cada revelação deve ter IMPACTO.
 O espectador deve terminar o vídeo pensando: "Preciso ver o próximo."
@@ -536,6 +634,8 @@ REGRAS DE OURO:
 3. A competição é pela originalidade editorial e profundidade narrativa
 4. Quanto mais abundante a IA, mais o YouTube precifica o esforço editorial humano
 5. Diretores anônimos que vencem: automação pesada + linha editorial humana transparente
+6. CREATIVE FINGERPRINT: perspectiva + pesquisa + estilo + voz = identidade inimitável
+7. Cada vídeo deve passar nas 4 Perguntas de Valor Humano antes de publicar
 `;
 
 // ─────────────────────────────────────────────────────────────
