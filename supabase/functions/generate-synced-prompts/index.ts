@@ -331,7 +331,7 @@ Respond with ONLY valid JSON: {"scenes":[{"sceneIndex":0,"sceneDurationSeconds":
             { role: "user", content: userContent },
           ],
           temperature: 0.7,
-          max_tokens: 32768,
+          max_tokens: 65536,
           response_format: { type: "json_object" },
         }),
       });
