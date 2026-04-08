@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { TITLE_ENGINEERING_INJECTION } from "../_shared/dark-channel-strategy-2026.ts";
+import { ANTI_SLOP_FOR_TITLES } from "../_shared/anti-slop-rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -347,7 +349,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
         headers: geminiHeaders,
         body: JSON.stringify({
           contents: [
-            { role: "user", parts: [{ text: `SYSTEM: Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}` }] },
+            { role: "user", parts: [{ text: `SYSTEM: Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}` }] },
           ],
           generationConfig: { temperature: 0.9, responseMimeType: "application/json" },
         }),
