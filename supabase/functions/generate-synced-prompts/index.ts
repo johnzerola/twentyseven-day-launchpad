@@ -373,7 +373,35 @@ Respond with ONLY valid JSON: {"scenes":[{"sceneIndex":0,"sceneDurationSeconds":
       rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawContent) throw new Error("No content in Gemini response");
     }
-    const parsed = JSON.parse(rawContent);
+    // Attempt JSON parse with repair for truncated responses
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawContent);
+    } catch (jsonErr) {
+      console.warn("JSON parse failed, attempting repair...");
+      // Try to repair truncated JSON by finding last complete scene object
+      let repaired = rawContent;
+      // Remove trailing incomplete object
+      const lastCompleteScene = repaired.lastIndexOf('},');
+      if (lastCompleteScene > 0) {
+        repaired = repaired.substring(0, lastCompleteScene + 1) + ']}';
+        try {
+          parsed = JSON.parse(repaired);
+          console.log("JSON repaired successfully — truncated scenes removed");
+        } catch {
+          // Try even more aggressive repair
+          const lastBracket = repaired.lastIndexOf('}');
+          if (lastBracket > 0) {
+            repaired = rawContent.substring(0, lastBracket + 1) + ']}';
+            try { parsed = JSON.parse(repaired); } catch { /* fall through */ }
+          }
+        }
+      }
+      if (!parsed) {
+        console.error("JSON repair failed, raw length:", rawContent.length);
+        throw new Error("AI response truncated — try fewer scenes or shorter script");
+      }
+    }
 
     // ═══ DarkPlanner v3 Post-Processing: FULL Veo3 Policy Filter ═══
     const validationWarnings: string[] = [];
