@@ -56,6 +56,8 @@ SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 7):
 11. Diálogo interno do narrador — hesita, questiona, muda de opinião
 12. Humor inesperado em momento tenso (e vice-versa)
 13. Analogias fortes e imagens mentais que transformam dados em cenas
+14. Alter-ego consistente: anedotas, percepções de vida, opiniões subjetivas recorrentes
+15. Analogias culturais calibradas à DEMOGRAFIA da audiência (novelas p/ 45+, games p/ Gen-Z)
 `;
 
 export const ANTI_SLOP_FOR_TITLES = `
@@ -64,22 +66,30 @@ export const ANTI_SLOP_FOR_TITLES = `
 - NUNCA use mais de 1 emoji por título
 - NUNCA use ALL CAPS em mais de 2 palavras
 - NUNCA use "Top 10" sem diferenciação
-- Prefira números ímpares e específicos (7, 13, 47)
+- Prefira números ímpares e ESPECÍFICOS (7, 13, 47, 2.347)
 - Cada título deve ter uma TENSÃO implícita ou explícita
 - O título deve fazer o espectador PRECISAR saber a resposta
+- NUNCA entregue resolução no título — force o cérebro a buscar conclusão
+- Limite: 55-80 caracteres (evitar truncamento em mobile)
+- FRONTLOADING: palavras-chave provocativas SEMPRE no início
+- Power Words: "Inacreditável", "Absurdo", "Urgente", "Passo-a-Passo"
+- Números EXATOS > arredondados ("180kg" não "pesado")
 `;
 
 export const ANTI_SLOP_FOR_THUMBNAILS = `
 🚫 ANTI-SLOP PARA THUMBNAILS (DARK CHANNEL STRATEGY 2026):
 - REGRA ATUAL: Máximo 1-2 elementos na imagem (simplicidade MATA thumbnails complexas)
-- NUNCA use mais de 3 palavras de texto overlay
+- NUNCA use mais de 3-5 palavras de texto overlay
 - NUNCA use fundo branco genérico sem elemento focal
 - NUNCA use layout simétrico centralizado (assimetria cria TENSÃO)
 - O rosto/objeto principal DEVE transmitir emoção EXTREMA
 - Cores que CONVERTEM: Branco, Amarelo e Vermelho (testado em milhares de canais)
 - A thumbnail deve ser legível em 1 segundo em tela de celular
-- ESTRATÉGIA VENCEDORA "Thumbnail Modelada": Pegue capa viral + troque personagens com IA + mantenha psicologia da imagem
+- ESTRATÉGIA "Thumbnail Modelada": Pegue capa viral + troque personagens com IA + mantenha psicologia da imagem
 - Contraste de cores complementares é OBRIGATÓRIO
+- Thumbnail COMPLEMENTA o título (não duplica visualmente)
+- Estrutura 3 painéis: Problema → Confusão → Solução
+- Dark Mode friendly: branco/amarelo/vermelho ruby para tipografia
 `;
 
 export const DARK_CHANNEL_CONTENT_RULES = `
@@ -90,16 +100,33 @@ VALOR HUMANO OBRIGATÓRIO (YouTube pune a falta):
 - Curadoria INTELECTUAL: selecionar, organizar, CONECTAR informações
 - Humor, ironia, opinião forte — sinais de criador real
 - Narrativa ÚNICA mesmo baseada em fatos de terceiros
+- Alter-ego consistente entre vídeos gera conexão parasocial
 
 MODELO "MONEY CHANNEL":
 - Nicho hiper-segmentado com RPM alto (>$8)
+- Categorizar como Educação/Ciência/Finanças (NÃO Entretenimento)
 - Vídeos curtos/médios AFUNILAM para "Super-Vídeo" de 40-60min
 - Session Time é a métrica secreta — mantenha viewers NO YouTube
 - IP Sintético: avatar/personagem recorrente gera conexão parasocial
+- Modelo híbrido: AdSense + afiliados high-ticket + produtos próprios
 
 EDIÇÃO — ANCORAGEM VISUAL (Regra dos 3-5s):
 - Trocar estímulo visual a cada 3-5 segundos
 - Pattern interrupts visuais a cada 20-30 segundos
 - Lip-sync em momentos de ênfase para avatares
 - NUNCA mais de 5s com mesma imagem estática
+- Eliminar TODO espaço morto (silêncio entre falas)
+- Acelerar 1.2x nos ganchos iniciais
+- Transições acopladas a efeitos sonoros (foley/swish)
+
+ENGENHARIA DO ROTEIRO:
+- Fluxo invertido: Título → Thumbnail → Roteiro (NUNCA o contrário)
+- Geração segmentada em capítulos (nunca prompt único)
+- Gancho isolado: 3-5s disjuntor + 30s validação de promessa
+- Rehooks a cada 30-40s (quebra de padrão + sub-promessa)
+- Intervenção humana final: simplificar, testar em voz alta
+- Variar modelo IA entre vídeos (Claude/GPT/Gemini/Grok)
+- Sound design imersivo > trilha musical genérica
+- Micro-CTAs pulverizados nos primeiros minutos (3 máx)
+- End Screen → próximo vídeo do canal → Binge Watching
 `;
