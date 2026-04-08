@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Rocket, Check, Loader2, AlertCircle, Play, X } from 'lucide-react';
+import { Rocket, Check, Loader2, AlertCircle, X, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,9 @@ interface AutoPilotEngineProps {
   onScenesGenerated: (scenes: any[]) => void;
   onTitlesGenerated: () => void;
   onStepChange: (step: PipelineStep) => void;
+  onTopicChange?: (topic: string) => void;
+  onNicheChange?: (niche: string) => void;
+  onDurationChange?: (duration: string) => void;
   disabled?: boolean;
 }
 
@@ -41,78 +44,235 @@ const INITIAL_STEPS: AutoPilotStep[] = [
   { key: 'affiliate', label: 'Links de Afiliado', emoji: '💰', status: 'pending' },
 ];
 
-const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-tts`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const TTS_URL = `${SUPABASE_URL}/functions/v1/google-tts`;
+
+// ── SSE Script Generator (supports long-form multi-act) ──
+async function generateScriptSSE(
+  body: Record<string, any>,
+  onChunk: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const url = `${SUPABASE_URL}/functions/v1/generate-script`;
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || ANON_KEY;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: ANON_KEY,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`generate-script ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+
+  // If JSON response (short scripts), handle directly
+  if (contentType.includes('application/json')) {
+    const data = await res.json();
+    const script = data?.script || data?.fullScript || '';
+    if (script) onChunk(script);
+    return script;
+  }
+
+  // SSE streaming for long scripts
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let accumulated = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let nlIdx: number;
+    while ((nlIdx = buffer.indexOf('\n')) !== -1) {
+      let line = buffer.slice(0, nlIdx);
+      buffer = buffer.slice(nlIdx + 1);
+      if (line.endsWith('\r')) line = line.slice(0, -1);
+      if (!line.startsWith('data: ')) continue;
+      const payload = line.slice(6).trim();
+      if (payload === '[DONE]') break;
+      try {
+        const parsed = JSON.parse(payload);
+        const content = parsed.choices?.[0]?.delta?.content
+          || parsed.choices?.[0]?.text
+          || parsed.text
+          || '';
+        if (content) {
+          accumulated += content;
+          onChunk(content);
+        }
+        // Handle full script in SSE JSON
+        if (parsed.script || parsed.fullScript) {
+          const full = parsed.script || parsed.fullScript;
+          accumulated = full;
+          onChunk(full);
+        }
+      } catch { /* partial JSON, ignore */ }
+    }
+  }
+
+  return accumulated;
+}
+
+// ── Clean narration text for TTS ──
+function getCleanNarration(script: string): string {
+  let clean = script;
+  const markers = ['## Títulos', '## TÍTULOS', '## Tags', '## SEO', '## Thumbnail', '---EXTRAS---', 'SCENE_BLUEPRINT'];
+  for (const m of markers) {
+    const idx = clean.indexOf(m);
+    if (idx > 0) clean = clean.slice(0, idx);
+  }
+  return clean
+    .replace(/^#+\s.*$/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\[.*?\]/g, '')
+    .replace(/---+/g, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 export const AutoPilotEngine = ({
   topic, niche, duration, style, language, videoType, videoStyle,
   onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange,
+  onTopicChange, onNicheChange, onDurationChange,
   disabled,
 }: AutoPilotEngineProps) => {
   const [running, setRunning] = useState(false);
   const [steps, setSteps] = useState<AutoPilotStep[]>(INITIAL_STEPS);
   const [showPanel, setShowPanel] = useState(false);
-  const abortRef = useRef(false);
+  const [loadingAutoTopic, setLoadingAutoTopic] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const updateStep = (key: string, update: Partial<AutoPilotStep>) => {
     setSteps(prev => prev.map(s => s.key === key ? { ...s, ...update } : s));
   };
 
-  const getCleanNarration = (script: string): string => {
-    let clean = script;
-    const markers = ['## Títulos', '## TÍTULOS', '## Tags', '## SEO', '## Thumbnail', '---EXTRAS---', 'SCENE_BLUEPRINT'];
-    for (const m of markers) { const idx = clean.indexOf(m); if (idx > 0) clean = clean.slice(0, idx); }
-    return clean
-      .replace(/^#+\s.*$/gm, '')
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .replace(/\*([^*]+)\*/g, '$1')
-      .replace(/\[.*?\]/g, '')
-      .replace(/---+/g, '')
-      .replace(/```[\s\S]*?```/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  };
+  // ── Auto-select trending topic based on user's niche ──
+  const autoSelectTopic = useCallback(async (): Promise<{ topic: string; niche: string } | null> => {
+    setLoadingAutoTopic(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error('Faça login primeiro'); return null; }
 
-  const runPipeline = useCallback(async () => {
-    if (!topic.trim() || !niche.trim()) {
+      // 1. Get user's niche from onboarding or channels
+      let userNiche = niche;
+      if (!userNiche) {
+        const { data: profile } = await supabase
+          .from('onboarding_plans')
+          .select('niche')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        userNiche = profile?.niche || 'curiosidades';
+      }
+
+      // 2. Try emerging_videos for trending topics
+      const { data: emerging } = await supabase
+        .from('emerging_videos')
+        .select('title, niche, views, velocity_score')
+        .order('velocity_score', { ascending: false })
+        .limit(10);
+
+      if (emerging?.length) {
+        // Pick niche-relevant or top trending
+        const nicheMatch = emerging.find(v => v.niche?.toLowerCase().includes(userNiche.toLowerCase()));
+        const pick = nicheMatch || emerging[0];
+        const autoTopic = `[TENDÊNCIA] ${pick.title} (${(pick.views || 0).toLocaleString()} views, velocidade: ${pick.velocity_score})`;
+        return { topic: autoTopic, niche: userNiche };
+      }
+
+      // 3. Fallback: call suggest-themes
+      const { data: themes } = await supabase.functions.invoke('suggest-themes', {
+        body: { niche: userNiche, language, count: 3 },
+      });
+      if (themes?.themes?.length) {
+        const best = themes.themes[0];
+        return { topic: best.topic || best.title, niche: userNiche };
+      }
+
+      // 4. Last resort
+      return { topic: `Top tendências ${userNiche} 2026`, niche: userNiche };
+    } catch (err: any) {
+      console.error('Auto-topic failed:', err);
+      toast.error('Erro ao buscar tema automaticamente');
+      return null;
+    } finally {
+      setLoadingAutoTopic(false);
+    }
+  }, [niche, language]);
+
+  // ── Run the full pipeline ──
+  const runPipeline = useCallback(async (autoTopic?: { topic: string; niche: string }) => {
+    const useTopic = autoTopic?.topic || topic;
+    const useNiche = autoTopic?.niche || niche;
+
+    if (!useTopic.trim() || !useNiche.trim()) {
       toast.error('Preencha o tópico e nicho antes de usar o Piloto Automático');
       return;
     }
 
+    // If auto-topic, update parent state
+    if (autoTopic) {
+      onTopicChange?.(autoTopic.topic);
+      onNicheChange?.(autoTopic.niche);
+    }
+
     setRunning(true);
     setShowPanel(true);
-    abortRef.current = false;
-    setSteps(INITIAL_STEPS);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setSteps(INITIAL_STEPS.map(s => ({ ...s, status: 'pending' as const })));
 
     let generatedScript = '';
 
-    // Step 1: Generate Script
+    // Step 1: Generate Script (SSE streaming for long-form)
     updateStep('script', { status: 'running' });
     try {
-      const { data, error } = await supabase.functions.invoke('generate-script', {
-        body: { topic, duration, style, niche, language, videoType, emotionalIntensity: 'maxima' },
-      });
-      if (error) throw error;
-      generatedScript = data?.script || data?.fullScript || '';
-      if (!generatedScript) throw new Error('No script returned');
+      generatedScript = await generateScriptSSE(
+        {
+          topic: useTopic, duration, style, niche: useNiche, language,
+          videoType, emotionalIntensity: 'maxima',
+        },
+        () => {}, // We collect the full text
+        controller.signal,
+      );
+      if (!generatedScript || generatedScript.length < 100) throw new Error('Script too short');
       onScriptGenerated(generatedScript);
       updateStep('script', { status: 'done' });
       onStepChange('script');
     } catch (err: any) {
+      if (err.name === 'AbortError') { setRunning(false); return; }
       updateStep('script', { status: 'error', error: err.message });
       toast.error('Erro no roteiro — continue manualmente');
       setRunning(false);
-      return; // Script is required for everything else
+      return;
     }
 
-    if (abortRef.current) { setRunning(false); return; }
+    if (controller.signal.aborted) { setRunning(false); return; }
 
-    // Step 2: Generate Voice
+    // Step 2: Generate Voice (TTS with fallback)
     updateStep('voice', { status: 'running' });
     try {
       const cleanText = getCleanNarration(generatedScript);
       if (cleanText.length < 50) throw new Error('Script too short for TTS');
-      
-      // Split into chunks for long scripts
+
       const MAX_CHUNK = 2000;
       const chunks: string[] = [];
       if (cleanText.length <= MAX_CHUNK) {
@@ -121,7 +281,10 @@ export const AutoPilotEngine = ({
         const sentences = cleanText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [cleanText];
         let current = '';
         for (const s of sentences) {
-          if (current.length + s.length > MAX_CHUNK && current.length > 0) { chunks.push(current.trim()); current = ''; }
+          if (current.length + s.length > MAX_CHUNK && current.length > 0) {
+            chunks.push(current.trim());
+            current = '';
+          }
           current += s;
         }
         if (current.trim()) chunks.push(current.trim());
@@ -129,18 +292,19 @@ export const AutoPilotEngine = ({
 
       const blobs: Blob[] = [];
       for (const chunk of chunks) {
-        if (abortRef.current) break;
+        if (controller.signal.aborted) break;
         const response = await fetch(TTS_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            apikey: ANON_KEY,
+            Authorization: `Bearer ${ANON_KEY}`,
           },
           body: JSON.stringify({
             text: chunk, language, voiceStyle: 'dopaminergico',
             speakingRate: 1.0, returnBinary: true,
           }),
+          signal: controller.signal,
         });
         if (!response.ok) throw new Error(`TTS ${response.status}`);
         const ct = response.headers.get('content-type') || '';
@@ -151,6 +315,8 @@ export const AutoPilotEngine = ({
           if (data.audioBase64) {
             const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
             blobs.push(await r.blob());
+          } else if (data.use_browser_synthesis) {
+            throw new Error('All TTS engines failed — browser fallback');
           }
         }
       }
@@ -165,22 +331,17 @@ export const AutoPilotEngine = ({
         throw new Error('No audio generated');
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') { setRunning(false); return; }
       updateStep('voice', { status: 'error', error: err.message });
     }
 
-    if (abortRef.current) { setRunning(false); return; }
+    if (controller.signal.aborted) { setRunning(false); return; }
 
     // Step 3: Generate Scenes
     updateStep('scenes', { status: 'running' });
     try {
       const { data, error } = await supabase.functions.invoke('generate-synced-prompts', {
-        body: {
-          script: generatedScript,
-          videoStyle,
-          characters: [],
-          language,
-          niche,
-        },
+        body: { script: generatedScript, videoStyle, characters: [], language, niche: useNiche },
       });
       if (error) throw error;
       const scenes = data?.scenes || data?.syncedScenes || [];
@@ -195,13 +356,13 @@ export const AutoPilotEngine = ({
       updateStep('scenes', { status: 'error', error: err.message });
     }
 
-    if (abortRef.current) { setRunning(false); return; }
+    if (controller.signal.aborted) { setRunning(false); return; }
 
-    // Step 4: Generate Titles
+    // Step 4: Titles & SEO
     updateStep('titles', { status: 'running' });
     try {
       const { error } = await supabase.functions.invoke('generate-titles', {
-        body: { topic, niche, language, script: generatedScript.slice(0, 3000) },
+        body: { topic: useTopic, niche: useNiche, language, script: generatedScript.slice(0, 3000) },
       });
       if (error) throw error;
       onTitlesGenerated();
@@ -214,7 +375,7 @@ export const AutoPilotEngine = ({
     updateStep('thumbnail', { status: 'running' });
     try {
       const { error } = await supabase.functions.invoke('generate-thumbnail-prompt', {
-        body: { title: topic, niche, script: generatedScript.slice(0, 2000) },
+        body: { title: useTopic, niche: useNiche, script: generatedScript.slice(0, 2000) },
       });
       if (error) throw error;
       updateStep('thumbnail', { status: 'done' });
@@ -222,41 +383,82 @@ export const AutoPilotEngine = ({
       updateStep('thumbnail', { status: 'error', error: err.message });
     }
 
-    // Step 6: Affiliate (always done — it's hardcoded data)
+    // Step 6: Affiliate
     updateStep('affiliate', { status: 'done' });
 
     onStepChange('titles');
     setRunning(false);
-    
-    const doneCount = steps.filter(s => s.status === 'done').length;
-    toast.success(`🚀 Piloto Automático concluído! ${doneCount + 1}/6 etapas completas.`);
-  }, [topic, niche, duration, style, language, videoType, videoStyle, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange]);
+
+    // Count completed
+    setSteps(prev => {
+      const doneCount = prev.filter(s => s.status === 'done').length;
+      toast.success(`🚀 Piloto Automático concluído! ${doneCount}/6 etapas completas.`);
+      return prev;
+    });
+  }, [topic, niche, duration, style, language, videoType, videoStyle, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange, onTopicChange, onNicheChange]);
+
+  // ── "Generate Next Video" — fully automatic ──
+  const handleAutoGenerate = useCallback(async () => {
+    const result = await autoSelectTopic();
+    if (result) {
+      await runPipeline(result);
+    }
+  }, [autoSelectTopic, runPipeline]);
+
+  const handleCancel = () => {
+    abortRef.current?.abort();
+    setRunning(false);
+  };
 
   const completedCount = steps.filter(s => s.status === 'done').length;
   const errorCount = steps.filter(s => s.status === 'error').length;
-  const progressPercent = running ? (steps.filter(s => s.status === 'done' || s.status === 'error' || s.status === 'skipped').length / steps.length) * 100 : 0;
+  const progressPercent = running
+    ? (steps.filter(s => s.status === 'done' || s.status === 'error' || s.status === 'skipped').length / steps.length) * 100
+    : 0;
 
   return (
     <div className="space-y-3">
-      {/* Trigger Button */}
-      <Button
-        onClick={runPipeline}
-        disabled={disabled || running || !topic.trim() || !niche.trim()}
-        size="lg"
-        className="gap-2 bg-gradient-to-r from-primary to-chart-4 hover:from-primary/90 hover:to-chart-4/90 text-primary-foreground shadow-lg shadow-primary/20 w-full sm:w-auto"
-      >
-        {running ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Piloto Automático Rodando...
-          </>
-        ) : (
-          <>
-            <Rocket className="w-4 h-4" />
-            🚀 Gerar Tudo Automaticamente
-          </>
-        )}
-      </Button>
+      {/* Buttons Row */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={() => runPipeline()}
+          disabled={disabled || running || !topic.trim() || !niche.trim()}
+          size="lg"
+          className="gap-2 bg-gradient-to-r from-primary to-chart-4 hover:from-primary/90 hover:to-chart-4/90 text-primary-foreground shadow-lg shadow-primary/20"
+        >
+          {running ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Piloto Automático Rodando...
+            </>
+          ) : (
+            <>
+              <Rocket className="w-4 h-4" />
+              🚀 Gerar Tudo Automaticamente
+            </>
+          )}
+        </Button>
+
+        <Button
+          onClick={handleAutoGenerate}
+          disabled={disabled || running || loadingAutoTopic}
+          size="lg"
+          variant="outline"
+          className="gap-2 border-chart-2/30 hover:bg-chart-2/10"
+        >
+          {loadingAutoTopic ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Buscando tema...
+            </>
+          ) : (
+            <>
+              <Brain className="w-4 h-4 text-chart-2" />
+              🧠 Gerar Próximo Vídeo
+            </>
+          )}
+        </Button>
+      </div>
 
       {/* Progress Panel */}
       <AnimatePresence>
@@ -285,7 +487,7 @@ export const AutoPilotEngine = ({
                 </div>
                 <div className="flex gap-2">
                   {running && (
-                    <Button variant="ghost" size="sm" onClick={() => { abortRef.current = true; }} className="text-xs text-destructive h-7">
+                    <Button variant="ghost" size="sm" onClick={handleCancel} className="text-xs text-destructive h-7">
                       <X className="w-3 h-3 mr-1" /> Cancelar
                     </Button>
                   )}
