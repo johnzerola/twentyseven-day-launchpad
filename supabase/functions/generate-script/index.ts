@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callGeminiWithFallback, callGeminiStreaming } from "../_shared/gemini-direct.ts";
+import { DARK_CHANNEL_STRATEGY_INJECTION, THUMBNAIL_CTR_RULES_2026 } from "../_shared/dark-channel-strategy-2026.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -810,6 +811,8 @@ ${skillScoreBlock}
 ${userPrefsBlock}
 
 ${YPP_2025_DIRECTIVE}
+
+${DARK_CHANNEL_STRATEGY_INJECTION}
 
 ${ANTI_SLOP_DIRECTIVE}
 
