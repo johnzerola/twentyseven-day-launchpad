@@ -421,6 +421,7 @@ export const AutoPilotEngine = ({
       {/* Buttons Row */}
       <div className="flex flex-wrap gap-2">
         <Button
+          id="autopilot-launch-btn"
           onClick={() => runPipeline()}
           disabled={disabled || running || !topic.trim() || !niche.trim()}
           size="lg"
