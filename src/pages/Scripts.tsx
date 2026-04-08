@@ -37,6 +37,7 @@ import { StepNavButtons } from '@/components/scripts/StepNavButtons';
 import { ProductionPack } from '@/components/scripts/ProductionPack';
 import { AffiliateLinksGenerator } from '@/components/scripts/AffiliateLinksGenerator';
 import { AutoPilotEngine } from '@/components/scripts/AutoPilotEngine';
+import { VideoCreationWizard, type WizardConfig } from '@/components/scripts/VideoCreationWizard';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
@@ -731,6 +732,24 @@ const Scripts = () => {
             <ScriptComparator />
           </div>
         )}
+
+        {/* 🎬 Video Creation Wizard */}
+        <VideoCreationWizard
+          disabled={loading}
+          onLaunch={(config: WizardConfig) => {
+            setTopic(config.topic);
+            setNiche(config.niche);
+            setDuration(config.duration);
+            setStyle(config.scriptStyle);
+            setLanguage(config.language);
+            setVideoStyle(config.visualStyle);
+            // Trigger AutoPilot after state update
+            setTimeout(() => {
+              const btn = document.getElementById('autopilot-launch-btn');
+              if (btn) btn.click();
+            }, 300);
+          }}
+        />
 
         {/* Auto Pilot Engine */}
         <AutoPilotEngine

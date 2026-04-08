@@ -24,6 +24,7 @@ interface AutoPilotEngineProps {
   language: string;
   videoType: 'long' | 'short';
   videoStyle: string;
+  voiceStyle?: string;
   onScriptGenerated: (script: string) => void;
   onAudioGenerated: (blob: Blob, url: string) => void;
   onScenesGenerated: (scenes: any[]) => void;
@@ -148,7 +149,7 @@ function getCleanNarration(script: string): string {
 }
 
 export const AutoPilotEngine = ({
-  topic, niche, duration, style, language, videoType, videoStyle,
+  topic, niche, duration, style, language, videoType, videoStyle, voiceStyle: voiceStyleProp,
   onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange,
   onTopicChange, onNicheChange, onDurationChange,
   disabled,
@@ -301,7 +302,7 @@ export const AutoPilotEngine = ({
             Authorization: `Bearer ${ANON_KEY}`,
           },
           body: JSON.stringify({
-            text: chunk, language, voiceStyle: 'dopaminergico',
+            text: chunk, language, voiceStyle: voiceStyleProp || 'dopaminergico',
             speakingRate: 1.0, returnBinary: true,
           }),
           signal: controller.signal,
@@ -421,6 +422,7 @@ export const AutoPilotEngine = ({
       {/* Buttons Row */}
       <div className="flex flex-wrap gap-2">
         <Button
+          id="autopilot-launch-btn"
           onClick={() => runPipeline()}
           disabled={disabled || running || !topic.trim() || !niche.trim()}
           size="lg"
