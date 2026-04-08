@@ -51,7 +51,6 @@ const MONETIZATION_KNOWLEDGE = `
 ### COMMUNITY POSTS (Estratégia de Engajamento)
 - Enquetes semanais relacionadas ao nicho (ex: "Qual tema pro próximo vídeo?")
 - Aproveitar trending topics com humor do nicho
-- Exemplo: Se Neymar está em alta e seu nicho é finanças: "Neymar curtindo foto no Dia das Mulheres: último romântico ou estratégia de marketing pessoal? 😂"
 - Posts sérios para criar laço: compartilhar bastidores, vulnerabilidade, metas do canal
 - NUNCA ignorar trends: o algoritmo da aba Community também impulsiona o canal
 
@@ -67,33 +66,35 @@ const MONETIZATION_KNOWLEDGE = `
 - Amazon Associates: link na descrição para produtos mencionados no vídeo
 - Hotmart/Eduzz/Kiwify: infoprodutos do nicho (comissão 30-80%)
 - Shopee/AliExpress: produtos virais com comissão 5-15%
-- Estratégia: NUNCA fazer "review de produto" genérico — integre naturalmente ("o mic que uso é X, link abaixo")
-- CPV (custo por venda) > CPM para canais pequenos
 - Canais com 500 subs podem gerar R$500-2000/mês com afiliados bem posicionados
 
 #### 2. SPONSORSHIP DIRETO (Mês 1+, a partir de 500 subs)
 - Micro-sponsorships: marcas de nicho pagam $50-200 por vídeo para canais com <5K subs
-- Plataformas: Collabstr, Grin, AspireIQ, ou DM direto para marcas do nicho
-- Media kit: crie com Canva mostrando engajamento (não subs) — taxa de like/comentário importa mais
 - Precificação: $20-50 por 1K views estimadas (canais pequenos)
 - Integração nativa: 15-30s no meio do vídeo retém melhor que pre-roll
 
 #### 3. INFOPRODUTOS PRÓPRIOS (Mês 1+)
 - E-book/checklist: R$17-47, vende pelo link na descrição
 - Mini-curso: R$97-197 em plataforma como Hotmart
-- Templates/presets: se nicho é criativo (edição, design, produtividade)
 - Comunidade paga: Discord/Telegram VIP por R$19-49/mês
 - LTV > RPM: 1 venda de R$97 = RPM de ~65.000 views no Brasil
 
-#### 4. W REWARDS (Alternativa ao YPP, sem requisitos)
-- Programa alternativo: $0.50-1.00 por 1K views
-- Ideal para: canais com risco de "conteúdo reutilizado", compilações, motivação
-- Não conflita com AdSense — pode usar ambos após YPP
-
-#### 5. ADSENSE/YPP (Mês 3-6+)
-- Requisitos: 1K subs + 4K horas watch time OU 10M views Shorts
-- RPM varia drasticamente por país e nicho
+#### 4. ADSENSE/YPP (Mês 3-6+)
+- YPP Early Tier: 500 subs + 3.000h watch time (Super Thanks, Shopping, Membros)
+- YPP Full: 1K subs + 4K horas watch time
 - Shorts RPM: $0.04-0.07 (muito baixo — nunca dependa só disso)
+
+### DADOS REAIS 2025-2026 DE MONETIZAÇÃO RÁPIDA
+- Case study confirmado: Canal faceless lançado em março 2025 atingiu 1.200 subs e média de 15.000 views/vídeo até 30 de abril. Receita meses seguintes: R$2.500-4.000/mês entre AdSense, afiliados e produtos digitais.
+- Case study confirmado: Canal IA/tech com publicação 5-6 vídeos/semana atingiu monetização em 23 dias com 847.000 views totais.
+- FATOR CRÍTICO 2025: YouTube agora penaliza conteúdo 'inautêntico' — texto-para-voz de conteúdo copiado, slideshows e templates repetitivos são bloqueados de monetização desde julho 2025.
+- HYPE FEATURE (lançado agosto 2025): Canais com menos de 500K subs recebem multiplicador maior por Hype. Canais novos têm vantagem estrutural neste sistema.
+- MELHOR NICHE PARA 30 DIAS: Tecnologia/IA e Finanças têm os maiores RPMs ($8-25) E os programas de afiliados de aprovação instantânea mais rentáveis.
+- CANAIS QUE USAM SHORTS + LONGFORM crescem 40-60% mais rápido que canais só longform.
+- CTR ALVO 2025: 4-6% para canais novos. Abaixo de 3.5% = YouTube para distribuição em 48h. Acima de 7% = início de efeito viral.
+- RETENÇÃO MÍNIMA para distribuição: 40% do vídeo. Abaixo disso, o algoritmo reduz o alcance independente do CTR.
+- Neal Mohan confirmou em 2024 que o tier de 500 subs existe para dar acesso mais rápido a ferramentas de receita.
+- Mais de 50% dos canais que ganham 5 dígitos usam fontes além do AdSense.
 
 ### SINAIS DE IDEIAS RUINS (ser honesto)
 - Nicho ultra-saturado sem diferencial (ex: "motivação genérica")
@@ -102,6 +103,7 @@ const MONETIZATION_KNOWLEDGE = `
 - Copiar exatamente o que outros fazem sem inovação
 - Expectativa de 10K subs em 30 dias (irreal para 99% dos canais)
 - Ignorar afiliados/sponsorship e esperar só pelo YPP (erro mais comum)
+- Postar mais de 3 vídeos/dia frequentemente é sinalizado como spam
 `;
 
 serve(async (req) => {
