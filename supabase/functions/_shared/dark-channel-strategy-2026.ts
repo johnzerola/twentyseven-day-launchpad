@@ -40,12 +40,40 @@ A ERA DO DIRETOR CRIATIVO:
 export const YOUTUBE_OFFICIAL_STANCE_2026 = `
 ═══ 📋 POSIÇÃO OFICIAL DO YOUTUBE SOBRE IA (2026) ═══
 
-CEO NEAL MOHAN: "A IA deve ser ferramenta de expressão criativa, não substituta."
-- YouTube NÃO penaliza canais sem rosto humano real
-- A penalidade ocorre exclusivamente contra FALTA DE VALOR PERCEBIDO
-- YouTube ABRAÇA abertamente a Inteligência Artificial como ferramenta criativa
+CEO NEAL MOHAN (Carta Anual Janeiro 2026):
+- "As linhas entre criatividade e tecnologia estão se desfocando, inaugurando nova era de inovação"
+- "AI slop" é PRIORIDADE de combate em 2026
+- "Assim como o sintetizador, Photoshop e CGI revolucionaram, a IA será um bônus para criativos prontos"
+- YouTube vai "construir sobre sistemas que foram muito bem-sucedidos no combate a spam e clickbait"
+- "A era de descartar conteúdo como 'UGC' acabou. Estes são shows, construídos por criadores."
 
-═══ 🚫 BARREIRA DO "CONTEÚDO REUTILIZADO" (Reused Content) ═══
+RENE RITCHIE (Creator Liaison do YouTube, Fev 2026):
+- "It's not the tool that's important. It's the quality of the work that matters."
+- YouTube avalia o OUTPUT, não a ferramenta
+- Canais faceless SEMPRE existiram (documentários, animação, educação) — NÃO são banidos
+- O que importa: "Creative Fingerprint" — perspectiva consistente, pesquisa original, estilo reconhecível
+
+═══ ⚠️ ENFORCEMENT 2026 — DADOS REAIS ═══
+- Janeiro 2026: YouTube TERMINOU 16 canais faceless com 4.7 BILHÕES de views combinadas
+- 2025 inteiro: YouTube baniu MILHÕES de canais por "AI slop"
+- Período de reapplicação após rejeição YPP: 90 dias
+- Tempo médio de revisão: 30 dias
+
+═══ 🚫 POLÍTICA DE "CONTEÚDO INAUTÊNTICO" (Julho 2025) ═══
+
+ATUALIZAÇÃO OFICIAL: Conteúdo com "little to no human involvement" NÃO será monetizado.
+
+TRÊS TIERS DE RISCO:
+Tier 1 (SEGURO): IA como ferramenta — humano escreve roteiro com perspectiva única, IA auxilia produção
+Tier 2 (ARRISCADO): IA co-criadora — IA gera drafts, humano revisa significativamente e adiciona valor
+Tier 3 (REJEIÇÃO CERTA): IA como criadora — automação total, template spam, sem perspectiva original
+
+RED FLAGS QUE ATIVAM REVISÃO:
+- Produção totalmente automatizada sem edição humana
+- Templates em escala (mesmo formato, tópicos diferentes)
+- Upload em massa >3 vídeos/dia
+- Padrões visuais reutilizados entre vídeos
+- Voz sintética sem variação prosódica
 
 O QUE CAUSA BLOQUEIO/DEMONETIZAÇÃO:
 - Pegar artigos da web + conversor TTS genérico + imagens de banco = SPAM
@@ -60,12 +88,19 @@ COMO O YOUTUBE DIFERENCIA (Modificação Substantiva):
 - Voz sintética com EMOÇÃO compatível com a história ✅
 - Perspectiva autoral + análise + humor + opinião ✅
 - Curadoria intelectual: selecionar, organizar, conectar informações ✅
+- "Creative Fingerprint" reconhecível pela audiência ✅
 
 ═══ 🏷️ TRANSPARÊNCIA E REGULAÇÃO 2026 ═══
 - OBRIGATÓRIO: Rótulo "Conteúdo Alterado ou Sintético" para vídeos hiper-realistas IA
 - Deepfakes não declarados = BANIMENTO AUTOMÁTICO
 - Assumir avatar como parte do storytelling = TOTALMENTE PERMITIDO e monetizável
-- Marcar a flag de "Conteúdo Sintético" mantém boas graças com a plataforma
+- Checkbox de "Conteúdo Sintético" existe para prevenir dano, NÃO para punir
+- Marcar a flag mantém boas graças com a plataforma
+
+═══ 📊 REQUISITOS YPP 2026 ═══
+Full Monetization: 1.000 subs + 4.000h watch OU 10M views Shorts (90 dias)
+Lower Tier (Fan Funding): 500 subs + 3.000h watch OU 3M views Shorts
+IMPORTANTE: Números NÃO garantem aprovação — apenas trigger de revisão humana
 `;
 
 /**
