@@ -25,6 +25,8 @@ import { VideoPerformanceTracker } from '@/components/dashboard/VideoPerformance
 import { DistributionPhaseTracker } from '@/components/dashboard/DistributionPhaseTracker';
 import { ABTestManager } from '@/components/dashboard/ABTestManager';
 import { NextBestActionWidget } from '@/components/dashboard/NextBestActionWidget';
+import { ConsistencyGuardian } from '@/components/dashboard/ConsistencyGuardian';
+import { MonetizationTrack } from '@/components/dashboard/MonetizationTrack';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -186,6 +188,12 @@ const Dashboard = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* ⚠️ Consistency Guardian — full-width alert */}
+        <ConsistencyGuardian />
+
+        {/* 💰 Monetization Track */}
+        <MonetizationTrack />
 
         {/* 🚀 Next Best Action — Decision Engine */}
         <NextBestActionWidget />
