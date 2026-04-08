@@ -390,26 +390,16 @@ REGRAS PARA CTR MÁXIMO:
 
 Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
 
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: geminiHeaders,
-        body: JSON.stringify({
-          contents: [
-            { role: "user", parts: [{ text: `SYSTEM: Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}\n\n${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}` }] },
-          ],
-          generationConfig: { temperature: 0.9, responseMimeType: "application/json" },
-        }),
-      });
+      const systemMsg = `Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}`;
+      const userMsg = `${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}`;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Gemini error:", response.status, errText);
-        if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI error: ${response.status}`);
+      let content: string;
+      try {
+        content = await callAI(userMsg, systemMsg, GOOGLE_AI_API_KEY || '', LOVABLE_API_KEY, { temperature: 0.9 });
+      } catch (err: any) {
+        if (err.message?.includes('429')) return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        throw err;
       }
-
-      const result = await response.json();
-      const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!content) throw new Error("No content in response");
       const parsed = JSON.parse(content);
 
