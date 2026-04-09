@@ -217,47 +217,9 @@ RULES:
 - Cover the ENTIRE audio duration from start to finish
 - Return ONLY the JSON array, no markdown, no explanation`;
 
-        // Try Lovable AI Gateway with audio URL (multimodal)
-        const gatewayKey = LOVABLE_API_KEY || GOOGLE_AI_API_KEY;
-        if (gatewayKey) {
-          try {
-            console.log("Trying audio transcription via AI Gateway (multimodal)...");
-            const gatewayResp = await fetch(GATEWAY_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${gatewayKey}` },
-              body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-                messages: [{
-                  role: "user",
-                  content: [
-                    { type: "text", text: transcribePrompt },
-                    { type: "image_url", image_url: { url: audioUrl } },
-                  ],
-                }],
-                temperature: 0.1,
-                max_completion_tokens: 32768,
-              }),
-            });
-
-            if (gatewayResp.ok) {
-              const gData = await gatewayResp.json();
-              const text = gData.choices?.[0]?.message?.content || "";
-              if (text.includes('"start"') && text.includes('"end"')) {
-                transcribeData = { choices: [{ message: { content: text } }] };
-                console.log("AI Gateway audio transcription successful");
-              } else {
-                console.warn("AI Gateway returned non-transcript content, trying fallback...");
-              }
-            } else {
-              const errText = await gatewayResp.text();
-              console.warn("AI Gateway audio transcription failed:", gatewayResp.status, errText.slice(0, 300));
-            }
-          } catch (e: any) {
-            console.warn("AI Gateway audio transcription error:", e.message);
-          }
-        }
-
-        // Fallback: direct Gemini with Files API for large audio
+        // Audio transcription: Direct Gemini fallback is at line ~260, Gateway only if direct fails
+        // Try Gateway only as secondary option for multimodal audio
+        // (Direct Gemini with Files API is tried first below at line 261)
         if (!transcribeData && GOOGLE_AI_KEY && audioUrl) {
           try {
             console.log("Trying direct Gemini transcription...");
