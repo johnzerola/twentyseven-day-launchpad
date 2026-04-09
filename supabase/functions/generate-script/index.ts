@@ -1023,11 +1023,12 @@ Responda em JSON puro: { "acts": [{ "act": 1, "title": "...", "time_range": "...
       try {
         const outlineRes = await callGeminiWithFallback(
           GOOGLE_AI_API_KEY,
+          "Você é um roteirista profissional. Responda APENAS em JSON válido.",
           outlinePrompt,
           { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-flash", maxTokens: 2048, label: `OUTLINE runId=${runId}` },
         );
-        if (outlineRes.ok) {
-          const outlineText = await outlineRes.text();
+        if (outlineRes) {
+          const outlineText = typeof outlineRes === 'string' ? outlineRes : String(outlineRes);
           const jsonMatch = outlineText.match(/\{[\s\S]*"acts"[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
