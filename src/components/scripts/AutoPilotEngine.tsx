@@ -250,8 +250,9 @@ export const AutoPilotEngine = ({
         {
           topic: useTopic, duration, style, niche: useNiche, language,
           videoType, emotionalIntensity: 'maxima',
+          voiceStyle: voiceStyleProp || 'dopaminergico',
         },
-        () => {}, // We collect the full text
+        () => {},
         controller.signal,
       );
       if (!generatedScript || generatedScript.length < 100) throw new Error('Script too short');
@@ -292,6 +293,7 @@ export const AutoPilotEngine = ({
       }
 
       const blobs: Blob[] = [];
+      let browserFallbackUsed = false;
       for (const chunk of chunks) {
         if (controller.signal.aborted) break;
         const response = await fetch(TTS_URL, {
@@ -319,9 +321,9 @@ export const AutoPilotEngine = ({
           } else if (data.use_browser_synthesis) {
             // Browser fallback is acceptable — continue pipeline with estimated duration
             console.warn('TTS: browser synthesis fallback (all cloud engines unavailable)');
+            browserFallbackUsed = true;
             updateStep('voice', { status: 'done', error: 'Usando síntese do navegador (engines cloud indisponíveis)' });
             onStepChange('voice');
-            // Skip remaining chunks — browser synthesis will be handled by AudioProcessor
             break;
           }
         }
@@ -333,7 +335,7 @@ export const AutoPilotEngine = ({
         onAudioGenerated(finalBlob, url);
         updateStep('voice', { status: 'done' });
         onStepChange('voice');
-      } else {
+      } else if (!browserFallbackUsed) {
         throw new Error('No audio generated');
       }
     } catch (err: any) {
@@ -414,7 +416,7 @@ export const AutoPilotEngine = ({
       toast.success(`🚀 Piloto Automático concluído! ${doneCount}/6 etapas completas.`);
       return prev;
     });
-  }, [topic, niche, duration, style, language, videoType, videoStyle, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange, onTopicChange, onNicheChange]);
+  }, [topic, niche, duration, style, language, videoType, videoStyle, voiceStyleProp, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange, onTopicChange, onNicheChange]);
 
   // ── "Generate Next Video" — fully automatic ──
   const handleAutoGenerate = useCallback(async () => {

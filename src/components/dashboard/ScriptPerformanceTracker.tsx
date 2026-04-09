@@ -141,14 +141,18 @@ export const ScriptPerformanceTracker = ({ scriptId, scriptTopic }: Props) => {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {link.performance_grade && (
-                  <Badge className={`text-xs font-black ${gradeColor(link.performance_grade)}`}>
-                    {link.performance_grade}
-                  </Badge>
+                  <span>
+                    <Badge className={`text-xs font-black ${gradeColor(link.performance_grade)}`}>
+                      {link.performance_grade}
+                    </Badge>
+                  </span>
                 )}
                 {link.learnings_extracted && (
-                  <Badge variant="outline" className="text-[9px] text-chart-2 border-chart-2/30 gap-0.5">
-                    <CheckCircle2 className="w-2.5 h-2.5" /> Aprendizado extraído
-                  </Badge>
+                  <span>
+                    <Badge variant="outline" className="text-[9px] text-chart-2 border-chart-2/30 gap-0.5">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Aprendizado extraído
+                    </Badge>
+                  </span>
                 )}
               </div>
             </div>

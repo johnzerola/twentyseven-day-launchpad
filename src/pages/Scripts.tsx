@@ -747,10 +747,9 @@ const Scripts = () => {
             setVideoStyle(config.visualStyle);
             setVoiceStyle(config.voiceStyle);
             setWizardConfigured(true);
-            // Trigger AutoPilot directly
+            // AutoPilot will be triggered via autoLaunchRef
             setTimeout(() => {
-              const btn = document.getElementById('autopilot-launch-btn');
-              if (btn) btn.click();
+              autoLaunchRef.current?.();
             }, 300);
           }}
         />
@@ -1037,7 +1036,7 @@ const Scripts = () => {
 
           {/* Right: Content Area */}
           <div className="lg:col-span-2 space-y-4">
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               {/* Step 2: Voice / Narration */}
               {activeStep === 'voice' && script && (
                 <VoiceGeneratorStep
