@@ -33,6 +33,7 @@ interface AutoPilotEngineProps {
   onTopicChange?: (topic: string) => void;
   onNicheChange?: (niche: string) => void;
   onDurationChange?: (duration: string) => void;
+  onReady?: (launch: () => void) => void;
   disabled?: boolean;
 }
 
@@ -151,7 +152,7 @@ function getCleanNarration(script: string): string {
 export const AutoPilotEngine = ({
   topic, niche, duration, style, language, videoType, videoStyle, voiceStyle: voiceStyleProp,
   onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange,
-  onTopicChange, onNicheChange, onDurationChange,
+  onTopicChange, onNicheChange, onDurationChange, onReady,
   disabled,
 }: AutoPilotEngineProps) => {
   const [running, setRunning] = useState(false);
