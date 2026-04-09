@@ -1,126 +1,122 @@
 
-Objetivo: deixar o pipeline de vídeos longos realmente confiável de 8, 15, 25, 40 e 60 minutos, garantindo que roteiro, áudio e cenas cubram a duração escolhida.
+Diagnóstico confirmado
 
-1. Diagnóstico do erro atual
-- O material que você enviou mostra um desencontro claro:
-  - pedido: 15 min
-  - production pack: 2851 palavras (~19 min)
-  - áudio real no console: 131s (~2m11s)
-  - cenas geradas: 17
-- Isso indica que o problema principal NÃO foi o roteiro.
-- O roteiro veio longo o suficiente, mas o áudio final ficou truncado/corrompido e a etapa de cenas usou essa duração errada de 131s.
+Do I know what the issue is? Sim.
 
-2. Causas-raiz encontradas no código
-- AutoPilotEngine concatena os chunks de áudio com `new Blob(blobs)` sem tratar WAV corretamente.
-  - Isso funciona melhor para MP3.
-  - Quando o fallback de TTS retorna WAV, o arquivo final pode ficar com vários headers WAV colados, e o player/decoder passa a “enxergar” só uma parte do áudio.
-- O manual de voz já tem uma concatenação WAV correta em `VoiceGeneratorStep.tsx`, mas o AutoPilotEngine não reutiliza essa lógica.
-- O AutoPilotEngine gera cenas com a função direta `generate-synced-prompts`, em um único request.
-  - Isso é frágil para longform.
-  - Para 15, 25, 40 e 60 min, a quantidade de cenas explode e esse modelo não é o caminho mais seguro.
-- Falta um “loop de garantia” entre:
-  - duração pedida
-  - tamanho do roteiro
+O erro principal agora não é mais só “áudio curto”. O fluxo está falhando antes, já no roteiro, e por isso às vezes “não gera nada”.
+
+O que encontrei no código e nos sinais da sessão:
+- A chamada para `generate-script` voltou `200`, mas o stream veio praticamente vazio: só `data: [DONE]`.
+- No frontend, `AutoPilotEngine` interpreta isso como string vazia e lança o erro genérico `Script too short`.
+- No backend, `supabase/functions/generate-script/index.ts` fecha o SSE com `[DONE]` quando o provedor devolve `402` ou `429`, em vez de devolver um erro estruturado. Resultado: o usuário recebe um falso “sucesso vazio”.
+- Existe também uma condição de corrida no auto-start:
+  - `Scripts.tsx` chama `autoLaunchRef.current?.()` com `setTimeout(300)`
+  - mas o `AutoPilotEngine` só existe depois de `wizardConfigured`
+  - então em alguns casos o clique/launch acontece antes do engine estar pronto, e parece que “nada aconteceu”.
+- Há bugs secundários que reduzem a confiabilidade:
+  - `generateTTSChunk()` usa `Bearer` com chave pública em vez da sessão do usuário
+  - fallback de browser TTS é tratado como sucesso mesmo em longform
+  - o AutoPilot não envia para o pipeline chunked o mesmo contexto rico que o `AudioProcessor` envia
+  - a UI aceita cobertura parcial de cenas como “ok”
+  - `Badge` não usa `forwardRef`, causando warning com Framer Motion
+
+Plano de correção
+
+1. Corrigir o erro silencioso no gerador de roteiro
+- Ajustar `supabase/functions/generate-script/index.ts` para nunca encerrar stream vazio em erro de provedor.
+- Quando houver `402`, `429` ou resposta vazia do modelo:
+  - retornar erro explícito, ou
+  - emitir evento SSE de erro estruturado antes de finalizar.
+- Padronizar códigos de erro como:
+  - `INSUFFICIENT_CREDITS`
+  - `RATE_LIMITED`
+  - `EMPTY_PROVIDER_STREAM`
+  - `SCRIPT_GENERATION_FAILED`
+
+2. Tornar o frontend capaz de entender erro real
+- Atualizar `generateScriptSSE()` em `AutoPilotEngine.tsx` para:
+  - detectar stream vazio
+  - detectar evento SSE de erro
+  - distinguir falha real de “roteiro curto”
+- Mostrar mensagens corretas no painel:
+  - “Créditos insuficientes”
+  - “Rate limit, tente novamente”
+  - “O provedor não retornou conteúdo”
+- Impedir continuação automática para voz/cenas quando o roteiro falhar.
+
+3. Remover a condição de corrida no auto-launch
+- Substituir o `setTimeout(300)` em `src/pages/Scripts.tsx` por um handshake robusto:
+  - guardar intenção de launch
+  - disparar apenas quando `AutoPilotEngine` já tiver registrado `onReady`
+- Isso resolve o caso em que o usuário clica e “não acontece nada”.
+
+4. Endurecer a etapa de áudio para longform real
+- Em `AutoPilotEngine.tsx`, usar o token da sessão do usuário nas chamadas diretas de TTS.
+- Tratar `browser fallback` como modo degradado, não como sucesso pleno para 8–60 min.
+- Se não houver áudio real decodificável:
+  - não marcar a etapa como concluída normal
+  - só seguir com aviso explícito ou tentar fallback controlado
+- Manter a concatenação segura já existente em `src/lib/audio-concat.ts`.
+
+5. Unificar o pipeline de cenas do AutoPilot com o pipeline manual
+- O `AudioProcessor.tsx` hoje manda mais contexto para `transcribe-and-generate-scenes` do que o AutoPilot.
+- Vou alinhar o AutoPilot para enviar também:
+  - áudio real quando existir
+  - `audioMimeType`
+  - `customStyleNotes`
+  - `referenceImageUrls`
+  - `sceneBlueprintFromScript`
+  - personagens
+- Para longform, o AutoPilot deve usar sempre o pipeline chunked robusto, com base no áudio real quando disponível.
+
+6. Subir o padrão de “sucesso” para 100% do que foi pedido
+- Hoje o sistema ainda aceita coisas “quase ok”.
+- Vou considerar sucesso apenas quando:
+  - roteiro atingir a meta mínima de palavras
+  - áudio real atingir a duração mínima definida
+  - cenas cobrirem a timeline inteira do áudio
+- Ajustes:
+  - `ProductionPack.tsx` passa a mostrar falha se cobertura não for total
+  - AutoPilot não fecha como concluído se alguma etapa crítica ficar incompleta
+  - cobertura deixa de usar limite frouxo como 80%
+
+7. Corrigir bugs visuais e de diagnóstico da UI
+- Ajustar `src/components/ui/badge.tsx` para `forwardRef`, eliminando warning com Framer Motion.
+- Melhorar o painel do AutoPilot para exibir:
+  - erro técnico real
   - duração real do áudio
-  - quantidade final de cenas
+  - cenas esperadas vs geradas
+  - status de fallback/degradação
 
-3. O que vou implementar
-- Corrigir a montagem de áudio no AutoPilotEngine
-  - Extrair a lógica segura de concatenação de áudio para util compartilhado.
-  - Suportar corretamente:
-    - MP3 concatenado
-    - WAV concatenado com header refeito
-  - Medir a duração real do arquivo final sempre.
-- Criar validação obrigatória de duração
-  - Após gerar o roteiro: validar se ele bate a meta mínima por duração.
-  - Após gerar o áudio: validar se a duração real bate a duração escolhida.
-  - Se o áudio ficar menor do que o solicitado, o sistema entra em modo de correção automática:
-    - gera continuação do roteiro apenas para o tempo faltante
-    - gera só o trecho de áudio faltante
-    - anexa ao áudio existente
-    - mede de novo
-  - Repetir até atingir a meta mínima.
-- Trocar a geração de cenas do AutoPilotEngine para o pipeline assíncrono já existente
-  - Em vez de chamar `generate-synced-prompts` direto para o vídeo inteiro, usar o fluxo robusto:
-    - `transcribe-and-generate-scenes` start
-    - `generate_chunk`
-    - `finalize`
-  - Esse pipeline já foi feito exatamente para evitar quebra em materiais longos.
-- Adicionar guard rails para longform
-  - Reservar `generate-synced-prompts` para casos curtos/pequenos.
-  - Para longform, forçar o pipeline chunked.
-  - Se algum caminho tentar gerar cenas demais num único request, bloquear e redirecionar automaticamente.
-- Exibir métricas reais na interface
-  - duração solicitada
-  - palavras do roteiro
-  - duração real do áudio
-  - cenas esperadas (`ceil(audio/8)`)
-  - cenas geradas
-  - status de sincronização
-- Ajustar o Production Pack
-  - parar de mostrar apenas estimativa por palavras
-  - incluir também:
-    - duração real do áudio
-    - cobertura de cenas
-    - alerta visível se algum item não bate com a duração escolhida
-
-4. Arquivos principais que precisam entrar nessa correção
-- `src/components/scripts/AutoPilotEngine.tsx`
-  - corrigir concatenação de áudio
-  - medir duração real
-  - implementar auto-correção de duração
-  - trocar cenas para pipeline chunked
-- `src/components/scripts/VoiceGeneratorStep.tsx`
-  - reaproveitar/extrair a lógica segura de concatenação WAV
-- `src/components/scripts/AudioProcessor.tsx`
-  - compartilhar a orquestração chunked de cenas com o AutoPilot
+Arquivos principais
 - `supabase/functions/generate-script/index.ts`
-  - reforçar garantia de comprimento mínimo por duração
-  - permitir continuação automática quando faltar tempo real
-- `supabase/functions/generate-synced-prompts/index.ts`
-  - colocar trava para não ser usado em longform pesado
+- `src/components/scripts/AutoPilotEngine.tsx`
+- `src/pages/Scripts.tsx`
+- `src/components/scripts/AudioProcessor.tsx`
 - `src/components/scripts/ProductionPack.tsx`
-  - mostrar duração real e cobertura final
-
-5. Regra de garantia por duração
-Vou tratar como sucesso apenas quando os 3 itens baterem:
-- roteiro suficiente para a duração
-- áudio real com pelo menos a duração escolhida
-- cenas cobrindo 100% do áudio real
-
-Exemplos de aceite:
-- 8 min → áudio >= 8:00, cenas >= 60
-- 15 min → áudio >= 15:00, cenas >= 113
-- 25 min → áudio >= 25:00, cenas >= 188
-- 40 min → áudio >= 40:00, cenas >= 300
-- 60 min → áudio >= 60:00, cenas >= 450
-
-6. Estratégia para “isso nunca mais ocorrer”
-- Unificar a lógica dos fluxos manual e automático para não existirem dois comportamentos diferentes.
-- Impedir que o sistema avance para cenas quando o áudio real estiver abaixo do solicitado.
-- Validar a saída em cada etapa antes de seguir para a próxima.
-- Mostrar ao usuário o diagnóstico real, em vez de parecer que “deu certo” quando só uma parte foi gerada.
-
-7. Resultado esperado após a correção
-- Se você escolher 1 hora:
-  - o roteiro será grande o bastante
-  - o áudio final terá pelo menos 1 hora
-  - as cenas cobrirão a 1 hora inteira
-  - o pack final mostrará números reais, não estimativas enganosas
+- `src/components/ui/badge.tsx`
 
 Detalhes técnicos
-- Bug crítico confirmado: truncamento do áudio por concatenação inadequada de múltiplos chunks, especialmente quando o TTS retorna WAV.
-- Sintoma colateral confirmado: como o AutoPilot usa a duração do áudio corrompido para gerar cenas, a contagem de cenas cai drasticamente.
-- Melhoria estrutural principal: migrar o AutoPilot para o pipeline assíncrono de cenas já existente, que é o caminho correto para materiais longos.
+- Causa-raiz imediata do “não gerou”: stream SSE vazio mascarado como sucesso no backend.
+- Causa-raiz intermitente do “cliquei e nada aconteceu”: corrida entre wizard e `autoLaunchRef`.
+- Causa-raiz histórica do áudio truncado: concatenação/medição do áudio; a base disso já existe, mas a orquestração ainda precisa ficar mais rígida.
+- Observação honesta de engenharia: não existe como prometer que um provedor externo nunca dará rate limit ou falta de crédito; o que dá para garantir é:
+  - fallback correto
+  - erro explícito
+  - nenhum falso sucesso
+  - nenhuma continuação para cenas/áudio quando o roteiro não existir de verdade
 
-Plano de validação final
-- Testar ponta a ponta: 8, 15, 25, 40 e 60 minutos
-- Validar pelo menos dois cenários de voz:
-  - retorno MP3
-  - retorno WAV
-- Conferir em cada teste:
-  - palavras do roteiro
-  - duração real do áudio
-  - número de cenas
-  - cobertura total da timeline
-  - Production Pack coerente com o resultado real
+Validação final que vou aplicar na implementação
+- Teste ponta a ponta para: 8, 15, 25, 40 e 60 min
+- Validar estes cenários:
+  - geração normal
+  - provedor com rate limit
+  - crédito insuficiente
+  - TTS MP3
+  - TTS WAV
+- Conferir em cada caso:
+  - se o clique sempre inicia de fato
+  - se o roteiro veio com conteúdo real
+  - se o áudio medido bate a meta
+  - se as cenas cobrem toda a timeline
+  - se a UI mostra erro verdadeiro, nunca “script too short” quando o problema for outro
