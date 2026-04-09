@@ -35,57 +35,62 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
     if (!GOOGLE_AI_API_KEY && !GOOGLE_AI_KEY && !LOVABLE_API_KEY) throw new Error("Nenhuma API key configurada.");
 
-    // Helper: call Lovable AI Gateway (preferred) with Gemini direct fallback
+    // Helper: call Gemini direct FIRST (zero credit cost), Gateway as fallback
     async function callAI(messages: {role: string; content: string}[], options: { tools?: any[]; tool_choice?: any; temperature?: number; max_tokens?: number } = {}): Promise<any> {
-      const model = "google/gemini-2.5-flash";
-      // Try Lovable Gateway first
-      const gatewayKey = LOVABLE_API_KEY || GOOGLE_AI_API_KEY;
-      if (gatewayKey) {
+      // PRIMARY: Direct Gemini API
+      if (GOOGLE_AI_KEY) {
         try {
-          const resp = await fetch(GATEWAY_URL, {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+          const resp = await fetch(geminiUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${gatewayKey}` },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              model,
-              messages,
-              temperature: options.temperature ?? 0.7,
-              max_completion_tokens: options.max_tokens || 16384,
-              ...(options.tools ? { tools: options.tools, tool_choice: options.tool_choice || "auto" } : {}),
+              contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+              generationConfig: { temperature: options.temperature ?? 0.7, ...(options.tools ? { responseMimeType: "application/json" } : {}) },
+              ...(options.tools ? { tools: [{ functionDeclarations: options.tools.map((t: any) => t.function) }] } : {}),
             }),
           });
-          if (resp.ok) return await resp.json();
+          if (resp.ok) {
+            const data = await resp.json();
+            const candidate = data.candidates?.[0];
+            const part = candidate?.content?.parts?.[0];
+            if (part?.functionCall) {
+              return { choices: [{ message: { tool_calls: [{ function: { name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args) } }] } }] };
+            }
+            return { choices: [{ message: { content: part?.text || "" } }] };
+          }
           const errText = await resp.text();
-          console.warn(`Gateway failed (${resp.status}):`, errText.slice(0, 200));
-          if (resp.status === 402) throw new Error("Créditos insuficientes no gateway.");
+          console.warn(`Direct Gemini failed (${resp.status}):`, errText.slice(0, 200));
+          // Fall through to gateway on 429/403
+          if (resp.status !== 429 && resp.status !== 403) throw new Error(`Gemini direct error: ${resp.status}`);
         } catch (e: any) {
-          if (e.message?.includes("Créditos")) throw e;
-          console.warn("Gateway error:", e.message);
+          if (!e.message?.includes("429") && !e.message?.includes("403")) throw e;
+          console.warn("Direct Gemini failed, trying gateway:", e.message);
         }
       }
-      // Fallback: Gemini direct
-      if (!GOOGLE_AI_KEY) throw new Error("Gateway indisponível e GOOGLE_AI_API_KEY não configurada.");
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
-      const resp = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
-          generationConfig: { temperature: options.temperature ?? 0.7, ...(options.tools ? { responseMimeType: "application/json" } : {}) },
-          ...(options.tools ? { tools: [{ functionDeclarations: options.tools.map((t: any) => t.function) }] } : {}),
-        }),
-      });
-      if (!resp.ok) {
+
+      // FALLBACK: Lovable AI Gateway (costs credits)
+      if (LOVABLE_API_KEY) {
+        const model = "google/gemini-2.5-flash";
+        const resp = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: options.temperature ?? 0.7,
+            max_completion_tokens: options.max_tokens || 16384,
+            ...(options.tools ? { tools: options.tools, tool_choice: options.tool_choice || "auto" } : {}),
+          }),
+        });
+        if (resp.ok) return await resp.json();
         const errText = await resp.text();
-        throw new Error(`Gemini direct error: ${resp.status} - ${errText.slice(0, 200)}`);
+        console.warn(`Gateway failed (${resp.status}):`, errText.slice(0, 200));
+        if (resp.status === 402) throw new Error("Créditos insuficientes no gateway.");
+        throw new Error(`Gateway error: ${resp.status}`);
       }
-      const data = await resp.json();
-      // Convert Gemini response to OpenAI-compatible format
-      const candidate = data.candidates?.[0];
-      const part = candidate?.content?.parts?.[0];
-      if (part?.functionCall) {
-        return { choices: [{ message: { tool_calls: [{ function: { name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args) } }] } }] };
-      }
-      return { choices: [{ message: { content: part?.text || "" } }] };
+
+      throw new Error("Nenhuma API key disponível.");
     }
 
     const body = await req.json();
@@ -212,47 +217,9 @@ RULES:
 - Cover the ENTIRE audio duration from start to finish
 - Return ONLY the JSON array, no markdown, no explanation`;
 
-        // Try Lovable AI Gateway with audio URL (multimodal)
-        const gatewayKey = LOVABLE_API_KEY || GOOGLE_AI_API_KEY;
-        if (gatewayKey) {
-          try {
-            console.log("Trying audio transcription via AI Gateway (multimodal)...");
-            const gatewayResp = await fetch(GATEWAY_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${gatewayKey}` },
-              body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-                messages: [{
-                  role: "user",
-                  content: [
-                    { type: "text", text: transcribePrompt },
-                    { type: "image_url", image_url: { url: audioUrl } },
-                  ],
-                }],
-                temperature: 0.1,
-                max_completion_tokens: 32768,
-              }),
-            });
-
-            if (gatewayResp.ok) {
-              const gData = await gatewayResp.json();
-              const text = gData.choices?.[0]?.message?.content || "";
-              if (text.includes('"start"') && text.includes('"end"')) {
-                transcribeData = { choices: [{ message: { content: text } }] };
-                console.log("AI Gateway audio transcription successful");
-              } else {
-                console.warn("AI Gateway returned non-transcript content, trying fallback...");
-              }
-            } else {
-              const errText = await gatewayResp.text();
-              console.warn("AI Gateway audio transcription failed:", gatewayResp.status, errText.slice(0, 300));
-            }
-          } catch (e: any) {
-            console.warn("AI Gateway audio transcription error:", e.message);
-          }
-        }
-
-        // Fallback: direct Gemini with Files API for large audio
+        // Audio transcription: Direct Gemini fallback is at line ~260, Gateway only if direct fails
+        // Try Gateway only as secondary option for multimodal audio
+        // (Direct Gemini with Files API is tried first below at line 261)
         if (!transcribeData && GOOGLE_AI_KEY && audioUrl) {
           try {
             console.log("Trying direct Gemini transcription...");

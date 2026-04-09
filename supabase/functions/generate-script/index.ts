@@ -613,10 +613,15 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     } catch { /* no cache — fresh run */ }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 0: Hook Generation (Gemini primary, GPT fallback)
+    // PHASE 0: Hook Generation — SKIP for ≤15min (system prompt already handles hooks)
+    // Only generate separate hook for long videos (>15min) where multi-act needs it
     // ═══════════════════════════════════════════════════════
-    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via GEMINI...`);
+    const skipHookPhase = dur <= 15;
+    console.log(`[PHASE-0 HOOK] runId=${runId} ${skipHookPhase ? 'SKIPPED (≤15min, hook in system prompt)' : 'Starting hook generation...'}`);
     let hookText = phaseCache['phase0'] || '';
+    if (skipHookPhase) {
+      hookText = ''; // Let the main generation handle the hook inline
+    } else if (hookText) {
     if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
     } else {
@@ -660,8 +665,8 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
           hookSystemPrompt,
           `Escreva os primeiros 90 SEGUNDOS de narração para um vídeo de ${duration}min sobre: "${topic}".\n\nO hook deve ser IMPOSSÍVEL de ignorar. Desenvolva 3 open loops com profundidade.\nRetorne APENAS texto de narração pura — zero tags, zero anotações.`,
           {
-            primaryModel: "gemini-2.5-pro",
-            fallbackModel: "gemini-2.5-flash",
+            primaryModel: "gemini-2.5-flash",
+            fallbackModel: "gemini-2.5-pro",
             maxTokens: 4000,
             label: `PHASE-0 HOOK runId=${runId}`,
           },
@@ -996,7 +1001,7 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
     //  60min  → 5 acts × 1800w = 9000w
     // Overflow acts: 2 (short), 3 (medium), 4 (long)
     // ═══════════════════════════════════════════════════════════════
-    const needsMultiAct = dur >= 8 && !isShort;
+    const needsMultiAct = dur >= 20 && !isShort;
     
     if (needsMultiAct) {
       console.log(`[MULTI-ACT] runId=${runId} Starting for ${dur}min (target: ${targetWords} words, min: ${minWords})`);
