@@ -1,5 +1,5 @@
-// Shared Gemini Direct API helpers — Lovable AI Gateway PRIMARY, direct API FALLBACK
-// Uses LOVABLE_API_KEY for gateway access (primary), falls back to GOOGLE_AI_API_KEY
+// Shared Gemini Direct API helpers — Direct GOOGLE_AI_API_KEY PRIMARY, Lovable AI Gateway FALLBACK
+// Uses GOOGLE_AI_API_KEY first (zero credit cost), falls back to LOVABLE_API_KEY gateway
 
 export const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const LOVABLE_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -82,8 +82,8 @@ export function mapModel(model: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PRIMARY: Lovable AI Gateway (uses user's Lovable credits)
-// FALLBACK: Direct Google AI API (uses GOOGLE_AI_API_KEY)
+// PRIMARY: Direct Google AI API (uses GOOGLE_AI_API_KEY — zero credit cost)
+// FALLBACK: Lovable AI Gateway (uses Lovable credits — only when direct fails)
 // ═══════════════════════════════════════════════════════════════
 
 /** Call Lovable AI Gateway (OpenAI-compatible) */
