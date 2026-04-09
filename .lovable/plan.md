@@ -1,77 +1,74 @@
 
 
-# Plano: Piloto Automático Inteligente + TTS Resiliente + OAuth Closed-Loop
+# Verificação Completa do Sistema — Bugs e Problemas Encontrados
 
-Após análise detalhada do código, identifiquei os 4 gaps reais e como resolvê-los.
+## Bugs Encontrados
 
----
+### BUG 1: Voice step throws error after browser fallback (CRITICAL)
+In `AutoPilotEngine.tsx`, when TTS falls back to browser synthesis (line 319-326), it sets the step as "done" and breaks the loop. But then the code continues to line 330-337 where it checks `if (blobs.length > 0)` — since browser fallback produces no blobs, it falls through to `throw new Error('No audio generated')`, which overwrites the "done" status with an error.
 
-## 1. Multi-Act já existe — mas o AutoPilot não o usa corretamente
+**Fix:** After the `break` in browser fallback, add a flag to skip the blob check. Or restructure so the `else` block at line 336 checks if the step was already marked done.
 
-O `generate-script` já tem o **DYNAMIC MULTI-ACT ENGINE** (linha 998-1272) que ativa para `dur >= 25`. O problema é que o `AutoPilotEngine.tsx` usa `supabase.functions.invoke()` que espera JSON, mas o generate-script retorna **SSE streaming**. Isso causa falha silenciosa para scripts longos.
+### BUG 2: AnimatePresence mode="wait" with multiple children (Console Warning)
+In `Scripts.tsx` lines 1040-1372, `<AnimatePresence mode="wait">` wraps multiple conditional renders that can be true simultaneously (e.g., `activeStep === 'titles'` renders TitleSEOStep, ThumbnailGenerator, PackagingLab, and ProductionPack all at once — lines 1299, 1316, 1324, 1338). This causes the console warning "attempting to animate multiple children within AnimatePresence, but its mode is set to wait."
 
-**Fix:** Reescrever a chamada do AutoPilot para usar `fetch()` com streaming SSE, acumulando o texto igual ao `ScriptGenerator`. Também adicionar opção de duração 40/45/50/60 min no seletor de duração.
+**Fix:** Remove `mode="wait"` or restructure so only one child renders per step.
 
-**Arquivo:** `src/components/scripts/AutoPilotEngine.tsx`
+### BUG 3: Badge ref warning in ScriptPerformanceTracker
+Console shows "Function components cannot be given refs" for Badge inside ScriptPerformanceTracker. This is a framer-motion `AnimatePresence` trying to pass a ref to Badge.
 
----
+**Fix:** Wrap Badge with `forwardRef` or use a `<div>` wrapper.
 
-## 2. TTS Fallback Chain — adicionar Lovable AI Gateway como Engine 2.5
+### BUG 4: Wizard auto-triggers AutoPilot via DOM click (fragile)
+In `Scripts.tsx` line 751-754, after wizard configuration, a `setTimeout` + `document.getElementById('autopilot-launch-btn').click()` is used to trigger the pipeline. This is fragile — if the button isn't rendered yet (race condition), it fails silently.
 
-O `google-tts/index.ts` já tem 4 engines (Google Cloud → Gemini → ElevenLabs → Browser). O gap: Google Cloud dá 403 (billing) e Gemini dá 429 (quota). O ElevenLabs funciona mas tem limites.
+**Fix:** Replace with a direct function call via a ref or callback instead of DOM manipulation.
 
-**Fix:** Adicionar o **Lovable AI Gateway** como engine entre Gemini Direct e ElevenLabs. O gateway em `ai.gateway.lovable.dev` usa créditos do usuário e tem quota separada.
+### BUG 5: Voice step not passed to `generate-script` edge function
+In `AutoPilotEngine.tsx` line 249-256, the `generateScriptSSE` call passes `style` but not `voiceStyle`. The voice style chosen by the user in the wizard is not influencing the script generation — only the TTS step uses it.
 
-```
-Engine 1: Google Cloud TTS (keys rotation) — FALHA: 403
-Engine 2: Gemini TTS Direct (keys rotation) — FALHA: 429  
-Engine 2.5: Gemini TTS via Lovable Gateway (NEW) — créditos separados
-Engine 3: ElevenLabs
-Engine 4: Browser synthesis
-```
+**Fix:** Pass `voiceStyle` to the script generation body so the AI adapts writing style to match voice.
 
-**Arquivo:** `supabase/functions/google-tts/index.ts`
+### BUG 6: Missing `niche` validation in "Gerar Tudo Automaticamente"
+The "Gerar Tudo Automaticamente" button (line 445) requires `niche.trim()` to be non-empty, but the VideoCreationWizard always sets a niche. However, if wizard is bypassed via URL params or history restore, `niche` could be empty and the button stays disabled without explanation.
 
----
+**Fix:** Show a tooltip or message when disabled explaining why.
 
-## 3. Modo Piloto Automático "Zero Decisões"
+### BUG 7: `voiceStyleProp` not in dependency array of `runPipeline`
+In `AutoPilotEngine.tsx` line 417, `voiceStyleProp` is used inside `runPipeline` (line 305) but is NOT listed in the `useCallback` dependency array. This means stale closures could use the wrong voice style.
 
-O AutoPilot atual exige que o usuário preencha tópico + nicho. O pedido é: **1 clique = o sistema escolhe o melhor tema automaticamente**.
+**Fix:** Add `voiceStyleProp` to the dependency array.
 
-**Fix:** Adicionar botão "🧠 Gerar Próximo Vídeo" que:
-1. Busca o nicho do usuário em `onboarding_profiles` ou `user_subscriptions`
-2. Chama `suggest-themes` ou consulta `emerging_videos` para pegar o tema trending #1
-3. Auto-preenche tópico, nicho, duração (padrão 15min), estilo (dopaminérgico)
-4. Dispara o pipeline AutoPilot automaticamente
+## Implementation Plan
 
-**Componente:** Novo botão no `AutoPilotEngine.tsx` — "Gerar Próximo Vídeo (IA escolhe o tema)"
+### Step 1: Fix browser fallback voice bug (AutoPilotEngine.tsx)
+- Add a `browserFallbackUsed` flag before the loop
+- After the loop, check the flag before throwing "No audio generated"
+- If flag is true, skip the blob check entirely
 
-**Arquivo:** `src/components/scripts/AutoPilotEngine.tsx`
+### Step 2: Fix AnimatePresence multiple children (Scripts.tsx)
+- Change `<AnimatePresence mode="wait">` to `<AnimatePresence>` (no mode)
+- This allows multiple children to animate simultaneously without warnings
 
----
+### Step 3: Fix Badge ref warning (ScriptPerformanceTracker.tsx)
+- Wrap animated Badge with a `<span>` or `<div>` instead of passing ref directly
 
-## 4. Closed-Loop OAuth Automático a cada 48h
+### Step 4: Replace DOM click with direct function call (Scripts.tsx)
+- Store `runPipeline` from AutoPilotEngine via a ref/callback
+- Call it directly from the wizard's `onLaunch` instead of using `getElementById`
 
-O `sync-oauth-performance` já existe e faz tudo: puxa métricas, calcula CTR/AVD, auto-linka scripts. Mas só roda quando o usuário clica manualmente.
+### Step 5: Add voiceStyleProp to dependency array (AutoPilotEngine.tsx)
+- Add `voiceStyleProp` to `runPipeline`'s `useCallback` deps
 
-**Fix:** Criar um cron job via `pg_cron` + `pg_net` que chama `sync-oauth-performance` a cada 48h para todos os usuários com OAuth tokens.
+### Step 6: Pass voiceStyle to script generation (AutoPilotEngine.tsx)
+- Add `voiceStyle: voiceStyleProp` to the `generateScriptSSE` body
 
-**Implementação:** SQL insert (não migração) para agendar o cron. Também adicionar chamada automática no Dashboard mount para sincronizar quando o usuário abre o app.
+### Technical Details
 
-**Arquivos:**
-- `src/pages/Dashboard.tsx` — trigger sync on mount
-- SQL cron job para `sync-oauth-performance`
+Files to modify:
+- `src/components/scripts/AutoPilotEngine.tsx` — Bugs 1, 5, 6, 7
+- `src/pages/Scripts.tsx` — Bugs 2, 4
+- `src/components/dashboard/ScriptPerformanceTracker.tsx` — Bug 3
 
----
-
-## Arquivos a editar
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/scripts/AutoPilotEngine.tsx` | SSE streaming, auto-topic, durações longas |
-| `supabase/functions/google-tts/index.ts` | Lovable Gateway como Engine 2.5 |
-| `src/pages/Dashboard.tsx` | Auto-sync OAuth on mount |
-| `src/pages/Scripts.tsx` | Opções de duração 40-60min no seletor |
-
-## Sem migrações — apenas 1 SQL insert para cron job
+All other pages (Dashboard, Channels, Titles, ViralDatabase, Landing, Login, etc.) are structurally sound. The edge functions are operational (confirmed in previous tests). The main issues are concentrated in the Scripts pipeline flow.
 
