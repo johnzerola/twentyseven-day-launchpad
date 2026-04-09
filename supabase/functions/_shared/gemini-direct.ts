@@ -212,6 +212,11 @@ export async function callGeminiOpenAICompat(
         }
         return gatewayRes;
       }
+      // 402 = credits exhausted — return immediately, do NOT fallback
+      if (gatewayRes.status === 402) {
+        console.error(`[callGeminiOpenAICompat] Lovable Gateway 402 — INSUFFICIENT_CREDITS`);
+        return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS" }), { status: 402 });
+      }
       console.warn(`[callGeminiOpenAICompat] Lovable Gateway returned ${gatewayRes.status}, falling back to direct API`);
     } catch (e) {
       console.warn(`[callGeminiOpenAICompat] Lovable Gateway error, falling back to direct API:`, e);
