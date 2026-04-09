@@ -543,7 +543,7 @@ export async function callGeminiWithFallback(
 
 /**
  * Streaming call.
- * PRIMARY: Lovable AI Gateway (streaming). FALLBACK: Direct Google AI API.
+ * PRIMARY: Direct Google AI API (zero credits). FALLBACK: Lovable AI Gateway.
  */
 export async function callGeminiStreaming(
   apiKey: string, system: string, userMsg: string,
@@ -551,12 +551,45 @@ export async function callGeminiStreaming(
 ): Promise<Response> {
   const models = [opts.primaryModel || 'gemini-2.5-pro', opts.fallbackModel].filter(Boolean) as string[];
   const label = opts.label || 'Streaming';
+  const s = sanitizeUnicode(system);
+  const u = sanitizeUnicode(userMsg);
 
-  // ═══ PRIMARY: Lovable AI Gateway (streaming) ═══
+  // ═══ PRIMARY: Direct Google AI API (zero credit cost) ═══
+  if (apiKey) {
+    for (const model of models) {
+      try {
+        console.log(`[${label}] PRIMARY: Direct API streaming with ${model}`);
+        const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: s }] },
+            contents: [{ role: "user", parts: [{ text: u }] }],
+            generationConfig: { temperature: 0.8, maxOutputTokens: opts.maxTokens || 16384 },
+          }),
+        }, 3, `Gemini-stream-${model}`);
+
+        if (res.ok) {
+          console.log(`[${label}] Streaming via direct API with ${model}`);
+          return new Response(geminiSseToOpenAi(res.body!), { headers: { "Content-Type": "text/event-stream" } });
+        }
+        const t = await res.text();
+        console.warn(`[${label}] Direct ${model} streaming ${res.status}:`, t.slice(0, 300));
+        if (!shouldFallback(res) && model === models[models.length - 1]) {
+          throw new Error(`Direct streaming failed: ${res.status}`);
+        }
+      } catch (e) {
+        console.warn(`[${label}] Direct ${model} streaming error:`, e);
+        if (model === models[models.length - 1] && !Deno.env.get("LOVABLE_API_KEY")) throw e;
+      }
+    }
+  }
+
+  // ═══ FALLBACK: Lovable AI Gateway (uses credits) ═══
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   if (lovableKey) {
     try {
-      console.log(`[${label}] PRIMARY: Lovable Gateway streaming with google/${models[0]}`);
+      console.log(`[${label}] FALLBACK: Lovable Gateway streaming with google/${models[0]}`);
       const res = await fetchWithRetry(LOVABLE_GATEWAY, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${lovableKey}` },
@@ -572,41 +605,17 @@ export async function callGeminiStreaming(
         console.log(`[${label}] Streaming via Lovable Gateway with google/${models[0]}`);
         return new Response(res.body, { headers: { "Content-Type": "text/event-stream" } });
       }
-      // 402 = credits exhausted — return 402 immediately, do NOT fallback
       if (res.status === 402) {
-        console.error(`[${label}] Lovable Gateway 402 — INSUFFICIENT_CREDITS, NOT falling back`);
+        console.error(`[${label}] Lovable Gateway 402 — INSUFFICIENT_CREDITS`);
         return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS" }), { status: 402 });
       }
-      console.warn(`[${label}] Lovable Gateway returned ${res.status}, falling back to direct API`);
+      console.warn(`[${label}] Lovable Gateway returned ${res.status}`);
     } catch (e) {
-      console.warn(`[${label}] Lovable Gateway error, falling back to direct API:`, e);
+      console.warn(`[${label}] Lovable Gateway error:`, e);
     }
   }
 
-  // ═══ FALLBACK: Direct Google AI API ═══
-  const s = sanitizeUnicode(system);
-  const u = sanitizeUnicode(userMsg);
-
-  for (const model of models) {
-    const res = await fetchWithRetry(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: s }] },
-        contents: [{ role: "user", parts: [{ text: u }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: opts.maxTokens || 16384 },
-      }),
-    }, 3, `Gemini-streamFallback-${model}`);
-
-    if (res.ok) {
-      console.log(`[${label}] Streaming via direct API with ${model}`);
-      return new Response(geminiSseToOpenAi(res.body!));
-    }
-    const t = await res.text();
-    console.error(`[${label}] ${model} streaming error ${res.status}:`, t.slice(0, 300));
-    if (model === models[models.length - 1]) throw new Error(`All streaming models failed: ${res.status}`);
-  }
-  throw new Error("All streaming models failed");
+  throw new Error("All streaming providers failed");
 }
 
 /**
