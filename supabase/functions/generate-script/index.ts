@@ -1227,7 +1227,15 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 break;
               }
             } catch (e) {
+              const errMsg = e instanceof Error ? e.message : String(e);
               console.error(`[MULTI-ACT ${actPlan.act}] runId=${runId} Failed:`, e);
+              // If credits exhausted, stop immediately with structured error
+              if (errMsg.includes("INSUFFICIENT_CREDITS") || errMsg.includes("402")) {
+                ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ error: "INSUFFICIENT_CREDITS", message: "Créditos de IA esgotados. Recarregue seu saldo para continuar.", code: 402 })}\n\n`));
+                ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+                ctrl.close();
+                return;
+              }
               continue;
             }
           }
@@ -1271,7 +1279,17 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 previousActText = ovText;
                 console.log(`[MULTI-ACT OVERFLOW ${overflowAct}] runId=${runId} Added ${ovWords} words (total: ${totalWordCount})`);
               }
-            } catch (e) { console.warn(`[MULTI-ACT OVERFLOW ${overflowAct}] runId=${runId} Failed:`, e); break; }
+            } catch (e) {
+              const ovErrMsg = e instanceof Error ? e.message : String(e);
+              console.warn(`[MULTI-ACT OVERFLOW ${overflowAct}] runId=${runId} Failed:`, e);
+              if (ovErrMsg.includes("INSUFFICIENT_CREDITS") || ovErrMsg.includes("402")) {
+                ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ error: "INSUFFICIENT_CREDITS", message: "Créditos de IA esgotados. Recarregue seu saldo para continuar.", code: 402 })}\n\n`));
+                ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+                ctrl.close();
+                return;
+              }
+              break;
+            }
           }
 
           console.log(`[MULTI-ACT COMPLETE] runId=${runId} Final word count: ${totalWordCount}/${targetWords} (${Math.round(totalWordCount / targetWords * 100)}%)`);

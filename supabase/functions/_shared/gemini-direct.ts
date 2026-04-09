@@ -212,6 +212,11 @@ export async function callGeminiOpenAICompat(
         }
         return gatewayRes;
       }
+      // 402 = credits exhausted — return immediately, do NOT fallback
+      if (gatewayRes.status === 402) {
+        console.error(`[callGeminiOpenAICompat] Lovable Gateway 402 — INSUFFICIENT_CREDITS`);
+        return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS" }), { status: 402 });
+      }
       console.warn(`[callGeminiOpenAICompat] Lovable Gateway returned ${gatewayRes.status}, falling back to direct API`);
     } catch (e) {
       console.warn(`[callGeminiOpenAICompat] Lovable Gateway error, falling back to direct API:`, e);
@@ -455,8 +460,14 @@ export async function callGemini(
         const content = data.choices?.[0]?.message?.content || '';
         if (content) return content;
       }
+      // 402 = credits exhausted — do NOT fallback, fail immediately
+      if (res.status === 402) {
+        console.error(`[callGemini] Lovable Gateway 402 — INSUFFICIENT_CREDITS, stopping`);
+        throw new Error("INSUFFICIENT_CREDITS");
+      }
       console.warn(`[callGemini] Lovable Gateway returned ${res.status}, trying direct API`);
     } catch (e) {
+      if (e instanceof Error && e.message === "INSUFFICIENT_CREDITS") throw e;
       console.warn(`[callGemini] Lovable Gateway error, trying direct API:`, e);
     }
   }
@@ -534,6 +545,11 @@ export async function callGeminiStreaming(
       if (res.ok && res.body) {
         console.log(`[${label}] Streaming via Lovable Gateway with google/${models[0]}`);
         return new Response(res.body, { headers: { "Content-Type": "text/event-stream" } });
+      }
+      // 402 = credits exhausted — return 402 immediately, do NOT fallback
+      if (res.status === 402) {
+        console.error(`[${label}] Lovable Gateway 402 — INSUFFICIENT_CREDITS, NOT falling back`);
+        return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS" }), { status: 402 });
       }
       console.warn(`[${label}] Lovable Gateway returned ${res.status}, falling back to direct API`);
     } catch (e) {
