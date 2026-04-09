@@ -8,12 +8,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-// Helper: call AI via Lovable Gateway (preferred) or direct Gemini
+// Helper: call AI via direct Gemini (preferred, zero credit cost) with Gateway fallback
 async function callAI(prompt: string, systemPrompt: string, apiKey: string, lovableKey: string | undefined, opts?: { temperature?: number }): Promise<string> {
   const temp = opts?.temperature ?? 0.9;
   
+  // PRIMARY: Direct Gemini API (zero credit cost)
+  if (apiKey) {
+    try {
+      const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: temp, responseMimeType: "application/json", maxOutputTokens: 8192 },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (text) return text;
+      }
+      const errText = await res.text();
+      console.warn("Direct Gemini error:", res.status, errText.slice(0, 200));
+      // Fall through to gateway on 429/quota errors
+      if (res.status !== 429 && res.status !== 403) throw new Error(`Gemini error: ${res.status}`);
+    } catch (e) {
+      console.warn("Direct Gemini failed, trying gateway:", (e as Error).message);
+    }
+  }
+
+  // FALLBACK: Lovable Gateway (costs credits)
   if (lovableKey) {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -37,7 +64,7 @@ async function callAI(prompt: string, systemPrompt: string, apiKey: string, lova
     return data.choices?.[0]?.message?.content || "";
   }
 
-  // Fallback: direct Gemini
+  throw new Error("No AI API key available");
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
