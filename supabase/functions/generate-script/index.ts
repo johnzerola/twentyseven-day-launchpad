@@ -994,11 +994,15 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMeta ideal: ${targetWords} palavras. Mínimo absoluto: ${minWords} palavras de NARRAÇÃO PURA. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. PROIBIDO qualquer tag técnica, VFX, música, cena, EXTRAS ou metadado.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nSe perceber que ainda não cobriu ${duration} minutos completos, CONTINUE expandindo com desenvolvimento, aprofundamento, callbacks e payoff final até atingir a duração. Comece imediatamente pelo roteiro.`;
 
     // ═══════════════════════════════════════════════════════════════
-    // DYNAMIC MULTI-ACT GENERATION ENGINE for 25+ min scripts
-    // Uses a narrative outline pre-flight + dynamic act loop to 
-    // reliably hit 40-60 min targets (6000-9000+ words).
+    // DYNAMIC MULTI-ACT GENERATION ENGINE
+    // Calibrated for all durations: 8, 15, 25, 40, 60 min
+    //   8min  → 2 acts ×  600w = 1200w  (150 WPM)
+    //  15min  → 2 acts × 1125w = 2250w
+    //  25min  → 3 acts × 1250w = 3750w
+    //  40min  → 4 acts × 1500w = 6000w
+    //  60min  → 5 acts × 1800w = 9000w
+    // Overflow acts: 2 (short), 3 (medium), 4 (long)
     // ═══════════════════════════════════════════════════════════════
-    // Multi-act for ANY video >= 8 min to guarantee word count targets
     const needsMultiAct = dur >= 8 && !isShort;
     
     if (needsMultiAct) {
