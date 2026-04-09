@@ -613,10 +613,15 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     } catch { /* no cache — fresh run */ }
 
     // ═══════════════════════════════════════════════════════
-    // PHASE 0: Hook Generation (Gemini primary, GPT fallback)
+    // PHASE 0: Hook Generation — SKIP for ≤15min (system prompt already handles hooks)
+    // Only generate separate hook for long videos (>15min) where multi-act needs it
     // ═══════════════════════════════════════════════════════
-    console.log(`[PHASE-0 HOOK] runId=${runId} Starting hook generation via GEMINI...`);
+    const skipHookPhase = dur <= 15;
+    console.log(`[PHASE-0 HOOK] runId=${runId} ${skipHookPhase ? 'SKIPPED (≤15min, hook in system prompt)' : 'Starting hook generation...'}`);
     let hookText = phaseCache['phase0'] || '';
+    if (skipHookPhase) {
+      hookText = ''; // Let the main generation handle the hook inline
+    } else if (hookText) {
     if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
     } else {
