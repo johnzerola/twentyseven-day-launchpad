@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Copy, Download, Package, Check, FileText, Film, Mic, Sparkles, Image, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Download, Package, Check, FileText, Film, Mic, Sparkles, Image, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { getExpectedSceneCount } from '@/lib/audio-concat';
 import type { SyncedScene, Character } from './types';
 
 interface ProductionPackProps {
@@ -19,10 +20,12 @@ interface ProductionPackProps {
   seoDescription?: string;
   seoTags?: string[];
   seoHashtags?: string[];
+  /** Real audio duration in seconds (measured via AudioContext) */
+  audioDurationSeconds?: number;
 }
 
-const Section = ({ title, icon: Icon, badge, children, defaultOpen = true }: {
-  title: string; icon: any; badge?: string; children: React.ReactNode; defaultOpen?: boolean;
+const Section = ({ title, icon: Icon, badge, badgeColor, children, defaultOpen = true }: {
+  title: string; icon: any; badge?: string; badgeColor?: string; children: React.ReactNode; defaultOpen?: boolean;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -31,7 +34,7 @@ const Section = ({ title, icon: Icon, badge, children, defaultOpen = true }: {
         <div className="flex items-center gap-2">
           <Icon className="w-4 h-4 text-primary" />
           <span className="font-medium text-sm">{title}</span>
-          {badge && <Badge variant="outline" className="text-[10px]">{badge}</Badge>}
+          {badge && <Badge variant="outline" className={`text-[10px] ${badgeColor || ''}`}>{badge}</Badge>}
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
@@ -56,18 +59,35 @@ const CopyButton = ({ text, label }: { text: string; label: string }) => {
   );
 };
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export const ProductionPack = ({
   topic, script, selectedTitle, niche, language, videoStyle,
   duration, syncedScenes, characters, generatedAudioUrl,
-  seoDescription, seoTags, seoHashtags,
+  seoDescription, seoTags, seoHashtags, audioDurationSeconds,
 }: ProductionPackProps) => {
   const [copiedAll, setCopiedAll] = useState(false);
 
   const finalTitle = selectedTitle || topic;
   const wordCount = script.split(/\s+/).filter(Boolean).length;
   const estimatedMinutes = Math.round(wordCount / 150);
+  const requestedMinutes = parseInt(duration, 10) || 8;
+  const requestedSeconds = requestedMinutes * 60;
 
-  // Check completeness
+  // Real or estimated duration
+  const realDurationSec = audioDurationSeconds || Math.round((wordCount / 150) * 60);
+  const hasRealDuration = !!audioDurationSeconds && audioDurationSeconds > 0;
+  const expectedScenes = getExpectedSceneCount(realDurationSec);
+  const sceneCoverage = expectedScenes > 0 ? Math.round((syncedScenes.length / expectedScenes) * 100) : 0;
+  
+  // Duration health checks
+  const durationMet = realDurationSec >= requestedSeconds * 0.85;
+  const scenesCoverageOk = sceneCoverage >= 80;
+
   const sections = useMemo(() => ({
     script: !!script,
     audio: !!generatedAudioUrl,
@@ -79,7 +99,6 @@ export const ProductionPack = ({
   const completedCount = Object.values(sections).filter(Boolean).length;
   const totalSections = Object.keys(sections).length;
 
-  // Build visual DNA for coherent storyboard
   const visualDNA = useMemo(() => {
     if (syncedScenes.length === 0) return null;
     const counts = (arr: (string | undefined)[]) => {
@@ -102,10 +121,9 @@ export const ProductionPack = ({
     lines.push(sep);
     lines.push(`📦 PRODUCTION PACK — ${finalTitle}`);
     lines.push(`Nicho: ${niche} | Idioma: ${language} | Duração: ${duration}min | Estilo: ${videoStyle}`);
-    lines.push(`Palavras: ${wordCount} (~${estimatedMinutes}min) | Cenas: ${syncedScenes.length}`);
+    lines.push(`Palavras: ${wordCount} | Áudio: ${formatDuration(realDurationSec)} | Cenas: ${syncedScenes.length}/${expectedScenes}`);
     lines.push(sep);
 
-    // Title & SEO
     lines.push('\n🎯 TÍTULO FINAL:');
     lines.push(finalTitle);
     if (seoDescription) {
@@ -121,26 +139,22 @@ export const ProductionPack = ({
       lines.push(seoHashtags.join(' '));
     }
 
-    // Script
     lines.push(`\n${sep}`);
     lines.push('📜 ROTEIRO COMPLETO:');
     lines.push(sep);
     lines.push(script);
 
-    // Characters
     if (characters.length > 0) {
       lines.push(`\n${sep}`);
       lines.push('👥 PERSONAGENS:');
       lines.push(sep);
       characters.forEach(c => {
         const a: Record<string, string> = (c.appearance || {}) as any;
-        const f: Record<string, string> = (c.facial_features || {}) as any;
         const cl: Record<string, string> = (c.clothing || {}) as any;
         lines.push(`\n[${c.name}]: ${c.gender}, ~${c.age} anos, ${a.body_type || 'médio'}. Pele: ${a.skin_color || 'média'}. Cabelo: ${a.hair_color || 'escuro'} ${a.hair_style || 'curto'}. Olhos: ${a.eye_color || 'castanhos'}. Roupa: ${cl.shirt || 'casual'}, ${cl.pants || 'jeans'}.`);
       });
     }
 
-    // Visual Prompts
     if (syncedScenes.length > 0) {
       lines.push(`\n${sep}`);
       lines.push('🎬 PROMPTS VISUAIS (Veo3/Midjourney):');
@@ -162,6 +176,7 @@ export const ProductionPack = ({
 
     lines.push(`\n${sep}`);
     lines.push(`✅ Pack gerado em ${new Date().toLocaleString('pt-BR')}`);
+    lines.push(`📊 Duração real: ${formatDuration(realDurationSec)} | Cobertura: ${sceneCoverage}%`);
 
     return lines.join('\n');
   };
@@ -170,7 +185,7 @@ export const ProductionPack = ({
     const pack = buildFullPack();
     navigator.clipboard.writeText(pack);
     setCopiedAll(true);
-    toast.success(`📦 Production Pack completo copiado! (${wordCount} palavras + ${syncedScenes.length} cenas)`);
+    toast.success(`📦 Production Pack copiado! (${formatDuration(realDurationSec)} de áudio + ${syncedScenes.length} cenas)`);
     setTimeout(() => setCopiedAll(false), 3000);
   };
 
@@ -206,6 +221,27 @@ export const ProductionPack = ({
         </Badge>
       </div>
 
+      {/* Duration/Sync alerts */}
+      {(!durationMet || !scenesCoverageOk) && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-destructive" />
+            <span className="text-xs font-semibold text-destructive">Atenção — Verificação de Duração</span>
+          </div>
+          {!durationMet && (
+            <p className="text-[11px] text-destructive/80">
+              ⏱️ Áudio real: {formatDuration(realDurationSec)} — Solicitado: {requestedMinutes}min.
+              {hasRealDuration ? ' O áudio ficou mais curto que o esperado.' : ' Duração estimada por palavras.'}
+            </p>
+          )}
+          {!scenesCoverageOk && syncedScenes.length > 0 && (
+            <p className="text-[11px] text-destructive/80">
+              🎬 Cenas: {syncedScenes.length}/{expectedScenes} ({sceneCoverage}% cobertura). Algumas partes do vídeo podem ficar sem cena visual.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Completion indicators */}
       <div className="flex flex-wrap gap-2">
         {[
@@ -222,17 +258,25 @@ export const ProductionPack = ({
         ))}
       </div>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-4 gap-2 text-center">
+      {/* Quick stats — now with REAL duration */}
+      <div className="grid grid-cols-5 gap-2 text-center">
         <div className="bg-muted/30 rounded-lg p-2">
           <div className="text-lg font-bold text-foreground">{wordCount.toLocaleString()}</div>
           <div className="text-[10px] text-muted-foreground">palavras</div>
         </div>
-        <div className="bg-muted/30 rounded-lg p-2">
-          <div className="text-lg font-bold text-foreground">~{estimatedMinutes}min</div>
-          <div className="text-[10px] text-muted-foreground">duração</div>
+        <div className={`rounded-lg p-2 ${durationMet ? 'bg-muted/30' : 'bg-destructive/10'}`}>
+          <div className={`text-lg font-bold ${durationMet ? 'text-foreground' : 'text-destructive'}`}>
+            {formatDuration(realDurationSec)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            {hasRealDuration ? 'áudio real' : '~estimado'}
+          </div>
         </div>
         <div className="bg-muted/30 rounded-lg p-2">
+          <div className="text-lg font-bold text-foreground">{requestedMinutes}min</div>
+          <div className="text-[10px] text-muted-foreground">solicitado</div>
+        </div>
+        <div className={`rounded-lg p-2 ${scenesCoverageOk || syncedScenes.length === 0 ? 'bg-muted/30' : 'bg-destructive/10'}`}>
           <div className="text-lg font-bold text-foreground">{syncedScenes.length}</div>
           <div className="text-[10px] text-muted-foreground">cenas</div>
         </div>
@@ -290,9 +334,17 @@ export const ProductionPack = ({
         </Section>
 
         {syncedScenes.length > 0 && (
-          <Section title="Prompts Visuais" icon={Film} badge={`${syncedScenes.length} cenas`} defaultOpen={false}>
+          <Section 
+            title="Prompts Visuais" 
+            icon={Film} 
+            badge={`${syncedScenes.length}/${expectedScenes} cenas`}
+            badgeColor={scenesCoverageOk ? '' : 'border-destructive/50 text-destructive'}
+            defaultOpen={false}
+          >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground">Prompts prontos para Veo3/Midjourney</span>
+              <span className="text-xs text-muted-foreground">
+                Cobertura: {sceneCoverage}% — Prompts prontos para Veo3/Midjourney
+              </span>
               <CopyButton
                 text={syncedScenes.map((s, i) => `[CENA ${i + 1}] ${s.visualPrompt}`).join('\n\n')}
                 label="Prompts visuais"

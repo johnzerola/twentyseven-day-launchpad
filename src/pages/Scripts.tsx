@@ -82,6 +82,7 @@ const Scripts = () => {
   const [activeStep, setActiveStep] = useState<PipelineStep>('script');
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState('');
   const [generatedAudioBlob, setGeneratedAudioBlob] = useState<Blob | null>(null);
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState(0);
   const [videoStyle, setVideoStyle] = useState('cinematográfico');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -767,7 +768,14 @@ const Scripts = () => {
             videoStyle={videoStyle}
             voiceStyle={voiceStyle}
             onScriptGenerated={(s) => { setScript(s); loadHistory(); }}
-            onAudioGenerated={(blob, url) => { setGeneratedAudioBlob(blob); setGeneratedAudioUrl(url); }}
+            onAudioGenerated={async (blob, url) => {
+              setGeneratedAudioBlob(blob); setGeneratedAudioUrl(url);
+              try {
+                const { measureAudioDuration } = await import('@/lib/audio-concat');
+                const dur = await measureAudioDuration(blob);
+                if (dur > 0) setAudioDurationSeconds(dur);
+              } catch {}
+            }}
             onScenesGenerated={(scenes) => setSyncedScenes(scenes)}
             onTitlesGenerated={() => {}}
             onStepChange={(step) => setActiveStep(step)}
@@ -1044,9 +1052,14 @@ const Scripts = () => {
                 <VoiceGeneratorStep
                   script={getCleanNarration()}
                   language={language}
-                  onAudioGenerated={(blob, url) => {
+                  onAudioGenerated={async (blob, url) => {
                     setGeneratedAudioBlob(blob);
                     setGeneratedAudioUrl(url);
+                    try {
+                      const { measureAudioDuration } = await import('@/lib/audio-concat');
+                      const dur = await measureAudioDuration(blob);
+                      if (dur > 0) setAudioDurationSeconds(dur);
+                    } catch {}
                   }}
                   onNavigate={setActiveStep}
                   existingAudioUrl={generatedAudioUrl}
@@ -1350,6 +1363,7 @@ const Scripts = () => {
                     syncedScenes={syncedScenes}
                     characters={characters}
                     generatedAudioUrl={generatedAudioUrl}
+                    audioDurationSeconds={audioDurationSeconds}
                   />
                 </motion.div>
               )}
