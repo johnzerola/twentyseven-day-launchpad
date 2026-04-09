@@ -420,7 +420,12 @@ export const AutoPilotEngine = ({
     });
   }, [topic, niche, duration, style, language, videoType, videoStyle, voiceStyleProp, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange, onTopicChange, onNicheChange]);
 
-  // ── "Generate Next Video" — fully automatic ──
+  // Expose runPipeline to parent via onReady callback
+  useEffect(() => {
+    runPipelineRef.current = () => runPipeline();
+    onReady?.(() => runPipeline());
+  }, [runPipeline, onReady]);
+
   const handleAutoGenerate = useCallback(async () => {
     const result = await autoSelectTopic();
     if (result) {

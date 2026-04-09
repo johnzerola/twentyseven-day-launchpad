@@ -774,6 +774,7 @@ const Scripts = () => {
             onTopicChange={(t) => setTopic(t)}
             onNicheChange={(n) => setNiche(n)}
             onDurationChange={(d) => setDuration(d)}
+            onReady={(launch) => { autoLaunchRef.current = launch; }}
             disabled={loading}
           />
         )}
