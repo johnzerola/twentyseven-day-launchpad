@@ -375,7 +375,7 @@ export const AutoPilotEngine = ({
           apikey: ANON_KEY,
           Authorization: `Bearer ${ANON_KEY}`,
         },
-        body: JSON.stringify({ script: generatedScript, videoStyle, characters: [], language, niche: useNiche }),
+        body: JSON.stringify({ script: generatedScript, videoStyle, characters: [], language, niche: useNiche, audioDurationSeconds: audioDurationSeconds || undefined }),
         signal: controller.signal,
       });
       if (!scenesResp.ok) {
