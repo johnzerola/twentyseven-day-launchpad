@@ -1,74 +1,126 @@
 
+Objetivo: deixar o pipeline de vídeos longos realmente confiável de 8, 15, 25, 40 e 60 minutos, garantindo que roteiro, áudio e cenas cubram a duração escolhida.
 
-# Verificação Completa do Sistema — Bugs e Problemas Encontrados
+1. Diagnóstico do erro atual
+- O material que você enviou mostra um desencontro claro:
+  - pedido: 15 min
+  - production pack: 2851 palavras (~19 min)
+  - áudio real no console: 131s (~2m11s)
+  - cenas geradas: 17
+- Isso indica que o problema principal NÃO foi o roteiro.
+- O roteiro veio longo o suficiente, mas o áudio final ficou truncado/corrompido e a etapa de cenas usou essa duração errada de 131s.
 
-## Bugs Encontrados
+2. Causas-raiz encontradas no código
+- AutoPilotEngine concatena os chunks de áudio com `new Blob(blobs)` sem tratar WAV corretamente.
+  - Isso funciona melhor para MP3.
+  - Quando o fallback de TTS retorna WAV, o arquivo final pode ficar com vários headers WAV colados, e o player/decoder passa a “enxergar” só uma parte do áudio.
+- O manual de voz já tem uma concatenação WAV correta em `VoiceGeneratorStep.tsx`, mas o AutoPilotEngine não reutiliza essa lógica.
+- O AutoPilotEngine gera cenas com a função direta `generate-synced-prompts`, em um único request.
+  - Isso é frágil para longform.
+  - Para 15, 25, 40 e 60 min, a quantidade de cenas explode e esse modelo não é o caminho mais seguro.
+- Falta um “loop de garantia” entre:
+  - duração pedida
+  - tamanho do roteiro
+  - duração real do áudio
+  - quantidade final de cenas
 
-### BUG 1: Voice step throws error after browser fallback (CRITICAL)
-In `AutoPilotEngine.tsx`, when TTS falls back to browser synthesis (line 319-326), it sets the step as "done" and breaks the loop. But then the code continues to line 330-337 where it checks `if (blobs.length > 0)` — since browser fallback produces no blobs, it falls through to `throw new Error('No audio generated')`, which overwrites the "done" status with an error.
+3. O que vou implementar
+- Corrigir a montagem de áudio no AutoPilotEngine
+  - Extrair a lógica segura de concatenação de áudio para util compartilhado.
+  - Suportar corretamente:
+    - MP3 concatenado
+    - WAV concatenado com header refeito
+  - Medir a duração real do arquivo final sempre.
+- Criar validação obrigatória de duração
+  - Após gerar o roteiro: validar se ele bate a meta mínima por duração.
+  - Após gerar o áudio: validar se a duração real bate a duração escolhida.
+  - Se o áudio ficar menor do que o solicitado, o sistema entra em modo de correção automática:
+    - gera continuação do roteiro apenas para o tempo faltante
+    - gera só o trecho de áudio faltante
+    - anexa ao áudio existente
+    - mede de novo
+  - Repetir até atingir a meta mínima.
+- Trocar a geração de cenas do AutoPilotEngine para o pipeline assíncrono já existente
+  - Em vez de chamar `generate-synced-prompts` direto para o vídeo inteiro, usar o fluxo robusto:
+    - `transcribe-and-generate-scenes` start
+    - `generate_chunk`
+    - `finalize`
+  - Esse pipeline já foi feito exatamente para evitar quebra em materiais longos.
+- Adicionar guard rails para longform
+  - Reservar `generate-synced-prompts` para casos curtos/pequenos.
+  - Para longform, forçar o pipeline chunked.
+  - Se algum caminho tentar gerar cenas demais num único request, bloquear e redirecionar automaticamente.
+- Exibir métricas reais na interface
+  - duração solicitada
+  - palavras do roteiro
+  - duração real do áudio
+  - cenas esperadas (`ceil(audio/8)`)
+  - cenas geradas
+  - status de sincronização
+- Ajustar o Production Pack
+  - parar de mostrar apenas estimativa por palavras
+  - incluir também:
+    - duração real do áudio
+    - cobertura de cenas
+    - alerta visível se algum item não bate com a duração escolhida
 
-**Fix:** After the `break` in browser fallback, add a flag to skip the blob check. Or restructure so the `else` block at line 336 checks if the step was already marked done.
+4. Arquivos principais que precisam entrar nessa correção
+- `src/components/scripts/AutoPilotEngine.tsx`
+  - corrigir concatenação de áudio
+  - medir duração real
+  - implementar auto-correção de duração
+  - trocar cenas para pipeline chunked
+- `src/components/scripts/VoiceGeneratorStep.tsx`
+  - reaproveitar/extrair a lógica segura de concatenação WAV
+- `src/components/scripts/AudioProcessor.tsx`
+  - compartilhar a orquestração chunked de cenas com o AutoPilot
+- `supabase/functions/generate-script/index.ts`
+  - reforçar garantia de comprimento mínimo por duração
+  - permitir continuação automática quando faltar tempo real
+- `supabase/functions/generate-synced-prompts/index.ts`
+  - colocar trava para não ser usado em longform pesado
+- `src/components/scripts/ProductionPack.tsx`
+  - mostrar duração real e cobertura final
 
-### BUG 2: AnimatePresence mode="wait" with multiple children (Console Warning)
-In `Scripts.tsx` lines 1040-1372, `<AnimatePresence mode="wait">` wraps multiple conditional renders that can be true simultaneously (e.g., `activeStep === 'titles'` renders TitleSEOStep, ThumbnailGenerator, PackagingLab, and ProductionPack all at once — lines 1299, 1316, 1324, 1338). This causes the console warning "attempting to animate multiple children within AnimatePresence, but its mode is set to wait."
+5. Regra de garantia por duração
+Vou tratar como sucesso apenas quando os 3 itens baterem:
+- roteiro suficiente para a duração
+- áudio real com pelo menos a duração escolhida
+- cenas cobrindo 100% do áudio real
 
-**Fix:** Remove `mode="wait"` or restructure so only one child renders per step.
+Exemplos de aceite:
+- 8 min → áudio >= 8:00, cenas >= 60
+- 15 min → áudio >= 15:00, cenas >= 113
+- 25 min → áudio >= 25:00, cenas >= 188
+- 40 min → áudio >= 40:00, cenas >= 300
+- 60 min → áudio >= 60:00, cenas >= 450
 
-### BUG 3: Badge ref warning in ScriptPerformanceTracker
-Console shows "Function components cannot be given refs" for Badge inside ScriptPerformanceTracker. This is a framer-motion `AnimatePresence` trying to pass a ref to Badge.
+6. Estratégia para “isso nunca mais ocorrer”
+- Unificar a lógica dos fluxos manual e automático para não existirem dois comportamentos diferentes.
+- Impedir que o sistema avance para cenas quando o áudio real estiver abaixo do solicitado.
+- Validar a saída em cada etapa antes de seguir para a próxima.
+- Mostrar ao usuário o diagnóstico real, em vez de parecer que “deu certo” quando só uma parte foi gerada.
 
-**Fix:** Wrap Badge with `forwardRef` or use a `<div>` wrapper.
+7. Resultado esperado após a correção
+- Se você escolher 1 hora:
+  - o roteiro será grande o bastante
+  - o áudio final terá pelo menos 1 hora
+  - as cenas cobrirão a 1 hora inteira
+  - o pack final mostrará números reais, não estimativas enganosas
 
-### BUG 4: Wizard auto-triggers AutoPilot via DOM click (fragile)
-In `Scripts.tsx` line 751-754, after wizard configuration, a `setTimeout` + `document.getElementById('autopilot-launch-btn').click()` is used to trigger the pipeline. This is fragile — if the button isn't rendered yet (race condition), it fails silently.
+Detalhes técnicos
+- Bug crítico confirmado: truncamento do áudio por concatenação inadequada de múltiplos chunks, especialmente quando o TTS retorna WAV.
+- Sintoma colateral confirmado: como o AutoPilot usa a duração do áudio corrompido para gerar cenas, a contagem de cenas cai drasticamente.
+- Melhoria estrutural principal: migrar o AutoPilot para o pipeline assíncrono de cenas já existente, que é o caminho correto para materiais longos.
 
-**Fix:** Replace with a direct function call via a ref or callback instead of DOM manipulation.
-
-### BUG 5: Voice step not passed to `generate-script` edge function
-In `AutoPilotEngine.tsx` line 249-256, the `generateScriptSSE` call passes `style` but not `voiceStyle`. The voice style chosen by the user in the wizard is not influencing the script generation — only the TTS step uses it.
-
-**Fix:** Pass `voiceStyle` to the script generation body so the AI adapts writing style to match voice.
-
-### BUG 6: Missing `niche` validation in "Gerar Tudo Automaticamente"
-The "Gerar Tudo Automaticamente" button (line 445) requires `niche.trim()` to be non-empty, but the VideoCreationWizard always sets a niche. However, if wizard is bypassed via URL params or history restore, `niche` could be empty and the button stays disabled without explanation.
-
-**Fix:** Show a tooltip or message when disabled explaining why.
-
-### BUG 7: `voiceStyleProp` not in dependency array of `runPipeline`
-In `AutoPilotEngine.tsx` line 417, `voiceStyleProp` is used inside `runPipeline` (line 305) but is NOT listed in the `useCallback` dependency array. This means stale closures could use the wrong voice style.
-
-**Fix:** Add `voiceStyleProp` to the dependency array.
-
-## Implementation Plan
-
-### Step 1: Fix browser fallback voice bug (AutoPilotEngine.tsx)
-- Add a `browserFallbackUsed` flag before the loop
-- After the loop, check the flag before throwing "No audio generated"
-- If flag is true, skip the blob check entirely
-
-### Step 2: Fix AnimatePresence multiple children (Scripts.tsx)
-- Change `<AnimatePresence mode="wait">` to `<AnimatePresence>` (no mode)
-- This allows multiple children to animate simultaneously without warnings
-
-### Step 3: Fix Badge ref warning (ScriptPerformanceTracker.tsx)
-- Wrap animated Badge with a `<span>` or `<div>` instead of passing ref directly
-
-### Step 4: Replace DOM click with direct function call (Scripts.tsx)
-- Store `runPipeline` from AutoPilotEngine via a ref/callback
-- Call it directly from the wizard's `onLaunch` instead of using `getElementById`
-
-### Step 5: Add voiceStyleProp to dependency array (AutoPilotEngine.tsx)
-- Add `voiceStyleProp` to `runPipeline`'s `useCallback` deps
-
-### Step 6: Pass voiceStyle to script generation (AutoPilotEngine.tsx)
-- Add `voiceStyle: voiceStyleProp` to the `generateScriptSSE` body
-
-### Technical Details
-
-Files to modify:
-- `src/components/scripts/AutoPilotEngine.tsx` — Bugs 1, 5, 6, 7
-- `src/pages/Scripts.tsx` — Bugs 2, 4
-- `src/components/dashboard/ScriptPerformanceTracker.tsx` — Bug 3
-
-All other pages (Dashboard, Channels, Titles, ViralDatabase, Landing, Login, etc.) are structurally sound. The edge functions are operational (confirmed in previous tests). The main issues are concentrated in the Scripts pipeline flow.
-
+Plano de validação final
+- Testar ponta a ponta: 8, 15, 25, 40 e 60 minutos
+- Validar pelo menos dois cenários de voz:
+  - retorno MP3
+  - retorno WAV
+- Conferir em cada teste:
+  - palavras do roteiro
+  - duração real do áudio
+  - número de cenas
+  - cobertura total da timeline
+  - Production Pack coerente com o resultado real
