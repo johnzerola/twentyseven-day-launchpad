@@ -359,6 +359,11 @@ export const AutoPilotEngine = ({
       }
     } catch (err: any) {
       if (err.name === 'AbortError') { setRunning(false); return; }
+      // Estimate duration from script word count as fallback
+      if (audioDurationSeconds === 0) {
+        const wordCount = generatedScript.split(/\s+/).length;
+        audioDurationSeconds = Math.round((wordCount / 150) * 60);
+      }
       updateStep('voice', { status: 'error', error: err.message });
     }
 
