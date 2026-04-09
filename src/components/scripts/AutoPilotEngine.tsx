@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { safeConcatAudioBlobs, measureAudioDuration, getMinDurationSeconds } from '@/lib/audio-concat';
 import type { PipelineStep } from './PipelineStepper';
 
 interface AutoPilotStep {
@@ -14,6 +15,7 @@ interface AutoPilotStep {
   emoji: string;
   status: 'pending' | 'running' | 'done' | 'error' | 'skipped';
   error?: string;
+  detail?: string;
 }
 
 interface AutoPilotEngineProps {
@@ -78,7 +80,6 @@ async function generateScriptSSE(
 
   const contentType = res.headers.get('content-type') || '';
 
-  // If JSON response (short scripts), handle directly
   if (contentType.includes('application/json')) {
     const data = await res.json();
     const script = data?.script || data?.fullScript || '';
@@ -86,7 +87,6 @@ async function generateScriptSSE(
     return script;
   }
 
-  // SSE streaming for long scripts
   const reader = res.body?.getReader();
   if (!reader) throw new Error('No response body');
 
@@ -117,7 +117,6 @@ async function generateScriptSSE(
           accumulated += content;
           onChunk(content);
         }
-        // Handle full script in SSE JSON
         if (parsed.script || parsed.fullScript) {
           const full = parsed.script || parsed.fullScript;
           accumulated = full;
@@ -149,6 +148,148 @@ function getCleanNarration(script: string): string {
     .trim();
 }
 
+/** Split text at sentence boundaries into chunks ≤ maxLen */
+function splitTextIntoChunks(text: string, maxLen: number): string[] {
+  if (text.length <= maxLen) return [text];
+  const sentences = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [text];
+  const chunks: string[] = [];
+  let current = '';
+  for (const sentence of sentences) {
+    if (current.length + sentence.length > maxLen && current.length > 0) {
+      chunks.push(current.trim());
+      current = '';
+    }
+    current += sentence;
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+/** Generate TTS for a single text chunk, returns a Blob */
+async function generateTTSChunk(
+  text: string,
+  language: string,
+  voiceStyle: string,
+  signal?: AbortSignal,
+): Promise<Blob | null> {
+  const response = await fetch(TTS_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      text, language, voiceStyle,
+      speakingRate: 1.0, returnBinary: true,
+    }),
+    signal,
+  });
+  if (!response.ok) throw new Error(`TTS ${response.status}`);
+  const ct = response.headers.get('content-type') || '';
+  if (ct.startsWith('audio/')) {
+    return response.blob();
+  }
+  const data = await response.json();
+  if (data.audioBase64) {
+    const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
+    return r.blob();
+  }
+  if (data.use_browser_synthesis) {
+    return null; // Signal browser fallback
+  }
+  throw new Error('Unexpected TTS response');
+}
+
+/** Generate scenes using the chunked async pipeline */
+async function generateScenesChunked(
+  script: string,
+  videoStyle: string,
+  language: string,
+  niche: string,
+  audioDurationSeconds: number,
+  signal?: AbortSignal,
+): Promise<any[]> {
+  const { data: startData, error: startError } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+    body: {
+      action: 'start',
+      script,
+      videoStyle,
+      language,
+      niche,
+      audioDurationSeconds,
+    },
+  });
+
+  if (startError) throw startError;
+  if (startData?.error) throw new Error(startData.error);
+  if (!startData?.job_id) throw new Error('Failed to start scene generation');
+
+  const { job_id, totalChunks } = startData;
+  const allScenes: any[] = [];
+
+  for (let ci = 0; ci < totalChunks; ci++) {
+    if (signal?.aborted) break;
+    const { data: chunkData, error: chunkError } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+      body: { action: 'generate_chunk', job_id, chunk_index: ci },
+    });
+
+    if (chunkError) { console.error(`Chunk ${ci} error:`, chunkError); continue; }
+    if (chunkData?.error) { console.error(`Chunk ${ci}:`, chunkData.error); continue; }
+    if (chunkData?.scenes) allScenes.push(...chunkData.scenes);
+
+    toast.loading(`Gerando cenas... ${ci + 1}/${totalChunks}`, { id: 'autopilot-scenes' });
+  }
+
+  toast.dismiss('autopilot-scenes');
+
+  if (allScenes.length === 0) throw new Error('No scenes generated');
+
+  // Finalize
+  const { data: finalData, error: finalError } = await supabase.functions.invoke('transcribe-and-generate-scenes', {
+    body: { action: 'finalize', job_id, all_scenes: allScenes },
+  });
+
+  if (finalError) throw finalError;
+  if (finalData?.error) throw new Error(finalData.error);
+
+  return (Array.isArray(finalData?.scenes) ? finalData.scenes : [])
+    .filter((scene: any) => scene && typeof scene.visualPrompt === 'string' && scene.visualPrompt.trim().length > 0)
+    .map((scene: any, index: number) => ({
+      ...scene,
+      sceneIndex: typeof scene.sceneIndex === 'number' ? scene.sceneIndex : index + 1,
+      startTime: Number(scene.startTime) || 0,
+      endTime: Number(scene.endTime) || (Number(scene.startTime) || 0) + 6,
+    }));
+}
+
+/** Generate scenes using direct single-request (only for short content ≤ 5min) */
+async function generateScenesDirect(
+  script: string,
+  videoStyle: string,
+  language: string,
+  niche: string,
+  audioDurationSeconds: number,
+  signal?: AbortSignal,
+): Promise<any[]> {
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-synced-prompts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+    },
+    body: JSON.stringify({ script, videoStyle, characters: [], language, niche, audioDurationSeconds }),
+    signal,
+  });
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => '');
+    throw new Error(`Scenes ${resp.status}: ${errBody.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  return data?.scenes || data?.syncedScenes || [];
+}
+
 export const AutoPilotEngine = ({
   topic, niche, duration, style, language, videoType, videoStyle, voiceStyle: voiceStyleProp,
   onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange,
@@ -166,14 +307,13 @@ export const AutoPilotEngine = ({
     setSteps(prev => prev.map(s => s.key === key ? { ...s, ...update } : s));
   };
 
-  // ── Auto-select trending topic based on user's niche ──
+  // ── Auto-select trending topic ──
   const autoSelectTopic = useCallback(async (): Promise<{ topic: string; niche: string } | null> => {
     setLoadingAutoTopic(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error('Faça login primeiro'); return null; }
 
-      // 1. Get user's niche from onboarding or channels
       let userNiche = niche;
       if (!userNiche) {
         const { data: profile } = await supabase
@@ -186,7 +326,6 @@ export const AutoPilotEngine = ({
         userNiche = profile?.niche || 'curiosidades';
       }
 
-      // 2. Try emerging_videos for trending topics
       const { data: emerging } = await supabase
         .from('emerging_videos')
         .select('title, niche, views, velocity_score')
@@ -194,23 +333,18 @@ export const AutoPilotEngine = ({
         .limit(10);
 
       if (emerging?.length) {
-        // Pick niche-relevant or top trending
         const nicheMatch = emerging.find(v => v.niche?.toLowerCase().includes(userNiche.toLowerCase()));
         const pick = nicheMatch || emerging[0];
-        const autoTopic = `[TENDÊNCIA] ${pick.title} (${(pick.views || 0).toLocaleString()} views, velocidade: ${pick.velocity_score})`;
-        return { topic: autoTopic, niche: userNiche };
+        return { topic: `[TENDÊNCIA] ${pick.title} (${(pick.views || 0).toLocaleString()} views)`, niche: userNiche };
       }
 
-      // 3. Fallback: call suggest-themes
       const { data: themes } = await supabase.functions.invoke('suggest-themes', {
         body: { niche: userNiche, language, count: 3 },
       });
       if (themes?.themes?.length) {
-        const best = themes.themes[0];
-        return { topic: best.topic || best.title, niche: userNiche };
+        return { topic: themes.themes[0].topic || themes.themes[0].title, niche: userNiche };
       }
 
-      // 4. Last resort
       return { topic: `Top tendências ${userNiche} 2026`, niche: userNiche };
     } catch (err: any) {
       console.error('Auto-topic failed:', err);
@@ -231,7 +365,6 @@ export const AutoPilotEngine = ({
       return;
     }
 
-    // If auto-topic, update parent state
     if (autoTopic) {
       onTopicChange?.(autoTopic.topic);
       onNicheChange?.(autoTopic.niche);
@@ -244,8 +377,10 @@ export const AutoPilotEngine = ({
     setSteps(INITIAL_STEPS.map(s => ({ ...s, status: 'pending' as const })));
 
     let generatedScript = '';
+    const requestedMinutes = parseInt(duration, 10) || 8;
+    const minDurationSec = getMinDurationSeconds(duration);
 
-    // Step 1: Generate Script (SSE streaming for long-form)
+    // ═══ STEP 1: Generate Script ═══
     updateStep('script', { status: 'running' });
     try {
       generatedScript = await generateScriptSSE(
@@ -258,9 +393,18 @@ export const AutoPilotEngine = ({
         controller.signal,
       );
       if (!generatedScript || generatedScript.length < 100) throw new Error('Script too short');
+      
+      const wordCount = getCleanNarration(generatedScript).split(/\s+/).length;
+      const minWords = Math.floor(requestedMinutes * 150 * 0.85);
+      
       onScriptGenerated(generatedScript);
-      updateStep('script', { status: 'done' });
+      updateStep('script', { 
+        status: 'done', 
+        detail: `${wordCount} palavras (~${Math.round(wordCount / 150)}min)` 
+      });
       onStepChange('script');
+      
+      console.log(`Script: ${wordCount} words, target: ${minWords} min words for ${requestedMinutes}min`);
     } catch (err: any) {
       if (err.name === 'AbortError') { setRunning(false); return; }
       updateStep('script', { status: 'error', error: err.message });
@@ -271,95 +415,137 @@ export const AutoPilotEngine = ({
 
     if (controller.signal.aborted) { setRunning(false); return; }
 
-    // Step 2: Generate Voice (TTS with fallback)
+    // ═══ STEP 2: Generate Voice (TTS) with duration validation ═══
     let audioDurationSeconds = 0;
+    let finalAudioBlob: Blob | null = null;
+    let browserFallbackUsed = false;
+
     updateStep('voice', { status: 'running' });
     try {
-      const cleanText = getCleanNarration(generatedScript);
+      let cleanText = getCleanNarration(generatedScript);
       if (cleanText.length < 50) throw new Error('Script too short for TTS');
 
-      const MAX_CHUNK = 2000;
-      const chunks: string[] = [];
-      if (cleanText.length <= MAX_CHUNK) {
-        chunks.push(cleanText);
-      } else {
-        const sentences = cleanText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [cleanText];
-        let current = '';
-        for (const s of sentences) {
-          if (current.length + s.length > MAX_CHUNK && current.length > 0) {
-            chunks.push(current.trim());
-            current = '';
-          }
-          current += s;
-        }
-        if (current.trim()) chunks.push(current.trim());
-      }
+      const voiceStyleToUse = voiceStyleProp || 'dopaminergico';
+      
+      // Generate TTS for the full script
+      const generateFullAudio = async (text: string): Promise<{ blob: Blob | null; browserFallback: boolean }> => {
+        const chunks = splitTextIntoChunks(text, 2000);
+        const blobs: Blob[] = [];
+        let fallback = false;
 
-      const blobs: Blob[] = [];
-      let browserFallbackUsed = false;
-      // audioDurationSeconds declared above try block
-      for (const chunk of chunks) {
-        if (controller.signal.aborted) break;
-        const response = await fetch(TTS_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: ANON_KEY,
-            Authorization: `Bearer ${ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            text: chunk, language, voiceStyle: voiceStyleProp || 'dopaminergico',
-            speakingRate: 1.0, returnBinary: true,
-          }),
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error(`TTS ${response.status}`);
-        const ct = response.headers.get('content-type') || '';
-        if (ct.startsWith('audio/')) {
-          blobs.push(await response.blob());
-        } else {
-          const data = await response.json();
-          if (data.audioBase64) {
-            const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
-            blobs.push(await r.blob());
-          } else if (data.use_browser_synthesis) {
-            // Browser fallback — estimate duration from word count (150 WPM)
-            const wordCount = cleanText.split(/\s+/).length;
-            audioDurationSeconds = Math.round((wordCount / 150) * 60);
-            console.warn('TTS: browser synthesis fallback, estimated duration:', audioDurationSeconds, 's');
-            browserFallbackUsed = true;
-            updateStep('voice', { status: 'done', error: 'Usando síntese do navegador (engines cloud indisponíveis)' });
-            onStepChange('voice');
+        for (let i = 0; i < chunks.length; i++) {
+          if (controller.signal.aborted) break;
+          
+          toast.loading(`Gerando áudio... ${i + 1}/${chunks.length}`, { id: 'autopilot-tts' });
+          
+          const blob = await generateTTSChunk(chunks[i], language, voiceStyleToUse, controller.signal);
+          if (blob === null) {
+            // Browser fallback signal
+            fallback = true;
             break;
           }
+          blobs.push(blob);
         }
-      }
+        
+        toast.dismiss('autopilot-tts');
 
-      if (blobs.length > 0) {
-        const finalBlob = new Blob(blobs, { type: blobs[0].type || 'audio/mpeg' });
-        const url = URL.createObjectURL(finalBlob);
-        onAudioGenerated(finalBlob, url);
-        // Calculate real audio duration
-        try {
-          const audioCtx = new AudioContext();
-          const arrayBuf = await finalBlob.arrayBuffer();
-          const decoded = await audioCtx.decodeAudioData(arrayBuf);
-          audioDurationSeconds = Math.round(decoded.duration);
-          audioCtx.close();
-        } catch {
-          // Fallback: estimate from word count
-          const wordCount = cleanText.split(/\s+/).length;
-          audioDurationSeconds = Math.round((wordCount / 150) * 60);
-        }
-        console.log('Audio duration:', audioDurationSeconds, 's');
-        updateStep('voice', { status: 'done' });
+        if (blobs.length === 0) return { blob: null, browserFallback: fallback };
+
+        // ★ Use safe concatenation (handles WAV headers properly)
+        const concatenated = await safeConcatAudioBlobs(blobs);
+        return { blob: concatenated, browserFallback: false };
+      };
+
+      const result = await generateFullAudio(cleanText);
+      
+      if (result.browserFallback) {
+        browserFallbackUsed = true;
+        const wordCount = cleanText.split(/\s+/).length;
+        audioDurationSeconds = Math.round((wordCount / 150) * 60);
+        console.warn('TTS: browser synthesis fallback, estimated duration:', audioDurationSeconds, 's');
+        updateStep('voice', { status: 'done', detail: `~${Math.round(audioDurationSeconds / 60)}min (estimado, navegador)` });
         onStepChange('voice');
-      } else if (!browserFallbackUsed) {
+      } else if (result.blob) {
+        finalAudioBlob = result.blob;
+        
+        // ★ Measure REAL audio duration
+        const wordCount = cleanText.split(/\s+/).length;
+        audioDurationSeconds = await measureAudioDuration(finalAudioBlob, wordCount);
+        
+        console.log(`Audio duration: ${audioDurationSeconds}s (target: ${requestedMinutes * 60}s, min: ${minDurationSec}s)`);
+        
+        // ★ Duration validation loop — if audio is too short, generate continuation
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+        
+        while (audioDurationSeconds < minDurationSec && retryCount < MAX_RETRIES && !controller.signal.aborted) {
+          retryCount++;
+          const missingSeconds = (requestedMinutes * 60) - audioDurationSeconds;
+          const missingMinutes = Math.ceil(missingSeconds / 60);
+          const missingWords = Math.ceil((missingSeconds / 60) * 150);
+          
+          console.log(`Audio too short by ${missingSeconds}s. Generating continuation #${retryCount} (~${missingWords} words)...`);
+          updateStep('voice', { 
+            status: 'running', 
+            detail: `Áudio curto (${Math.round(audioDurationSeconds / 60)}min). Gerando continuação #${retryCount}...` 
+          });
+          
+          // Generate continuation script
+          let continuationScript = '';
+          try {
+            continuationScript = await generateScriptSSE(
+              {
+                topic: useTopic, 
+                duration: String(missingMinutes),
+                style, niche: useNiche, language,
+                videoType, emotionalIntensity: 'maxima',
+                voiceStyle: voiceStyleToUse,
+                continuationOf: generatedScript.slice(-2000), // Last 2000 chars as context
+                isContinuation: true,
+              },
+              () => {},
+              controller.signal,
+            );
+          } catch (e: any) {
+            console.error('Continuation script failed:', e);
+            break;
+          }
+          
+          if (!continuationScript || continuationScript.length < 50) break;
+          
+          // Append continuation to main script
+          generatedScript += '\n\n' + continuationScript;
+          onScriptGenerated(generatedScript);
+          
+          // Generate TTS for continuation only
+          const contClean = getCleanNarration(continuationScript);
+          const contResult = await generateFullAudio(contClean);
+          
+          if (!contResult.blob) break;
+          
+          // Concatenate new audio with existing
+          finalAudioBlob = await safeConcatAudioBlobs([finalAudioBlob!, contResult.blob]);
+          audioDurationSeconds = await measureAudioDuration(finalAudioBlob, 
+            getCleanNarration(generatedScript).split(/\s+/).length);
+          
+          console.log(`After continuation #${retryCount}: ${audioDurationSeconds}s`);
+        }
+        
+        // Deliver final audio
+        const url = URL.createObjectURL(finalAudioBlob);
+        onAudioGenerated(finalAudioBlob, url);
+        
+        const finalMinutes = (audioDurationSeconds / 60).toFixed(1);
+        updateStep('voice', { 
+          status: 'done', 
+          detail: `${finalMinutes}min real` 
+        });
+        onStepChange('voice');
+      } else {
         throw new Error('No audio generated');
       }
     } catch (err: any) {
       if (err.name === 'AbortError') { setRunning(false); return; }
-      // Estimate duration from script word count as fallback
       if (audioDurationSeconds === 0) {
         const wordCount = generatedScript.split(/\s+/).length;
         audioDurationSeconds = Math.round((wordCount / 150) * 60);
@@ -369,30 +555,35 @@ export const AutoPilotEngine = ({
 
     if (controller.signal.aborted) { setRunning(false); return; }
 
-    // Step 3: Generate Scenes
+    // ═══ STEP 3: Generate Scenes (chunked pipeline for longform) ═══
     updateStep('scenes', { status: 'running' });
     try {
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const scenesResp = await fetch(`${SUPABASE_URL}/functions/v1/generate-synced-prompts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: ANON_KEY,
-          Authorization: `Bearer ${ANON_KEY}`,
-        },
-        body: JSON.stringify({ script: generatedScript, videoStyle, characters: [], language, niche: useNiche, audioDurationSeconds: audioDurationSeconds || undefined }),
-        signal: controller.signal,
-      });
-      if (!scenesResp.ok) {
-        const errBody = await scenesResp.text().catch(() => '');
-        throw new Error(`Scenes ${scenesResp.status}: ${errBody.slice(0, 200)}`);
+      const isLongform = requestedMinutes >= 8 || audioDurationSeconds >= 300;
+      let scenes: any[];
+      
+      if (isLongform) {
+        // ★ Use chunked async pipeline for long-form (robust, no timeout)
+        console.log(`Using chunked scene pipeline for ${audioDurationSeconds}s audio`);
+        scenes = await generateScenesChunked(
+          generatedScript, videoStyle, language, useNiche, 
+          audioDurationSeconds, controller.signal,
+        );
+      } else {
+        // Direct single-request for short content
+        scenes = await generateScenesDirect(
+          generatedScript, videoStyle, language, useNiche,
+          audioDurationSeconds, controller.signal,
+        );
       }
-      const data = await scenesResp.json();
-      const scenes = data?.scenes || data?.syncedScenes || [];
+      
       if (scenes.length > 0) {
         onScenesGenerated(scenes);
-        updateStep('scenes', { status: 'done' });
+        const expectedScenes = Math.ceil(audioDurationSeconds / 8);
+        const coverage = Math.round((scenes.length / expectedScenes) * 100);
+        updateStep('scenes', { 
+          status: 'done', 
+          detail: `${scenes.length} cenas (${coverage}% cobertura)` 
+        });
         onStepChange('prompts');
       } else {
         updateStep('scenes', { status: 'skipped', error: 'Nenhuma cena gerada' });
@@ -403,7 +594,7 @@ export const AutoPilotEngine = ({
 
     if (controller.signal.aborted) { setRunning(false); return; }
 
-    // Step 4: Titles & SEO
+    // ═══ STEP 4: Titles & SEO ═══
     updateStep('titles', { status: 'running' });
     try {
       const { error } = await supabase.functions.invoke('generate-titles', {
@@ -416,7 +607,7 @@ export const AutoPilotEngine = ({
       updateStep('titles', { status: 'error', error: err.message });
     }
 
-    // Step 5: Thumbnail
+    // ═══ STEP 5: Thumbnail ═══
     updateStep('thumbnail', { status: 'running' });
     try {
       const { error } = await supabase.functions.invoke('generate-thumbnail-prompt', {
@@ -428,13 +619,12 @@ export const AutoPilotEngine = ({
       updateStep('thumbnail', { status: 'error', error: err.message });
     }
 
-    // Step 6: Affiliate
+    // ═══ STEP 6: Affiliate ═══
     updateStep('affiliate', { status: 'done' });
 
     onStepChange('titles');
     setRunning(false);
 
-    // Count completed
     setSteps(prev => {
       const doneCount = prev.filter(s => s.status === 'done').length;
       toast.success(`🚀 Piloto Automático concluído! ${doneCount}/6 etapas completas.`);
@@ -442,7 +632,6 @@ export const AutoPilotEngine = ({
     });
   }, [topic, niche, duration, style, language, videoType, videoStyle, voiceStyleProp, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange, onTopicChange, onNicheChange]);
 
-  // Expose runPipeline to parent via onReady callback
   useEffect(() => {
     runPipelineRef.current = () => runPipeline();
     onReady?.(() => runPipeline());
@@ -571,6 +760,12 @@ export const AutoPilotEngine = ({
                        <span>{step.emoji}</span>}
                     </div>
                     <span className="text-[10px] font-medium text-center leading-tight">{step.label}</span>
+                    {step.detail && step.status === 'done' && (
+                      <span className="text-[9px] text-chart-2 text-center">{step.detail}</span>
+                    )}
+                    {step.status === 'running' && step.detail && (
+                      <span className="text-[9px] text-primary text-center line-clamp-2">{step.detail}</span>
+                    )}
                     {step.status === 'error' && step.error && (
                       <span className="text-[9px] text-destructive text-center line-clamp-2">{step.error}</span>
                     )}
