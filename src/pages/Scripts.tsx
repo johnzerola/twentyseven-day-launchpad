@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
@@ -102,6 +102,7 @@ const Scripts = () => {
   const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
   const [wizardConfigured, setWizardConfigured] = useState(false);
   const [voiceStyle, setVoiceStyle] = useState('dopaminergico');
+  const autoLaunchRef = useRef<(() => void) | null>(null);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [selectedTitle, setSelectedTitle] = useState('');
@@ -747,10 +748,9 @@ const Scripts = () => {
             setVideoStyle(config.visualStyle);
             setVoiceStyle(config.voiceStyle);
             setWizardConfigured(true);
-            // Trigger AutoPilot directly
+            // AutoPilot will be triggered via autoLaunchRef
             setTimeout(() => {
-              const btn = document.getElementById('autopilot-launch-btn');
-              if (btn) btn.click();
+              autoLaunchRef.current?.();
             }, 300);
           }}
         />
@@ -774,6 +774,7 @@ const Scripts = () => {
             onTopicChange={(t) => setTopic(t)}
             onNicheChange={(n) => setNiche(n)}
             onDurationChange={(d) => setDuration(d)}
+            onReady={(launch) => { autoLaunchRef.current = launch; }}
             disabled={loading}
           />
         )}
@@ -1037,7 +1038,7 @@ const Scripts = () => {
 
           {/* Right: Content Area */}
           <div className="lg:col-span-2 space-y-4">
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               {/* Step 2: Voice / Narration */}
               {activeStep === 'voice' && script && (
                 <VoiceGeneratorStep
