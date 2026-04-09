@@ -297,7 +297,7 @@ export const AutoPilotEngine = ({
 
       const blobs: Blob[] = [];
       let browserFallbackUsed = false;
-      let audioDurationSeconds = 0;
+      // audioDurationSeconds declared above try block
       for (const chunk of chunks) {
         if (controller.signal.aborted) break;
         const response = await fetch(TTS_URL, {
