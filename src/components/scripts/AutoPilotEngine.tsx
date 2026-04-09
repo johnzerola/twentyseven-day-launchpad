@@ -299,12 +299,16 @@ async function generateScenesDirect(
   audioDurationSeconds: number,
   signal?: AbortSignal,
 ): Promise<any[]> {
+  // ★ Use user session token
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || ANON_KEY;
+
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-synced-prompts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: ANON_KEY,
-      Authorization: `Bearer ${ANON_KEY}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ script, videoStyle, characters: [], language, niche, audioDurationSeconds }),
     signal,
@@ -490,8 +494,18 @@ export const AutoPilotEngine = ({
         const wordCount = cleanText.split(/\s+/).length;
         audioDurationSeconds = Math.round((wordCount / 150) * 60);
         console.warn('TTS: browser synthesis fallback, estimated duration:', audioDurationSeconds, 's');
-        updateStep('voice', { status: 'done', detail: `~${Math.round(audioDurationSeconds / 60)}min (estimado, navegador)` });
-        onStepChange('voice');
+        
+        // ★ For longform (≥8min), browser fallback is NOT acceptable — mark as degraded
+        if (requestedMinutes >= 8) {
+          updateStep('voice', { 
+            status: 'error', 
+            error: `⚠️ TTS indisponível — áudio real necessário para ${requestedMinutes}min. Gere o áudio manualmente na aba "Voz".`
+          });
+          toast.error('TTS não disponível para longform. Use a geração manual de voz.');
+        } else {
+          updateStep('voice', { status: 'done', detail: `~${Math.round(audioDurationSeconds / 60)}min (estimado, navegador)` });
+          onStepChange('voice');
+        }
       } else if (result.blob) {
         finalAudioBlob = result.blob;
         
