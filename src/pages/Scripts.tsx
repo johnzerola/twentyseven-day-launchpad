@@ -1052,9 +1052,14 @@ const Scripts = () => {
                 <VoiceGeneratorStep
                   script={getCleanNarration()}
                   language={language}
-                  onAudioGenerated={(blob, url) => {
+                  onAudioGenerated={async (blob, url) => {
                     setGeneratedAudioBlob(blob);
                     setGeneratedAudioUrl(url);
+                    try {
+                      const { measureAudioDuration } = await import('@/lib/audio-concat');
+                      const dur = await measureAudioDuration(blob);
+                      if (dur > 0) setAudioDurationSeconds(dur);
+                    } catch {}
                   }}
                   onNavigate={setActiveStep}
                   existingAudioUrl={generatedAudioUrl}
