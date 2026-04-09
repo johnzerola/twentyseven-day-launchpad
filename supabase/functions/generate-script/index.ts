@@ -994,11 +994,15 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
       : `Escreva roteiro MAGNÉTICO de ${duration}min sobre: "${topic}"\nMeta ideal: ${targetWords} palavras. Mínimo absoluto: ${minWords} palavras de NARRAÇÃO PURA. Hook de CHOQUE. Pattern interrupts a cada 45s. Escalada emocional. PROIBIDO qualquer tag técnica, VFX, música, cena, EXTRAS ou metadado.${hookText ? ' USE O HOOK PRÉ-GERADO.' : ''}\nSe perceber que ainda não cobriu ${duration} minutos completos, CONTINUE expandindo com desenvolvimento, aprofundamento, callbacks e payoff final até atingir a duração. Comece imediatamente pelo roteiro.`;
 
     // ═══════════════════════════════════════════════════════════════
-    // DYNAMIC MULTI-ACT GENERATION ENGINE for 25+ min scripts
-    // Uses a narrative outline pre-flight + dynamic act loop to 
-    // reliably hit 40-60 min targets (6000-9000+ words).
+    // DYNAMIC MULTI-ACT GENERATION ENGINE
+    // Calibrated for all durations: 8, 15, 25, 40, 60 min
+    //   8min  → 2 acts ×  600w = 1200w  (150 WPM)
+    //  15min  → 2 acts × 1125w = 2250w
+    //  25min  → 3 acts × 1250w = 3750w
+    //  40min  → 4 acts × 1500w = 6000w
+    //  60min  → 5 acts × 1800w = 9000w
+    // Overflow acts: 2 (short), 3 (medium), 4 (long)
     // ═══════════════════════════════════════════════════════════════
-    // Multi-act for ANY video >= 8 min to guarantee word count targets
     const needsMultiAct = dur >= 8 && !isShort;
     
     if (needsMultiAct) {
@@ -1061,7 +1065,9 @@ Responda em JSON puro: { "acts": [{ "act": 1, "title": "...", "time_range": "...
       const enc = new TextEncoder();
       let totalWordCount = 0;
       let previousActText = '';
-      const MAX_ACTS = 6; // safety limit
+      const MAX_ACTS = 8; // safety limit
+      const maxOverflow = dur >= 40 ? 4 : dur >= 25 ? 3 : 2;
+      const actMaxTokens = dur >= 40 ? 24000 : dur >= 20 ? 20000 : 16384;
 
       const multiActStream = new ReadableStream({
         async start(ctrl) {
@@ -1128,7 +1134,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 actMessage,
-                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `ACT${actPlan.act} runId=${runId}` },
+                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
               );
 
               if (!actRes.ok) {
@@ -1226,7 +1232,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
 
           // If we're still short after all planned acts, generate overflow acts
           let overflowAct = 0;
-          while (totalWordCount < minWords && overflowAct < 2) {
+          while (totalWordCount < minWords && overflowAct < maxOverflow) {
             overflowAct++;
             const remaining = targetWords - totalWordCount;
             const contextWords = previousActText.split(/\s+/).slice(-800).join(' ');
@@ -1237,7 +1243,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 `CONTINUAÇÃO EXTRA — O roteiro ainda precisa de ~${remaining} palavras para atingir ${dur} minutos.\n\nÚltimas 800 palavras:\n"${contextWords}"\n\nContinue aprofundando a narrativa com:\n- Novas camadas de detalhes e nuances\n- Callbacks a elementos plantados no início\n- Desenvolvimento de personagens secundários\n- Aprofundamento emocional\n${overflowAct >= 2 || remaining < 1500 ? '\n- RESOLUÇÃO FINAL + Binge Loop (este é o trecho final)' : '\n- Termine com tensão para permitir mais continuação'}\n\nApenas narração pura. NÃO repita conteúdo anterior.`,
-                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `OVERFLOW${overflowAct} runId=${runId}` },
+                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: actMaxTokens, label: `OVERFLOW${overflowAct} runId=${runId}` },
               );
               if (ovRes.ok && ovRes.body) {
                 ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
