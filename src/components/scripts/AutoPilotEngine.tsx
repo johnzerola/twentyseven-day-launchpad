@@ -272,6 +272,7 @@ export const AutoPilotEngine = ({
     if (controller.signal.aborted) { setRunning(false); return; }
 
     // Step 2: Generate Voice (TTS with fallback)
+    let audioDurationSeconds = 0;
     updateStep('voice', { status: 'running' });
     try {
       const cleanText = getCleanNarration(generatedScript);
