@@ -272,6 +272,7 @@ export const AutoPilotEngine = ({
     if (controller.signal.aborted) { setRunning(false); return; }
 
     // Step 2: Generate Voice (TTS with fallback)
+    let audioDurationSeconds = 0;
     updateStep('voice', { status: 'running' });
     try {
       const cleanText = getCleanNarration(generatedScript);
@@ -296,6 +297,7 @@ export const AutoPilotEngine = ({
 
       const blobs: Blob[] = [];
       let browserFallbackUsed = false;
+      // audioDurationSeconds declared above try block
       for (const chunk of chunks) {
         if (controller.signal.aborted) break;
         const response = await fetch(TTS_URL, {
@@ -321,8 +323,10 @@ export const AutoPilotEngine = ({
             const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
             blobs.push(await r.blob());
           } else if (data.use_browser_synthesis) {
-            // Browser fallback is acceptable — continue pipeline with estimated duration
-            console.warn('TTS: browser synthesis fallback (all cloud engines unavailable)');
+            // Browser fallback — estimate duration from word count (150 WPM)
+            const wordCount = cleanText.split(/\s+/).length;
+            audioDurationSeconds = Math.round((wordCount / 150) * 60);
+            console.warn('TTS: browser synthesis fallback, estimated duration:', audioDurationSeconds, 's');
             browserFallbackUsed = true;
             updateStep('voice', { status: 'done', error: 'Usando síntese do navegador (engines cloud indisponíveis)' });
             onStepChange('voice');
@@ -335,6 +339,19 @@ export const AutoPilotEngine = ({
         const finalBlob = new Blob(blobs, { type: blobs[0].type || 'audio/mpeg' });
         const url = URL.createObjectURL(finalBlob);
         onAudioGenerated(finalBlob, url);
+        // Calculate real audio duration
+        try {
+          const audioCtx = new AudioContext();
+          const arrayBuf = await finalBlob.arrayBuffer();
+          const decoded = await audioCtx.decodeAudioData(arrayBuf);
+          audioDurationSeconds = Math.round(decoded.duration);
+          audioCtx.close();
+        } catch {
+          // Fallback: estimate from word count
+          const wordCount = cleanText.split(/\s+/).length;
+          audioDurationSeconds = Math.round((wordCount / 150) * 60);
+        }
+        console.log('Audio duration:', audioDurationSeconds, 's');
         updateStep('voice', { status: 'done' });
         onStepChange('voice');
       } else if (!browserFallbackUsed) {
@@ -342,6 +359,11 @@ export const AutoPilotEngine = ({
       }
     } catch (err: any) {
       if (err.name === 'AbortError') { setRunning(false); return; }
+      // Estimate duration from script word count as fallback
+      if (audioDurationSeconds === 0) {
+        const wordCount = generatedScript.split(/\s+/).length;
+        audioDurationSeconds = Math.round((wordCount / 150) * 60);
+      }
       updateStep('voice', { status: 'error', error: err.message });
     }
 
@@ -359,7 +381,7 @@ export const AutoPilotEngine = ({
           apikey: ANON_KEY,
           Authorization: `Bearer ${ANON_KEY}`,
         },
-        body: JSON.stringify({ script: generatedScript, videoStyle, characters: [], language, niche: useNiche }),
+        body: JSON.stringify({ script: generatedScript, videoStyle, characters: [], language, niche: useNiche, audioDurationSeconds: audioDurationSeconds || undefined }),
         signal: controller.signal,
       });
       if (!scenesResp.ok) {
