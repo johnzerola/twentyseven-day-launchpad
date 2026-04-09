@@ -141,9 +141,9 @@ SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 7):
 - NUNCA use "Mas espera!" — formas orgânicas apenas
 
 📍 RETENTION CHECKPOINTS (OBRIGATÓRIO — a cada 45-60 segundos de narração, ~110-150 palavras):
-- Insira um comentário no roteiro: [EDITOR: pattern interrupt aqui — corte, zoom, nova cena, ou dado chocante]
-- Esses checkpoints são NÃO-NEGOCIÁVEIS em todo roteiro gerado
-- Eles servem como guia para o editor de vídeo manter a atenção
+- Crie uma mudança de ritmo ou perspectiva natural a cada 45-60 segundos de narração (~110-150 palavras)
+- Essas mudanças devem ser ORGÂNICAS na narrativa — um dado chocante, uma virada, uma mudança de tom
+- NÃO insira tags técnicas, marcadores entre colchetes ou anotações de edição
 
 🔗 BINGE HOOK OBRIGATÓRIO (final de todo roteiro):
 - O roteiro DEVE terminar com uma frase que conecta ao próximo vídeo potencial
@@ -898,34 +898,24 @@ REGRAS:
 `}
 
 ═══ EMOTION MAP (obrigatório para longform >5min) ═══
-Cada bloco de ~45-60s DEVE ter uma EMOÇÃO PRIMÁRIA diferente do bloco anterior:
-Bloco 1: [CURIOSIDADE/CHOQUE] → Bloco 2: [TENSÃO/MEDO] → Bloco 3: [EMPATIA/TRISTEZA] → Bloco 4: [ESPERANÇA/ALÍVIO] → Bloco 5: [CHOQUE/REVELAÇÃO] → ...
+Cada bloco de ~45-60s DEVE ter uma EMOÇÃO PRIMÁRIA diferente do bloco anterior.
+Varie entre: curiosidade, choque, tensão, empatia, esperança, revelação, medo, euforia.
 REGRA: NUNCA dois blocos consecutivos com a mesma emoção primária.
+A variação emocional deve ser NATURAL na narrativa — NÃO insira tags, marcadores ou anotações.
 
-═══ 🧬 EMOTIONAL INTENSITY ENGINE — DOPAMINA MAGNÉTICA (OBRIGATÓRIO) ═══
+═══ 🧬 INTENSIDADE EMOCIONAL — DOPAMINA MAGNÉTICA ═══
 
-O cérebro humano VICIA em conteúdo que alterna emoções rapidamente. Este motor garante retenção 80%+.
+O cérebro humano VICIA em conteúdo que alterna emoções rapidamente. Aplique variação emocional natural:
 
-📍 MARCADORES EMOCIONAIS (insira no texto para guiar narração e edição):
-Insira marcadores [EMOÇÃO: tipo] a cada 45-60 segundos no roteiro:
-- [EMOÇÃO: choque] → Antes de revelações impossíveis. Técnica: pausa de 0.5s + fato devastador
-- [EMOÇÃO: dopamina] → Após resolver um loop ou antes de "e fica melhor...". Técnica: energia crescente
-- [EMOÇÃO: tensão] → Antes de perigo/conflito. Técnica: frases cada vez mais curtas, ritmo acelerado
-- [EMOÇÃO: compaixão] → Momentos humanos. Técnica: detalhe íntimo + pausa reflexiva
-- [EMOÇÃO: medo] → Ameaça real/existencial. Técnica: descrição sensorial do perigo
-- [EMOÇÃO: esperança] → Luz no fim do túnel. Técnica: mudança de tom de grave para luminoso
-- [EMOÇÃO: raiva] → Injustiça/traição. Técnica: ritmo acelerado + dados específicos da injustiça
-- [EMOÇÃO: euforia] → Vitória/conquista. Técnica: crescendo de energia + números específicos
-
-🔄 EMOTIONAL WHIPLASH AMPLIFICADO:
+🔄 CONTRASTE EMOCIONAL (EMOTIONAL WHIPLASH):
 - Alterne emoções OPOSTAS em transições rápidas (2-3 frases):
   Exemplo: compaixão → choque → esperança → devastação
 - O contraste emocional é o que cria MEMÓRIA e VÍCIO no canal
 - Cada transição emocional deve ser abrupta mas LÓGICA na narrativa
 - Máximo 3 whiplashes por roteiro — impacto vem da raridade estratégica
 
-🧲 GATILHOS DOPAMINÉRGICOS (insira pelo menos 1 a cada 2 minutos):
-1. "E aqui é onde fica realmente insano..." (promessa de escalada)
+🧲 GATILHOS DOPAMINÉRGICOS (pelo menos 1 a cada 2 minutos):
+1. Promessa de escalada com entrega imediata
 2. Número ESPECÍFICO e impossível que contradiz expectativa
 3. Mini-payoff que resolve 1 loop e abre 2 novos
 4. Detalhe sensorial tão vívido que o espectador SENTE (textura, temperatura, cheiro)
@@ -936,10 +926,13 @@ Insira marcadores [EMOÇÃO: tipo] a cada 45-60 segundos no roteiro:
 - Minuto 1: CHOQUE puro (hook) → garante que o espectador fica
 - Minuto 2-3: CURIOSIDADE + mini-revelações → constrói investimento
 - Minuto 4-5: TENSÃO crescente → o espectador está preso
-- Minuto 6-7: EMOTIONAL WHIPLASH → contraste emocional cria memória
+- Minuto 6-7: CONTRASTE EMOCIONAL → cria memória
 - Minuto 8+: DOPAMINA em cascata → cada revelação maior que a anterior
 - Últimos 60s: EUFORIA + BINGE HOOK → o espectador PRECISA do próximo vídeo
 O espectador precisa de VARIAÇÃO emocional — monotonia = saída.
+
+⚠️ REGRA ABSOLUTA: NUNCA insira tags técnicas como [EMOÇÃO:], [EDITOR:], [SFX:], [VISUAL:] ou qualquer marcador entre colchetes no texto.
+O roteiro deve ser 100% narração falada pura — sem NENHUMA anotação técnica.
 
 ═══ CHECKLIST FINAL (AUTO-REVISÃO OBRIGATÓRIA ANTES DE ENVIAR) ═══
 Antes de responder, revise mentalmente e melhore qualquer trecho genérico, fraco ou previsível.
@@ -1134,7 +1127,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 actMessage,
-                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
+                { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
               );
 
               if (!actRes.ok) {
@@ -1211,7 +1204,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                       GOOGLE_AI_API_KEY,
                       systemPrompt,
                       `ENCERRAMENTO FINAL DO ROTEIRO\n\nContexto (final do último trecho):\n"${contextForClose}"\n\nEscreva ~${closingWords} palavras para FECHAR este roteiro com:\n- CLÍMAX se ainda não aconteceu\n- RESOLUÇÃO completa e satisfatória\n- Binge Loop final\n\nMantenha o mesmo tom. APENAS narração pura.`,
-                      { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 8192, label: `ACT-CLOSE runId=${runId}` },
+                      { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: 8192, label: `ACT-CLOSE runId=${runId}` },
                     );
                     if (closeRes.ok && closeRes.body) {
                       ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
@@ -1253,7 +1246,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 `CONTINUAÇÃO EXTRA — O roteiro ainda precisa de ~${remaining} palavras para atingir ${dur} minutos.\n\nÚltimas 800 palavras:\n"${contextWords}"\n\nContinue aprofundando a narrativa com:\n- Novas camadas de detalhes e nuances\n- Callbacks a elementos plantados no início\n- Desenvolvimento de personagens secundários\n- Aprofundamento emocional\n${overflowAct >= 2 || remaining < 1500 ? '\n- RESOLUÇÃO FINAL + Binge Loop (este é o trecho final)' : '\n- Termine com tensão para permitir mais continuação'}\n\nApenas narração pura. NÃO repita conteúdo anterior.`,
-                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: actMaxTokens, label: `OVERFLOW${overflowAct} runId=${runId}` },
+                { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: actMaxTokens, label: `OVERFLOW${overflowAct} runId=${runId}` },
               );
               if (ovRes.ok && ovRes.body) {
                 ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
@@ -1311,8 +1304,8 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
       systemPrompt,
       userMessage,
       {
-        primaryModel: "gemini-2.5-pro",
-        fallbackModel: "gemini-2.5-flash",
+        primaryModel: "gemini-2.5-flash",
+        fallbackModel: "gemini-2.5-pro",
         maxTokens: 32000,
         label: `PHASE-1 DRAFT runId=${runId}`,
       },
