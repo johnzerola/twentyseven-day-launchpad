@@ -138,7 +138,7 @@ async function generateScriptSSE(
   if (sseError) {
     const errorMessages: Record<string, string> = {
       'RATE_LIMITED': '⏳ Rate limit atingido. Aguarde alguns segundos e tente novamente.',
-      'INSUFFICIENT_CREDITS': '💳 Créditos insuficientes no provedor de IA. Verifique sua conta.',
+      'INSUFFICIENT_CREDITS': '💳 Créditos de IA esgotados. Recarregue seu saldo em "Top up" para continuar gerando.',
       'EMPTY_PROVIDER_STREAM': '🔌 O provedor de IA não retornou conteúdo. Tente novamente.',
     };
     throw new Error(errorMessages[sseError.error] || sseError.message || `Erro do provedor: ${sseError.error}`);
