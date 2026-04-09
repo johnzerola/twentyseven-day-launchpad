@@ -13,6 +13,19 @@ serve(async (req) => {
 
   try {
     const { script, videoStyle, characters, audioDurationSeconds, sceneDurationSeconds, language, niche, sceneBlueprintFromScript } = await req.json();
+    
+    // ★ LONGFORM GUARD: Reject single-request scene generation for content > 10 min
+    // This prevents timeout/truncation. Use the chunked pipeline (transcribe-and-generate-scenes) instead.
+    const effectiveDuration = audioDurationSeconds || Math.round((script?.split(/\s+/)?.length || 0) / 150 * 60);
+    if (effectiveDuration > 600) {
+      return new Response(JSON.stringify({
+        error: "LONGFORM_REDIRECT",
+        message: "Content exceeds 10 minutes. Use the chunked pipeline (transcribe-and-generate-scenes) for reliable long-form scene generation.",
+        audioDurationSeconds: effectiveDuration,
+        estimatedScenes: Math.ceil(effectiveDuration / 8),
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!LOVABLE_API_KEY && !GOOGLE_AI_API_KEY) throw new Error("No AI API key configured");
