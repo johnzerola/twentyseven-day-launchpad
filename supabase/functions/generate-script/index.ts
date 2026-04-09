@@ -998,13 +998,14 @@ Se uma frase não adiciona nada, DELETE-A. Densidade > Volume.`;
     // Uses a narrative outline pre-flight + dynamic act loop to 
     // reliably hit 40-60 min targets (6000-9000+ words).
     // ═══════════════════════════════════════════════════════════════
-    const needsMultiAct = dur >= 25 && !isShort;
+    // Multi-act for ANY video >= 8 min to guarantee word count targets
+    const needsMultiAct = dur >= 8 && !isShort;
     
     if (needsMultiAct) {
       console.log(`[MULTI-ACT] runId=${runId} Starting for ${dur}min (target: ${targetWords} words, min: ${minWords})`);
 
       // ── Step 1: Generate narrative outline (fast, non-streaming) ──
-      const numPlannedActs = dur >= 50 ? 5 : dur >= 35 ? 4 : 3;
+      const numPlannedActs = dur >= 50 ? 5 : dur >= 35 ? 4 : dur >= 20 ? 3 : 2;
       const outlinePrompt = `Crie um OUTLINE de ${numPlannedActs} atos para um roteiro de ${dur} minutos sobre: "${topic}"
 
 Para cada ato, forneça:
@@ -1022,11 +1023,12 @@ Responda em JSON puro: { "acts": [{ "act": 1, "title": "...", "time_range": "...
       try {
         const outlineRes = await callGeminiWithFallback(
           GOOGLE_AI_API_KEY,
+          "Você é um roteirista profissional. Responda APENAS em JSON válido.",
           outlinePrompt,
           { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-flash", maxTokens: 2048, label: `OUTLINE runId=${runId}` },
         );
-        if (outlineRes.ok) {
-          const outlineText = await outlineRes.text();
+        if (outlineRes) {
+          const outlineText = typeof outlineRes === 'string' ? outlineRes : String(outlineRes);
           const jsonMatch = outlineText.match(/\{[\s\S]*"acts"[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
