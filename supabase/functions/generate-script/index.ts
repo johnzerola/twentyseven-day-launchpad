@@ -1141,11 +1141,13 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 const errText = await actRes.text();
                 console.error(`[MULTI-ACT ${actPlan.act}] runId=${runId} error:`, actRes.status, errText);
                 if (actRes.status === 429) {
+                  ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ error: "RATE_LIMITED", message: "Rate limit atingido. Aguarde alguns segundos e tente novamente.", code: 429 })}\n\n`));
                   ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
                   ctrl.close();
                   return;
                 }
                 if (actRes.status === 402) {
+                  ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ error: "INSUFFICIENT_CREDITS", message: "Créditos insuficientes no provedor de IA.", code: 402 })}\n\n`));
                   ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
                   ctrl.close();
                   return;

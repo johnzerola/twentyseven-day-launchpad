@@ -749,10 +749,8 @@ const Scripts = () => {
             setVideoStyle(config.visualStyle);
             setVoiceStyle(config.voiceStyle);
             setWizardConfigured(true);
-            // AutoPilot will be triggered via autoLaunchRef
-            setTimeout(() => {
-              autoLaunchRef.current?.();
-            }, 300);
+            // ★ Store launch intent — will fire when AutoPilotEngine registers onReady
+            autoLaunchRef.current = null; // Reset ref; onReady will set it and auto-fire
           }}
         />
 
