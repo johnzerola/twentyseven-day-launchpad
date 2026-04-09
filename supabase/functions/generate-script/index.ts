@@ -1130,7 +1130,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 actMessage,
-                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `ACT${actPlan.act} runId=${runId}` },
+                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
               );
 
               if (!actRes.ok) {
@@ -1228,7 +1228,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
 
           // If we're still short after all planned acts, generate overflow acts
           let overflowAct = 0;
-          while (totalWordCount < minWords && overflowAct < 2) {
+          while (totalWordCount < minWords && overflowAct < maxOverflow) {
             overflowAct++;
             const remaining = targetWords - totalWordCount;
             const contextWords = previousActText.split(/\s+/).slice(-800).join(' ');
@@ -1239,7 +1239,7 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 `CONTINUAÇÃO EXTRA — O roteiro ainda precisa de ~${remaining} palavras para atingir ${dur} minutos.\n\nÚltimas 800 palavras:\n"${contextWords}"\n\nContinue aprofundando a narrativa com:\n- Novas camadas de detalhes e nuances\n- Callbacks a elementos plantados no início\n- Desenvolvimento de personagens secundários\n- Aprofundamento emocional\n${overflowAct >= 2 || remaining < 1500 ? '\n- RESOLUÇÃO FINAL + Binge Loop (este é o trecho final)' : '\n- Termine com tensão para permitir mais continuação'}\n\nApenas narração pura. NÃO repita conteúdo anterior.`,
-                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: 16384, label: `OVERFLOW${overflowAct} runId=${runId}` },
+                { primaryModel: "gemini-2.5-pro", fallbackModel: "gemini-2.5-flash", maxTokens: actMaxTokens, label: `OVERFLOW${overflowAct} runId=${runId}` },
               );
               if (ovRes.ok && ovRes.body) {
                 ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
