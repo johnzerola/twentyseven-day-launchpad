@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
@@ -102,6 +102,7 @@ const Scripts = () => {
   const [analyzingChannelStyle, setAnalyzingChannelStyle] = useState(false);
   const [wizardConfigured, setWizardConfigured] = useState(false);
   const [voiceStyle, setVoiceStyle] = useState('dopaminergico');
+  const autoLaunchRef = useRef<(() => void) | null>(null);
   // Intelligence
   const [intelligenceBriefing, setIntelligenceBriefing] = useState<any>(null);
   const [selectedTitle, setSelectedTitle] = useState('');
