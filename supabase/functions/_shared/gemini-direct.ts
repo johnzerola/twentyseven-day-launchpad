@@ -440,7 +440,7 @@ export function geminiSseToOpenAi(geminiBody: ReadableStream<Uint8Array>): Reada
 
 /**
  * Non-streaming call.
- * PRIMARY: Lovable AI Gateway. FALLBACK: Direct Google AI API.
+ * PRIMARY: Direct Google AI API (zero credits). FALLBACK: Lovable AI Gateway.
  */
 export async function callGemini(
   apiKey: string, system: string, userMsg: string,
@@ -450,11 +450,44 @@ export async function callGemini(
   const s = sanitizeUnicode(system);
   const u = sanitizeUnicode(userMsg);
 
-  // ═══ PRIMARY: Lovable AI Gateway ═══
+  // ═══ PRIMARY: Direct Google AI API (zero credit cost) ═══
+  if (apiKey) {
+    try {
+      console.log(`[callGemini] PRIMARY: Direct API with ${model}`);
+      const genConfig: Record<string, unknown> = {
+        temperature: opts.temperature ?? 0.8,
+        maxOutputTokens: opts.maxTokens || 8192,
+      };
+      if (opts.jsonMode) genConfig.responseMimeType = "application/json";
+
+      const res = await callDirectGemini(apiKey, model, {
+        systemInstruction: { parts: [{ text: s }] },
+        contents: [{ role: "user", parts: [{ text: u }] }],
+        generationConfig: genConfig,
+      }, `Gemini-callDirect-${model}`);
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (content) return content;
+      }
+      if (!shouldFallback(res)) {
+        const t = await res.text();
+        console.error(`Gemini ${model} error ${res.status}:`, t.slice(0, 300));
+        throw new Error(`GEMINI_ERROR_${res.status}`);
+      }
+      console.warn(`[callGemini] Direct API ${res.status}, trying Lovable Gateway`);
+    } catch (e) {
+      if (e instanceof Error && (e.message.startsWith("GEMINI_ERROR_") || e.message === "INSUFFICIENT_CREDITS")) throw e;
+      console.warn(`[callGemini] Direct API error, trying Lovable Gateway:`, e);
+    }
+  }
+
+  // ═══ FALLBACK: Lovable AI Gateway (uses credits) ═══
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   if (lovableKey) {
     try {
-      console.log(`[callGemini] PRIMARY: Lovable Gateway with google/${model}`);
+      console.log(`[callGemini] FALLBACK: Lovable Gateway with google/${model}`);
       const gatewayBody: any = {
         model: `google/${model}`,
         messages: [
@@ -473,44 +506,23 @@ export async function callGemini(
         const content = data.choices?.[0]?.message?.content || '';
         if (content) return content;
       }
-      // 402 = credits exhausted — do NOT fallback, fail immediately
       if (res.status === 402) {
-        console.error(`[callGemini] Lovable Gateway 402 — INSUFFICIENT_CREDITS, stopping`);
+        console.error(`[callGemini] Lovable Gateway 402 — INSUFFICIENT_CREDITS`);
         throw new Error("INSUFFICIENT_CREDITS");
       }
-      console.warn(`[callGemini] Lovable Gateway returned ${res.status}, trying direct API`);
+      console.warn(`[callGemini] Lovable Gateway returned ${res.status}`);
     } catch (e) {
       if (e instanceof Error && e.message === "INSUFFICIENT_CREDITS") throw e;
-      console.warn(`[callGemini] Lovable Gateway error, trying direct API:`, e);
+      console.warn(`[callGemini] Lovable Gateway error:`, e);
     }
   }
 
-  // ═══ FALLBACK: Direct Google AI API ═══
-  console.log(`[callGemini] FALLBACK: Direct API with ${model}`);
-  const genConfig: Record<string, unknown> = {
-    temperature: opts.temperature ?? 0.8,
-    maxOutputTokens: opts.maxTokens || 8192,
-  };
-  if (opts.jsonMode) genConfig.responseMimeType = "application/json";
-
-  const res = await callDirectGemini(apiKey, model, {
-    systemInstruction: { parts: [{ text: s }] },
-    contents: [{ role: "user", parts: [{ text: u }] }],
-    generationConfig: genConfig,
-  }, `Gemini-callDirect-${model}`);
-
-  if (!res.ok) {
-    const t = await res.text();
-    console.error(`Gemini ${model} error ${res.status}:`, t);
-    throw new Error(`GEMINI_ERROR_${res.status}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  throw new Error(`All providers failed for model ${model}`);
 }
 
 /**
  * Non-streaming with fallback model.
- * PRIMARY: Lovable AI Gateway. FALLBACK: Direct Google AI API with model chain.
+ * PRIMARY: Direct Google AI API. FALLBACK: Lovable Gateway.
  */
 export async function callGeminiWithFallback(
   apiKey: string, system: string, userMsg: string,
@@ -522,6 +534,7 @@ export async function callGeminiWithFallback(
       return await callGemini(apiKey, system, userMsg, { model, maxTokens: opts.maxTokens, temperature: opts.temperature, jsonMode: opts.jsonMode });
     } catch (e) {
       console.error(`[${opts.label || 'Gemini'}] ${model} failed:`, e);
+      if (e instanceof Error && e.message === "INSUFFICIENT_CREDITS") throw e;
       if (model === models[models.length - 1]) throw e;
     }
   }
