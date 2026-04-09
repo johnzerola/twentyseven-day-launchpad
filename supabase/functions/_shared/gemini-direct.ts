@@ -186,7 +186,7 @@ function toOpenAIMessages(systemInstruction: any, contents: any[]): any[] {
 
 /**
  * OpenAI-compatible wrapper for Gemini API.
- * PRIMARY: Lovable AI Gateway. FALLBACK: Direct Google AI API.
+ * PRIMARY: Direct Google AI API. FALLBACK: Lovable AI Gateway.
  */
 export async function callGeminiOpenAICompat(
   apiKey: string,
@@ -201,27 +201,140 @@ export async function callGeminiOpenAICompat(
     response_format?: any;
   }
 ): Promise<Response> {
-  // ═══ PRIMARY: Try Lovable Gateway first ═══
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (lovableKey) {
+  // ═══ PRIMARY: Direct Google AI API (zero credit cost) ═══
+  const directApiKey = apiKey || Deno.env.get("GOOGLE_AI_API_KEY");
+  const model = mapModel(body.model);
+  const { systemInstruction, contents } = convertMessages(body.messages);
+  const genConfig: Record<string, unknown> = {};
+  
+  if (body.temperature !== undefined) genConfig.temperature = body.temperature;
+  if (body.max_tokens) genConfig.maxOutputTokens = body.max_tokens;
+
+  let directFailed = false;
+
+  if (directApiKey) {
     try {
-      const gatewayRes = await callLovableGateway(body);
-      if (gatewayRes.ok) {
-        if (body.stream && gatewayRes.body) {
-          return new Response(gatewayRes.body, { headers: { "Content-Type": "text/event-stream" } });
+      // Handle tool_choice → force JSON mode with schema in prompt
+      if (body.tools?.length && body.tool_choice) {
+        const toolName = typeof body.tool_choice === "object" ? body.tool_choice?.function?.name : null;
+        
+        if (toolName) {
+          const targetTool = body.tools.find((t: any) => t.function?.name === toolName);
+          if (targetTool) {
+            const schema = targetTool.function.parameters;
+            genConfig.responseMimeType = "application/json";
+            
+            const schemaInstruction = `\n\nYou MUST respond with ONLY valid JSON matching this exact schema:\n${JSON.stringify(schema, null, 2)}\n\nDo NOT wrap in markdown. Output ONLY the JSON object.`;
+            if (systemInstruction) {
+              systemInstruction.parts[0].text += schemaInstruction;
+            } else {
+              contents.unshift({ role: "user", parts: [{ text: schemaInstruction }] });
+            }
+          }
         }
-        return gatewayRes;
       }
-      // 402 = credits exhausted — return immediately, do NOT fallback
-      if (gatewayRes.status === 402) {
-        console.error(`[callGeminiOpenAICompat] Lovable Gateway 402 — INSUFFICIENT_CREDITS`);
-        return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS" }), { status: 402 });
+
+      if (body.tools?.length && !body.tool_choice) {
+        const geminiTools = [{
+          functionDeclarations: convertTools(body.tools),
+        }];
+        
+        const geminiBody: any = {
+          contents,
+          tools: geminiTools,
+          generationConfig: genConfig,
+        };
+        if (systemInstruction) geminiBody.systemInstruction = systemInstruction;
+
+        if (body.stream) {
+          return streamGeminiAsOpenAI(directApiKey, model, geminiBody);
+        }
+
+        const res = await callDirectGemini(directApiKey, model, geminiBody, `Gemini-tools-${model}`);
+        
+        if (res.ok) {
+          const data = await res.json();
+          return new Response(JSON.stringify(convertGeminiToOpenAI(data)), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (!shouldFallback(res)) {
+          const t = await res.text();
+          console.error(`Gemini ${model} error ${res.status}:`, t.slice(0, 500));
+          return new Response(JSON.stringify({ error: `Gemini error: ${res.status}` }), { status: res.status });
+        }
+        directFailed = true;
+        console.warn(`[callGeminiOpenAICompat] Direct API ${res.status}, falling back to Lovable Gateway`);
+      } else {
+        // Standard (non-tool) request
+        const geminiBody: any = { contents, generationConfig: genConfig };
+        if (systemInstruction) geminiBody.systemInstruction = systemInstruction;
+
+        if (body.stream) {
+          const streamRes = await fetchWithRetry(`${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${directApiKey}`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(geminiBody),
+          }, 3, `Gemini-stream-${model}`);
+          if (streamRes.ok) {
+            return new Response(geminiSseToOpenAi(streamRes.body!), { headers: { "Content-Type": "text/event-stream" } });
+          }
+          if (!shouldFallback(streamRes)) {
+            const t = await streamRes.text();
+            return new Response(JSON.stringify({ error: `Gemini streaming error: ${streamRes.status}` }), { status: streamRes.status });
+          }
+          directFailed = true;
+          console.warn(`[callGeminiOpenAICompat] Direct stream ${streamRes.status}, falling back to Gateway`);
+        } else {
+          const res = await callDirectGemini(directApiKey, model, geminiBody, `Gemini-std-${model}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (body.tool_choice && typeof body.tool_choice === "object" && body.tool_choice?.function?.name) {
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+              return new Response(JSON.stringify({
+                choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: `call_${Date.now()}`, type: "function", function: { name: body.tool_choice.function.name, arguments: text } }] } }],
+              }), { headers: { "Content-Type": "application/json" } });
+            }
+            return new Response(JSON.stringify(convertGeminiToOpenAI(data)), { headers: { "Content-Type": "application/json" } });
+          }
+          if (!shouldFallback(res)) {
+            const t = await res.text();
+            return new Response(JSON.stringify({ error: `Gemini error: ${res.status}` }), { status: res.status });
+          }
+          directFailed = true;
+          console.warn(`[callGeminiOpenAICompat] Direct API ${res.status}, falling back to Gateway`);
+        }
       }
-      console.warn(`[callGeminiOpenAICompat] Lovable Gateway returned ${gatewayRes.status}, falling back to direct API`);
     } catch (e) {
-      console.warn(`[callGeminiOpenAICompat] Lovable Gateway error, falling back to direct API:`, e);
+      directFailed = true;
+      console.warn(`[callGeminiOpenAICompat] Direct API error, falling back to Gateway:`, e);
+    }
+  } else {
+    directFailed = true;
+  }
+
+  // ═══ FALLBACK: Lovable AI Gateway (uses credits) ═══
+  if (directFailed) {
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (lovableKey) {
+      try {
+        const gatewayRes = await callLovableGateway(body);
+        if (gatewayRes.ok) {
+          if (body.stream && gatewayRes.body) {
+            return new Response(gatewayRes.body, { headers: { "Content-Type": "text/event-stream" } });
+          }
+          return gatewayRes;
+        }
+        if (gatewayRes.status === 402) {
+          console.error(`[callGeminiOpenAICompat] Lovable Gateway 402 — INSUFFICIENT_CREDITS`);
+          return new Response(JSON.stringify({ error: "INSUFFICIENT_CREDITS" }), { status: 402 });
+        }
+        console.warn(`[callGeminiOpenAICompat] Lovable Gateway returned ${gatewayRes.status}`);
+      } catch (e) {
+        console.warn(`[callGeminiOpenAICompat] Lovable Gateway error:`, e);
+      }
     }
   }
+
+  return new Response(JSON.stringify({ error: "All AI providers failed" }), { status: 500 });
 
   // ═══ FALLBACK: Direct Google AI API ═══
   const model = mapModel(body.model);
