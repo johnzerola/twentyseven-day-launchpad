@@ -329,8 +329,44 @@ Respond with ONLY valid JSON: {"scenes":[{"sceneIndex":0,"sceneDurationSeconds":
 
     let rawContent: string;
 
-    if (LOVABLE_API_KEY) {
-      // Use Lovable AI Gateway (no external API key needed)
+    // PRIMARY: Direct Gemini API (zero credit cost)
+    if (GOOGLE_AI_API_KEY) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemContent }] },
+            contents: [{ role: "user", parts: [{ text: userContent }] }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 32768,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!rawContent) throw new Error("No content in Gemini response");
+        } else {
+          const t = await response.text();
+          console.warn("Direct Gemini error:", response.status, t.slice(0, 200));
+          if (response.status !== 429 && response.status !== 403) throw new Error("Failed to generate synced prompts");
+          throw new Error("FALLBACK_TO_GATEWAY");
+        }
+      } catch (e) {
+        if ((e as Error).message !== "FALLBACK_TO_GATEWAY") throw e;
+        // Fall through to gateway
+        rawContent = '';
+      }
+    } else {
+      rawContent = '';
+    }
+
+    // FALLBACK: Lovable Gateway (only if direct failed or unavailable)
+    if (!rawContent && LOVABLE_API_KEY) {
       const gatewayRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -359,33 +395,9 @@ Respond with ONLY valid JSON: {"scenes":[{"sceneIndex":0,"sceneDurationSeconds":
       const gatewayData = await gatewayRes.json();
       rawContent = gatewayData.choices?.[0]?.message?.content;
       if (!rawContent) throw new Error("No content in Gateway response");
-    } else {
-      // Fallback to direct Gemini API
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GOOGLE_AI_API_KEY}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemContent }] },
-          contents: [{ role: "user", parts: [{ text: userContent }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 32768,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const t = await response.text();
-        console.error("Synced prompts error:", response.status, t);
-        if (response.status === 429) return errResp("Rate limit.", 429);
-        throw new Error("Failed to generate synced prompts");
-      }
-
-      const data = await response.json();
-      rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawContent) throw new Error("No content in Gemini response");
     }
+
+    if (!rawContent) throw new Error("No AI API key available");
     // Attempt JSON parse with repair for truncated responses
     let parsed: any;
     try {
