@@ -93,6 +93,7 @@ async function generateScriptSSE(
   const decoder = new TextDecoder();
   let accumulated = '';
   let buffer = '';
+  let sseError: { error: string; message: string; code?: number } | null = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -109,6 +110,13 @@ async function generateScriptSSE(
       if (payload === '[DONE]') break;
       try {
         const parsed = JSON.parse(payload);
+        
+        // ★ Detect structured error events from backend
+        if (parsed.error && typeof parsed.error === 'string') {
+          sseError = { error: parsed.error, message: parsed.message || parsed.error, code: parsed.code };
+          continue;
+        }
+        
         const content = parsed.choices?.[0]?.delta?.content
           || parsed.choices?.[0]?.text
           || parsed.text
@@ -124,6 +132,21 @@ async function generateScriptSSE(
         }
       } catch { /* partial JSON, ignore */ }
     }
+  }
+
+  // ★ If backend sent a structured error, throw with specific message
+  if (sseError) {
+    const errorMessages: Record<string, string> = {
+      'RATE_LIMITED': '⏳ Rate limit atingido. Aguarde alguns segundos e tente novamente.',
+      'INSUFFICIENT_CREDITS': '💳 Créditos insuficientes no provedor de IA. Verifique sua conta.',
+      'EMPTY_PROVIDER_STREAM': '🔌 O provedor de IA não retornou conteúdo. Tente novamente.',
+    };
+    throw new Error(errorMessages[sseError.error] || sseError.message || `Erro do provedor: ${sseError.error}`);
+  }
+
+  // ★ If stream completed but no content accumulated, it's an empty response
+  if (!accumulated || accumulated.trim().length < 50) {
+    throw new Error('🔌 O provedor de IA não retornou conteúdo. Tente novamente em alguns segundos.');
   }
 
   return accumulated;
@@ -172,12 +195,16 @@ async function generateTTSChunk(
   voiceStyle: string,
   signal?: AbortSignal,
 ): Promise<Blob | null> {
+  // ★ Use user session token for TTS (not anon key)
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || ANON_KEY;
+
   const response = await fetch(TTS_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: ANON_KEY,
-      Authorization: `Bearer ${ANON_KEY}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       text, language, voiceStyle,
@@ -632,9 +659,19 @@ export const AutoPilotEngine = ({
     });
   }, [topic, niche, duration, style, language, videoType, videoStyle, voiceStyleProp, onScriptGenerated, onAudioGenerated, onScenesGenerated, onTitlesGenerated, onStepChange, onTopicChange, onNicheChange]);
 
+  // ★ Register launch function AND auto-fire on first mount (wizard just configured)
+  const hasAutoLaunched = useRef(false);
   useEffect(() => {
     runPipelineRef.current = () => runPipeline();
-    onReady?.(() => runPipeline());
+    const launchFn = () => runPipeline();
+    onReady?.(launchFn);
+    // Auto-launch on first mount (wizard was just configured)
+    if (!hasAutoLaunched.current && topic.trim() && niche.trim()) {
+      hasAutoLaunched.current = true;
+      // Small delay to ensure state is settled
+      const timer = setTimeout(() => launchFn(), 100);
+      return () => clearTimeout(timer);
+    }
   }, [runPipeline, onReady]);
 
   const handleAutoGenerate = useCallback(async () => {
