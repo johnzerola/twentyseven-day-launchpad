@@ -296,6 +296,7 @@ export const AutoPilotEngine = ({
 
       const blobs: Blob[] = [];
       let browserFallbackUsed = false;
+      let audioDurationSeconds = 0;
       for (const chunk of chunks) {
         if (controller.signal.aborted) break;
         const response = await fetch(TTS_URL, {
@@ -321,8 +322,10 @@ export const AutoPilotEngine = ({
             const r = await fetch(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audioBase64}`);
             blobs.push(await r.blob());
           } else if (data.use_browser_synthesis) {
-            // Browser fallback is acceptable — continue pipeline with estimated duration
-            console.warn('TTS: browser synthesis fallback (all cloud engines unavailable)');
+            // Browser fallback — estimate duration from word count (150 WPM)
+            const wordCount = cleanText.split(/\s+/).length;
+            audioDurationSeconds = Math.round((wordCount / 150) * 60);
+            console.warn('TTS: browser synthesis fallback, estimated duration:', audioDurationSeconds, 's');
             browserFallbackUsed = true;
             updateStep('voice', { status: 'done', error: 'Usando síntese do navegador (engines cloud indisponíveis)' });
             onStepChange('voice');
@@ -335,6 +338,19 @@ export const AutoPilotEngine = ({
         const finalBlob = new Blob(blobs, { type: blobs[0].type || 'audio/mpeg' });
         const url = URL.createObjectURL(finalBlob);
         onAudioGenerated(finalBlob, url);
+        // Calculate real audio duration
+        try {
+          const audioCtx = new AudioContext();
+          const arrayBuf = await finalBlob.arrayBuffer();
+          const decoded = await audioCtx.decodeAudioData(arrayBuf);
+          audioDurationSeconds = Math.round(decoded.duration);
+          audioCtx.close();
+        } catch {
+          // Fallback: estimate from word count
+          const wordCount = cleanText.split(/\s+/).length;
+          audioDurationSeconds = Math.round((wordCount / 150) * 60);
+        }
+        console.log('Audio duration:', audioDurationSeconds, 's');
         updateStep('voice', { status: 'done' });
         onStepChange('voice');
       } else if (!browserFallbackUsed) {
