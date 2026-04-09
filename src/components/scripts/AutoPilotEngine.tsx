@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Rocket, Check, Loader2, AlertCircle, X, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -160,6 +160,7 @@ export const AutoPilotEngine = ({
   const [showPanel, setShowPanel] = useState(false);
   const [loadingAutoTopic, setLoadingAutoTopic] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const runPipelineRef = useRef<(() => void) | null>(null);
 
   const updateStep = (key: string, update: Partial<AutoPilotStep>) => {
     setSteps(prev => prev.map(s => s.key === key ? { ...s, ...update } : s));
