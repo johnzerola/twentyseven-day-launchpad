@@ -1061,7 +1061,9 @@ Responda em JSON puro: { "acts": [{ "act": 1, "title": "...", "time_range": "...
       const enc = new TextEncoder();
       let totalWordCount = 0;
       let previousActText = '';
-      const MAX_ACTS = 6; // safety limit
+      const MAX_ACTS = 8; // safety limit
+      const maxOverflow = dur >= 40 ? 4 : dur >= 25 ? 3 : 2;
+      const actMaxTokens = dur >= 40 ? 24000 : dur >= 20 ? 20000 : 16384;
 
       const multiActStream = new ReadableStream({
         async start(ctrl) {
