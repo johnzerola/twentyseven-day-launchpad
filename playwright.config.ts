@@ -15,9 +15,4 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: "echo 'dev server already running'",
-    port: 5173,
-    reuseExistingServer: true,
-  },
 });
