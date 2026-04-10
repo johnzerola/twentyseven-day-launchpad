@@ -41,6 +41,7 @@ interface AutoPilotEngineProps {
 
 const INITIAL_STEPS: AutoPilotStep[] = [
   { key: 'script', label: 'Roteiro Dopaminérgico', emoji: '📝', status: 'pending' },
+  { key: 'refine', label: 'Refinamento IA', emoji: '✨', status: 'pending' },
   { key: 'voice', label: 'Narração Emocional', emoji: '🎙️', status: 'pending' },
   { key: 'scenes', label: 'Cenas Visuais', emoji: '🎬', status: 'pending' },
   { key: 'titles', label: 'Títulos & SEO', emoji: '🏷️', status: 'pending' },
@@ -455,6 +456,77 @@ export const AutoPilotEngine = ({
       toast.error('Erro no roteiro — continue manualmente');
       setRunning(false);
       return;
+    }
+
+    if (controller.signal.aborted) { setRunning(false); return; }
+
+    // ═══ STEP 1.5: Refine Script (Claude) ═══
+    updateStep('refine', { status: 'running', detail: 'Refinando hook + emoção...' });
+    try {
+      const { data: { session: refineSession } } = await supabase.auth.getSession();
+      const refineToken = refineSession?.access_token || ANON_KEY;
+      const refineUrl = `${SUPABASE_URL}/functions/v1/refine-script`;
+      
+      const refineRes = await fetch(refineUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${refineToken}`,
+          apikey: ANON_KEY,
+        },
+        body: JSON.stringify({
+          draft_script: generatedScript,
+          niche: useNiche,
+          language,
+          duration,
+          style,
+          target_words: generatedScript.split(/\s+/).length,
+        }),
+        signal: controller.signal,
+      });
+
+      if (refineRes.ok && refineRes.body) {
+        const reader = refineRes.body.getReader();
+        const decoder = new TextDecoder();
+        let refined = '';
+        let buf = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let nlIdx: number;
+          while ((nlIdx = buf.indexOf('\n')) !== -1) {
+            let line = buf.slice(0, nlIdx);
+            buf = buf.slice(nlIdx + 1);
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (!line.startsWith('data: ')) continue;
+            const payload = line.slice(6).trim();
+            if (payload === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(payload);
+              const content = parsed.choices?.[0]?.delta?.content || '';
+              if (content) refined += content;
+            } catch { /* partial */ }
+          }
+        }
+
+        if (refined && refined.length > generatedScript.length * 0.5) {
+          generatedScript = refined;
+          onScriptGenerated(generatedScript);
+          const refinedWords = refined.split(/\s+/).length;
+          updateStep('refine', { status: 'done', detail: `${refinedWords} palavras (Claude)` });
+        } else {
+          updateStep('refine', { status: 'done', detail: 'Mantido original' });
+        }
+      } else {
+        console.warn('Refine-script returned non-OK, keeping original');
+        updateStep('refine', { status: 'done', detail: 'Mantido original' });
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') { setRunning(false); return; }
+      console.warn('Refinement failed, keeping original:', err.message);
+      updateStep('refine', { status: 'done', detail: 'Mantido original' });
     }
 
     if (controller.signal.aborted) { setRunning(false); return; }
