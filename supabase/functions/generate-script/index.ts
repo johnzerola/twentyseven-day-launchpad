@@ -10,6 +10,8 @@ const corsHeaders = {
 
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
+// Styles that REQUIRE deep web research (factual, investigative)
+const RESEARCH_REQUIRED_STYLES = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'];
 
 // ═══════════════════════════════════════════════════════════════
 // YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
@@ -234,6 +236,8 @@ const GENRE_DIRECTIONS: Record<string, string> = {
   'motivacional': '🎭 GÊNERO MOTIVACIONAL: Impacto emocional + urgência + direção + possibilidade REAL. Exemplos concretos, não platitudes.',
   'polemica': '🎭 GÊNERO POLÊMICA: Contraste de opiniões, tensão de ideias, gancho forte. AMBOS os lados com honestidade. Fatos geram a polêmica.',
   'documentario': '🎭 GÊNERO DOCUMENTÁRIO PREMIUM: Estilo Netflix/BBC/NatGeo. Dados com fonte → múltiplas perspectivas → revelações como camadas de cebola. Frio e preciso COM momentos de genuína perplexidade humana. Emoção e retenção através de REVELAÇÃO, não grito.',
+  'webdocumentário': '🎭 GÊNERO WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium): Pesquisa PROFUNDA com fontes acadêmicas, livros e bibliografias. Tom investigativo-científico, NUNCA sensacionalista. Estrutura: Pergunta provocativa → Investigação em camadas → Evidências com fonte → Contra-perspectiva → Revelação que muda tudo → Reflexão. Narração CALMA e INTELIGENTE — sem pressa, sem gritos, sem clickbait emocional. Curiosity gaps estratégicos baseados em EVIDÊNCIA, não hype. Dados com ESCALA (comparações vívidas). Citar estudos, papers, livros quando possível. O espectador deve APRENDER algo profundo e sentir que entendeu o mundo melhor.',
+  'webdocumentario': '🎭 GÊNERO WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium): Pesquisa PROFUNDA com fontes acadêmicas, livros e bibliografias. Tom investigativo-científico, NUNCA sensacionalista. Estrutura: Pergunta provocativa → Investigação em camadas → Evidências com fonte → Contra-perspectiva → Revelação que muda tudo → Reflexão. Narração CALMA e INTELIGENTE — sem pressa, sem gritos, sem clickbait emocional. Curiosity gaps estratégicos baseados em EVIDÊNCIA, não hype. Dados com ESCALA (comparações vívidas). Citar estudos, papers, livros quando possível.',
 };
 
 // Sanitize strings to remove broken Unicode surrogate pairs that cause JSON.stringify to fail
@@ -272,6 +276,7 @@ serve(async (req) => {
 
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
+    const isResearchRequired = RESEARCH_REQUIRED_STYLES.includes(styleLC);
 
     // ═══ SMART KNOWLEDGE RETRIEVAL (RAG + Re-Ranking) ═══
     // Instead of 13 fixed queries, use semantic search + re-ranking for relevant knowledge
@@ -492,6 +497,8 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
       'educativo': 'EDUCATIVO: Destruir mitos com fatos, analogias do dia-a-dia, "A maioria pensa X mas...". Transforme dados secos em revelações chocantes.',
       'tutorial': 'TUTORIAL: Resultado final PRIMEIRO, passos numerados claros, "O erro #1 que 90% cometem...". Screenshot mental de cada passo.',
       'documentário': 'DOCUMENTÁRIO PREMIUM (Netflix/BBC/NatGeo): Dados impactantes COM FONTE, múltiplas perspectivas, revelações progressivas como camadas. Tom frio e preciso COM momentos de genuína perplexidade humana. Emoção sutil mas poderosa. Retenção via REVELAÇÃO progressiva. Alternância: dado factual → reflexão emocional → implicação para o espectador.',
+      'webdocumentário': 'WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium/PBS Eons/RealLifeLore): Pesquisa PROFUNDA obrigatória. Tom investigativo-científico — calmo, inteligente, sem pressa. NUNCA sensacionalista. Estrutura em camadas: Pergunta provocativa → Contexto histórico/científico → Investigação com evidências → Contra-perspectiva → Revelação profunda → Reflexão que muda perspectiva. CITE fontes: estudos, papers, livros, datas. Use comparações de ESCALA para dados. Suporta: animais/natureza (Discovery), civilizações antigas (Egito, Maias, Mesopotâmia), ciência, tecnologia, biografias. O espectador deve sentir que APRENDEU algo profundo.',
+      'webdocumentario': 'WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium/PBS Eons/RealLifeLore): Pesquisa PROFUNDA obrigatória. Tom investigativo-científico — calmo, inteligente, sem pressa. CITE fontes: estudos, papers, livros. Estrutura em camadas de revelação.',
       'listicle': 'LISTICLE: Preview do #1 no início, escalada de impacto (fraco→médio→EXPLOSIVO). Cada item mais surpreendente que o anterior.',
       'reddit': 'REDDIT: Tom 1ª pessoa, detalhes sensoriais, plot twists, escalada. Digressões que voltam ao ponto. Humor self-deprecating. NÃO use fatos reais — crie narrativa.',
       'conspiração': 'CONSPIRAÇÃO: Fato oficial → inconsistências → evidências alternativas → contra-argumentos. Paranóico mas lúcido. Fatos verificáveis + especulação rotulada.',
@@ -518,6 +525,9 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
       'curiosidades': 'NICHO CURIOSIDADES: Cada fato MAIS surpreendente que o anterior. Números estranhos e específicos.',
       'relacionamentos': 'NICHO RELACIONAMENTOS: Psicologia aplicada. Histórias reais anônimas. Vulnerabilidade genuína.',
       'empreendedorismo': 'NICHO EMPREENDEDORISMO: Case studies REAIS com números. Passo-a-passo acionável. Erros que custam dinheiro.',
+      'documentário': 'NICHO DOCUMENTÁRIO: Dados COM FONTE, múltiplas perspectivas, revelações progressivas. Emoção via REVELAÇÃO.',
+      'webdocumentário': 'NICHO WEBDOCUMENTÁRIO: Pesquisa PROFUNDA obrigatória (papers, livros, bibliografias). Tom investigativo-científico calmo e inteligente. Referências: LEMMiNO, Kurzgesagt, JJ, Veritasium, PBS Eons, Discovery Channel. Suporta: animais/natureza, civilizações antigas (Egito, Maias, Mesopotâmia), ciência, tecnologia, biografias históricas. Estrutura em CAMADAS de revelação. Dados com ESCALA (comparações vívidas). Citar fontes sempre. O espectador deve APRENDER algo profundo.',
+      'animais': 'NICHO ANIMAIS/NATUREZA: Comportamentos extraordinários, adaptações evolutivas. Estilo NatGeo/Discovery. Dados científicos com linguagem acessível. Comparações de escala. Respeito pela natureza sem antropomorfizar.',
     };
     const nicheLC = (niche || '').toLowerCase();
     const nicheSpecific = Object.entries(nicheGuides).find(([key]) => nicheLC.includes(key))?.[1] || '';
@@ -596,6 +606,36 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
 - Priorize NARRATIVA MAGNÉTICA sobre precisão factual
 ` : '';
 
+    // ═══ DEEP WEB RESEARCH for Web Documentary style ═══
+    let deepResearchBlock = '';
+    if (isResearchRequired && topic) {
+      console.log(`[DEEP-RESEARCH] runId=${runId} Research-required style "${style}" — fetching web data for "${topic}"`);
+      try {
+        const researchAbort = new AbortController();
+        const researchTimeout = setTimeout(() => researchAbort.abort(), 20000);
+        const researchRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/brave-search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ query: `${topic} research facts data`, count: 8, freshness: 'pm' }),
+          signal: researchAbort.signal,
+        });
+        clearTimeout(researchTimeout);
+        if (researchRes.ok) {
+          const researchData = await researchRes.json();
+          const results = (researchData.results || []).map((r: any) => `• ${r.title}: ${r.description}`).join('\n');
+          if (results) {
+            deepResearchBlock = `\n📚 PESQUISA WEB PROFUNDA (fontes reais para webdocumentário):
+${results}
+INSTRUÇÃO: Use estes dados como BASE FACTUAL. Cite fontes. Transforme dados secos em narrativa envolvente.\n`;
+            console.log(`[DEEP-RESEARCH] runId=${runId} Got ${researchData.results?.length || 0} results`);
+          }
+        }
+      } catch (e) { console.warn("[DEEP-RESEARCH] Failed:", e); }
+    }
+
     // ═══════════════════════════════════════════════════════
     // PHASE CACHE: Check if a previous run was interrupted
     // ═══════════════════════════════════════════════════════
@@ -622,7 +662,6 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     if (skipHookPhase) {
       hookText = ''; // Let the main generation handle the hook inline
     } else if (hookText) {
-    if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
     } else {
       try {
@@ -704,6 +743,8 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
       'superacao': '🎬 REFERÊNCIAS ELITE: Titanic (história íntima dentro de evento épico). K-Drama (slow-burn com payoff catártico). Pixar (construa alegria 70% → devaste com emoção 30%). Schindler (especificidade cria universalidade).',
       'emocionante': '🎬 REFERÊNCIAS ELITE: K-Drama (precisão emocional cirúrgica, delayed gratification). Pixar (sucker punch emocional após investimento). Titanic (mãos que se soltam > navio que afunda). Schindler (casaco vermelho — 1 detalhe = toda a tragédia).',
       'documentário': '🎬 REFERÊNCIAS ELITE: Chernobyl (precisão científica como horror). The Wire (storytelling sistêmico). Coffeehouse Crime (cadeia de evidências). Netflix mid-season twist (reinterpretar tudo aos 50%).',
+      'webdocumentário': '🎬 REFERÊNCIAS ELITE WEBDOCUMENTÁRIO: LEMMiNO (investigação meticulosa, narração calma, pesquisa de meses). Kurzgesagt (dados complexos→visuais simples). Veritasium (desafiar intuição com ciência). JJ/Canal JJ BR (webdocumentário brasileiro, pesquisa profunda com fontes acadêmicas). PBS Eons (paleontologia narrativa). RealLifeLore (geopolítica visual). Real Stories (documentários humanos). Discovery Channel (natureza cinematográfica). ESTILO: calmo, inteligente, investigativo. Pesquisa profunda com livros, estudos científicos, bibliografias. Cada revelação baseada em EVIDÊNCIA.',
+      'webdocumentario': '🎬 REFERÊNCIAS ELITE WEBDOCUMENTÁRIO: LEMMiNO, Kurzgesagt, Veritasium, JJ BR, PBS Eons, RealLifeLore. Investigação profunda com fontes.',
       'finanças': '🎬 REFERÊNCIAS ELITE: Wolf of Wall Street (excesso como exposição, 4ª parede para cumplicidade). Breaking Bad (escalonamento moral). MrBeast ($1 vs $1M format). Dados ESPECÍFICOS sempre.',
       'mitologia': '🎬 REFERÊNCIAS ELITE: Game of Thrones (world-building through conflict, stakes reais). K-Drama (precisão emocional em escala épica). Godfather (poder e lealdade). Cada cena é um quadro épico.',
       'conspiração': '🎬 REFERÊNCIAS ELITE: Chernobyl (documentos reais + burocracia como vilão). The Wire (sistemas ocultos). Tarantino (não-linear para recontextualização). Coffeehouse Crime (evidência verificável + especulação rotulada).',
@@ -711,6 +752,7 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
       'entretenimento': '🎬 REFERÊNCIAS ELITE: MrBeast (premissa impossível + execução épica + linguagem simples). Wolf of Wall Street (4ª parede + humor). Netflix binge architecture (loops sobrepostos).',
       'história': '🎬 REFERÊNCIAS ELITE: Chernobyl (inevitabilidade como tensão). Schindler (1 detalhe específico = toda a era). Rashomon (mesmo evento, múltiplas perspectivas). Game of Thrones (ninguém está seguro).',
       'psicologia': '🎬 REFERÊNCIAS ELITE: Sopranos (terapia como narrativa, subtexto). Breaking Bad (transformação moral gradual). Dark Knight (dilemas impossíveis sem resposta certa). K-Drama (emoção precisa).',
+      'animais': '🎬 REFERÊNCIAS ELITE: BBC Earth (cinematografia), Discovery Channel (narrativa de sobrevivência), PBS Eons (evolução), Kurzgesagt (escala cósmica), NatGeo (imersão e respeito). Dados científicos com comparações de escala.',
     };
     const nicheRefKey = Object.keys(NICHE_REFERENCE_MAP).find(k => nicheLC.includes(k));
     const nicheReferenceBlock = nicheRefKey ? NICHE_REFERENCE_MAP[nicheRefKey] : '';
@@ -807,6 +849,7 @@ ${viralInjection}
 ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
+${deepResearchBlock}
 ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
