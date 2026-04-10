@@ -41,6 +41,7 @@ interface AutoPilotEngineProps {
 
 const INITIAL_STEPS: AutoPilotStep[] = [
   { key: 'script', label: 'Roteiro Dopaminérgico', emoji: '📝', status: 'pending' },
+  { key: 'refine', label: 'Refinamento IA', emoji: '✨', status: 'pending' },
   { key: 'voice', label: 'Narração Emocional', emoji: '🎙️', status: 'pending' },
   { key: 'scenes', label: 'Cenas Visuais', emoji: '🎬', status: 'pending' },
   { key: 'titles', label: 'Títulos & SEO', emoji: '🏷️', status: 'pending' },
