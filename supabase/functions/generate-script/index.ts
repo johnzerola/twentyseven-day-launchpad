@@ -662,7 +662,6 @@ INSTRUÇÃO: Use estes dados como BASE FACTUAL. Cite fontes. Transforme dados se
     if (skipHookPhase) {
       hookText = ''; // Let the main generation handle the hook inline
     } else if (hookText) {
-    if (hookText) {
       console.log(`[PHASE-0 HOOK] runId=${runId} Using cached hook`);
     } else {
       try {
