@@ -657,6 +657,145 @@ export async function callLovableAI(
   return data.choices?.[0]?.message?.content || '';
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CLAUDE DIRECT API (via CLAUDE_API_KEY — zero Lovable credits)
+// ═══════════════════════════════════════════════════════════════
+
+const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const CLAUDE_DEFAULT_MODEL = "claude-sonnet-4-20250514";
+
+/**
+ * Non-streaming Claude call via direct API key.
+ */
+export async function callClaude(
+  system: string, userMsg: string,
+  opts: { model?: string; maxTokens?: number; temperature?: number } = {}
+): Promise<string> {
+  const claudeKey = Deno.env.get("CLAUDE_API_KEY");
+  if (!claudeKey) throw new Error("CLAUDE_API_KEY not configured");
+
+  const model = opts.model || CLAUDE_DEFAULT_MODEL;
+  console.log(`[callClaude] Calling ${model} (direct API)`);
+
+  const res = await fetchWithRetry(CLAUDE_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": claudeKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: opts.maxTokens || 16384,
+      temperature: opts.temperature ?? 0.7,
+      system: sanitizeUnicode(system),
+      messages: [{ role: "user", content: sanitizeUnicode(userMsg) }],
+    }),
+  }, 3, `Claude-${model}`);
+
+  if (!res.ok) {
+    const t = await res.text();
+    console.error(`[callClaude] ${model} error ${res.status}:`, t.slice(0, 300));
+    throw new Error(`Claude error ${res.status}: ${t.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const content = data.content?.[0]?.text || '';
+  if (!content) throw new Error("Claude returned empty content");
+  return content;
+}
+
+/**
+ * Streaming Claude call — returns a Response with OpenAI-compatible SSE stream.
+ */
+export async function callClaudeStreaming(
+  system: string, userMsg: string,
+  opts: { model?: string; maxTokens?: number; temperature?: number; label?: string } = {}
+): Promise<Response> {
+  const claudeKey = Deno.env.get("CLAUDE_API_KEY");
+  if (!claudeKey) throw new Error("CLAUDE_API_KEY not configured");
+
+  const model = opts.model || CLAUDE_DEFAULT_MODEL;
+  const label = opts.label || 'Claude-stream';
+  console.log(`[${label}] Streaming from ${model} (direct API)`);
+
+  const res = await fetchWithRetry(CLAUDE_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": claudeKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: opts.maxTokens || 32000,
+      temperature: opts.temperature ?? 0.7,
+      stream: true,
+      system: sanitizeUnicode(system),
+      messages: [{ role: "user", content: sanitizeUnicode(userMsg) }],
+    }),
+  }, 2, label);
+
+  if (!res.ok || !res.body) {
+    const t = await res.text();
+    console.error(`[${label}] ${model} error ${res.status}:`, t.slice(0, 300));
+    throw new Error(`Claude streaming error ${res.status}`);
+  }
+
+  // Transform Claude SSE → OpenAI-compatible SSE
+  return new Response(claudeSseToOpenAi(res.body), {
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
+
+/** Transform Claude SSE stream to OpenAI-compatible SSE stream */
+function claudeSseToOpenAi(claudeBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = claudeBody.getReader();
+  const dec = new TextDecoder();
+  const enc = new TextEncoder();
+  let buf = '';
+
+  function processLine(line: string, ctrl: ReadableStreamDefaultController<Uint8Array>) {
+    if (!line.startsWith('data: ')) return;
+    const jsonStr = line.slice(6).trim();
+    if (!jsonStr || jsonStr === '[DONE]') return;
+    try {
+      const p = JSON.parse(jsonStr);
+      // Claude events: content_block_delta with type "text_delta"
+      if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta') {
+        const text = p.delta.text;
+        if (text) {
+          ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+        }
+      }
+      // Claude message_stop event → send [DONE]
+      if (p.type === 'message_stop') {
+        ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+      }
+    } catch { /* partial JSON, skip */ }
+  }
+
+  return new ReadableStream({
+    async pull(ctrl) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          if (buf.trim()) for (const l of buf.split('\n')) processLine(l.trim(), ctrl);
+          ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+          ctrl.close();
+          return;
+        }
+        buf += dec.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n')) !== -1) {
+          processLine(buf.slice(0, idx).trim(), ctrl);
+          buf = buf.slice(idx + 1);
+        }
+      }
+    }
+  });
+}
+
 /** Generate text embedding using Google's text-embedding-004 model */
 export async function generateEmbedding(apiKey: string, text: string): Promise<number[] | null> {
   try {
