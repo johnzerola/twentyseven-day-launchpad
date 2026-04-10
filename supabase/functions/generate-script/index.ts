@@ -606,6 +606,36 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
 - Priorize NARRATIVA MAGNÉTICA sobre precisão factual
 ` : '';
 
+    // ═══ DEEP WEB RESEARCH for Web Documentary style ═══
+    let deepResearchBlock = '';
+    if (isResearchRequired && topic) {
+      console.log(`[DEEP-RESEARCH] runId=${runId} Research-required style "${style}" — fetching web data for "${topic}"`);
+      try {
+        const researchAbort = new AbortController();
+        const researchTimeout = setTimeout(() => researchAbort.abort(), 20000);
+        const researchRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/brave-search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ query: `${topic} research facts data`, count: 8, freshness: 'pm' }),
+          signal: researchAbort.signal,
+        });
+        clearTimeout(researchTimeout);
+        if (researchRes.ok) {
+          const researchData = await researchRes.json();
+          const results = (researchData.results || []).map((r: any) => `• ${r.title}: ${r.description}`).join('\n');
+          if (results) {
+            deepResearchBlock = `\n📚 PESQUISA WEB PROFUNDA (fontes reais para webdocumentário):
+${results}
+INSTRUÇÃO: Use estes dados como BASE FACTUAL. Cite fontes. Transforme dados secos em narrativa envolvente.\n`;
+            console.log(`[DEEP-RESEARCH] runId=${runId} Got ${researchData.results?.length || 0} results`);
+          }
+        }
+      } catch (e) { console.warn("[DEEP-RESEARCH] Failed:", e); }
+    }
+
     // ═══════════════════════════════════════════════════════
     // PHASE CACHE: Check if a previous run was interrupted
     // ═══════════════════════════════════════════════════════
