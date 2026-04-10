@@ -1,79 +1,82 @@
 
 
-# Avaliação do Sistema + Pitch de Vendas para Sócio
+# Plano: Sistema 10/10 — Webdocumentário + Normalização + Melhorias Críticas
 
-## Estado Atual do Sistema — Nota: 8.5/10
+## Diagnóstico Atual (8.5/10)
 
-### O que JÁ está pronto e funcional:
+**Dados no banco:**
+- 19.257 canais | 6.611 títulos virais | 1.013 content DNA | 3.274 embeddings | 401 hooks | 290 script knowledge | 15 structures | 6 attention curves | 242 ai_learnings
 
-**Frontend (17 telas protegidas):**
-- Landing page completa com pricing, FAQ, testimonials, simulador de monetização
-- Dashboard com stats, plano de 27 dias, chatbot TubeBot
-- Gerador de roteiros com pipeline Multi-IA (Gemini + Claude + avaliação)
-- Modo Piloto Automático (roteiro → voz → cenas → títulos → thumbnail)
-- DubSpy (espionagem de canais concorrentes)
-- Viral Database + Outlier Finder
-- Growth Tools, Shorts Trends, Títulos Virais
-- Multi-canal, Tracker 30 Dias
-- Sistema de assinatura com tiers (Starter/Pro/Full)
-- Internacionalização (PT/EN/ES)
+**Problemas identificados:**
+1. **Nichos fragmentados** — 95+ variações de "Documentary" (ex: "Documentary", "documentary", "Nature Documentary", "nature documentaries", "Documentary/History"). Mesmo problema em True Crime, Horror, etc.
+2. **Sem estilo Webdocumentário** — O sistema tem "documentário" genérico mas falta o estilo específico de webdocumentários (LEMMiNO, Kurzgesagt, Real Stories, Veritasium, canais BR como JJ)
+3. **Apenas 6 attention curves** — Falta curva específica para documentário/webdoc
+4. **Apenas 15 script structures** — Falta template webdocumentário com pesquisa profunda
+5. **Hook types fragmentados** — 80+ tipos não normalizados (curiosity vs Curiosity vs curiosidade)
 
-**Backend (100+ edge functions):**
-- Pipeline Multi-IA: Gemini Flash (geração) → Claude Sonnet (refinamento) → Gemini Flash (avaliação)
-- Loop de aprendizado evolutivo (ai_learning table)
-- TTS com ElevenLabs + Google TTS
-- Geração de cenas visuais, thumbnails, prompts Veo3
-- Canal intelligence, competitor tracking, niche explorer
-- YouTube OAuth + analytics sync
-- Auto-enrich, self-learning, knowledge expansion
-- Anti-AI-Slop detector
+## O que será feito
 
-**Custos operacionais otimizados:**
-- ~R$0,00 em créditos Lovable por vídeo (tudo via API direta)
-- Claude: ~R$0,05-0,10 por refinamento
-- Gemini Flash: custo quase zero
+### 1. Normalização de Nichos (Migration SQL)
+Criar migration que normaliza os nichos duplicados nas tabelas `channel_intelligence` e `viral_titles_db`:
+- "documentary" → "Documentary"
+- "true crime" → "True Crime"
+- "horror" → "Horror"
+- ~20 normalizações nos nichos mais fragmentados
+- Criar função SQL reutilizável para normalização futura
 
----
+### 2. Normalização de Hook Types (Migration SQL)
+Unificar hook_library:
+- "curiosity" / "Curiosity" / "curiosidade" → "curiosity"
+- "shock" / "Shocking stat" / "shocking stat" → "shock"
+- ~15 normalizações
 
-## Plano: Criar Pitch Deck + Lista de Melhorias
+### 3. Novo Estilo: Webdocumentário (generate-script + refine-script)
+Adicionar estilo "webdocumentário" no `styleGuides` e `GENRE_DIRECTIONS`:
 
-### 1. Pitch Deck (apresentação PPTX profissional)
-Slides propostos:
-1. **Capa** — Monetiza27: IA que monetiza canais YouTube
-2. **Problema** — Criadores gastam 40h/semana, 95% nunca monetizam
-3. **Solução** — Pipeline automatizado de produção com IA
-4. **Demo do Produto** — Screenshots das telas principais
-5. **Tecnologia** — Pipeline Multi-IA (Gemini + Claude + aprendizado evolutivo)
-6. **Mercado** — 113M+ canais YouTube, mercado de tools cresce 25%/ano
-7. **Modelo de Negócio** — SaaS: R$97 / R$247 / R$597 por mês
-8. **Economia unitária** — Custo por vídeo ~R$0,10 vs receita ~R$8-20/usuário/mês
-9. **Tração** — Sistema funcional, 100+ funções backend, pipeline completo
-10. **Melhorias Futuras** — Roadmap de expansão
-11. **Proposta de Sociedade** — Próximos passos
+**Características do estilo webdocumentário:**
+- Pesquisa profunda com fontes acadêmicas, livros, bibliografias
+- Tom investigativo-científico (não sensacionalista)
+- Estrutura: Pergunta provocativa → Investigação em camadas → Revelações baseadas em evidência → Conclusão que muda perspectiva
+- Referências: LEMMiNO, Kurzgesagt, Veritasium, Real Stories, JJ (BR), PBS Eons, RealLifeLore
+- Suporta: animais/natureza (Discovery Channel), civilizações antigas (Egito, Maias), ciência, tecnologia, biografias históricas
+- Narração calma, inteligente, sem pressa — mas com curiosity gaps estratégicos
+- Dados com fontes reais, citações de estudos, contexto histórico profundo
 
-### 2. Lista de Melhorias Possíveis
-Incluída no pitch como roadmap:
+### 4. Nova Attention Curve: Webdocumentário (Insert SQL)
+Adicionar curva de atenção específica para documentários de 15-20 min:
+- Opening fact → Context build → Investigation → Evidence reveal → Counter-perspective → Deep reveal → Synthesis → Reflection
 
-**Curto prazo (1-2 semanas):**
-- Integração com Stripe/pagamento real
-- Onboarding guiado mais polido
-- Dashboard de métricas de uso (quantos roteiros, TTS, etc.)
+### 5. Novas Script Structures (Insert SQL)
+Adicionar 3 templates:
+- **Web Documentary Deep Research** — LEMMiNO/Kurzgesagt style
+- **Nature/Animal Documentary** — Discovery/NatGeo style
+- **Ancient Civilizations Documentary** — History Channel style
 
-**Médio prazo (1-2 meses):**
-- App mobile (React Native ou PWA)
-- Agendamento automático de publicação no YouTube
-- White-label para agências
-- Marketplace de templates de roteiro
+### 6. Script Knowledge para Webdocumentário (Insert SQL)
+Adicionar 5-8 técnicas específicas:
+- Pesquisa em camadas (livro → estudo → entrevista → dado primário)
+- Narração omnisciente com empatia
+- Visualização de dados complexos em linguagem simples
+- Transições tipo "viagem no tempo" (presente → passado → presente)
+- Técnica "zoom in/zoom out" (macro → micro → macro)
 
-**Longo prazo (3-6 meses):**
-- Editor de vídeo integrado (timeline com cenas + áudio)
-- Geração de vídeo completo automatizada (Veo3/Sora)
-- API pública para integrações de terceiros
-- Programa de afiliados
+### 7. Brave/Perplexity Research para Webdocumentário
+No `generate-script`, habilitar pesquisa web para estilo webdocumentário (atualmente bloqueado para estilos criativos). Webdocumentários PRECISAM de dados reais.
 
-### Implementação
-- Criar PPTX profissional com branding Monetiza27 (vermelho/preto/dourado)
-- Screenshots reais do sistema nas slides
-- Dados de mercado e projeções financeiras
-- Salvar em `/mnt/documents/`
+## Arquivos a editar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/functions/generate-script/index.ts` | Adicionar estilo "webdocumentário" em styleGuides, nicheGuides e GENRE_DIRECTIONS. Habilitar pesquisa web para este estilo. |
+| `supabase/functions/refine-script/index.ts` | Instruções específicas de refinamento para webdocumentário (preservar fontes, não sensacionalizar). |
+| Migration SQL #1 | Normalização de nichos em channel_intelligence e viral_titles_db |
+| Migration SQL #2 | Normalização de hook_types em hook_library |
+| Insert SQL | Novas attention curves, script structures e script knowledge para webdocumentário |
+
+## Resultado esperado
+- Sistema sobe de 8.5 → 9.5/10
+- Nichos organizados e limpos
+- Suporte nativo a webdocumentários (Discovery, NatGeo, LEMMiNO)
+- Dados mais confiáveis para TubeBot e RAG semântico
+- Hooks normalizados para análise precisa
 
