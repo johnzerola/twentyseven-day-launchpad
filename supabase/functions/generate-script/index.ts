@@ -10,6 +10,8 @@ const corsHeaders = {
 
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
 const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
+// Styles that REQUIRE deep web research (factual, investigative)
+const RESEARCH_REQUIRED_STYLES = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'];
 
 // ═══════════════════════════════════════════════════════════════
 // YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
@@ -234,6 +236,8 @@ const GENRE_DIRECTIONS: Record<string, string> = {
   'motivacional': '🎭 GÊNERO MOTIVACIONAL: Impacto emocional + urgência + direção + possibilidade REAL. Exemplos concretos, não platitudes.',
   'polemica': '🎭 GÊNERO POLÊMICA: Contraste de opiniões, tensão de ideias, gancho forte. AMBOS os lados com honestidade. Fatos geram a polêmica.',
   'documentario': '🎭 GÊNERO DOCUMENTÁRIO PREMIUM: Estilo Netflix/BBC/NatGeo. Dados com fonte → múltiplas perspectivas → revelações como camadas de cebola. Frio e preciso COM momentos de genuína perplexidade humana. Emoção e retenção através de REVELAÇÃO, não grito.',
+  'webdocumentário': '🎭 GÊNERO WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium): Pesquisa PROFUNDA com fontes acadêmicas, livros e bibliografias. Tom investigativo-científico, NUNCA sensacionalista. Estrutura: Pergunta provocativa → Investigação em camadas → Evidências com fonte → Contra-perspectiva → Revelação que muda tudo → Reflexão. Narração CALMA e INTELIGENTE — sem pressa, sem gritos, sem clickbait emocional. Curiosity gaps estratégicos baseados em EVIDÊNCIA, não hype. Dados com ESCALA (comparações vívidas). Citar estudos, papers, livros quando possível. O espectador deve APRENDER algo profundo e sentir que entendeu o mundo melhor.',
+  'webdocumentario': '🎭 GÊNERO WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium): Pesquisa PROFUNDA com fontes acadêmicas, livros e bibliografias. Tom investigativo-científico, NUNCA sensacionalista. Estrutura: Pergunta provocativa → Investigação em camadas → Evidências com fonte → Contra-perspectiva → Revelação que muda tudo → Reflexão. Narração CALMA e INTELIGENTE — sem pressa, sem gritos, sem clickbait emocional. Curiosity gaps estratégicos baseados em EVIDÊNCIA, não hype. Dados com ESCALA (comparações vívidas). Citar estudos, papers, livros quando possível.',
 };
 
 // Sanitize strings to remove broken Unicode surrogate pairs that cause JSON.stringify to fail
@@ -492,6 +496,8 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
       'educativo': 'EDUCATIVO: Destruir mitos com fatos, analogias do dia-a-dia, "A maioria pensa X mas...". Transforme dados secos em revelações chocantes.',
       'tutorial': 'TUTORIAL: Resultado final PRIMEIRO, passos numerados claros, "O erro #1 que 90% cometem...". Screenshot mental de cada passo.',
       'documentário': 'DOCUMENTÁRIO PREMIUM (Netflix/BBC/NatGeo): Dados impactantes COM FONTE, múltiplas perspectivas, revelações progressivas como camadas. Tom frio e preciso COM momentos de genuína perplexidade humana. Emoção sutil mas poderosa. Retenção via REVELAÇÃO progressiva. Alternância: dado factual → reflexão emocional → implicação para o espectador.',
+      'webdocumentário': 'WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium/PBS Eons/RealLifeLore): Pesquisa PROFUNDA obrigatória. Tom investigativo-científico — calmo, inteligente, sem pressa. NUNCA sensacionalista. Estrutura em camadas: Pergunta provocativa → Contexto histórico/científico → Investigação com evidências → Contra-perspectiva → Revelação profunda → Reflexão que muda perspectiva. CITE fontes: estudos, papers, livros, datas. Use comparações de ESCALA para dados. Suporta: animais/natureza (Discovery), civilizações antigas (Egito, Maias, Mesopotâmia), ciência, tecnologia, biografias. O espectador deve sentir que APRENDEU algo profundo.',
+      'webdocumentario': 'WEBDOCUMENTÁRIO (LEMMiNO/Kurzgesagt/JJ/Veritasium/PBS Eons/RealLifeLore): Pesquisa PROFUNDA obrigatória. Tom investigativo-científico — calmo, inteligente, sem pressa. CITE fontes: estudos, papers, livros. Estrutura em camadas de revelação.',
       'listicle': 'LISTICLE: Preview do #1 no início, escalada de impacto (fraco→médio→EXPLOSIVO). Cada item mais surpreendente que o anterior.',
       'reddit': 'REDDIT: Tom 1ª pessoa, detalhes sensoriais, plot twists, escalada. Digressões que voltam ao ponto. Humor self-deprecating. NÃO use fatos reais — crie narrativa.',
       'conspiração': 'CONSPIRAÇÃO: Fato oficial → inconsistências → evidências alternativas → contra-argumentos. Paranóico mas lúcido. Fatos verificáveis + especulação rotulada.',
