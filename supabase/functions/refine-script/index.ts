@@ -46,6 +46,8 @@ serve(async (req) => {
     }
 
     const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
+    const styleLC = (style || '').toLowerCase();
+    const isWebDoc = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'].includes(styleLC);
     
     if (!draft_script) throw new Error("draft_script is required");
 
