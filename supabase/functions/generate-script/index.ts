@@ -524,6 +524,9 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
       'curiosidades': 'NICHO CURIOSIDADES: Cada fato MAIS surpreendente que o anterior. Números estranhos e específicos.',
       'relacionamentos': 'NICHO RELACIONAMENTOS: Psicologia aplicada. Histórias reais anônimas. Vulnerabilidade genuína.',
       'empreendedorismo': 'NICHO EMPREENDEDORISMO: Case studies REAIS com números. Passo-a-passo acionável. Erros que custam dinheiro.',
+      'documentário': 'NICHO DOCUMENTÁRIO: Dados COM FONTE, múltiplas perspectivas, revelações progressivas. Emoção via REVELAÇÃO.',
+      'webdocumentário': 'NICHO WEBDOCUMENTÁRIO: Pesquisa PROFUNDA obrigatória (papers, livros, bibliografias). Tom investigativo-científico calmo e inteligente. Referências: LEMMiNO, Kurzgesagt, JJ, Veritasium, PBS Eons, Discovery Channel. Suporta: animais/natureza, civilizações antigas (Egito, Maias, Mesopotâmia), ciência, tecnologia, biografias históricas. Estrutura em CAMADAS de revelação. Dados com ESCALA (comparações vívidas). Citar fontes sempre. O espectador deve APRENDER algo profundo.',
+      'animais': 'NICHO ANIMAIS/NATUREZA: Comportamentos extraordinários, adaptações evolutivas. Estilo NatGeo/Discovery. Dados científicos com linguagem acessível. Comparações de escala. Respeito pela natureza sem antropomorfizar.',
     };
     const nicheLC = (niche || '').toLowerCase();
     const nicheSpecific = Object.entries(nicheGuides).find(([key]) => nicheLC.includes(key))?.[1] || '';
