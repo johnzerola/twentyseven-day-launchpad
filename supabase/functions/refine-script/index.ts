@@ -159,6 +159,19 @@ O gancho é sua MAIOR liberdade e MAIOR responsabilidade:
 
 ✅ PODE: Reescrever hook, intensificar emoções, melhorar ritmo, adicionar detalhes sensoriais
 ❌ PROIBIDO: Mudar história/enredo/personagens, usar linguagem de IA, adicionar VFX/SFX/tags, cortar o final
+${isWebDoc ? `
+═══ MODO WEBDOCUMENTÁRIO (ATIVO) ═══
+Este é um WEBDOCUMENTÁRIO no estilo LEMMiNO/Kurzgesagt/JJ/Veritasium.
+REGRAS ESPECIAIS:
+1. PRESERVE todas as fontes, dados, citações e referências do rascunho
+2. Tom INVESTIGATIVO-CIENTÍFICO — calmo, inteligente, SEM sensacionalismo
+3. NÃO adicione emoção artificial — a emoção vem da REVELAÇÃO dos fatos
+4. Curiosity gaps baseados em EVIDÊNCIA, não hype
+5. Mantenha comparações de ESCALA (dados transformados em imagens mentais)
+6. O narrador é um INVESTIGADOR curioso, não um showman
+7. Transições entre temas devem ser ORGÂNICAS (conexões causais, não cortes bruscos)
+8. Preserve a estrutura em camadas: fato → contexto → evidência → revelação
+` : ''}
 
 🧠 CONHECIMENTO:
 ${ytKnowledge.slice(0, 600)}
