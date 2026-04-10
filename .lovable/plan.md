@@ -1,76 +1,82 @@
 
 
-# Diagnóstico: Consumo Excessivo de Créditos + Marcadores de Emoção no Roteiro
+# Pipeline Multi-IA: Claude no Refinamento + Loop de Aprendizado
 
-## Problemas encontrados
+## Resumo
 
-### 1. Consumo de créditos absurdo
-**Causa-raiz:** Todas as chamadas de IA passam agora pelo Lovable AI Gateway como prioridade, usando `gemini-2.5-pro` (o modelo MAIS caro). Antes, o sistema usava diretamente a sua chave `GOOGLE_AI_API_KEY` (custo zero de créditos Lovable).
+Integrar o Claude (via CLAUDE_API_KEY já configurado) como editor especializado na fase de refinamento, com um loop de aprendizado que usa o feedback da avaliação para melhorar todas as IAs continuamente. O Gemini Flash continua gerando o rascunho (custo quase zero via API direta).
 
-Para gerar UM ÚNICO roteiro de 15 minutos, o sistema faz:
-- 1 chamada para Smart Knowledge Retrieval (re-ranking)
-- 1 chamada para gerar o Hook (Phase 0) — `gemini-2.5-pro`
-- 1 chamada para gerar o Outline — `gemini-2.5-flash`
-- 2-3 chamadas para gerar os Atos — `gemini-2.5-pro`
-- 0-2 chamadas de Overflow — `gemini-2.5-pro`
-- Depois: cenas, títulos, thumbnails, afiliados — mais chamadas Pro
+## Fluxo proposto
 
-Total: **8-15 chamadas por vídeo**, maioria usando `gemini-2.5-pro` via Gateway.
+```text
+FASE 1: GERAÇÃO (Gemini Flash — API direta, custo ~zero)
+  └─ GPT sugere 3 mini-outlines → Gemini escolhe + escreve roteiro completo
 
-O `gemini-2.5-pro` é 10-20x mais caro que o `gemini-2.5-flash`. E o Lovable Gateway cobra créditos por cada chamada.
+FASE 2: REFINAMENTO (Claude — API direta via CLAUDE_API_KEY)
+  └─ Claude lê o roteiro INTEIRO primeiro (contexto completo)
+  └─ Reescreve o hook (30s) com emoção e magnetismo
+  └─ Polimento emocional cirúrgico no corpo
+  └─ Regra: NÃO pode mudar história, personagens ou eventos
 
-**Solução:** Inverter a prioridade para que o sistema use a chave direta `GOOGLE_AI_API_KEY` como primário, e o Lovable Gateway apenas como fallback quando a chave direta falhar. Isso era o comportamento antigo.
+FASE 3: AVALIAÇÃO (Gemini Flash — API direta, custo ~zero)
+  └─ Score detalhado com pontos fortes e fracos
 
-### 2. Marcadores de emoção no roteiro
-**Causa-raiz:** O system prompt da `generate-script` inclui um bloco inteiro chamado "EMOTIONAL INTENSITY ENGINE" (linhas 905-941) que **pede explicitamente** para o AI inserir marcadores `[EMOÇÃO: tipo]` no texto do roteiro. O prompt diz literalmente: *"Insira marcadores [EMOÇÃO: tipo] a cada 45-60 segundos no roteiro"*.
+FASE 4: APRENDIZADO (automático, sem custo extra)
+  └─ Feedback da avaliação salvo na tabela ai_learning
+  └─ Próximas gerações consultam esses aprendizados
+  └─ IAs evitam erros recorrentes (roteiro curto, final previsível, etc.)
+```
 
-Isso polui o texto de narração com tags técnicas que não deveriam aparecer no roteiro final.
+## Economia vs. Fluxo atual
 
-**Solução:** Remover a instrução de inserir marcadores `[EMOÇÃO: tipo]` no texto. Manter a orientação de VARIAR emoções entre blocos (isso é bom para o roteiro), mas sem pedir tags visíveis.
+| Etapa | Antes | Depois |
+|---|---|---|
+| Geração | Gemini Flash (direto) | Gemini Flash (direto) — igual |
+| Hook separado | Gemini Pro (caro) | Eliminado — Claude faz no refinamento |
+| Refinamento | Gemini (direto) | Claude (direto via CLAUDE_API_KEY) |
+| Avaliação | GPT-5 via Gateway ($$$) + Gemini | 2x Gemini Flash (direto, ~zero) |
+| Total créditos Lovable | ~R$0,23/vídeo | ~R$0,00 (tudo via API direta) |
 
----
+A chave `CLAUDE_API_KEY` já está configurada nos secrets. Claude Sonnet é ~$3/M tokens input, ~$15/M output. Um refinamento de roteiro de 10min (~2000 palavras) custa ~$0,01-0,02.
 
-## Plano de implementação
+## Implementação técnica
 
-### Passo 1: Inverter prioridade — GOOGLE_AI_API_KEY primeiro, Gateway como fallback
-Em `supabase/functions/_shared/gemini-direct.ts`:
-- `callGemini()`: Tentar primeiro a API direta com `GOOGLE_AI_API_KEY`. Se falhar (429/quota), usar Lovable Gateway como fallback.
-- `callGeminiStreaming()`: Mesma inversão.
-- `callGeminiWithFallback()`: Mesma inversão.
-- `callGeminiOpenAICompat()`: Mesma inversão.
-- Manter o tratamento de 402 do Gateway intacto.
+### 1. Adicionar `callClaude()` ao `gemini-direct.ts`
+- Nova função `callClaude(system, userMsg, opts)` que chama `https://api.anthropic.com/v1/messages` com `CLAUDE_API_KEY`
+- Nova função `callClaudeStreaming()` para refinamento com streaming
+- Modelo: `claude-sonnet-4-20250514` (melhor custo-benefício para edição)
 
-Isso reduz o custo de créditos Lovable para quase zero quando a chave direta tem quota.
+### 2. Atualizar `generate-script/index.ts` — GPT sugere outlines
+- Antes de gerar, chamar Gemini Flash para 3 mini-outlines (1 chamada barata)
+- O outline vencedor alimenta a geração principal
+- Remover a fase de Hook separada (Claude faz isso no refinamento)
 
-### Passo 2: Usar Flash em vez de Pro para etapas auxiliares
-Em `supabase/functions/generate-script/index.ts`:
-- Hook (Phase 0): manter Pro como primary (é crítico para qualidade)
-- Outline: já usa Flash — manter
-- Atos: trocar de Pro para Flash como primary, Pro como fallback
-- Overflow: usar Flash
-- ACT-CLOSE: usar Flash
+### 3. Reescrever `refine-script/index.ts` — Claude como editor
+- Claude recebe o roteiro completo + contexto (nicho, estilo, duração)
+- Instruções: ler tudo primeiro, depois polir hook + emoção + magnetismo
+- Regra absoluta: não mudar história, personagens, eventos
+- Saída: narração pura, zero tags técnicas
 
-Isso reduz o custo por chamada em ~10x para a maioria das etapas, sem perda significativa de qualidade.
+### 4. Atualizar `score-script/index.ts` — Eliminar GPT-5 via Gateway
+- Trocar `callLovableAI(openai/gpt-5)` por `callGemini(gemini-2.5-flash)` (API direta)
+- Mantém avaliação dual (2x Flash com temperaturas diferentes)
+- Zero custo de créditos Lovable
 
-### Passo 3: Remover marcadores de emoção do texto
-Em `supabase/functions/generate-script/index.ts`:
-- Remover o bloco "MARCADORES EMOCIONAIS" (linhas 909-918) que pede inserção de `[EMOÇÃO: tipo]`
-- Manter o conceito de variação emocional entre blocos, mas como instrução narrativa, não como tag
-- Adicionar instrução explícita: "NUNCA insira tags técnicas, marcadores entre colchetes, ou anotações de edição no texto — o roteiro deve ser 100% narração falada pura"
+### 5. Loop de aprendizado evolutivo
+- Já existe parcialmente (`ai_learning` table + `dual_score_rejection`)
+- Expandir: salvar TODOS os feedbacks (aprovados + rejeitados)
+- Injetar os top 10 aprendizados recentes no system prompt da geração E do refinamento
+- Categorizar erros: "roteiro curto", "final previsível", "linguagem IA", "hook fraco"
 
-### Passo 4: Limpar outros marcadores técnicos do prompt
-- Verificar e remover instruções de `[EDITOR: ...]` checkpoints (linha 144-146) — transformar em orientação narrativa sem tags
-- Reforçar a limpeza no `getCleanNarration()` do AutoPilotEngine para filtrar qualquer marcador que escape
-
----
+### 6. AutoPilotEngine — Integrar refinamento no pipeline
+- Após geração do script, chamar `refine-script` automaticamente
+- Mostrar progresso: "Refinando com IA especializada..."
+- O script refinado é o que vai para TTS
 
 ## Arquivos a editar
-- `supabase/functions/_shared/gemini-direct.ts` — inverter prioridade API direta > Gateway
-- `supabase/functions/generate-script/index.ts` — remover marcadores de emoção, usar Flash para atos
-- `src/components/scripts/AutoPilotEngine.tsx` — melhorar limpeza de narração
-
-## Resultado esperado
-- Custo de créditos Lovable: queda de ~90% (usa a chave direta como primário)
-- Roteiros limpos: sem `[EMOÇÃO: tipo]`, sem `[EDITOR: ...]`, apenas narração pura
-- Qualidade mantida: Hook ainda usa Pro; atos usam Flash que é suficiente para narração
+- `supabase/functions/_shared/gemini-direct.ts` — adicionar `callClaude` + `callClaudeStreaming`
+- `supabase/functions/refine-script/index.ts` — trocar Gemini por Claude
+- `supabase/functions/score-script/index.ts` — eliminar GPT-5 via Gateway
+- `supabase/functions/generate-script/index.ts` — remover hook separado
+- `src/components/scripts/AutoPilotEngine.tsx` — integrar refinamento no pipeline
 
