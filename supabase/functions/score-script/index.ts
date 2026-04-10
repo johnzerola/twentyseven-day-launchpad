@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { callGemini, callLovableAI } from "../_shared/gemini-direct.ts";
+import { callGemini } from "../_shared/gemini-direct.ts";
 import { calibrateScore, getCalibrationStatus } from "../_shared/calibration-engine.ts";
 import { predictRetention } from "../_shared/retention-predictor.ts";
 
@@ -211,23 +211,18 @@ serve(async (req) => {
 
     const userScoreMsg = `Avalie este roteiro${niche ? ` (nicho: ${niche})` : ''}${style ? ` (estilo: ${style})` : ''}:\n\n${scriptText}`;
 
-    // ═══ DUAL AI EVALUATION: GPT-5-mini (strict) + Gemini Flash (creative) ═══
-    console.log(`[PHASE-3 SCORE] runId=${runId} Dual scoring: GPT-5-mini (strict) + Gemini Flash (creative)...`);
+    // ═══ DUAL AI EVALUATION: 2x Gemini Flash (direct API — zero Lovable credits) ═══
+    console.log(`[PHASE-3 SCORE] runId=${runId} Dual scoring: 2x Gemini Flash (direct, zero credits)...`);
     
     const scorePromptA = SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR A (RIGOROSO). Seja independente. NÃO INFLACIONE notas. Foque em FRAQUEZAS.\n\n" + jsonSchema;
     const scorePromptB = SCORE_PROMPT + slopWarning + calibrationContext + "\nVocê é o AVALIADOR B (CRITERIOSO). Seja independente. Valorize ORIGINALIDADE e EMOÇÃO.\n\n" + jsonSchema;
 
     const [evalAResult, evalBResult] = await Promise.allSettled([
-      // Evaluator A: GPT-5 via Lovable Gateway (strict, high reasoning)
-      callLovableAI(scorePromptA, userScoreMsg, { 
-        model: 'openai/gpt-5', temperature: 0.3, maxTokens: 8192, jsonMode: true 
-      }).catch(async (e) => {
-        console.warn(`[PHASE-3 SCORE] GPT-5 failed, falling back to Gemini:`, e);
-        return callGemini(GOOGLE_AI_API_KEY!, scorePromptA, userScoreMsg, { 
-          model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 8192 
-        });
+      // Evaluator A: Gemini Flash (strict, low temperature) — direct API
+      callGemini(GOOGLE_AI_API_KEY, scorePromptA, userScoreMsg, { 
+        model: 'gemini-2.5-flash', temperature: 0.3, jsonMode: true, maxTokens: 8192 
       }),
-      // Evaluator B: Gemini Flash via Lovable Gateway (creative)
+      // Evaluator B: Gemini Flash (creative, higher temperature) — direct API
       callGemini(GOOGLE_AI_API_KEY, scorePromptB, userScoreMsg, { 
         model: 'gemini-2.5-flash', temperature: 0.7, jsonMode: true, maxTokens: 8192 
       }),
@@ -248,8 +243,8 @@ serve(async (req) => {
       }
     };
 
-    const gptScore = parseScore(evalAResult, "EvalA-GPT5mini");
-    const geminiScore = parseScore(evalBResult, "EvalB-GeminiFlash");
+    const gptScore = parseScore(evalAResult, "EvalA-FlashStrict");
+    const geminiScore = parseScore(evalBResult, "EvalB-FlashCreative");
 
     if (!gptScore && !geminiScore) {
       console.error(`[PHASE-3 SCORE] runId=${runId} Both evaluators returned invalid JSON`);
