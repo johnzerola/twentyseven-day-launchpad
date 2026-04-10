@@ -1,82 +1,79 @@
 
 
-# Pipeline Multi-IA: Claude no Refinamento + Loop de Aprendizado
+# Avaliação do Sistema + Pitch de Vendas para Sócio
 
-## Resumo
+## Estado Atual do Sistema — Nota: 8.5/10
 
-Integrar o Claude (via CLAUDE_API_KEY já configurado) como editor especializado na fase de refinamento, com um loop de aprendizado que usa o feedback da avaliação para melhorar todas as IAs continuamente. O Gemini Flash continua gerando o rascunho (custo quase zero via API direta).
+### O que JÁ está pronto e funcional:
 
-## Fluxo proposto
+**Frontend (17 telas protegidas):**
+- Landing page completa com pricing, FAQ, testimonials, simulador de monetização
+- Dashboard com stats, plano de 27 dias, chatbot TubeBot
+- Gerador de roteiros com pipeline Multi-IA (Gemini + Claude + avaliação)
+- Modo Piloto Automático (roteiro → voz → cenas → títulos → thumbnail)
+- DubSpy (espionagem de canais concorrentes)
+- Viral Database + Outlier Finder
+- Growth Tools, Shorts Trends, Títulos Virais
+- Multi-canal, Tracker 30 Dias
+- Sistema de assinatura com tiers (Starter/Pro/Full)
+- Internacionalização (PT/EN/ES)
 
-```text
-FASE 1: GERAÇÃO (Gemini Flash — API direta, custo ~zero)
-  └─ GPT sugere 3 mini-outlines → Gemini escolhe + escreve roteiro completo
+**Backend (100+ edge functions):**
+- Pipeline Multi-IA: Gemini Flash (geração) → Claude Sonnet (refinamento) → Gemini Flash (avaliação)
+- Loop de aprendizado evolutivo (ai_learning table)
+- TTS com ElevenLabs + Google TTS
+- Geração de cenas visuais, thumbnails, prompts Veo3
+- Canal intelligence, competitor tracking, niche explorer
+- YouTube OAuth + analytics sync
+- Auto-enrich, self-learning, knowledge expansion
+- Anti-AI-Slop detector
 
-FASE 2: REFINAMENTO (Claude — API direta via CLAUDE_API_KEY)
-  └─ Claude lê o roteiro INTEIRO primeiro (contexto completo)
-  └─ Reescreve o hook (30s) com emoção e magnetismo
-  └─ Polimento emocional cirúrgico no corpo
-  └─ Regra: NÃO pode mudar história, personagens ou eventos
+**Custos operacionais otimizados:**
+- ~R$0,00 em créditos Lovable por vídeo (tudo via API direta)
+- Claude: ~R$0,05-0,10 por refinamento
+- Gemini Flash: custo quase zero
 
-FASE 3: AVALIAÇÃO (Gemini Flash — API direta, custo ~zero)
-  └─ Score detalhado com pontos fortes e fracos
+---
 
-FASE 4: APRENDIZADO (automático, sem custo extra)
-  └─ Feedback da avaliação salvo na tabela ai_learning
-  └─ Próximas gerações consultam esses aprendizados
-  └─ IAs evitam erros recorrentes (roteiro curto, final previsível, etc.)
-```
+## Plano: Criar Pitch Deck + Lista de Melhorias
 
-## Economia vs. Fluxo atual
+### 1. Pitch Deck (apresentação PPTX profissional)
+Slides propostos:
+1. **Capa** — Monetiza27: IA que monetiza canais YouTube
+2. **Problema** — Criadores gastam 40h/semana, 95% nunca monetizam
+3. **Solução** — Pipeline automatizado de produção com IA
+4. **Demo do Produto** — Screenshots das telas principais
+5. **Tecnologia** — Pipeline Multi-IA (Gemini + Claude + aprendizado evolutivo)
+6. **Mercado** — 113M+ canais YouTube, mercado de tools cresce 25%/ano
+7. **Modelo de Negócio** — SaaS: R$97 / R$247 / R$597 por mês
+8. **Economia unitária** — Custo por vídeo ~R$0,10 vs receita ~R$8-20/usuário/mês
+9. **Tração** — Sistema funcional, 100+ funções backend, pipeline completo
+10. **Melhorias Futuras** — Roadmap de expansão
+11. **Proposta de Sociedade** — Próximos passos
 
-| Etapa | Antes | Depois |
-|---|---|---|
-| Geração | Gemini Flash (direto) | Gemini Flash (direto) — igual |
-| Hook separado | Gemini Pro (caro) | Eliminado — Claude faz no refinamento |
-| Refinamento | Gemini (direto) | Claude (direto via CLAUDE_API_KEY) |
-| Avaliação | GPT-5 via Gateway ($$$) + Gemini | 2x Gemini Flash (direto, ~zero) |
-| Total créditos Lovable | ~R$0,23/vídeo | ~R$0,00 (tudo via API direta) |
+### 2. Lista de Melhorias Possíveis
+Incluída no pitch como roadmap:
 
-A chave `CLAUDE_API_KEY` já está configurada nos secrets. Claude Sonnet é ~$3/M tokens input, ~$15/M output. Um refinamento de roteiro de 10min (~2000 palavras) custa ~$0,01-0,02.
+**Curto prazo (1-2 semanas):**
+- Integração com Stripe/pagamento real
+- Onboarding guiado mais polido
+- Dashboard de métricas de uso (quantos roteiros, TTS, etc.)
 
-## Implementação técnica
+**Médio prazo (1-2 meses):**
+- App mobile (React Native ou PWA)
+- Agendamento automático de publicação no YouTube
+- White-label para agências
+- Marketplace de templates de roteiro
 
-### 1. Adicionar `callClaude()` ao `gemini-direct.ts`
-- Nova função `callClaude(system, userMsg, opts)` que chama `https://api.anthropic.com/v1/messages` com `CLAUDE_API_KEY`
-- Nova função `callClaudeStreaming()` para refinamento com streaming
-- Modelo: `claude-sonnet-4-20250514` (melhor custo-benefício para edição)
+**Longo prazo (3-6 meses):**
+- Editor de vídeo integrado (timeline com cenas + áudio)
+- Geração de vídeo completo automatizada (Veo3/Sora)
+- API pública para integrações de terceiros
+- Programa de afiliados
 
-### 2. Atualizar `generate-script/index.ts` — GPT sugere outlines
-- Antes de gerar, chamar Gemini Flash para 3 mini-outlines (1 chamada barata)
-- O outline vencedor alimenta a geração principal
-- Remover a fase de Hook separada (Claude faz isso no refinamento)
-
-### 3. Reescrever `refine-script/index.ts` — Claude como editor
-- Claude recebe o roteiro completo + contexto (nicho, estilo, duração)
-- Instruções: ler tudo primeiro, depois polir hook + emoção + magnetismo
-- Regra absoluta: não mudar história, personagens, eventos
-- Saída: narração pura, zero tags técnicas
-
-### 4. Atualizar `score-script/index.ts` — Eliminar GPT-5 via Gateway
-- Trocar `callLovableAI(openai/gpt-5)` por `callGemini(gemini-2.5-flash)` (API direta)
-- Mantém avaliação dual (2x Flash com temperaturas diferentes)
-- Zero custo de créditos Lovable
-
-### 5. Loop de aprendizado evolutivo
-- Já existe parcialmente (`ai_learning` table + `dual_score_rejection`)
-- Expandir: salvar TODOS os feedbacks (aprovados + rejeitados)
-- Injetar os top 10 aprendizados recentes no system prompt da geração E do refinamento
-- Categorizar erros: "roteiro curto", "final previsível", "linguagem IA", "hook fraco"
-
-### 6. AutoPilotEngine — Integrar refinamento no pipeline
-- Após geração do script, chamar `refine-script` automaticamente
-- Mostrar progresso: "Refinando com IA especializada..."
-- O script refinado é o que vai para TTS
-
-## Arquivos a editar
-- `supabase/functions/_shared/gemini-direct.ts` — adicionar `callClaude` + `callClaudeStreaming`
-- `supabase/functions/refine-script/index.ts` — trocar Gemini por Claude
-- `supabase/functions/score-script/index.ts` — eliminar GPT-5 via Gateway
-- `supabase/functions/generate-script/index.ts` — remover hook separado
-- `src/components/scripts/AutoPilotEngine.tsx` — integrar refinamento no pipeline
+### Implementação
+- Criar PPTX profissional com branding Monetiza27 (vermelho/preto/dourado)
+- Screenshots reais do sistema nas slides
+- Dados de mercado e projeções financeiras
+- Salvar em `/mnt/documents/`
 
