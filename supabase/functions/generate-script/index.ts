@@ -276,6 +276,7 @@ serve(async (req) => {
 
     const styleLC = (style || '').toLowerCase();
     const isCreativeStyle = CREATIVE_STYLES.includes(styleLC);
+    const isResearchRequired = RESEARCH_REQUIRED_STYLES.includes(styleLC);
 
     // ═══ SMART KNOWLEDGE RETRIEVAL (RAG + Re-Ranking) ═══
     // Instead of 13 fixed queries, use semantic search + re-ranking for relevant knowledge
