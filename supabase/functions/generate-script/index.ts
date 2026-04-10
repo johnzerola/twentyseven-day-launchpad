@@ -850,6 +850,7 @@ ${viralInjection}
 ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
+${deepResearchBlock}
 ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
