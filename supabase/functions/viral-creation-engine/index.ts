@@ -1,4 +1,4 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// COST OPTIMIZATION: Use Gemini Pro direct (via callGeminiOpenAICompat) instead of GPT-5 through gateway
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 // Migrated to Gemini Direct via _shared/gemini-direct.ts
 
@@ -58,6 +61,7 @@ serve(async (req) => {
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    // COST OPTIMIZATION: Use Gemini direct API (zero cost) instead of GPT-5 gateway
     const aiH = { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" };
     const isShort = video_type === "short";
 
@@ -196,10 +200,10 @@ serve(async (req) => {
     // ═══════════════════════════════════════════════════════════
     // PHASE 3: VIRAL CONCEPT GENERATION (GPT-5)
     // ═══════════════════════════════════════════════════════════
-    const conceptRes = await fetch(AI_URL, {
-      method: "POST", headers: aiH,
+    const conceptRes = await fetch(`${AI_URL}?key=${GOOGLE_AI_API_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "openai/gpt-5",
+        model: "gemini-2.5-pro",
         messages: [
           {
             role: "system",
