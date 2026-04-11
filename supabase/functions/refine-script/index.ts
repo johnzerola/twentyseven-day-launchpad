@@ -2,6 +2,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callClaudeStreaming, callGeminiStreaming } from "../_shared/gemini-direct.ts";
 
+// ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
+// Claude excels at: emotional depth, literary polish, storytelling nuance
+// Gemini Pro/Flash: factual accuracy, speed, cost-efficiency
+const CLAUDE_STYLES = ['storytelling', 'terror', 'horror', 'emocionante', 'superacao', 'superação',
+  'novela', 'novela_style', 'polêmica', 'polemica', 'filme_style', 'serie_style'];
+const GEMINI_PRO_STYLES = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario',
+  'ciência', 'ciencia', 'educativo'];
+// Everything else (dopaminérgico, mrbeast, listicle, curiosidades, tutorial, etc.) → Gemini Flash
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -190,10 +199,17 @@ ${draft_script}
 MISSÃO: Hook dos primeiros 30s é prioridade #1. Corpo: edições cirúrgicas para emoção, magnetismo e ritmo.
 A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWords} palavras.`;
 
-    // ═══ PRIMARY: Claude (direct API) | FALLBACK: Gemini (direct API) ═══
+    // ═══ SMART AI ROUTING — Choose engine based on style ═══
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    const useClaude = hasClaude && CLAUDE_STYLES.includes(styleLC);
+    const useGeminiPro = GEMINI_PRO_STYLES.includes(styleLC);
+    const engineLabel = useClaude ? 'CLAUDE' : useGeminiPro ? 'GEMINI_PRO' : 'GEMINI_FLASH';
+    console.log(`[PHASE-2 REFINE] runId=${runId} Style="${styleLC}" → Engine=${engineLabel} (Claude available: ${hasClaude})`);
+
     try {
-      if (hasClaude) {
-        console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from CLAUDE (direct)...`);
+      if (useClaude) {
+        // Claude: emotional/narrative styles that need literary polish
+        console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from CLAUDE (emotional style)...`);
         const refineRes = await callClaudeStreaming(systemPrompt, userMessage, {
           maxTokens: 32000,
           temperature: 0.7,
@@ -203,16 +219,17 @@ A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWord
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
         });
       } else {
-        // Fallback to Gemini if no Claude key
-        console.log(`[PHASE-2 REFINE] runId=${runId} No CLAUDE_API_KEY, falling back to Gemini...`);
-        const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+        // Gemini: factual styles use Pro, simple styles use Flash
         if (!GOOGLE_AI_API_KEY) throw new Error("No AI API keys configured");
+        const primaryModel = useGeminiPro ? "gemini-2.5-pro" : "gemini-2.5-flash";
+        const fallbackModel = useGeminiPro ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
+        console.log(`[PHASE-2 REFINE] runId=${runId} Streaming from ${primaryModel} (${engineLabel})...`);
         
         const refineRes = await callGeminiStreaming(GOOGLE_AI_API_KEY, systemPrompt, userMessage, {
-          primaryModel: "gemini-2.5-flash",
-          fallbackModel: "gemini-2.5-flash-lite",
+          primaryModel,
+          fallbackModel,
           maxTokens: 32000,
-          label: `PHASE-2-REFINE-GEMINI runId=${runId}`,
+          label: `PHASE-2-REFINE-${engineLabel} runId=${runId}`,
         });
         return new Response(refineRes.body, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
@@ -222,6 +239,7 @@ A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWord
       const msg = streamErr instanceof Error ? streamErr.message : "Streaming failed";
       console.error(`[PHASE-2 REFINE] runId=${runId} Error:`, msg);
       if (msg.includes('429')) return errResp("Rate limit. Aguarde.", 429);
+      if (msg.includes('402')) return errResp("Créditos insuficientes.", 402);
       throw streamErr;
     }
 
