@@ -86,6 +86,19 @@ serve(async (req) => {
       });
     }
 
+    // ═══ TIER GATE: Veo3 prompts are a PRO+ feature ═══
+    const userId = (_claims.claims as any).sub;
+    const userTier = await getUserTier(userId);
+    if (userTier === "starter") {
+      return new Response(JSON.stringify({
+        error: "Veo3 prompts são exclusivos dos planos Pro e Full. Faça upgrade para acessar.",
+        tier_required: "pro",
+        current_tier: "starter",
+      }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { segments, characterDescription, videoStyle, characters } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
