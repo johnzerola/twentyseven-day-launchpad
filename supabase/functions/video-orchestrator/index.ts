@@ -1,4 +1,6 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+// ⚠️ DEPRECATED: This function duplicates generate-script + refine-script pipeline.
+// Kept as thin redirect to avoid breaking existing client calls.
+// New code should call generate-script directly.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -6,11 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-// Migrated to Gemini Direct via _shared/gemini-direct.ts
-
-// COST OPTIMIZATION: Direct Gemini API URL (zero credit cost)
-const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 // Ensemble model mapping — OPTIMIZED: all Gemini (no GPT-5 gateway costs)
 const MODELS = {

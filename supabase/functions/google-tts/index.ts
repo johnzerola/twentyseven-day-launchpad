@@ -388,7 +388,14 @@ serve(async (req) => {
 
     // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
     const useGeminiEngine = isGeminiVoice(voiceName);
-    const selectedVoice = voiceName || langConfig.voices[0].name;
+    // COST OPTIMIZATION: Downgrade Neural2→Standard for Starter tier
+    const rawVoice = voiceName || langConfig.voices[0].name;
+    const selectedVoice = (isStarterTier && !useGeminiEngine && STARTER_VOICE_MAP[rawVoice])
+      ? STARTER_VOICE_MAP[rawVoice]
+      : rawVoice;
+    if (isStarterTier && rawVoice !== selectedVoice) {
+      console.log(`TTS tier downgrade: ${rawVoice} → ${selectedVoice} (starter tier)`);
+    }
     const fallbackGender = useGeminiEngine
       ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
       : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');
