@@ -1,4 +1,6 @@
-import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+// ⚠️ DEPRECATED: This function duplicates generate-script + refine-script pipeline.
+// Kept as thin redirect to avoid breaking existing client calls.
+// New code should call generate-script directly.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -6,11 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-// Migrated to Gemini Direct via _shared/gemini-direct.ts
-
-// COST OPTIMIZATION: Direct Gemini API URL (zero credit cost)
-const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 // Ensemble model mapping — OPTIMIZED: all Gemini (no GPT-5 gateway costs)
 const MODELS = {
@@ -208,7 +205,7 @@ INSTRUÇÃO CRÍTICA: Adapte CADA FASE do roteiro com base neste DNA. Personaliz
     }
 
     // ════════════════════════════════════════════════════════════
-    // STEP 5: SceneBreak — Break into ~8s scenes with AutoFlow format
+    // STEP 5: SceneBreak — Break into ~40s scenes (COST OPTIMIZED from ~8s)
     // ════════════════════════════════════════════════════════════
     const step5Start = Date.now();
     const scenes = await callSceneBreakdown(aiH, sb, finalScript, detectedNiche, project.id, langLabel, refined.characters, dbCtx.autoflowRules);
@@ -523,8 +520,8 @@ async function callSceneBreakdown(
       body: JSON.stringify({
         model: MODELS.sceneBreak,
         messages: [
-          { role: "system", content: `Break this script into ~8-second visual scenes for a faceless YouTube video. Each scene needs:\n- TTS narration text\n- Visual AI prompt (cinematic, detailed)\n- Camera movement and lens\n- Lighting\n- Emotional intent\n- 8-second clip intent for Veo3\n\nCHARACTER CONSISTENCY (inject into every scene featuring them):\n${charBlock || "No named characters"}\n\nAUTOFLOW FORMAT RULES:\n${autoflowFormat}\n\nVISUAL REFERENCE:\n${sceneRef}` },
-          { role: "user", content: `Break into 10-50 scenes (each ~8s, max 6-8s for Veo3 clips):\n\n${script.slice(0, 6000)}` },
+          { role: "system", content: `Break this script into ~40-second visual scenes for a faceless YouTube video. Each scene groups multiple Veo3 clips (~8s each) under one visual theme. Each scene needs:\n- TTS narration text (~40s worth)\n- Visual AI prompt (cinematic, detailed)\n- Camera movement and lens\n- Lighting\n- Emotional intent\n- Scene duration (30-50s)\n\nCHARACTER CONSISTENCY (inject into every scene featuring them):\n${charBlock || "No named characters"}\n\nAUTOFLOW FORMAT RULES:\n${autoflowFormat}\n\nVISUAL REFERENCE:\n${sceneRef}` },
+          { role: "user", content: `Break into scenes (each ~40s, grouping 4-5 Veo3 clips per scene):\n\n${script.slice(0, 6000)}` },
         ],
         tools: [{
           type: "function",

@@ -356,8 +356,28 @@ serve(async (req) => {
     }
 
     // ── Generate audio ──
-    const { text, language, voiceName, speakingRate = 1.0, pitch = 0, voiceStyle, returnBinary } = body;
+    const { text, language, voiceName, speakingRate = 1.0, pitch = 0, voiceStyle, returnBinary, userTier } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
+
+    // ── TIER-BASED VOICE QUALITY ──
+    // Starter: Standard voices only (R$4/1M chars) — saves R$0.64/video
+    // Pro/Full: Neural2 voices (R$16/1M chars) — premium quality
+    const isStarterTier = userTier === 'starter';
+    const STARTER_VOICE_MAP: Record<string, string> = {
+      'pt-BR-Neural2-B': 'pt-BR-Standard-B',
+      'pt-BR-Neural2-C': 'pt-BR-Standard-C',
+      'pt-BR-Neural2-A': 'pt-BR-Standard-A',
+      'pt-BR-Wavenet-B': 'pt-BR-Standard-B',
+      'pt-BR-Wavenet-C': 'pt-BR-Standard-C',
+      'en-US-Neural2-D': 'en-US-Standard-D',
+      'en-US-Neural2-F': 'en-US-Standard-F',
+      'en-US-Neural2-A': 'en-US-Standard-A',
+      'en-US-Neural2-C': 'en-US-Standard-C',
+      'en-US-Wavenet-D': 'en-US-Standard-D',
+      'en-US-Wavenet-F': 'en-US-Standard-F',
+      'es-ES-Neural2-B': 'es-ES-Standard-B',
+      'es-ES-Neural2-A': 'es-ES-Standard-A',
+    };
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const GOOGLE_TTS_API_KEY_2 = Deno.env.get('GOOGLE_TTS_API_KEY_2');
@@ -368,7 +388,14 @@ serve(async (req) => {
 
     // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
     const useGeminiEngine = isGeminiVoice(voiceName);
-    const selectedVoice = voiceName || langConfig.voices[0].name;
+    // COST OPTIMIZATION: Downgrade Neural2→Standard for Starter tier
+    const rawVoice = voiceName || langConfig.voices[0].name;
+    const selectedVoice = (isStarterTier && !useGeminiEngine && STARTER_VOICE_MAP[rawVoice])
+      ? STARTER_VOICE_MAP[rawVoice]
+      : rawVoice;
+    if (isStarterTier && rawVoice !== selectedVoice) {
+      console.log(`TTS tier downgrade: ${rawVoice} → ${selectedVoice} (starter tier)`);
+    }
     const fallbackGender = useGeminiEngine
       ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
       : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');

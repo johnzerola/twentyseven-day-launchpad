@@ -1219,10 +1219,31 @@ MANTENHA o mesmo tom, voz e estilo. Retorne APENAS texto de narração pura.`;
 
             console.log(`[MULTI-ACT ${actPlan.act}/${actOutline.length}] runId=${runId} Generating (target: ${actTargetWords} words, total so far: ${totalWordCount})`);
 
+            // COST OPTIMIZATION: Acts 2+ use a slim system prompt (saves ~25k tokens/video)
+            const actSystemPrompt = isFirstAct ? systemPrompt : `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
+
+═══ REGRAS DE CONTINUIDADE (ATO ${actPlan.act}) ═══
+- Mantenha MESMO tom, voz, estilo e personagens do ato anterior
+- NÃO repita conteúdo. NÃO faça resumo. Continue fluindo.
+- Linguagem conversacional, parágrafos curtos (2-3 frases)
+- APENAS texto de narração pura — ZERO tags, timestamps, anotações
+- Valores em $. Idioma: ${language || 'português'}
+- Alterne emoções entre blocos (~45-60s cada)
+- Cliffhanger no final de cada bloco narrativo
+
+${nicheReferenceBlock ? `═══ REFERÊNCIAS ═══\n${nicheReferenceBlock}` : ''}
+${voiceInjection ? `═══ VOZ DO CANAL ═══\n${voiceInjection.slice(0, 500)}` : ''}
+
+═══ REGRA MAS/PORTANTO ═══
+Use "MAS" (conflito) ou "PORTANTO" (consequência) como conectores. NUNCA "E depois...".
+
+═══ BINGE LOOP (apenas no ATO FINAL) ═══
+NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo vídeo.`;
+
             try {
               const actRes = await callGeminiStreaming(
                 GOOGLE_AI_API_KEY,
-                systemPrompt,
+                actSystemPrompt,
                 actMessage,
                 { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
               );
