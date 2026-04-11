@@ -65,21 +65,6 @@ async function callAI(prompt: string, systemPrompt: string, apiKey: string, lova
   }
 
   throw new Error("No AI API key available");
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: `SYSTEM: ${systemPrompt}\n\n${prompt}` }] }],
-      generationConfig: { temperature: temp, responseMimeType: "application/json" },
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    console.error("Gemini error:", res.status, t);
-    throw new Error(`AI error: ${res.status}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
 // ========== HELPER: Search YouTube for competing videos ==========
