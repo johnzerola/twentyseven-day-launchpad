@@ -369,17 +369,9 @@ serve(async (req) => {
     const googleKeys = [GOOGLE_AI_API_KEY, GOOGLE_TTS_API_KEY_2].filter(Boolean) as string[];
     const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
 
-    // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
-    const useGeminiEngine = isGeminiVoice(voiceName);
-    // COST OPTIMIZATION: Downgrade Neural2→Standard for Starter tier
+    // Use the voice as-is — no tier downgrade needed
     const rawVoice = voiceName || langConfig.voices[0].name;
-    const selectedVoice = (isStarterTier && !useGeminiEngine && STARTER_VOICE_MAP[rawVoice])
-      ? STARTER_VOICE_MAP[rawVoice]
-      : rawVoice;
-    if (isStarterTier && rawVoice !== selectedVoice) {
-      console.log(`TTS tier downgrade: ${rawVoice} → ${selectedVoice} (starter tier)`);
-    }
-    const fallbackGender = useGeminiEngine
+    const selectedVoice = rawVoice;
       ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
       : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');
 
