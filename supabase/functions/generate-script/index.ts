@@ -608,10 +608,14 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
 - Priorize NARRATIVA MAGNÉTICA sobre precisão factual
 ` : '';
 
-    // ═══ DEEP WEB RESEARCH for Web Documentary style ═══
+    // ═══ DEEP WEB RESEARCH for factual styles ═══
     let deepResearchBlock = '';
+    const isDeepResearch = DEEP_RESEARCH_STYLES.includes(styleLC);
     if (isResearchRequired && topic) {
       console.log(`[DEEP-RESEARCH] runId=${runId} Research-required style "${style}" — fetching web data for "${topic}"`);
+      
+      // Layer 1: Brave Search (fast factual results) — runs for ALL research styles
+      let braveResults = '';
       try {
         const researchAbort = new AbortController();
         const researchTimeout = setTimeout(() => researchAbort.abort(), 20000);
@@ -627,15 +631,58 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
         clearTimeout(researchTimeout);
         if (researchRes.ok) {
           const researchData = await researchRes.json();
-          const results = (researchData.results || []).map((r: any) => `• ${r.title}: ${r.description}`).join('\n');
-          if (results) {
-            deepResearchBlock = `\n📚 PESQUISA WEB PROFUNDA (fontes reais para webdocumentário):
-${results}
-INSTRUÇÃO: Use estes dados como BASE FACTUAL. Cite fontes. Transforme dados secos em narrativa envolvente.\n`;
-            console.log(`[DEEP-RESEARCH] runId=${runId} Got ${researchData.results?.length || 0} results`);
-          }
+          braveResults = (researchData.results || []).map((r: any) => `• ${r.title}: ${r.description}`).join('\n');
+          console.log(`[DEEP-RESEARCH] runId=${runId} Brave: ${researchData.results?.length || 0} results`);
         }
-      } catch (e) { console.warn("[DEEP-RESEARCH] Failed:", e); }
+      } catch (e) { console.warn("[DEEP-RESEARCH] Brave failed:", e); }
+
+      // Layer 2: Perplexity Sonar (deep academic research) — ONLY for webdocumentary/documentary
+      let perplexityResults = '';
+      if (isDeepResearch) {
+        try {
+          const pxAbort = new AbortController();
+          const pxTimeout = setTimeout(() => pxAbort.abort(), 25000);
+          const pxRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/perplexity-research`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              singleQuery: {
+                query: `${topic}: dados científicos, estudos acadêmicos, fontes históricas, bibliografias, papers relevantes. Inclua números específicos, datas e nomes de pesquisadores.`,
+                model: "sonar-pro",
+                searchRecency: "year",
+              },
+            }),
+            signal: pxAbort.signal,
+          });
+          clearTimeout(pxTimeout);
+          if (pxRes.ok) {
+            const pxData = await pxRes.json();
+            if (pxData.result?.content) {
+              perplexityResults = pxData.result.content;
+              const citations = pxData.result.citations || [];
+              if (citations.length > 0) {
+                perplexityResults += `\n\nFontes: ${citations.slice(0, 5).join(', ')}`;
+              }
+              console.log(`[DEEP-RESEARCH] runId=${runId} Perplexity: ${perplexityResults.length} chars, ${citations.length} citations`);
+            }
+          }
+        } catch (e) { console.warn("[DEEP-RESEARCH] Perplexity failed:", e); }
+      }
+
+      // Build research block
+      if (braveResults || perplexityResults) {
+        deepResearchBlock = `\n📚 PESQUISA WEB PROFUNDA (fontes reais${isDeepResearch ? ' + pesquisa acadêmica' : ''}):`;
+        if (braveResults) {
+          deepResearchBlock += `\n\n🔍 RESULTADOS WEB:\n${braveResults}`;
+        }
+        if (perplexityResults) {
+          deepResearchBlock += `\n\n🎓 PESQUISA ACADÊMICA/PROFUNDA:\n${perplexityResults.slice(0, 3000)}`;
+        }
+        deepResearchBlock += `\n\nINSTRUÇÃO: Use estes dados como BASE FACTUAL. Cite fontes e estudos. Transforme dados em narrativa envolvente com comparações de ESCALA.\n`;
+      }
     }
 
     // ═══════════════════════════════════════════════════════
