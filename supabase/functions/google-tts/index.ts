@@ -359,25 +359,8 @@ serve(async (req) => {
     const { text, language, voiceName, speakingRate = 1.0, pitch = 0, voiceStyle, returnBinary, userTier } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
-    // ── TIER-BASED VOICE QUALITY ──
-    // Starter: Standard voices only (R$4/1M chars) — saves R$0.64/video
-    // Pro/Full: Neural2 voices (R$16/1M chars) — premium quality
-    const isStarterTier = userTier === 'starter';
-    const STARTER_VOICE_MAP: Record<string, string> = {
-      'pt-BR-Neural2-B': 'pt-BR-Standard-B',
-      'pt-BR-Neural2-C': 'pt-BR-Standard-C',
-      'pt-BR-Neural2-A': 'pt-BR-Standard-A',
-      'pt-BR-Wavenet-B': 'pt-BR-Standard-B',
-      'pt-BR-Wavenet-C': 'pt-BR-Standard-C',
-      'en-US-Neural2-D': 'en-US-Standard-D',
-      'en-US-Neural2-F': 'en-US-Standard-F',
-      'en-US-Neural2-A': 'en-US-Standard-A',
-      'en-US-Neural2-C': 'en-US-Standard-C',
-      'en-US-Wavenet-D': 'en-US-Standard-D',
-      'en-US-Wavenet-F': 'en-US-Standard-F',
-      'es-ES-Neural2-B': 'es-ES-Standard-B',
-      'es-ES-Neural2-A': 'es-ES-Standard-A',
-    };
+    // All tiers now get Neural2 quality — user brings own Google TTS API key
+    // Cost is borne by user's free tier (1M chars/month = ~22 videos free)
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const GOOGLE_TTS_API_KEY_2 = Deno.env.get('GOOGLE_TTS_API_KEY_2');
@@ -386,16 +369,10 @@ serve(async (req) => {
     const googleKeys = [GOOGLE_AI_API_KEY, GOOGLE_TTS_API_KEY_2].filter(Boolean) as string[];
     const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
 
-    // Detect if user selected a Gemini voice (e.g. "Charon", "Zephyr")
-    const useGeminiEngine = isGeminiVoice(voiceName);
-    // COST OPTIMIZATION: Downgrade Neural2→Standard for Starter tier
+    // Use the voice as-is — no tier downgrade needed
     const rawVoice = voiceName || langConfig.voices[0].name;
-    const selectedVoice = (isStarterTier && !useGeminiEngine && STARTER_VOICE_MAP[rawVoice])
-      ? STARTER_VOICE_MAP[rawVoice]
-      : rawVoice;
-    if (isStarterTier && rawVoice !== selectedVoice) {
-      console.log(`TTS tier downgrade: ${rawVoice} → ${selectedVoice} (starter tier)`);
-    }
+    const selectedVoice = rawVoice;
+    const useGeminiEngine = isGeminiVoice(selectedVoice);
     const fallbackGender = useGeminiEngine
       ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
       : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');

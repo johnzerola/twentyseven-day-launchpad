@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type SubscriptionTier = 'starter' | 'pro' | 'full';
+export type SubscriptionTier = 'starter' | 'pro' | 'studio';
 
 interface Subscription {
   tier: SubscriptionTier;
@@ -14,10 +14,10 @@ interface Subscription {
 const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
   starter: 0,
   pro: 1,
-  full: 2,
+  studio: 2,
 };
 
-// ─── Plan Limits Configuration (aligned with pricing) ──────
+// ─── Plan Limits Configuration (aligned with pricing V3) ──────
 export interface PlanLimits {
   maxChannels: number;
   videosPerDay: number;
@@ -40,6 +40,9 @@ export interface PlanLimits {
   unlimitedScripts: boolean;
   unlimitedSearches: boolean;
   elevenLabs: boolean;
+  dubspy: boolean;
+  growthTools: boolean;
+  claudeDeepAnalysis: boolean;
 }
 
 export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
@@ -47,12 +50,12 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     maxChannels: 1,
     videosPerDay: 1,
     videosPerMonth: 30,
-    maxDurationMinutes: 30,
+    maxDurationMinutes: 60,
     searchesPerDay: 3,
     tubebotChats: 20,
-    maxNarrationMinutes: 30,
-    maxVideoDurationMinutes: 30,
-    ttsQuality: 'standard',
+    maxNarrationMinutes: 60,
+    maxVideoDurationMinutes: 60,
+    ttsQuality: 'neural2',
     multilingual: false,
     competitorAnalysis: false,
     deepResearch: false,
@@ -61,17 +64,46 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     apiAccess: false,
     prioritySupport: false,
     whiteLabel: false,
-    viralDatabase: false,
+    viralDatabase: true,
     unlimitedScripts: false,
     unlimitedSearches: false,
     elevenLabs: false,
+    dubspy: false,
+    growthTools: false,
+    claudeDeepAnalysis: false,
   },
   pro: {
+    maxChannels: 2,
+    videosPerDay: 2,
+    videosPerMonth: 60,
+    maxDurationMinutes: 60,
+    searchesPerDay: 10,
+    tubebotChats: -1,
+    maxNarrationMinutes: 60,
+    maxVideoDurationMinutes: 60,
+    ttsQuality: 'neural2',
+    multilingual: false,
+    competitorAnalysis: true,
+    deepResearch: false,
+    webdocStyle: true,
+    veo3Prompts: true,
+    apiAccess: false,
+    prioritySupport: false,
+    whiteLabel: false,
+    viralDatabase: true,
+    unlimitedScripts: false,
+    unlimitedSearches: false,
+    elevenLabs: false,
+    dubspy: true,
+    growthTools: true,
+    claudeDeepAnalysis: false,
+  },
+  studio: {
     maxChannels: 5,
     videosPerDay: 3,
     videosPerMonth: 90,
     maxDurationMinutes: 60,
-    searchesPerDay: 10,
+    searchesPerDay: 50,
     tubebotChats: -1,
     maxNarrationMinutes: 60,
     maxVideoDurationMinutes: 60,
@@ -82,35 +114,15 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     webdocStyle: true,
     veo3Prompts: true,
     apiAccess: false,
-    prioritySupport: false,
-    whiteLabel: false,
-    viralDatabase: true,
-    unlimitedScripts: false,
-    unlimitedSearches: false,
-    elevenLabs: false,
-  },
-  full: {
-    maxChannels: 20,
-    videosPerDay: 10,
-    videosPerMonth: 300,
-    maxDurationMinutes: 90,
-    searchesPerDay: 50,
-    tubebotChats: -1,
-    maxNarrationMinutes: 90,
-    maxVideoDurationMinutes: 90,
-    ttsQuality: 'neural2',
-    multilingual: true,
-    competitorAnalysis: true,
-    deepResearch: true,
-    webdocStyle: true,
-    veo3Prompts: true,
-    apiAccess: true,
     prioritySupport: true,
-    whiteLabel: true,
+    whiteLabel: false,
     viralDatabase: true,
     unlimitedScripts: true,
     unlimitedSearches: true,
-    elevenLabs: true,
+    elevenLabs: false,
+    dubspy: true,
+    growthTools: true,
+    claudeDeepAnalysis: true,
   },
 };
 
@@ -122,12 +134,12 @@ const FEATURE_TIERS: Record<string, SubscriptionTier> = {
   '/titles': 'starter',
   '/search': 'starter',
   '/channels': 'starter',
-  '/viral-db': 'pro',
-  '/growth-tools': 'pro',
-  '/multichannel': 'pro',
+  '/viral-db': 'starter',
   '/branding': 'starter',
   '/niches': 'starter',
   '/workflow': 'starter',
+  '/growth-tools': 'pro',
+  '/multichannel': 'pro',
 };
 
 // ─── Feature-level Gating (granular) ───────────────────────────
@@ -143,7 +155,10 @@ export type FeatureKey =
   | 'unlimitedSearches'
   | 'deepResearch'
   | 'webdocStyle'
-  | 'elevenLabs';
+  | 'elevenLabs'
+  | 'dubspy'
+  | 'growthTools'
+  | 'claudeDeepAnalysis';
 
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription>({
@@ -208,16 +223,16 @@ export function useSubscription() {
     const labels: Record<SubscriptionTier, string> = {
       starter: 'Starter',
       pro: 'Creator Pro',
-      full: 'Agency Elite',
+      studio: 'Studio',
     };
     return labels[tier];
   };
 
   const getUpgradeTier = (feature: FeatureKey): SubscriptionTier => {
-    for (const tier of ['starter', 'pro', 'full'] as SubscriptionTier[]) {
+    for (const tier of ['starter', 'pro', 'studio'] as SubscriptionTier[]) {
       if (PLAN_LIMITS[tier][feature]) return tier;
     }
-    return 'full';
+    return 'studio';
   };
 
   return {

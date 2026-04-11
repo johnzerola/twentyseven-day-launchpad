@@ -4889,7 +4889,7 @@ export type Database = {
       refresh_materialized_views: { Args: never; Returns: undefined }
     }
     Enums: {
-      subscription_tier: "starter" | "pro" | "full"
+      subscription_tier: "starter" | "pro" | "full" | "studio"
       video_type: "long" | "short"
     }
     CompositeTypes: {
@@ -5018,7 +5018,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      subscription_tier: ["starter", "pro", "full"],
+      subscription_tier: ["starter", "pro", "full", "studio"],
       video_type: ["long", "short"],
     },
   },

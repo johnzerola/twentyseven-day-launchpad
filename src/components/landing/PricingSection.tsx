@@ -25,7 +25,7 @@ export const PricingSection = () => {
             Planos para Monetizar seu YouTube
           </h2>
           <p className="text-[#A3A3A3] mt-4 max-w-xl mx-auto">
-            Compare: 1 mês de monetização no YouTube rende em média R$800–R$2.400. Seu plano custa R$47.
+            1 mês de monetização no YouTube rende R$500–R$3.000. Seu plano custa R$97.
           </p>
 
           {/* Toggle */}
@@ -52,11 +52,11 @@ export const PricingSection = () => {
             <div className="mb-6">
               <svg width="20" height="14" viewBox="0 0 28 20" fill="none" className="mb-3 opacity-40"><rect width="28" height="20" rx="6" fill="#FF0000"/><path d="M11 6L19 10L11 14V6Z" fill="white"/></svg>
               <h3 className="font-display font-bold text-xl text-white">Starter</h3>
-              <p className="text-sm text-[#A3A3A3] mt-1">1 vídeo por dia, tudo que precisa pra começar</p>
+              <p className="text-sm text-[#A3A3A3] mt-1">1 vídeo de 60min por dia — tudo que precisa pra começar</p>
             </div>
             <div className="mb-6">
               <div className="flex items-baseline gap-1">
-                <span className="font-display font-bold text-4xl text-white">R${annual ? '29' : '47'}</span>
+                <span className="font-display font-bold text-4xl text-white">R${annual ? '60' : '97'}</span>
                 <span className="text-[#A3A3A3] text-sm">/{annual ? 'mês no anual' : 'mês'}</span>
               </div>
             </div>
@@ -64,10 +64,12 @@ export const PricingSection = () => {
               {[
                 '1 canal do YouTube',
                 '30 vídeos/mês (1/dia)',
-                'Vídeos até 30 minutos',
-                'Narração IA (Standard)',
-                'Plano 27 dias com IA',
-                'Análise de nicho',
+                'Vídeos até 60 minutos',
+                'Narração Neural2 (6 vozes PT-BR)',
+                'Roteiro completo IA',
+                'Título SEO + Thumbnail prompt',
+                'Tracker 30 dias + Dashboard YPP',
+                'Viral Database básica',
                 'TubeBot (20 msgs/dia)',
               ].map((f, i) => (
                 <li key={i} className="flex items-center gap-2.5 text-sm text-[#A3A3A3]">
@@ -93,31 +95,32 @@ export const PricingSection = () => {
 
             <div className="mt-4 mb-6">
               <h3 className="font-display font-bold text-xl text-white">Creator Pro</h3>
-              <p className="text-sm text-[#F5C518] mt-1">Para quem quer monetizar nos próximos 27 dias</p>
+              <p className="text-sm text-[#F5C518] mt-1">Para quem quer escalar com Veo3 + DubSpy</p>
             </div>
 
             <div className="mb-6">
-              <div className="text-[#A3A3A3] text-sm line-through">R$247/mês</div>
+              <div className="text-[#A3A3A3] text-sm line-through">R$347/mês</div>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="font-display font-extrabold text-5xl gradient-text-fire">R${annual ? '97' : '147'}</span>
+                <span className="font-display font-extrabold text-5xl gradient-text-fire">R${annual ? '122' : '197'}</span>
                 <span className="text-[#A3A3A3] text-sm">/{annual ? 'mês no anual' : 'mês'}</span>
               </div>
               <div className="inline-block mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold text-[#0A0A0A]" style={{ background: 'linear-gradient(135deg, #F5C518, #E8A800)' }}>
-                = R${annual ? '3,23' : '4,90'} por dia • menos que um café
+                = R${annual ? '4,07' : '6,57'} por dia • menos que um café
               </div>
             </div>
 
             <ul className="space-y-3 mb-6">
               {[
-                '5 canais do YouTube',
-                '90 vídeos/mês (3/dia)',
+                '2 canais do YouTube',
+                '30 vídeos/mês (1/dia por canal)',
                 'Vídeos até 60 minutos',
-                'Narração Neural2 (premium)',
-                'Pesquisa profunda (Brave + Perplexity)',
-                'Estilo Webdocumentário',
-                'Prompts Veo3 visuais',
+                'Narração Neural2 (todas as vozes)',
+                '90 prompts Veo3 por vídeo',
+                'DubSpy — scanner canais virais',
                 'Análise de concorrentes',
-                'Multilíngue (8 idiomas)',
+                'Growth Tools completo',
+                'Viral Database completa',
+                'Estilo visual personalizado',
                 'TubeBot ilimitado',
               ].map((f, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-white/90">
@@ -154,27 +157,26 @@ export const PricingSection = () => {
             <p className="text-center text-[11px] text-[#A3A3A3] mt-1">Pix • Cartão • Boleto</p>
           </motion.div>
 
-          {/* Agency plan */}
+          {/* Studio plan */}
           <motion.div {...fadeUp(0.2)} className="glass-dark rounded-2xl p-6 h-full">
             <div className="mb-6">
-              <h3 className="font-display font-bold text-xl text-white">Agency Elite</h3>
+              <h3 className="font-display font-bold text-xl text-white">Studio</h3>
               <p className="text-sm text-[#A3A3A3] mt-1">Para agências e criadores sérios</p>
             </div>
             <div className="mb-6">
-              <span className="font-display font-bold text-4xl text-white">R${annual ? '247' : '397'}</span>
+              <span className="font-display font-bold text-4xl text-white">R${annual ? '215' : '347'}</span>
               <span className="text-[#A3A3A3] text-sm">/mês</span>
             </div>
             <ul className="space-y-3 mb-8">
               {[
-                '20 canais do YouTube',
-                '300 vídeos/mês (10/dia)',
-                'Vídeos até 90 minutos',
+                '5 canais do YouTube',
+                '90 vídeos/mês (3/dia)',
+                'Vídeos até 60 minutos',
                 'Tudo do Creator Pro',
-                'Narração ElevenLabs',
-                'Roteiros ilimitados',
-                'Acesso à API',
-                'White label',
-                'Account manager dedicado',
+                'Claude deep analysis (5x/mês)',
+                'Weekly deep research (Brave + Perplexity)',
+                'Multilíngue (8 idiomas)',
+                'Suporte prioritário',
               ].map((f, i) => (
                 <li key={i} className="flex items-center gap-2.5 text-sm text-[#A3A3A3]">
                   <Check size={14} className="text-[#22C55E] flex-shrink-0" />
