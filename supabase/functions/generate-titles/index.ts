@@ -440,7 +440,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
           competitors_found: competitorBlock ? true : false,
           brave_used: braveBlock ? true : false,
           titles_count: parsed.titles?.length || 0,
-          model: 'gemini-2.5-pro',
+          model: 'gemini-2.5-flash',
         },
       }); } catch { /* non-blocking */ }
 
