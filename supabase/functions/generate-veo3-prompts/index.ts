@@ -38,22 +38,22 @@ const styleGuides: Record<string, string> = {
 
 // Trigger words and anti-text imported from shared filter
 
-// ═══ DarkPlanner v3 Prompt Density Formula — Veo3 = 8s clips ═══
-// CRITICAL: Each Veo3 video clip is ONLY 8 seconds. So for an 80s audio → minimum 10 prompts.
+// ═══ DarkPlanner v3 Prompt Density Formula — OPTIMIZED: ~40s per scene ═══
+// COST OPTIMIZATION: Veo3 reuses the same prompt for consecutive 8s clips within a scene.
+// Grouping into 40s blocks = 80% fewer tokens while maintaining visual coverage.
 function calculatePromptCount(totalDurationSec: number, contentType: string): number {
-  // Base formula: 1 prompt per 8 seconds (Veo3 clip duration)
-  const base = Math.ceil(totalDurationSec / 8);
+  // Base formula: 1 prompt per 40 seconds (Veo3 reuses prompt for multiple 8s clips)
+  const base = Math.ceil(totalDurationSec / 40);
   let adjusted: number;
   switch (contentType) {
-    case 'action': adjusted = Math.ceil(base * 1.1); break; // slightly more for fast cuts
-    case 'dialogue': adjusted = Math.ceil(base * 0.9); break; // fewer for talking heads
-    case 'documentary': adjusted = Math.ceil(totalDurationSec / 10); break; // 10s per scene max
+    case 'action': adjusted = Math.ceil(base * 1.3); break; // more variety for fast cuts
+    case 'dialogue': adjusted = Math.ceil(base * 0.9); break;
+    case 'documentary': adjusted = Math.ceil(totalDurationSec / 60); break; // 1 per minute
     case 'contemplative': adjusted = Math.ceil(base * 0.85); break;
     default: adjusted = base;
   }
-  // Minimum = ceil(duration/8), never less than that
-  const minimum = Math.ceil(totalDurationSec / 8);
-  return Math.max(minimum, Math.min(300, adjusted));
+  const minimum = Math.ceil(totalDurationSec / 40);
+  return Math.max(minimum, Math.min(200, adjusted));
 }
 
 function detectContentType(segments: any[]): string {
