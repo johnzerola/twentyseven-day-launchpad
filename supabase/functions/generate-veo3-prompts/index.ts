@@ -1,6 +1,7 @@
 import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX, TRIGGER_REPLACEMENTS } from "../_shared/veo3-policy-filter.ts";
+import { getUserTier } from "../_shared/tier-limits.ts";
 
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
