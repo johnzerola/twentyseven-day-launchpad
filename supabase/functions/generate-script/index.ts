@@ -9,9 +9,11 @@ const corsHeaders = {
 };
 
 // Styles where Brave/web search would HURT creativity (fiction, theories, personal stories)
-const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror'];
+const CREATIVE_STYLES = ['conspiração', 'mitologia', 'teorias', 'storytelling', 'reddit', 'horror', 'terror', 'novela', 'novela_style'];
 // Styles that REQUIRE deep web research (factual, investigative)
-const RESEARCH_REQUIRED_STYLES = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'];
+const RESEARCH_REQUIRED_STYLES = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario', 'educativo', 'ciência', 'ciencia', 'história', 'historia'];
+// Styles that need DEEP research (academic sources, papers, books) — Perplexity + Brave
+const DEEP_RESEARCH_STYLES = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'];
 
 // ═══════════════════════════════════════════════════════════════
 // YPP 2025 ANTI-DEMONETIZATION + JENGA THEORY
