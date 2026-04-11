@@ -17,17 +17,21 @@ const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
   full: 2,
 };
 
-// ─── Plan Limits Configuration ─────────────────────────────────────
+// ─── Plan Limits Configuration (aligned with pricing) ──────
 export interface PlanLimits {
   maxChannels: number;
   videosPerDay: number;
   videosPerMonth: number;
+  maxDurationMinutes: number;
   searchesPerDay: number;
   tubebotChats: number;       // -1 = unlimited
   maxNarrationMinutes: number;
   maxVideoDurationMinutes: number;
+  ttsQuality: 'standard' | 'neural2';
   multilingual: boolean;
   competitorAnalysis: boolean;
+  deepResearch: boolean;
+  webdocStyle: boolean;
   veo3Prompts: boolean;
   apiAccess: boolean;
   prioritySupport: boolean;
@@ -35,37 +39,47 @@ export interface PlanLimits {
   viralDatabase: boolean;
   unlimitedScripts: boolean;
   unlimitedSearches: boolean;
+  elevenLabs: boolean;
 }
 
 export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
   starter: {
     maxChannels: 1,
     videosPerDay: 1,
-    videosPerMonth: 12,
-    searchesPerDay: 1,
+    videosPerMonth: 30,
+    maxDurationMinutes: 30,
+    searchesPerDay: 3,
     tubebotChats: 20,
     maxNarrationMinutes: 30,
     maxVideoDurationMinutes: 30,
+    ttsQuality: 'standard',
     multilingual: false,
     competitorAnalysis: false,
-    veo3Prompts: true,
+    deepResearch: false,
+    webdocStyle: false,
+    veo3Prompts: false,
     apiAccess: false,
     prioritySupport: false,
     whiteLabel: false,
     viralDatabase: false,
     unlimitedScripts: false,
     unlimitedSearches: false,
+    elevenLabs: false,
   },
   pro: {
     maxChannels: 5,
-    videosPerDay: 5,
-    videosPerMonth: 150,
+    videosPerDay: 3,
+    videosPerMonth: 90,
+    maxDurationMinutes: 60,
     searchesPerDay: 10,
-    tubebotChats: -1, // unlimited
+    tubebotChats: -1,
     maxNarrationMinutes: 60,
     maxVideoDurationMinutes: 60,
+    ttsQuality: 'neural2',
     multilingual: true,
     competitorAnalysis: true,
+    deepResearch: true,
+    webdocStyle: true,
     veo3Prompts: true,
     apiAccess: false,
     prioritySupport: false,
@@ -73,17 +87,22 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     viralDatabase: true,
     unlimitedScripts: false,
     unlimitedSearches: false,
+    elevenLabs: false,
   },
   full: {
     maxChannels: 20,
-    videosPerDay: 20,
-    videosPerMonth: 600,
+    videosPerDay: 10,
+    videosPerMonth: 300,
+    maxDurationMinutes: 90,
     searchesPerDay: 50,
     tubebotChats: -1,
     maxNarrationMinutes: 90,
     maxVideoDurationMinutes: 90,
+    ttsQuality: 'neural2',
     multilingual: true,
     competitorAnalysis: true,
+    deepResearch: true,
+    webdocStyle: true,
     veo3Prompts: true,
     apiAccess: true,
     prioritySupport: true,
@@ -91,11 +110,11 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     viralDatabase: true,
     unlimitedScripts: true,
     unlimitedSearches: true,
+    elevenLabs: true,
   },
 };
 
-// ─── Route-based Feature Gating ────────────────────────────────────
-// Maps routes to the MINIMUM tier required to access them
+// ─── Route-based Feature Gating ────────────────────────────────
 const FEATURE_TIERS: Record<string, SubscriptionTier> = {
   '/dashboard': 'starter',
   '/tracker': 'starter',
@@ -103,15 +122,15 @@ const FEATURE_TIERS: Record<string, SubscriptionTier> = {
   '/titles': 'starter',
   '/search': 'starter',
   '/channels': 'starter',
-  '/viral-db': 'pro',        // Competitor analysis = Pro+
-  '/growth-tools': 'pro',    // Advanced tools = Pro+
-  '/multichannel': 'pro',    // Multiple channels = Pro+
+  '/viral-db': 'pro',
+  '/growth-tools': 'pro',
+  '/multichannel': 'pro',
   '/branding': 'starter',
   '/niches': 'starter',
   '/workflow': 'starter',
 };
 
-// ─── Feature-level Gating (granular) ───────────────────────────────
+// ─── Feature-level Gating (granular) ───────────────────────────
 export type FeatureKey =
   | 'multilingual'
   | 'competitorAnalysis'
@@ -121,7 +140,10 @@ export type FeatureKey =
   | 'prioritySupport'
   | 'veo3Prompts'
   | 'unlimitedScripts'
-  | 'unlimitedSearches';
+  | 'unlimitedSearches'
+  | 'deepResearch'
+  | 'webdocStyle'
+  | 'elevenLabs';
 
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription>({
@@ -164,24 +186,20 @@ export function useSubscription() {
     return () => authSub.unsubscribe();
   }, []);
 
-  /** Check if user's tier can access a given route */
   const hasAccess = (path: string): boolean => {
     const requiredTier = FEATURE_TIERS[path] || 'starter';
     return TIER_HIERARCHY[subscription.tier] >= TIER_HIERARCHY[requiredTier];
   };
 
-  /** Get the minimum tier required for a route */
   const getRequiredTier = (path: string): SubscriptionTier => {
     return FEATURE_TIERS[path] || 'starter';
   };
 
-  /** Check if a specific feature is available in the user's plan */
   const hasFeature = (feature: FeatureKey): boolean => {
     const limits = PLAN_LIMITS[subscription.tier];
     return !!limits[feature];
   };
 
-  /** Get the plan limits for the current tier */
   const getLimits = (): PlanLimits => {
     return PLAN_LIMITS[subscription.tier];
   };
@@ -189,13 +207,12 @@ export function useSubscription() {
   const tierLabel = (tier: SubscriptionTier): string => {
     const labels: Record<SubscriptionTier, string> = {
       starter: 'Starter',
-      pro: 'Pro',
-      full: 'Full',
+      pro: 'Creator Pro',
+      full: 'Agency Elite',
     };
     return labels[tier];
   };
 
-  /** Get the upgrade tier name for a locked feature */
   const getUpgradeTier = (feature: FeatureKey): SubscriptionTier => {
     for (const tier of ['starter', 'pro', 'full'] as SubscriptionTier[]) {
       if (PLAN_LIMITS[tier][feature]) return tier;

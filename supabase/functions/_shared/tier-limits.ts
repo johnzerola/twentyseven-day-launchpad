@@ -7,51 +7,75 @@ export interface PlanLimits {
   maxChannels: number;
   videosPerDay: number;
   videosPerMonth: number;
+  maxDurationMinutes: number;
   searchesPerDay: number;
   tubebotChats: number; // -1 = unlimited
   maxNarrationMinutes: number;
   maxVideoDurationMinutes: number;
+  ttsQuality: "standard" | "neural2";
   multilingual: boolean;
   competitorAnalysis: boolean;
+  deepResearch: boolean;
+  webdocStyle: boolean;
+  veo3Prompts: boolean;
   apiAccess: boolean;
+  elevenLabs: boolean;
 }
 
 export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
   starter: {
     maxChannels: 1,
     videosPerDay: 1,
-    videosPerMonth: 12,
-    searchesPerDay: 1,
+    videosPerMonth: 30,
+    maxDurationMinutes: 30,
+    searchesPerDay: 3,
     tubebotChats: 20,
     maxNarrationMinutes: 30,
     maxVideoDurationMinutes: 30,
+    ttsQuality: "standard",
     multilingual: false,
     competitorAnalysis: false,
+    deepResearch: false,
+    webdocStyle: false,
+    veo3Prompts: false,
     apiAccess: false,
+    elevenLabs: false,
   },
   pro: {
     maxChannels: 5,
-    videosPerDay: 5,
-    videosPerMonth: 150,
+    videosPerDay: 3,
+    videosPerMonth: 90,
+    maxDurationMinutes: 60,
     searchesPerDay: 10,
     tubebotChats: -1,
     maxNarrationMinutes: 60,
     maxVideoDurationMinutes: 60,
+    ttsQuality: "neural2",
     multilingual: true,
     competitorAnalysis: true,
+    deepResearch: true,
+    webdocStyle: true,
+    veo3Prompts: true,
     apiAccess: false,
+    elevenLabs: false,
   },
   full: {
     maxChannels: 20,
-    videosPerDay: 20,
-    videosPerMonth: 600,
+    videosPerDay: 10,
+    videosPerMonth: 300,
+    maxDurationMinutes: 90,
     searchesPerDay: 50,
     tubebotChats: -1,
     maxNarrationMinutes: 90,
     maxVideoDurationMinutes: 90,
+    ttsQuality: "neural2",
     multilingual: true,
     competitorAnalysis: true,
+    deepResearch: true,
+    webdocStyle: true,
+    veo3Prompts: true,
     apiAccess: true,
+    elevenLabs: true,
   },
 };
 
@@ -80,7 +104,7 @@ export function getLimitsForTier(tier: SubscriptionTier): PlanLimits {
  */
 export function tierHasFeature(
   tier: SubscriptionTier,
-  feature: keyof Pick<PlanLimits, "multilingual" | "competitorAnalysis" | "apiAccess">
+  feature: keyof PlanLimits
 ): boolean {
-  return PLAN_LIMITS[tier][feature];
+  return !!PLAN_LIMITS[tier][feature];
 }
