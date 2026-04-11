@@ -1,6 +1,7 @@
 import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX, TRIGGER_REPLACEMENTS } from "../_shared/veo3-policy-filter.ts";
+import { getUserTier } from "../_shared/tier-limits.ts";
 
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
@@ -37,22 +38,22 @@ const styleGuides: Record<string, string> = {
 
 // Trigger words and anti-text imported from shared filter
 
-// ═══ DarkPlanner v3 Prompt Density Formula — Veo3 = 8s clips ═══
-// CRITICAL: Each Veo3 video clip is ONLY 8 seconds. So for an 80s audio → minimum 10 prompts.
+// ═══ DarkPlanner v3 Prompt Density Formula — OPTIMIZED: ~40s per scene ═══
+// COST OPTIMIZATION: Veo3 reuses the same prompt for consecutive 8s clips within a scene.
+// Grouping into 40s blocks = 80% fewer tokens while maintaining visual coverage.
 function calculatePromptCount(totalDurationSec: number, contentType: string): number {
-  // Base formula: 1 prompt per 8 seconds (Veo3 clip duration)
-  const base = Math.ceil(totalDurationSec / 8);
+  // Base formula: 1 prompt per 40 seconds (Veo3 reuses prompt for multiple 8s clips)
+  const base = Math.ceil(totalDurationSec / 40);
   let adjusted: number;
   switch (contentType) {
-    case 'action': adjusted = Math.ceil(base * 1.1); break; // slightly more for fast cuts
-    case 'dialogue': adjusted = Math.ceil(base * 0.9); break; // fewer for talking heads
-    case 'documentary': adjusted = Math.ceil(totalDurationSec / 10); break; // 10s per scene max
+    case 'action': adjusted = Math.ceil(base * 1.3); break; // more variety for fast cuts
+    case 'dialogue': adjusted = Math.ceil(base * 0.9); break;
+    case 'documentary': adjusted = Math.ceil(totalDurationSec / 60); break; // 1 per minute
     case 'contemplative': adjusted = Math.ceil(base * 0.85); break;
     default: adjusted = base;
   }
-  // Minimum = ceil(duration/8), never less than that
-  const minimum = Math.ceil(totalDurationSec / 8);
-  return Math.max(minimum, Math.min(300, adjusted));
+  const minimum = Math.ceil(totalDurationSec / 40);
+  return Math.max(minimum, Math.min(200, adjusted));
 }
 
 function detectContentType(segments: any[]): string {
@@ -82,6 +83,19 @@ serve(async (req) => {
     if (_authErr || !_claims?.claims) {
       return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ═══ TIER GATE: Veo3 prompts are a PRO+ feature ═══
+    const userId = (_claims.claims as any).sub;
+    const userTier = await getUserTier(userId);
+    if (userTier === "starter") {
+      return new Response(JSON.stringify({
+        error: "Veo3 prompts são exclusivos dos planos Pro e Full. Faça upgrade para acessar.",
+        tier_required: "pro",
+        current_tier: "starter",
+      }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

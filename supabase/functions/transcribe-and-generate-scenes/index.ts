@@ -441,7 +441,9 @@ RULES:
       const totalChunks = chunksData.length;
       const { videoStyle, customStyleNotes, referenceImageUrls, characters, language, sceneBlueprintFromScript } = inputData;
 
-      const TARGET_SCENE_SECONDS = 8;
+      // COST OPTIMIZATION: Veo3 reuses same prompt for consecutive 8s clips of the same scene.
+      // Grouping narration into ~40s blocks = 90 scenes per 60min instead of 450 = 80% token savings.
+      const TARGET_SCENE_SECONDS = 40;
       const sceneWindows = buildSceneWindows(chunk.blocks || [], chunk.startTime, chunk.endTime, TARGET_SCENE_SECONDS);
       const expectedScenes = sceneWindows.length;
 
@@ -670,7 +672,7 @@ ${sceneBlueprintFromScript?.length ? `BLUEPRINT:\n${JSON.stringify(sceneBlueprin
         })
         .sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
 
-      const timelineWindows = buildSceneWindows(transcriptBlocks, 0, audioDuration, 8);
+      const timelineWindows = buildSceneWindows(transcriptBlocks, 0, audioDuration, 40);
       const fallbackCharacters = (inputData.characters || []).slice(0, 5).map((c: any) => {
         const a = c.appearance || {}; const ff = c.facial_features || {};
         return {

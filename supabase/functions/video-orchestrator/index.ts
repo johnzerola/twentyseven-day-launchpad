@@ -9,13 +9,16 @@ const corsHeaders = {
 
 // Migrated to Gemini Direct via _shared/gemini-direct.ts
 
-// Ensemble model mapping
+// COST OPTIMIZATION: Direct Gemini API URL (zero credit cost)
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+// Ensemble model mapping — OPTIMIZED: all Gemini (no GPT-5 gateway costs)
 const MODELS = {
-  hookGen: "openai/gpt-5",           // Phase 0: Hook + retention loops
-  draftScript: "google/gemini-2.5-flash", // Phase 1: Fast draft
-  refineScript: "google/gemini-2.5-pro",  // Phase 2: Creative refinement + scene_blueprint
-  factCheck: "openai/gpt-5-mini",         // Phase 3: Fact-check
-  sceneBreak: "google/gemini-2.5-flash-lite", // Phase 4: Scene breakdown
+  hookGen: "gemini-2.5-pro",              // Phase 0: Hook + retention loops (was openai/gpt-5)
+  draftScript: "gemini-2.5-flash",        // Phase 1: Fast draft
+  refineScript: "gemini-2.5-pro",         // Phase 2: Creative refinement + scene_blueprint
+  factCheck: "gemini-2.5-flash",          // Phase 3: Fact-check (was openai/gpt-5-mini)
+  sceneBreak: "gemini-2.5-flash-lite",    // Phase 4: Scene breakdown
 };
 
 serve(async (req) => {

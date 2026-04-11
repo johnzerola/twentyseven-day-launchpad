@@ -157,9 +157,9 @@ async function searchBraveTrending(topic: string, niche: string, language: strin
       return cached.result_json as string;
     }
 
+    // COST OPTIMIZATION: 1 query instead of 2 (reduce Brave API calls by 50%)
     const queries = [
-      `${topic} ${language === 'pt' ? 'youtube viral' : 'youtube trending'}`,
-      `${niche} ${topic} ${language === 'pt' ? 'dicas 2025 2026' : 'tips 2025 2026'}`,
+      `${topic} ${niche || ''} ${language === 'pt' ? 'youtube viral 2025 2026' : 'youtube trending 2025 2026'}`,
     ];
 
     const allSnippets: string[] = [];
@@ -440,7 +440,7 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
           competitors_found: competitorBlock ? true : false,
           brave_used: braveBlock ? true : false,
           titles_count: parsed.titles?.length || 0,
-          model: 'gemini-2.5-pro',
+          model: 'gemini-2.5-flash',
         },
       }); } catch { /* non-blocking */ }
 
