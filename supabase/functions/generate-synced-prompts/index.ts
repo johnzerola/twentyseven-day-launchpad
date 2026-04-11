@@ -116,15 +116,16 @@ serve(async (req) => {
     }
 
     // ========== Parse script into sentences ==========
-    const defaultSceneLen = sceneDurationSeconds || 8;
+    // COST OPTIMIZATION: Veo3 reuses same prompt for consecutive 8s clips of same scene.
+    // Grouping into ~40s blocks = 90 scenes per 60min instead of 450 = 80% token savings.
+    const defaultSceneLen = sceneDurationSeconds || 40;
     const totalDuration = audioDurationSeconds || 0;
     const sentences = script.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter((s: string) => s.trim());
     const totalChars = sentences.reduce((sum: number, s: string) => sum + s.length, 0);
 
-    // CRITICAL: Veo3 generates 8-second clips. For 80s audio → minimum 10 scenes.
-    // Formula: ceil(duration / 8) ensures full coverage with no gaps.
+    // Each scene = ~40s of narration, Veo3 generates multiple 8s clips per scene prompt.
     const numScenes = totalDuration > 0
-      ? Math.max(Math.ceil(totalDuration / 8), Math.ceil(totalDuration / defaultSceneLen))
+      ? Math.max(Math.ceil(totalDuration / defaultSceneLen), 3)
       : Math.max(1, Math.ceil(sentences.length / 2));
 
     const scenes: { index: number; text: string }[] = [];
