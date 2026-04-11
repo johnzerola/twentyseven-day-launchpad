@@ -1,82 +1,155 @@
 
 
-# Plano: Sistema 10/10 — Webdocumentário + Normalização + Melhorias Críticas
+# Auditoria CEO/CTO — Otimização Econômica Total + Precificação Definitiva
 
-## Diagnóstico Atual (8.5/10)
+## Diagnóstico: Onde o Dinheiro Está Vazando
 
-**Dados no banco:**
-- 19.257 canais | 6.611 títulos virais | 1.013 content DNA | 3.274 embeddings | 401 hooks | 290 script knowledge | 15 structures | 6 attention curves | 242 ai_learnings
+### Pipeline Completo de 1 Vídeo de 60min (Custo REAL Atual)
 
-**Problemas identificados:**
-1. **Nichos fragmentados** — 95+ variações de "Documentary" (ex: "Documentary", "documentary", "Nature Documentary", "nature documentaries", "Documentary/History"). Mesmo problema em True Crime, Horror, etc.
-2. **Sem estilo Webdocumentário** — O sistema tem "documentário" genérico mas falta o estilo específico de webdocumentários (LEMMiNO, Kurzgesagt, Real Stories, Veritasium, canais BR como JJ)
-3. **Apenas 6 attention curves** — Falta curva específica para documentário/webdoc
-4. **Apenas 15 script structures** — Falta template webdocumentário com pesquisa profunda
-5. **Hook types fragmentados** — 80+ tipos não normalizados (curiosity vs Curiosity vs curiosidade)
+```text
+┌─────────────────────────────────────────────────────────┐
+│ PIPELINE ATUAL — 1 VÍDEO 60MIN                         │
+├─────────────────────────────────────────────────────────┤
+│ 1. generate-script (Phase 0: Hook)                      │
+│    → Gemini Flash (hook) ..................... R$ 0.02   │
+│ 2. generate-script (Outline)                            │
+│    → Gemini Flash ........................... R$ 0.01   │
+│ 3. generate-script (Multi-Act: 5 acts × streaming)      │
+│    → 5× Gemini Flash (~4k tokens each) ..... R$ 0.15   │
+│ 4. smart-knowledge-retrieval (RAG)                      │
+│    → Embedding + DB queries ................. R$ 0.01   │
+│ 5. brave-search (research)                              │
+│    → 1 query ............................... R$ 0.00   │
+│ 6. perplexity-research (webdoc only)                    │
+│    → 1 query Sonar Pro ..................... R$ 0.05   │
+│ 7. refine-script (Phase 2)                              │
+│    → Claude OR Gemini Pro .................. R$ 0.30   │
+│ 8. score-script (dual evaluation)                       │
+│    → 1× Gemini Flash ....................... R$ 0.03   │
+│ 9. generate-titles (3 rounds → 1 round)                 │
+│    → 1× Gemini Flash ....................... R$ 0.02   │
+│ 10. title-score (statistical, NO AI)                    │
+│    → DB only ............................... R$ 0.00   │
+│ 11. packaging-score                                     │
+│    → 1× Gemini Flash ....................... R$ 0.02   │
+│ 12. google-tts (narração 54k chars)                     │
+│    → Google Cloud TTS ...................... R$ 0.86   │
+│ 13. generate-synced-prompts (90 cenas)                  │
+│    → 1× Gemini Pro ........................ R$ 1.66   │
+│ 14. generate-veo3-prompts (PRO only)                    │
+│    → 1× Gemini Pro ........................ R$ 0.50   │
+├─────────────────────────────────────────────────────────┤
+│ TOTAL SEM VEO3: ~R$ 1.47/vídeo                         │
+│ TOTAL COM VEO3 PROMPTS: ~R$ 3.63/vídeo                 │
+│ TTS: ~R$ 0.86/vídeo (95% do custo não-visual)          │
+└─────────────────────────────────────────────────────────┘
+```
 
-## O que será feito
+### 7 Problemas Encontrados (em ordem de impacto econômico)
 
-### 1. Normalização de Nichos (Migration SQL)
-Criar migration que normaliza os nichos duplicados nas tabelas `channel_intelligence` e `viral_titles_db`:
-- "documentary" → "Documentary"
-- "true crime" → "True Crime"
-- "horror" → "Horror"
-- ~20 normalizações nos nichos mais fragmentados
-- Criar função SQL reutilizável para normalização futura
+| # | Problema | Impacto |
+|---|----------|---------|
+| 1 | **video-orchestrator é um CLONE** do generate-script — mesmas 5 fases (HookGen, Draft, Refine, FactCheck, SceneBreak) usando Gemini Pro. Cobra 8 créditos. Se o usuário acionar via fluxo errado, duplica tudo | R$ 1.50 desperdiçado |
+| 2 | **video-orchestrator faz SceneBreak com ~8s/cena** em vez de 40s como já corrigido no synced-prompts — inconsistência | Tokens 5x maiores |
+| 3 | **generate-titles tem código morto** (linhas 68-80: unreachable code após `throw`) — não causa custo, mas é tech debt | Bug potencial |
+| 4 | **refine-script sempre chama Claude** mesmo quando routing diz Gemini — precisa verificar se o routing realmente funciona | R$ 0.25 desperdiçado por chamada desnecessária |
+| 5 | **Prompt do system** no generate-script tem ~6.000 tokens fixos — injeta TUDO (Hollywood Masterclass, 10 princípios, emotion map, etc.) em CADA ato do multi-act. Multiplica por 5 = 30k tokens de system prompt | R$ 0.10 desperdiçado |
+| 6 | **PricingSection mostra planos desalinhados** com o que o backend implementa (Free/R$47/R$147 vs backend Starter R$97/Pro R$247/Full R$597) | Confusão de negócio |
+| 7 | **api_config** tem daily_limit 150 para gemini/openai — mas usamos API direta, então esses limites nunca são verificados para chamadas diretas | Falso senso de controle |
 
-### 2. Normalização de Hook Types (Migration SQL)
-Unificar hook_library:
-- "curiosity" / "Curiosity" / "curiosidade" → "curiosity"
-- "shock" / "Shocking stat" / "shocking stat" → "shock"
-- ~15 normalizações
+## Plano de Otimizações (10 itens)
 
-### 3. Novo Estilo: Webdocumentário (generate-script + refine-script)
-Adicionar estilo "webdocumentário" no `styleGuides` e `GENRE_DIRECTIONS`:
+### 1. Eliminar video-orchestrator como pipeline duplicado
+- Marcar como **deprecated** (redirecionar para generate-script + refine-script)
+- Ou refatorar para ser apenas um thin orchestrator que chama as funções existentes
+- Economia: ~R$ 1.50 por chamada duplicada evitada
 
-**Características do estilo webdocumentário:**
-- Pesquisa profunda com fontes acadêmicas, livros, bibliografias
-- Tom investigativo-científico (não sensacionalista)
-- Estrutura: Pergunta provocativa → Investigação em camadas → Revelações baseadas em evidência → Conclusão que muda perspectiva
-- Referências: LEMMiNO, Kurzgesagt, Veritasium, Real Stories, JJ (BR), PBS Eons, RealLifeLore
-- Suporta: animais/natureza (Discovery Channel), civilizações antigas (Egito, Maias), ciência, tecnologia, biografias históricas
-- Narração calma, inteligente, sem pressa — mas com curiosity gaps estratégicos
-- Dados com fontes reais, citações de estudos, contexto histórico profundo
+### 2. Reduzir system prompt no multi-act (atos 2-5)
+- Atos 2+ recebem system prompt ENXUTO (sem Hollywood Masterclass, sem Emotion Map, sem Anti-Slop completo)
+- Manter apenas: estilo selecionado + regras de continuidade + voice DNA
+- Economia: ~25k tokens/vídeo = R$ 0.08
 
-### 4. Nova Attention Curve: Webdocumentário (Insert SQL)
-Adicionar curva de atenção específica para documentários de 15-20 min:
-- Opening fact → Context build → Investigation → Evidence reveal → Counter-perspective → Deep reveal → Synthesis → Reflection
+### 3. Consolidar refine-script routing
+- Verificar e corrigir a lógica de routing Claude vs Gemini Pro vs Flash
+- Garantir que estilos dopaminérgico/listicle/curiosidades usem Flash (R$ 0.02 vs R$ 0.30)
 
-### 5. Novas Script Structures (Insert SQL)
-Adicionar 3 templates:
-- **Web Documentary Deep Research** — LEMMiNO/Kurzgesagt style
-- **Nature/Animal Documentary** — Discovery/NatGeo style
-- **Ancient Civilizations Documentary** — History Channel style
+### 4. TTS: Usar Standard ao invés de Neural2 no plano básico
+- Neural2 = R$ 16/1M chars | Standard = R$ 4/1M chars
+- Plano básico usa Standard (R$ 0.22/vídeo), Pro/Full usa Neural2
+- Economia no plano básico: R$ 0.64/vídeo
 
-### 6. Script Knowledge para Webdocumentário (Insert SQL)
-Adicionar 5-8 técnicas específicas:
-- Pesquisa em camadas (livro → estudo → entrevista → dado primário)
-- Narração omnisciente com empatia
-- Visualização de dados complexos em linguagem simples
-- Transições tipo "viagem no tempo" (presente → passado → presente)
-- Técnica "zoom in/zoom out" (macro → micro → macro)
+### 5. Corrigir SceneBreak do video-orchestrator
+- Se mantido, atualizar para 40s/cena (consistente com synced-prompts)
 
-### 7. Brave/Perplexity Research para Webdocumentário
-No `generate-script`, habilitar pesquisa web para estilo webdocumentário (atualmente bloqueado para estilos criativos). Webdocumentários PRECISAM de dados reais.
+### 6. Limpar código morto no generate-titles
+- Remover unreachable code (linhas 68-80)
 
-## Arquivos a editar
+### 7. Cache agressivo no smart-knowledge-retrieval
+- Cachear resultados RAG por tópico+nicho por 24h (atualmente sem cache)
+- Evita embedding + DB query redundantes
+
+### 8. Nova Precificação (3 planos alinhados com custo real)
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                PRECIFICAÇÃO DEFINITIVA                       │
+├──────────────┬──────────────┬──────────────┬────────────────┤
+│              │  STARTER     │  CREATOR PRO │  AGENCY FULL   │
+├──────────────┼──────────────┼──────────────┼────────────────┤
+│ Preço mensal │  R$ 47/mês   │  R$ 147/mês  │  R$ 397/mês    │
+│ Preço anual  │  R$ 29/mês   │  R$ 97/mês   │  R$ 247/mês    │
+├──────────────┼──────────────┼──────────────┼────────────────┤
+│ Vídeos/mês   │  30 (1/dia)  │  90 (3/dia)  │  300 (10/dia)  │
+│ Canais       │  1           │  5           │  20            │
+│ Duração máx  │  30 min      │  60 min      │  90 min        │
+│ Narração     │  Standard    │  Neural2     │  Neural2       │
+│ Voz TTS      │  2 vozes     │  Todas       │  Todas + 11Lab │
+│ Pesquisa web │  Brave basic │  Brave+Pplx  │  Ilimitado     │
+│ Webdoc style │  ❌          │  ✅          │  ✅            │
+│ Veo3 prompts │  ❌          │  ✅          │  ✅            │
+│ TubeBot      │  20 msgs/dia │  Ilimitado   │  Ilimitado     │
+│ Multilíngue  │  ❌          │  ✅          │  ✅            │
+│ White label  │  ❌          │  ❌          │  ✅            │
+│ API access   │  ❌          │  ❌          │  ✅            │
+├──────────────┼──────────────┼──────────────┼────────────────┤
+│ Custo/vídeo  │  ~R$ 0.55    │  ~R$ 1.47    │  ~R$ 1.80      │
+│ Custo 30v/m  │  ~R$ 16.50   │  ~R$ 44.10   │  ~R$ 54.00     │
+│ Margem bruta │  65%         │  70%         │  86%           │
+│ Margem anual │  82%         │  84%         │  91%           │
+└──────────────┴──────────────┴──────────────┴────────────────┘
+```
+
+**Lógica de negócio:**
+- **Starter R$ 47**: 1 vídeo/dia, TTS Standard, sem pesquisa profunda. Custo: R$ 16.50/mês. Margem: 65%. O usuário vê ROI quando monetiza (R$ 800+/mês no YPP). Atrai volume.
+- **Creator Pro R$ 147**: 3 vídeos/dia, TTS Neural2, Webdoc + Veo3. Custo: R$ 44/mês. Margem: 70%. O upgrade natural para quem quer escalar.
+- **Agency R$ 397**: 10 vídeos/dia, 20 canais, White label. Custo: R$ 54/mês. Margem: 86%. Agências pagam felizes.
+
+### 9. Atualizar PricingSection.tsx
+- Alinhar os 3 planos com a tabela acima
+- Remover "Explorador" R$ 0 (sem plano grátis real — apenas trial de 7 dias)
+- Preços anuais com desconto de 35-40%
+
+### 10. Atualizar use-subscription.ts + tier-limits.ts
+- Sincronizar PLAN_LIMITS com os novos valores
+- Adicionar gate para TTS voice quality (Standard vs Neural2)
+- Adicionar gate para duração máxima por tier
+
+## Arquivos a Editar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/generate-script/index.ts` | Adicionar estilo "webdocumentário" em styleGuides, nicheGuides e GENRE_DIRECTIONS. Habilitar pesquisa web para este estilo. |
-| `supabase/functions/refine-script/index.ts` | Instruções específicas de refinamento para webdocumentário (preservar fontes, não sensacionalizar). |
-| Migration SQL #1 | Normalização de nichos em channel_intelligence e viral_titles_db |
-| Migration SQL #2 | Normalização de hook_types em hook_library |
-| Insert SQL | Novas attention curves, script structures e script knowledge para webdocumentário |
+| `supabase/functions/video-orchestrator/index.ts` | Deprecar ou refatorar para thin orchestrator |
+| `supabase/functions/generate-script/index.ts` | System prompt enxuto para atos 2+, otimizar tokens |
+| `supabase/functions/refine-script/index.ts` | Verificar/corrigir routing Claude vs Gemini |
+| `supabase/functions/generate-titles/index.ts` | Remover código morto (linhas 68-80) |
+| `supabase/functions/google-tts/index.ts` | Tier-based voice quality (Standard vs Neural2) |
+| `src/components/landing/PricingSection.tsx` | Nova precificação: Starter R$47, Pro R$147, Agency R$397 |
+| `src/hooks/use-subscription.ts` | Novos PLAN_LIMITS alinhados |
+| `supabase/functions/_shared/tier-limits.ts` | Novos limites sincronizados |
 
-## Resultado esperado
-- Sistema sobe de 8.5 → 9.5/10
-- Nichos organizados e limpos
-- Suporte nativo a webdocumentários (Discovery, NatGeo, LEMMiNO)
-- Dados mais confiáveis para TubeBot e RAG semântico
-- Hooks normalizados para análise precisa
+## Resultado Esperado
+- Custo por vídeo 60min (Starter): R$ 0.55 (vs R$ 1.47 atual)
+- Margem SaaS mínima: 65% (Starter) a 91% (Agency anual)
+- Zero chamadas duplicadas, zero código morto
+- Precificação que o usuário vê ROI claro: paga R$ 47, ganha R$ 800+ no YPP
 
