@@ -271,14 +271,14 @@ ${viralPatternsBlock}
 ${blueprintBlock}
 
 YOUR COMMANDMENTS:
-1. DYNAMIC SCENE DURATION: EVERY scene = 8 seconds (Veo3 hard limit).
-   For ${totalDuration > 0 ? `${totalDuration}s audio → MINIMUM ${Math.ceil((totalDuration || 80) / 8)} scenes` : 'estimate from text'}
-   HOOK SCENE (Scene 1): 8s — MOST spectacular opening shot.
+1. DYNAMIC SCENE DURATION: EACH scene covers ~40 seconds of narration. Veo3 generates multiple 8-second clips per scene prompt.
+    For ${totalDuration > 0 ? `${totalDuration}s audio → ${Math.ceil((totalDuration || 80) / 40)} scenes` : 'estimate from text'}
+    HOOK SCENE (Scene 1): First 40s — MOST spectacular opening shots.
 2. SCENE 1 = HOOK: MYSTERY + SCALE + MOTION + DETAIL. Prefix with "HOOK SCENE —"
 3. PROMPT LENGTH: 150-250 words. Professional film terminology.
 
 4. ═══ MULTI-MOMENT TECHNIQUE (CRITICAL — MANDATORY) ═══
-   Each 8-second Veo3 clip MUST contain 2-3 DISTINCT visual moments that match the narration timeline.
+    Each scene covers ~40 seconds and will be split into multiple 8s Veo3 clips. Include 4-5 DISTINCT visual moments per scene that match the narration timeline.
    The narration drives the visuals — what the viewer HEARS at second 0-3 must MATCH what they SEE at second 0-3.
    
    EXAMPLE — Narration: "Forget everything you learned in school, or saw in documentaries. These are the Pyramids of Egypt."
@@ -310,7 +310,7 @@ YOUR COMMANDMENTS:
 
     const userContent = `Generate ${scenes.length} NETFLIX/DISNEY-GRADE Veo3 video prompts.
 Total audio: ${totalDuration > 0 ? `${totalDuration}s` : 'estimate from text'}
-CRITICAL: Each Veo3 clip = 8 seconds. Minimum scenes needed: ${Math.ceil((totalDuration || 80) / 8)}
+CRITICAL: Each scene covers ~40s of narration. Veo3 generates multiple 8s clips per prompt. Target scenes: ${Math.ceil((totalDuration || 80) / 40)}
 Style: ${videoStyle || 'cinematográfico'}
 Niche: ${niche || 'general'}
 Language context: ${language || 'português'}
