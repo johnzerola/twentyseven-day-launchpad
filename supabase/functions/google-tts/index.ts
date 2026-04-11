@@ -372,6 +372,8 @@ serve(async (req) => {
     // Use the voice as-is — no tier downgrade needed
     const rawVoice = voiceName || langConfig.voices[0].name;
     const selectedVoice = rawVoice;
+    const useGeminiEngine = isGeminiVoice(selectedVoice);
+    const fallbackGender = useGeminiEngine
       ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
       : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');
 
