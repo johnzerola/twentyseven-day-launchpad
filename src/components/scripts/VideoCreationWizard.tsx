@@ -41,6 +41,7 @@ const SCRIPT_STYLES = [
   { value: 'cinematográfico', label: 'Cinematográfico', emoji: '🎬', desc: 'Tensão narrativa estilo filme' },
   { value: 'storytelling', label: 'Storytelling', emoji: '📖', desc: 'Personagens e plot twists' },
   { value: 'documentário', label: 'Documentário', emoji: '📹', desc: 'Investigação profunda' },
+  { value: 'webdocumentário', label: 'Webdoc', emoji: '🌍', desc: 'JJ, LEMMiNO, Discovery' },
   { value: 'mrbeast', label: 'MrBeast Style', emoji: '🔥', desc: 'Alta energia, desafios' },
   { value: 'narração', label: 'Narração', emoji: '🎙️', desc: 'Tom autoritário e misterioso' },
 ];
