@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { callClaudeStreaming, callGeminiStreaming } from "../_shared/gemini-direct.ts";
+import { callClaudeStreaming, callGeminiStreaming, callClaude } from "../_shared/gemini-direct.ts";
+import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_shared/scriptwriting-skills.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance
