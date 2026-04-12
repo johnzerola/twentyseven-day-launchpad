@@ -117,11 +117,131 @@ serve(async (req) => {
       const requestedAudioDuration = Number(audioDurationSeconds);
       const hasRequestedAudioDuration = Number.isFinite(requestedAudioDuration) && requestedAudioDuration > 0;
 
-      // Transcribe — Strategy: ElevenLabs STT (best, handles any size) → Gemini (small files) → script fallback
+      // Transcribe — Strategy: Gemini Flash (FREE) → ElevenLabs STT (paid fallback) → script fallback
       let transcribeData: any = null;
 
-      // ── METHOD 1: ElevenLabs Scribe v2 (preferred — real word-level timestamps) ──
-      if (ELEVENLABS_API_KEY && audioUrl) {
+      // ── METHOD 1 (PRIMARY — FREE): Gemini Flash audio transcription ──
+      if (!transcribeData && GOOGLE_AI_KEY && audioUrl) {
+        try {
+          console.log("Trying Gemini Flash STT (FREE primary)...");
+          const audioFetchCtrl = new AbortController();
+          const audioTimeout = setTimeout(() => audioFetchCtrl.abort(), 60000);
+          const audioResp = await fetch(audioUrl, { signal: audioFetchCtrl.signal });
+          clearTimeout(audioTimeout);
+          if (!audioResp.ok) throw new Error(`Failed to download audio: ${audioResp.status}`);
+
+          const audioBuffer = await audioResp.arrayBuffer();
+          const audioBytes = new Uint8Array(audioBuffer);
+          const fileSizeMB = audioBytes.length / 1024 / 1024;
+          console.log(`Audio downloaded: ${fileSizeMB.toFixed(1)}MB for Gemini STT`);
+
+          const transcribePrompt = `You are a professional audio transcriber. Transcribe the audio precisely in its original language (${language || 'detect automatically'}).
+
+OUTPUT FORMAT (strict JSON array):
+[{"start": 0.0, "end": 3.5, "text": "First sentence here."}, ...]
+
+RULES:
+- Transcribe EVERY spoken word — do NOT skip or summarize
+- Timestamps must be accurate per sentence
+- Sequential, non-overlapping
+- Cover the ENTIRE audio duration from start to finish
+- Return ONLY the JSON array, no markdown, no explanation`;
+
+          let geminiRequestBody: any;
+
+          if (audioBytes.length > 20 * 1024 * 1024) {
+            console.log("Using Google AI Files API for large audio...");
+            const startUploadResp = await fetch(
+              `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GOOGLE_AI_KEY}`,
+              {
+                method: "POST",
+                headers: {
+                  "X-Goog-Upload-Protocol": "resumable",
+                  "X-Goog-Upload-Command": "start",
+                  "X-Goog-Upload-Header-Content-Length": String(audioBytes.length),
+                  "X-Goog-Upload-Header-Content-Type": resolvedMime,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ file: { display_name: "audio_transcription" } }),
+              }
+            );
+            if (!startUploadResp.ok) throw new Error(`Files API start failed: ${startUploadResp.status}`);
+
+            const uploadUrl = startUploadResp.headers.get("X-Goog-Upload-URL");
+            if (!uploadUrl) throw new Error("No upload URL returned");
+
+            const uploadResp = await fetch(uploadUrl, {
+              method: "POST",
+              headers: {
+                "Content-Length": String(audioBytes.length),
+                "X-Goog-Upload-Offset": "0",
+                "X-Goog-Upload-Command": "upload, finalize",
+              },
+              body: audioBytes,
+            });
+            if (!uploadResp.ok) throw new Error(`Files API upload failed: ${uploadResp.status}`);
+
+            const fileInfo = await uploadResp.json();
+            const fileUri = fileInfo.file?.uri;
+            if (!fileUri) throw new Error("No file URI returned");
+            console.log(`File uploaded to Files API: ${fileUri}`);
+
+            const fileName = fileInfo.file?.name;
+            if (fileName) {
+              for (let attempt = 0; attempt < 12; attempt++) {
+                const statusResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GOOGLE_AI_KEY}`);
+                if (statusResp.ok) {
+                  const statusData = await statusResp.json();
+                  if (statusData.state === "ACTIVE") { console.log("File is ACTIVE"); break; }
+                  console.log(`File state: ${statusData.state}, waiting...`);
+                }
+                await new Promise(r => setTimeout(r, 5000));
+              }
+            }
+
+            geminiRequestBody = {
+              contents: [{ parts: [{ text: transcribePrompt }, { fileData: { mimeType: resolvedMime, fileUri } }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 32768 },
+            };
+          } else {
+            let base64Audio = "";
+            const CHUNK_SIZE = 8192;
+            for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+              base64Audio += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK_SIZE));
+            }
+            base64Audio = btoa(base64Audio);
+
+            geminiRequestBody = {
+              contents: [{ parts: [{ text: transcribePrompt }, { inlineData: { mimeType: resolvedMime, data: base64Audio } }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 32768 },
+            };
+          }
+
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_KEY}`;
+          const geminiCtrl = new AbortController();
+          const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 180000);
+          const geminiResp = await fetch(geminiUrl, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            signal: geminiCtrl.signal, body: JSON.stringify(geminiRequestBody),
+          });
+          clearTimeout(geminiTimeout);
+
+          if (geminiResp.ok) {
+            const gData = await geminiResp.json();
+            const text = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            transcribeData = { choices: [{ message: { content: text } }] };
+            console.log("Gemini STT success (FREE)");
+          } else {
+            const errText = await geminiResp.text();
+            console.warn("Gemini STT failed:", geminiResp.status, errText.slice(0, 200));
+          }
+        } catch (e: any) {
+          console.warn("Gemini STT error:", e.message);
+        }
+      }
+
+      // ── METHOD 2 (FALLBACK — PAID): ElevenLabs Scribe v2 ──
+      if (!transcribeData && ELEVENLABS_API_KEY && audioUrl) {
         try {
           console.log("Downloading audio for ElevenLabs STT...");
           const audioFetchCtrl = new AbortController();
