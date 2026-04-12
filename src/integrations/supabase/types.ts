@@ -4862,10 +4862,12 @@ export type Database = {
         Args: { _api_name: string }
         Returns: boolean
       }
+      cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
       consume_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: boolean
       }
+      get_niche_benchmarks: { Args: { _niche?: string }; Returns: Json[] }
       get_user_tier: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["subscription_tier"]
