@@ -129,6 +129,27 @@ Brasil: $0.80-2.50/1K | EUA: $6-15/1K | PT: $2.50-5/1K
 Finanças: 3-5x base | Horror: 0.8-1.2x base
 Shorts RPM: $0.04-0.07/1K
 
+### 📊 CTR BENCHMARKS POR NICHO (Focus Digital, dez/2025):
+| Nicho | CTR Alvo | CTR Excelente |
+|-------|----------|---------------|
+| Educação | 4-6% | 8%+ |
+| Entretenimento | 6-10% | 12%+ |
+| Tutorial/How-To | 5-8% | 10%+ |
+| Gaming | 4-7% | 9%+ |
+| Finanças | 3-5% | 7%+ |
+| Vlogs | 5-8% | 10%+ |
+| Tech/Reviews | 4-6% | 8%+ |
+| Horror/Mistério | 7-12% | 15%+ |
+| Curiosidades | 6-10% | 13%+ |
+| Comentário/Opinião | 5-8% | 10%+ |
+
+### 🎬 PATTERN INTERRUPTS (MrBeast, validado 100M+ views):
+- A cada **60-90 segundos** inserir interrupção visual/narrativa
+- Tipos: mudança de cenário, gráfico, zoom, pergunta retórica, revelação parcial
+- Primeiro interrupt obrigatório antes dos **30 segundos**
+- Retenção cai ~15% sem interrupts vs ~5% com interrupts regulares
+- Scripts DEVEM marcar [INTERRUPT] nos pontos de quebra
+
 ## 🧬 CREATIVE FINGERPRINT (Rene Ritchie, YouTube 2026)
 - "Se você só alimenta prompts e faz upload do que sai, NÃO tem fingerprint criativo."
 - 4 componentes: perspectiva editorial + pesquisa original + estilo reconhecível + voz distinta
