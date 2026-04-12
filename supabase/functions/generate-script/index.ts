@@ -762,11 +762,13 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
         );
         console.log(`[PHASE-0 HOOK] runId=${runId} Done: ${hookText.length} chars via Gemini`);
 
-        // ═══ CLAUDE HOOK POLISH — Add human soul to Gemini-generated hooks ═══
+        // ═══ CLAUDE HOOK POLISH — Add human soul (Pro/Studio only) ═══
         const hasClaude = !!Deno.env.get("CLAUDE_API_KEY");
-        if (hasClaude && hookText.length > 100) {
+        const userTierForPolish = (body?.userTier || 'starter').toLowerCase();
+        const tierAllowsClaude = userTierForPolish !== 'starter';
+        if (hasClaude && tierAllowsClaude && hookText.length > 100) {
           try {
-            console.log(`[PHASE-0 CLAUDE-POLISH] runId=${runId} Polishing hook with Claude...`);
+            console.log(`[PHASE-0 CLAUDE-POLISH] runId=${runId} Polishing hook with Claude (tier=${userTierForPolish})...`);
             const polishedHook = await callClaude(
               CLAUDE_HOOK_POLISH_SYSTEM,
               `HOOK ORIGINAL (gerado por IA — precisa de toque humano):\n\n${hookText}\n\nTEMA: "${topic}"\nESTILO: ${style}\nIDIOMA: ${language || 'português'}\n\nPOLIR este hook: adicione detalhes sensoriais, quebre o ritmo com frases curtas, substitua frases genéricas por específicas. Retorne APENAS o hook polido.`,
@@ -779,6 +781,8 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
           } catch (e) {
             console.warn(`[PHASE-0 CLAUDE-POLISH] runId=${runId} Claude polish failed (using Gemini hook):`, e);
           }
+        } else if (!tierAllowsClaude) {
+          console.log(`[PHASE-0 HOOK] runId=${runId} Skipping Claude polish (Starter tier — cost optimization)`);
         }
 
         // Cache the hook

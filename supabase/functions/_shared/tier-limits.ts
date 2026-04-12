@@ -13,6 +13,8 @@ export interface PlanLimits {
   maxNarrationMinutes: number;
   maxVideoDurationMinutes: number;
   ttsQuality: "standard" | "neural2";
+  ttsEngine: "gemini" | "neural2";
+  claudePolish: boolean;
   multilingual: boolean;
   competitorAnalysis: boolean;
   deepResearch: boolean;
@@ -36,6 +38,8 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     maxNarrationMinutes: 60,
     maxVideoDurationMinutes: 60,
     ttsQuality: "neural2",
+    ttsEngine: "gemini",
+    claudePolish: false,
     multilingual: false,
     competitorAnalysis: false,
     deepResearch: false,
@@ -57,6 +61,8 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     maxNarrationMinutes: 60,
     maxVideoDurationMinutes: 60,
     ttsQuality: "neural2",
+    ttsEngine: "neural2",
+    claudePolish: true,
     multilingual: false,
     competitorAnalysis: true,
     deepResearch: false,
@@ -78,6 +84,8 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     maxNarrationMinutes: 60,
     maxVideoDurationMinutes: 60,
     ttsQuality: "neural2",
+    ttsEngine: "neural2",
+    claudePolish: true,
     multilingual: true,
     competitorAnalysis: true,
     deepResearch: true,

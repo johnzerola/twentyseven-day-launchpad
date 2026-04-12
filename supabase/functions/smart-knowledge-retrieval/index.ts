@@ -37,6 +37,25 @@ serve(async (req) => {
     );
 
     const startTime = Date.now();
+
+    // ═══ RAG CACHE — 24h TTL for same topic+niche combo ═══
+    const cacheKey = `rag:${(topic || '').toLowerCase().trim().slice(0, 100)}:${(niche || 'general').toLowerCase()}`;
+    try {
+      const { data: cached } = await sb.from("research_cache")
+        .select("result_json, expires_at")
+        .eq("cache_key", cacheKey)
+        .maybeSingle();
+      if (cached?.result_json && cached.expires_at && new Date(cached.expires_at) > new Date()) {
+        const cachedResult = cached.result_json as any;
+        console.log(`[RAG-CACHE] HIT for "${cacheKey}" — returning ${cachedResult.knowledge?.length || 0} cached results`);
+        return new Response(JSON.stringify({
+          success: true,
+          knowledge: cachedResult.knowledge || [],
+          stats: { ...cachedResult.stats, cached: true, duration_ms: Date.now() - startTime },
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    } catch (e) { console.warn("[RAG-CACHE] Cache read failed:", e); }
+
     const topicWords = topic.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
 
     // ═══ STEP 1: Parallel direct queries (fast, no AI needed) ═══
@@ -137,7 +156,7 @@ serve(async (req) => {
     const durationMs = Date.now() - startTime;
     console.log(`Smart knowledge retrieval v2: ${finalKnowledge.length} results in ${durationMs}ms (${allCandidates.length} candidates)`);
 
-    return new Response(JSON.stringify({
+    const responsePayload = {
       success: true,
       knowledge: finalKnowledge,
       stats: {
@@ -146,7 +165,20 @@ serve(async (req) => {
         final_count: finalKnowledge.length,
         duration_ms: durationMs,
       }
-    }), {
+    };
+
+    // ═══ CACHE WRITE — store for 24h ═══
+    try {
+      await sb.from("research_cache").upsert({
+        cache_key: cacheKey,
+        source: "smart-knowledge-retrieval",
+        result_json: responsePayload,
+        expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
+        query: `${topic?.slice(0, 100)}|${niche || 'general'}`,
+      }, { onConflict: "cache_key" });
+    } catch (e) { console.warn("[RAG-CACHE] Cache write failed:", e); }
+
+    return new Response(JSON.stringify(responsePayload), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

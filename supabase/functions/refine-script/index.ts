@@ -213,12 +213,15 @@ ${draft_script}
 MISSÃO: Hook dos primeiros 30s é prioridade #1. Corpo: edições cirúrgicas para emoção, magnetismo e ritmo.
 A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWords} palavras.`;
 
-    // ═══ SMART AI ROUTING — Choose engine based on style ═══
+    // ═══ SMART AI ROUTING — Choose engine based on style + tier ═══
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    const useClaude = hasClaude && CLAUDE_STYLES.includes(styleLC);
-    const useGeminiPro = GEMINI_PRO_STYLES.includes(styleLC);
+    const userTierRefine = (body?.userTier || 'starter').toLowerCase();
+    const starterTier = userTierRefine === 'starter';
+    // Starter: always Gemini Flash (cost optimization — skip Claude & Pro)
+    const useClaude = !starterTier && hasClaude && CLAUDE_STYLES.includes(styleLC);
+    const useGeminiPro = !starterTier && GEMINI_PRO_STYLES.includes(styleLC);
     const engineLabel = useClaude ? 'CLAUDE' : useGeminiPro ? 'GEMINI_PRO' : 'GEMINI_FLASH';
-    console.log(`[PHASE-2 REFINE] runId=${runId} Style="${styleLC}" → Engine=${engineLabel} (Claude available: ${hasClaude})`);
+    console.log(`[PHASE-2 REFINE] runId=${runId} Style="${styleLC}" Tier="${userTierRefine}" → Engine=${engineLabel} (Claude available: ${hasClaude})`);
 
     try {
       if (useClaude) {
