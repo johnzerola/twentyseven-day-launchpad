@@ -66,8 +66,8 @@ const Dashboard = () => {
         if (!session) return;
         // Check if user has OAuth tokens
         const { data: tokens } = await supabase
-          .from('youtube_oauth_tokens' as any)
-          .select('id, last_synced_at')
+          .from('youtube_oauth_tokens_safe' as any)
+          .select('id, updated_at')
           .eq('user_id', session.user.id)
           .limit(1)
           .maybeSingle();
