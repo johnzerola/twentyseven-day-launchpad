@@ -115,7 +115,7 @@ const Channels = () => {
   const syncOAuthChannels = async (userId: string) => {
     try {
       const { data: oauthChannels } = await supabase
-        .from('youtube_oauth_tokens')
+        .from('youtube_oauth_tokens_safe' as any)
         .select('channel_id, channel_name, channel_thumbnail')
         .eq('user_id', userId) as any;
       if (!oauthChannels || oauthChannels.length === 0) return;

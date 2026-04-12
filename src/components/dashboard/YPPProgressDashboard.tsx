@@ -41,7 +41,7 @@ export function YPPProgressDashboard() {
 
     // Check for OAuth tokens
     const { data: oauthTokens } = await supabase
-      .from('youtube_oauth_tokens' as any)
+      .from('youtube_oauth_tokens_safe' as any)
       .select('channel_id, channel_name')
       .eq('user_id', user.id);
 

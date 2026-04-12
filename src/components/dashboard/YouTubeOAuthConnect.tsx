@@ -27,7 +27,7 @@ export const YouTubeOAuthConnect = () => {
   const fetchConnectedChannels = async () => {
     try {
       const { data, error } = await supabase
-        .from('youtube_oauth_tokens')
+        .from('youtube_oauth_tokens_safe' as any)
         .select('id, channel_id, channel_name, channel_thumbnail, connected_at');
       if (error) throw error;
       setConnectedChannels((data as ConnectedChannel[]) || []);
