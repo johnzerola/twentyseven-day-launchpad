@@ -204,6 +204,9 @@ ${scriptKnowledge.slice(0, 600)}
 📐 ESTRUTURAS: ${structures.slice(0, 300)}
 ${rejectionContext}${consensusContext}${slopContext}${pastLessonsBlock}
 
+${starterTier ? FLASH_REFINE_MASTERCLASS : ''}
+${buildFlashQualityBoost({ durationMin: parseInt(duration) || 15, style: styleLC, isStarterTier: starterTier, phase: 'refine' })}
+
 ⚠️ FORMATO: APENAS narração pura. ZERO anotações, tags, VFX, SFX, música, câmera, títulos. Valores em $.
 Mínimo ${effectiveMinWords} palavras. Idioma: ${language || 'português'}.`;
 
