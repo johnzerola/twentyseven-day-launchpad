@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callClaudeStreaming, callGeminiStreaming, callClaude } from "../_shared/gemini-direct.ts";
 import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_shared/scriptwriting-skills.ts";
+import { buildFlashQualityBoost, FLASH_REFINE_MASTERCLASS } from "../_shared/flash-quality-boost.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance
@@ -202,6 +203,9 @@ ${scriptKnowledge.slice(0, 600)}
 🎯 HOOKS TOP: ${topHooks.slice(0, 400)}
 📐 ESTRUTURAS: ${structures.slice(0, 300)}
 ${rejectionContext}${consensusContext}${slopContext}${pastLessonsBlock}
+
+${starterTier ? FLASH_REFINE_MASTERCLASS : ''}
+${buildFlashQualityBoost({ durationMin: parseInt(duration) || 15, style: styleLC, isStarterTier: starterTier, phase: 'refine' })}
 
 ⚠️ FORMATO: APENAS narração pura. ZERO anotações, tags, VFX, SFX, música, câmera, títulos. Valores em $.
 Mínimo ${effectiveMinWords} palavras. Idioma: ${language || 'português'}.`;

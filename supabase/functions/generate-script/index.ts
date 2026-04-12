@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callGeminiWithFallback, callGeminiStreaming, callClaude } from "../_shared/gemini-direct.ts";
 import { DARK_CHANNEL_STRATEGY_INJECTION, THUMBNAIL_CTR_RULES_2026 } from "../_shared/dark-channel-strategy-2026.ts";
 import { buildSkillsInjection, CLAUDE_HOOK_POLISH_SYSTEM } from "../_shared/scriptwriting-skills.ts";
+import { buildFlashQualityBoost } from "../_shared/flash-quality-boost.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -932,6 +933,8 @@ ${skillScoreBlock}
 ${userPrefsBlock}
 
 ${buildSkillsInjection({ durationMin: dur, style: styleLC, isWeakModel: true })}
+
+${buildFlashQualityBoost({ durationMin: dur, style: styleLC, isStarterTier: (body?.userTier || 'starter').toLowerCase() === 'starter', phase: 'generate' })}
 
 ${YPP_2025_DIRECTIVE}
 
