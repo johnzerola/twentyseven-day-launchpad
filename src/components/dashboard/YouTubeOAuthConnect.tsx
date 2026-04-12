@@ -30,7 +30,7 @@ export const YouTubeOAuthConnect = () => {
         .from('youtube_oauth_tokens_safe' as any)
         .select('id, channel_id, channel_name, channel_thumbnail, connected_at');
       if (error) throw error;
-      setConnectedChannels((data as ConnectedChannel[]) || []);
+      setConnectedChannels((data as unknown as ConnectedChannel[]) || []);
     } catch (err) {
       console.error('Error fetching connected channels:', err);
     } finally {
