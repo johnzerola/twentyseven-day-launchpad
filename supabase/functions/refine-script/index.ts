@@ -165,6 +165,19 @@ O gancho é sua MAIOR liberdade e MAIOR responsabilidade:
 • EMOTIONAL WHIPLASH: Mudança brusca de tom (máx 2x por roteiro)
 • INNER MONOLOGUE: Narrador hesita, questiona, muda de opinião
 
+═══ HUMANIZAÇÃO OBRIGATÓRIA ═══
+
+O texto deve soar como HUMANO REAL, não IA. Adicione cirurgicamente:
+• Hesitações: "Eu ia dizer que... não. É pior que isso."
+• Autocorreção: "Na verdade, risca isso."
+• Opinião pessoal forte
+• Humor inesperado em momento tenso (1-2x)
+• Vulnerabilidade: "Confesso que fiquei sem reação"
+
+${SENSORY_DETAILS}
+
+${MICRO_HOOKS}
+
 ═══ REGRAS ABSOLUTAS ═══
 
 ✅ PODE: Reescrever hook, intensificar emoções, melhorar ritmo, adicionar detalhes sensoriais
