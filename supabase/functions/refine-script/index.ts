@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { callClaudeStreaming, callGeminiStreaming } from "../_shared/gemini-direct.ts";
+import { callClaudeStreaming, callGeminiStreaming, callClaude } from "../_shared/gemini-direct.ts";
+import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_shared/scriptwriting-skills.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance
@@ -163,6 +164,19 @@ O gancho é sua MAIOR liberdade e MAIOR responsabilidade:
 • CHEKHOV'S GUN: Detalhe plantado cedo retorna no clímax
 • EMOTIONAL WHIPLASH: Mudança brusca de tom (máx 2x por roteiro)
 • INNER MONOLOGUE: Narrador hesita, questiona, muda de opinião
+
+═══ HUMANIZAÇÃO OBRIGATÓRIA ═══
+
+O texto deve soar como HUMANO REAL, não IA. Adicione cirurgicamente:
+• Hesitações: "Eu ia dizer que... não. É pior que isso."
+• Autocorreção: "Na verdade, risca isso."
+• Opinião pessoal forte
+• Humor inesperado em momento tenso (1-2x)
+• Vulnerabilidade: "Confesso que fiquei sem reação"
+
+${SENSORY_DETAILS}
+
+${MICRO_HOOKS}
 
 ═══ REGRAS ABSOLUTAS ═══
 
