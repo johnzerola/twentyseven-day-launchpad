@@ -359,27 +359,28 @@ serve(async (req) => {
     const { text, language, voiceName, speakingRate = 1.0, pitch = 0, voiceStyle, returnBinary, userTier } = body;
     if (!text?.trim()) throw new Error('Texto é obrigatório');
 
-    // All tiers now get Neural2 quality — user brings own Google TTS API key
-    // Cost is borne by user's free tier (1M chars/month = ~22 videos free)
+    // ═══ TIER-BASED ENGINE ROUTING ═══
+    // Starter → Gemini TTS (near-zero cost)
+    // Pro/Studio → Google Cloud Neural2 (premium quality)
+    const tier = (userTier || 'starter').toLowerCase();
+    const forceGeminiEngine = tier === 'starter';
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const GOOGLE_TTS_API_KEY_2 = Deno.env.get('GOOGLE_TTS_API_KEY_2');
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-    // All Google API keys to try in order
     const googleKeys = [GOOGLE_AI_API_KEY, GOOGLE_TTS_API_KEY_2].filter(Boolean) as string[];
     const langConfig = LANG_MAP[language?.toLowerCase()] || LANG_MAP['português'];
 
-    // Use the voice as-is — no tier downgrade needed
     const rawVoice = voiceName || langConfig.voices[0].name;
     const selectedVoice = rawVoice;
-    const useGeminiEngine = isGeminiVoice(selectedVoice);
+    const useGeminiEngine = forceGeminiEngine || isGeminiVoice(selectedVoice);
     const fallbackGender = useGeminiEngine
       ? (GEMINI_VOICES.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE')
       : (langConfig.voices.find(v => v.name === selectedVoice)?.gender === 'FEMALE' ? 'FEMALE' : 'MALE');
 
-    console.log(`TTS requested: voice=${selectedVoice}, engine=${useGeminiEngine ? 'gemini' : 'gcloud'}, lang=${language}, chars=${text.length}`);
+    console.log(`TTS requested: voice=${selectedVoice}, engine=${useGeminiEngine ? 'gemini' : 'gcloud'}, tier=${tier}, lang=${language}, chars=${text.length}`);
 
-    // ══════ ENGINE 1: Google Cloud TTS (try all keys) ══════
+    // ══════ ENGINE 1: Google Cloud TTS (Pro/Studio only, skip for Starter) ══════
     if (!useGeminiEngine) {
       for (const key of googleKeys) {
         try {
