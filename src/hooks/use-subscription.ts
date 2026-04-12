@@ -216,7 +216,7 @@ export function useSubscription() {
   };
 
   const getLimits = (): PlanLimits => {
-    return PLAN_LIMITS[subscription.tier];
+    return PLAN_LIMITS[subscription.tier] || PLAN_LIMITS.starter;
   };
 
   const tierLabel = (tier: SubscriptionTier): string => {
