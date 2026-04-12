@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// ANTI-AI-SLOP ENGINE — Shared rules for all generation functions
+// ANTI-AI-SLOP ENGINE v2.0 — 10/10 Quality Gate System
 // ═══════════════════════════════════════════════════════════════
 
 export const ANTI_SLOP_DIRECTIVE = `
@@ -23,6 +23,11 @@ FRASES PROIBIDAS (nunca use literalmente):
 - "Ficou curioso?" / "Quer saber mais?"
 - "Fique comigo até o final"
 - "Imagine um mundo onde..." (abertura genérica)
+- "Neste cenário" / "Neste contexto"
+- "Vale ressaltar/destacar/mencionar"
+- "É inegável que"
+- "Diante disso" / "Posto isso"
+- "Em suma" / "Em síntese" / "Concluindo"
 
 PADRÕES DE ESCRITA PROIBIDOS:
 - Parágrafos que começam com "Imagine..." seguido de cenário genérico
@@ -33,16 +38,13 @@ PADRÕES DE ESCRITA PROIBIDOS:
 - Enumerações de adjetivos vazios: "surpreendente, extraordinário e fascinante"
 - Parágrafos de "resumo" que não adicionam nada novo
 - Repetir a mesma ideia com sinônimos em frases consecutivas
-- Não começar com introdução morna ou texto com cara de artigo
-- Não despejar informação sem narrativa
-- Não exagerar em adjetivos vazios
-- Não repetir o tópico principal sem avanço narrativo
-- Não encerrar de forma abrupta
-- Não escrever frases artificiais de IA
+- Frases que começam com gerúndio sem sujeito ("Analisando...", "Considerando...")
+- Meta-comentários sobre o próprio texto ("Como veremos a seguir...")
+- Frases com 3+ vírgulas encadeando orações subordinadas (quebre em frases curtas)
 `;
 
 export const SOUL_SIGNALS = `
-SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 7):
+SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 9 dos 18):
 1. Analogia ÚNICA e inesperada (comparar algo técnico com algo cotidiano específico)
 2. Confissão ou imperfeição do narrador ("Eu pesquisei isso por 3 semanas e quase desisti quando...")
 3. Número ESPECÍFICO e estranho em vez de arredondado (2.347.891 > "milhões")
@@ -57,7 +59,10 @@ SINAIS DE "ALMA" OBRIGATÓRIOS (inclua pelo menos 7):
 12. Humor inesperado em momento tenso (e vice-versa)
 13. Analogias fortes e imagens mentais que transformam dados em cenas
 14. Alter-ego consistente: anedotas, percepções de vida, opiniões subjetivas recorrentes
-15. Analogias culturais calibradas à DEMOGRAFIA da audiência (novelas p/ 45+, games p/ Gen-Z)
+15. Analogias culturais calibradas à DEMOGRAFIA da audiência
+16. Autocorreção honesta: "Na verdade, risca isso. É mais complicado."
+17. Referência temporal precisa: "Era uma terça-feira. 14 de março. Chovia."
+18. Comparação de ESCALA visceral: "Empilhando, daria 47x a altura do Everest."
 `;
 
 export const ANTI_SLOP_FOR_TITLES = `
@@ -66,6 +71,7 @@ export const ANTI_SLOP_FOR_TITLES = `
 - NUNCA use mais de 1 emoji por título
 - NUNCA use ALL CAPS em mais de 2 palavras
 - NUNCA use "Top 10" sem diferenciação
+- NUNCA comece com "Como..." sem tensão
 - Prefira números ímpares e ESPECÍFICOS (7, 13, 47, 2.347)
 - Cada título deve ter uma TENSÃO implícita ou explícita
 - O título deve fazer o espectador PRECISAR saber a resposta
@@ -74,6 +80,7 @@ export const ANTI_SLOP_FOR_TITLES = `
 - FRONTLOADING: palavras-chave provocativas SEMPRE no início
 - Power Words: "Inacreditável", "Absurdo", "Urgente", "Passo-a-Passo"
 - Números EXATOS > arredondados ("180kg" não "pesado")
+- TESTE: O título cria um GAP entre "o que sei" e "o que PRECISO saber"?
 `;
 
 export const ANTI_SLOP_FOR_THUMBNAILS = `
@@ -143,8 +150,94 @@ ENGENHARIA DO ROTEIRO:
 - Gancho isolado: 3-5s disjuntor + 30s validação de promessa
 - Rehooks a cada 30-40s (quebra de padrão + sub-promessa)
 - Intervenção humana final: simplificar, testar em voz alta
-- Variar modelo IA entre vídeos (Claude/GPT/Gemini/Grok)
 - Sound design imersivo > trilha musical genérica
 - Micro-CTAs pulverizados nos primeiros minutos (3 máx)
 - End Screen → próximo vídeo do canal → Binge Watching
 `;
+
+/**
+ * SLOP SCORE — Programmatic detection of AI patterns in generated text.
+ * Returns a score 0-100 where 0 = pure human, 100 = pure AI slop.
+ * NEW in v2.0
+ */
+export function calculateSlopScore(text: string): { score: number; issues: string[] } {
+  const issues: string[] = [];
+  let score = 0;
+
+  const BANNED_PHRASES = [
+    'neste vasto', 'vamos mergulhar', 'mergulhemos', 'é crucial', 'é importante notar',
+    'jornada incrível', 'jornada fascinante', 'não é apenas', 'é também',
+    'mundo acelerado', 'mundo dinâmico', 'desbloqueie o potencial', 'maximize',
+    'sem mais delongas', 'buckle up', 'apertem os cintos', 'mente explodida',
+    'e se eu te dissesse', 'ficou curioso', 'quer saber mais', 'fique comigo',
+    'imagine um mundo', 'vale ressaltar', 'vale destacar', 'vale mencionar',
+    'é inegável', 'diante disso', 'posto isso', 'em suma', 'em síntese',
+    'neste cenário', 'neste contexto', 'como veremos', 'conforme mencionado',
+  ];
+
+  const lower = text.toLowerCase();
+
+  // Check banned phrases
+  for (const phrase of BANNED_PHRASES) {
+    if (lower.includes(phrase)) {
+      score += 8;
+      issues.push(`Frase proibida: "${phrase}"`);
+    }
+  }
+
+  // Check superlative density
+  const superlatives = (lower.match(/incrível|impressionante|fantástico|extraordinário|surpreendente|magnífico|espetacular/g) || []).length;
+  if (superlatives > 2) {
+    score += superlatives * 3;
+    issues.push(`${superlatives} superlativos genéricos`);
+  }
+
+  // Check adverb density (hallmark of AI writing)
+  const adverbs = (lower.match(/realmente|certamente|obviamente|claramente|definitivamente|absolutamente|extremamente|incrivelmente/g) || []).length;
+  if (adverbs > 3) {
+    score += adverbs * 2;
+    issues.push(`${adverbs} advérbios desnecessários`);
+  }
+
+  // Check sentence variety (AI tends toward uniform length)
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 5);
+  if (sentences.length > 5) {
+    const lengths = sentences.map(s => s.trim().split(/\s+/).length);
+    const avgLen = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+    const variance = lengths.reduce((s, l) => s + Math.pow(l - avgLen, 2), 0) / lengths.length;
+    if (variance < 15) {
+      score += 10;
+      issues.push('Frases muito uniformes em tamanho (falta variação rítmica)');
+    }
+  }
+
+  // Check for consecutive similar openings
+  const paragraphs = text.split('\n\n').filter(p => p.trim());
+  let sameOpening = 0;
+  for (let i = 1; i < paragraphs.length; i++) {
+    const prev = paragraphs[i - 1].trim().split(/\s+/).slice(0, 2).join(' ').toLowerCase();
+    const curr = paragraphs[i].trim().split(/\s+/).slice(0, 2).join(' ').toLowerCase();
+    if (prev === curr) sameOpening++;
+  }
+  if (sameOpening > 1) {
+    score += sameOpening * 5;
+    issues.push(`${sameOpening} parágrafos consecutivos com início similar`);
+  }
+
+  // Check for sensory details (lack = AI indicator)
+  const sensoryWords = (lower.match(/cheiro|textura|gosto|arrepio|suor|tremendo|frio|calor|peso|som de|barulho|silêncio|grito|sussurr/g) || []).length;
+  const wordCount = text.split(/\s+/).length;
+  if (wordCount > 300 && sensoryWords < 2) {
+    score += 8;
+    issues.push('Falta de detalhes sensoriais (texto muito abstrato)');
+  }
+
+  // Check for specific numbers (presence = human indicator, absence = AI)
+  const specificNumbers = (text.match(/\d{3,}/g) || []).length;
+  if (wordCount > 500 && specificNumbers < 2) {
+    score += 5;
+    issues.push('Falta de números específicos (dados vagos)');
+  }
+
+  return { score: Math.min(100, score), issues };
+}
