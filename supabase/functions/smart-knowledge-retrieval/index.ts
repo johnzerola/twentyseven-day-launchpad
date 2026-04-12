@@ -180,15 +180,6 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(responsePayload), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-        semantic_matches: 0,
-        total_candidates: allCandidates.length,
-        final_count: finalKnowledge.length,
-        duration_ms: durationMs,
-      }
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (e) {
     console.error("smart-knowledge-retrieval error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
