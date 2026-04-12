@@ -156,10 +156,31 @@ serve(async (req) => {
     const durationMs = Date.now() - startTime;
     console.log(`Smart knowledge retrieval v2: ${finalKnowledge.length} results in ${durationMs}ms (${allCandidates.length} candidates)`);
 
-    return new Response(JSON.stringify({
+    const responsePayload = {
       success: true,
       knowledge: finalKnowledge,
       stats: {
+        semantic_matches: 0,
+        total_candidates: allCandidates.length,
+        final_count: finalKnowledge.length,
+        duration_ms: durationMs,
+      }
+    };
+
+    // ═══ CACHE WRITE — store for 24h ═══
+    try {
+      await sb.from("research_cache").upsert({
+        cache_key: cacheKey,
+        source: "smart-knowledge-retrieval",
+        result_json: responsePayload,
+        expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
+        query: `${topic?.slice(0, 100)}|${niche || 'general'}`,
+      }, { onConflict: "cache_key" });
+    } catch (e) { console.warn("[RAG-CACHE] Cache write failed:", e); }
+
+    return new Response(JSON.stringify(responsePayload), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
         semantic_matches: 0,
         total_candidates: allCandidates.length,
         final_count: finalKnowledge.length,
