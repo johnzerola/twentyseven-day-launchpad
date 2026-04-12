@@ -927,6 +927,8 @@ ${rejectionLearningsBlock}
 ${skillScoreBlock}
 ${userPrefsBlock}
 
+${buildSkillsInjection({ durationMin: dur, style: styleLC, isWeakModel: true })}
+
 ${YPP_2025_DIRECTIVE}
 
 ${DARK_CHANNEL_STRATEGY_INJECTION}
