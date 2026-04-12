@@ -84,7 +84,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    console.log("audio-to-scenes v5 — small chunks, max_tokens fix");
+    console.log("audio-to-scenes v6 — Gemini STT primary (free), ElevenLabs fallback");
     const formData = await req.formData();
     const audioFile = formData.get("audio") as File;
     const script = (formData.get("script") as string || "").slice(0, 3000);
@@ -97,8 +97,7 @@ serve(async (req) => {
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!ELEVENLABS_API_KEY) throw new Error("ElevenLabs não configurado.");
-    if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY não configurado.");
+    if (!GOOGLE_AI_API_KEY && !ELEVENLABS_API_KEY) throw new Error("Nenhuma API de transcrição configurada.");
     if (!audioFile) throw new Error("Arquivo de áudio obrigatório.");
 
     const sceneDuration = isShort ? Math.min(parseInt(sceneDurationStr) || 3, 4) : (parseInt(sceneDurationStr) || 8);
@@ -112,42 +111,145 @@ serve(async (req) => {
     } catch { /* ignore */ }
     console.log(`Input: script=${script.length}c, chars=${characters.length}, audio=${audioFile.size}b, sceneDur=${sceneDuration}s`);
 
-    // ========== STEP 1: Transcribe ==========
-    console.log("Step 1: Transcribing...");
-    const sttFormData = new FormData();
-    sttFormData.append("file", audioFile);
-    sttFormData.append("model_id", "scribe_v2");
-    sttFormData.append("tag_audio_events", "true");
-    sttFormData.append("diarize", "false");
+    // ========== STEP 1: Transcribe (Gemini FREE first, ElevenLabs paid fallback) ==========
+    let fullText = "";
+    let words: any[] = [];
 
-    const langMap: Record<string, string> = {
-      'português': 'por', 'inglês': 'eng', 'english': 'eng',
-      'espanhol': 'spa', 'alemão': 'deu', 'turco': 'tur',
-      'japonês': 'jpn', 'polonês': 'pol',
-    };
-    const sttLang = langMap[language.toLowerCase()] || '';
-    if (sttLang) sttFormData.append("language_code", sttLang);
+    // ── METHOD 1 (PRIMARY — FREE): Gemini Flash audio transcription ──
+    if (GOOGLE_AI_API_KEY && !fullText.trim()) {
+      try {
+        console.log("Step 1: Transcribing with Gemini Flash (FREE)...");
+        const audioBuffer = await audioFile.arrayBuffer();
+        const audioBytes = new Uint8Array(audioBuffer);
+        const fileSizeMB = audioBytes.length / 1024 / 1024;
+        console.log(`Audio: ${fileSizeMB.toFixed(1)}MB`);
 
-    const sttResponse = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
-      method: "POST",
-      headers: { "xi-api-key": ELEVENLABS_API_KEY },
-      body: sttFormData,
-    });
+        const langMap: Record<string, string> = {
+          'português': 'Portuguese', 'inglês': 'English', 'english': 'English',
+          'espanhol': 'Spanish', 'alemão': 'German', 'turco': 'Turkish',
+        };
+        const langName = langMap[language.toLowerCase()] || language;
 
-    if (!sttResponse.ok) {
-      const errText = await sttResponse.text();
-      console.error("STT error:", sttResponse.status, errText);
-      if (sttResponse.status === 401) throw new Error("ElevenLabs API key inválida.");
-      if (sttResponse.status === 429) throw new Error("Rate limit ElevenLabs.");
-      throw new Error(`Erro na transcrição: ${sttResponse.status}`);
+        const transcribePrompt = `Transcribe this audio precisely in ${langName}. Return ONLY a JSON array:
+[{"text":"word","start":0.0,"end":0.3},{"text":"next","start":0.35,"end":0.6}]
+Rules: transcribe EVERY word with accurate timestamps. Return raw JSON, no markdown.`;
+
+        let geminiRequestBody: any;
+        if (audioBytes.length > 20 * 1024 * 1024) {
+          // Large file: use Files API
+          const startResp = await fetch(
+            `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GOOGLE_AI_API_KEY}`,
+            {
+              method: "POST",
+              headers: {
+                "X-Goog-Upload-Protocol": "resumable",
+                "X-Goog-Upload-Command": "start",
+                "X-Goog-Upload-Header-Content-Length": String(audioBytes.length),
+                "X-Goog-Upload-Header-Content-Type": audioFile.type || "audio/mp3",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ file: { display_name: "stt_audio" } }),
+            }
+          );
+          if (!startResp.ok) throw new Error(`Files API start: ${startResp.status}`);
+          const uploadUrl = startResp.headers.get("X-Goog-Upload-URL");
+          if (!uploadUrl) throw new Error("No upload URL");
+          const upResp = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Length": String(audioBytes.length), "X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize" },
+            body: audioBytes,
+          });
+          if (!upResp.ok) throw new Error(`Upload failed: ${upResp.status}`);
+          const fileInfo = await upResp.json();
+          const fileUri = fileInfo.file?.uri;
+          if (!fileUri) throw new Error("No file URI");
+          // Wait for ACTIVE
+          const fileName = fileInfo.file?.name;
+          if (fileName) {
+            for (let a = 0; a < 12; a++) {
+              const sr = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GOOGLE_AI_API_KEY}`);
+              if (sr.ok && (await sr.json()).state === "ACTIVE") break;
+              await new Promise(r => setTimeout(r, 5000));
+            }
+          }
+          geminiRequestBody = {
+            contents: [{ parts: [{ text: transcribePrompt }, { fileData: { mimeType: audioFile.type || "audio/mp3", fileUri } }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 32768 },
+          };
+        } else {
+          // Small file: inline base64
+          let base64 = "";
+          const CHUNK = 8192;
+          for (let i = 0; i < audioBytes.length; i += CHUNK) {
+            base64 += String.fromCharCode(...audioBytes.subarray(i, i + CHUNK));
+          }
+          base64 = btoa(base64);
+          geminiRequestBody = {
+            contents: [{ parts: [{ text: transcribePrompt }, { inlineData: { mimeType: audioFile.type || "audio/mp3", data: base64 } }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 32768 },
+          };
+        }
+
+        const geminiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(geminiRequestBody) }
+        );
+        if (geminiResp.ok) {
+          const gData = await geminiResp.json();
+          const rawText = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const cleaned = rawText.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
+          try {
+            const parsed = JSON.parse(cleaned);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              words = parsed;
+              fullText = parsed.map((w: any) => w.text).join(" ");
+              console.log(`Gemini STT success (FREE): ${words.length} words`);
+            }
+          } catch { console.warn("Gemini STT: JSON parse failed, trying ElevenLabs fallback"); }
+        } else {
+          const et = await geminiResp.text();
+          console.warn(`Gemini STT failed (${geminiResp.status}):`, et.slice(0, 200));
+        }
+      } catch (e: any) {
+        console.warn("Gemini STT error:", e.message);
+      }
     }
 
-    const transcription = await sttResponse.json();
-    const fullText = transcription.text || "";
-    const words = transcription.words || [];
-    if (!fullText.trim()) throw new Error("Áudio sem fala detectável.");
+    // ── METHOD 2 (FALLBACK — PAID): ElevenLabs Scribe v2 ──
+    if (!fullText.trim() && ELEVENLABS_API_KEY) {
+      console.log("Step 1b: Falling back to ElevenLabs STT (paid)...");
+      const sttFormData = new FormData();
+      sttFormData.append("file", audioFile);
+      sttFormData.append("model_id", "scribe_v2");
+      sttFormData.append("tag_audio_events", "true");
+      sttFormData.append("diarize", "false");
+      const langMap: Record<string, string> = {
+        'português': 'por', 'inglês': 'eng', 'english': 'eng',
+        'espanhol': 'spa', 'alemão': 'deu', 'turco': 'tur',
+        'japonês': 'jpn', 'polonês': 'pol',
+      };
+      const sttLang = langMap[language.toLowerCase()] || '';
+      if (sttLang) sttFormData.append("language_code", sttLang);
 
-    const audioDuration = words.length > 0 ? words[words.length - 1].end : 0;
+      const sttResponse = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+        method: "POST",
+        headers: { "xi-api-key": ELEVENLABS_API_KEY },
+        body: sttFormData,
+      });
+      if (sttResponse.ok) {
+        const transcription = await sttResponse.json();
+        fullText = transcription.text || "";
+        words = transcription.words || [];
+        console.log(`ElevenLabs STT fallback: ${words.length} words`);
+      } else {
+        const errText = await sttResponse.text();
+        console.error("ElevenLabs STT also failed:", sttResponse.status, errText.slice(0, 200));
+      }
+    }
+
+    if (!fullText.trim()) throw new Error("Áudio sem fala detectável (Gemini + ElevenLabs falharam).");
+
+    const audioDuration = words.length > 0 ? (words[words.length - 1].end || 0) : 0;
     console.log(`Transcribed: ${words.length} words, ${audioDuration.toFixed(1)}s`);
 
     // ========== STEP 2: Build transcript blocks ==========
