@@ -162,7 +162,7 @@ Calcule: idea_score = (curiosity * 0.25) + (viral_potential * 0.25) + (competiti
 Ordene por idea_score decrescente.`;
 
     const aiRes = await _ai({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [{ role: "user", content: prompt }],
         tools: [{
           type: "function",

@@ -30,7 +30,7 @@ async function callAI(
   toolDef: any,
   attempt = 0,
 ): Promise<any[]> {
-  const models = ["google/gemini-2.5-flash", "google/gemini-2.5-pro"];
+  const models = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
   const model = attempt >= 2 ? models[1] : models[0];
 
   try {
