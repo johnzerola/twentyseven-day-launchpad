@@ -43,6 +43,20 @@ serve(async (req) => {
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
+    // ═══ TUBEBOT DAILY LIMIT CHECK ═══
+    const { data: limitCheck } = await sb.rpc("check_tubebot_limit", { _user_id: currentUserId });
+    if (limitCheck && !limitCheck.allowed) {
+      return new Response(JSON.stringify({
+        error: `Limite diário do TubeBot atingido (${limitCheck.used}/${limitCheck.limit}). Faça upgrade para mais mensagens.`,
+        limit_reached: true,
+        used: limitCheck.used,
+        daily_limit: limitCheck.limit,
+        tier: limitCheck.tier,
+      }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ═══ CONVERSATION MEMORY ═══
     let conversationMemoryBlock = '';
     try {
