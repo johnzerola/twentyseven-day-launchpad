@@ -4862,6 +4862,7 @@ export type Database = {
         Args: { _api_name: string }
         Returns: boolean
       }
+      check_tubebot_limit: { Args: { _user_id: string }; Returns: Json }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
       consume_credits: {
         Args: { _amount: number; _user_id: string }
