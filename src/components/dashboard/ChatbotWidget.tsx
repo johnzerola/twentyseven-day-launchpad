@@ -442,7 +442,12 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
         return;
       }
       if (resp.status === 429) {
-        addAssistantMsg('⏳ Rate limit atingido. Tente novamente em alguns segundos.');
+        const limitData = await resp.json().catch(() => ({}));
+        if (limitData.limit_reached) {
+          addAssistantMsg(`🚫 Limite diário do TubeBot atingido (${limitData.used}/${limitData.daily_limit} mensagens). Plano: **${limitData.tier}**.\n\nFaça upgrade para aumentar seu limite diário:\n- 🟢 Starter: 10/dia\n- 🔵 Pro: 30/dia\n- 🟣 Studio: 100/dia`);
+        } else {
+          addAssistantMsg('⏳ Rate limit atingido. Tente novamente em alguns segundos.');
+        }
         setLoading(false);
         return;
       }
