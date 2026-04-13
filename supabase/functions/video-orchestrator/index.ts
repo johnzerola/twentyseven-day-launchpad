@@ -11,11 +11,11 @@ const corsHeaders = {
 
 // Ensemble model mapping — OPTIMIZED: all Gemini (no GPT-5 gateway costs)
 const MODELS = {
-  hookGen: "gemini-2.5-pro",              // Phase 0: Hook + retention loops (was openai/gpt-5)
-  draftScript: "gemini-2.5-flash",        // Phase 1: Fast draft
-  refineScript: "gemini-2.5-pro",         // Phase 2: Creative refinement + scene_blueprint
-  factCheck: "gemini-2.5-flash",          // Phase 3: Fact-check (was openai/gpt-5-mini)
-  sceneBreak: "gemini-2.5-flash-lite",    // Phase 4: Scene breakdown
+  hookGen: "gemini-2.5-flash",             // Phase 0: Hook (was Pro — Flash handles structured hooks well)
+  draftScript: "gemini-2.5-flash",         // Phase 1: Fast draft
+  refineScript: "gemini-2.5-flash",        // Phase 2: Creative refinement (Flash + quality boost engine)
+  factCheck: "gemini-2.5-flash-lite",      // Phase 3: Fact-check (lightweight)
+  sceneBreak: "gemini-2.5-flash-lite",     // Phase 4: Scene breakdown
 };
 
 serve(async (req) => {

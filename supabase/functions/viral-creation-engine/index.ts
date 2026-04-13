@@ -203,7 +203,7 @@ serve(async (req) => {
     const conceptRes = await fetch(`${AI_URL}?key=${GOOGLE_AI_API_KEY}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "system",

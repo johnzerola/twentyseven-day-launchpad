@@ -66,7 +66,7 @@ serve(async (req) => {
     const dnaRes = await fetch(AI_URL, {
       method: "POST", headers: aiH,
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
