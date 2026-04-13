@@ -446,7 +446,7 @@ export async function callGemini(
   apiKey: string, system: string, userMsg: string,
   opts: { model?: string; maxTokens?: number; temperature?: number; jsonMode?: boolean } = {}
 ): Promise<string> {
-  const model = opts.model || 'gemini-2.5-pro';
+  const model = opts.model || 'gemini-2.5-flash';
   const s = sanitizeUnicode(system);
   const u = sanitizeUnicode(userMsg);
 
@@ -528,7 +528,7 @@ export async function callGeminiWithFallback(
   apiKey: string, system: string, userMsg: string,
   opts: { primaryModel?: string; fallbackModel?: string; maxTokens?: number; label?: string; temperature?: number; jsonMode?: boolean }
 ): Promise<string> {
-  const models = [opts.primaryModel || 'gemini-2.5-pro', opts.fallbackModel].filter(Boolean) as string[];
+  const models = [opts.primaryModel || 'gemini-2.5-flash', opts.fallbackModel].filter(Boolean) as string[];
   for (const model of models) {
     try {
       return await callGemini(apiKey, system, userMsg, { model, maxTokens: opts.maxTokens, temperature: opts.temperature, jsonMode: opts.jsonMode });
@@ -549,7 +549,7 @@ export async function callGeminiStreaming(
   apiKey: string, system: string, userMsg: string,
   opts: { primaryModel?: string; fallbackModel?: string; maxTokens?: number; label?: string }
 ): Promise<Response> {
-  const models = [opts.primaryModel || 'gemini-2.5-pro', opts.fallbackModel].filter(Boolean) as string[];
+  const models = [opts.primaryModel || 'gemini-2.5-flash', opts.fallbackModel].filter(Boolean) as string[];
   const label = opts.label || 'Streaming';
   const s = sanitizeUnicode(system);
   const u = sanitizeUnicode(userMsg);

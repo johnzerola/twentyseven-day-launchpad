@@ -756,7 +756,7 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
           `Escreva os primeiros 90 SEGUNDOS de narração para um vídeo de ${duration}min sobre: "${topic}".\n\nO hook deve ser IMPOSSÍVEL de ignorar. Desenvolva 3 open loops com profundidade.\nRetorne APENAS texto de narração pura — zero tags, zero anotações.`,
           {
             primaryModel: "gemini-2.5-flash",
-            fallbackModel: "gemini-2.5-pro",
+            fallbackModel: "gemini-2.5-flash-lite",
             maxTokens: 4000,
             label: `PHASE-0 HOOK runId=${runId}`,
           },
@@ -1274,7 +1274,7 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
                 GOOGLE_AI_API_KEY,
                 actSystemPrompt,
                 actMessage,
-                { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
+                { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-flash-lite", maxTokens: actMaxTokens, label: `ACT${actPlan.act} runId=${runId}` },
               );
 
               if (!actRes.ok) {
@@ -1351,7 +1351,7 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
                       GOOGLE_AI_API_KEY,
                       systemPrompt,
                       `ENCERRAMENTO FINAL DO ROTEIRO\n\nContexto (final do último trecho):\n"${contextForClose}"\n\nEscreva ~${closingWords} palavras para FECHAR este roteiro com:\n- CLÍMAX se ainda não aconteceu\n- RESOLUÇÃO completa e satisfatória\n- Binge Loop final\n\nMantenha o mesmo tom. APENAS narração pura.`,
-                      { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: 8192, label: `ACT-CLOSE runId=${runId}` },
+                      { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-flash-lite", maxTokens: 8192, label: `ACT-CLOSE runId=${runId}` },
                     );
                     if (closeRes.ok && closeRes.body) {
                       ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
@@ -1393,7 +1393,7 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
                 GOOGLE_AI_API_KEY,
                 systemPrompt,
                 `CONTINUAÇÃO EXTRA — O roteiro ainda precisa de ~${remaining} palavras para atingir ${dur} minutos.\n\nÚltimas 800 palavras:\n"${contextWords}"\n\nContinue aprofundando a narrativa com:\n- Novas camadas de detalhes e nuances\n- Callbacks a elementos plantados no início\n- Desenvolvimento de personagens secundários\n- Aprofundamento emocional\n${overflowAct >= 2 || remaining < 1500 ? '\n- RESOLUÇÃO FINAL + Binge Loop (este é o trecho final)' : '\n- Termine com tensão para permitir mais continuação'}\n\nApenas narração pura. NÃO repita conteúdo anterior.`,
-                { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-pro", maxTokens: actMaxTokens, label: `OVERFLOW${overflowAct} runId=${runId}` },
+                { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-flash-lite", maxTokens: actMaxTokens, label: `OVERFLOW${overflowAct} runId=${runId}` },
               );
               if (ovRes.ok && ovRes.body) {
                 ctrl.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n\n" } }] })}\n\n`));
@@ -1452,7 +1452,7 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
       userMessage,
       {
         primaryModel: "gemini-2.5-flash",
-        fallbackModel: "gemini-2.5-pro",
+        fallbackModel: "gemini-2.5-flash-lite",
         maxTokens: 32000,
         label: `PHASE-1 DRAFT runId=${runId}`,
       },
