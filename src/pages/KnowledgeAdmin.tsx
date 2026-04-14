@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Brain, BookOpen, Film, Clapperboard, Search, Database, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, Rocket, Dna, TrendingUp, Layers, Tv2 } from 'lucide-react';
 import { ReferenceChannelAnalyzer } from '@/components/dashboard/ReferenceChannelAnalyzer';
+import { NicheSkillTemplates } from '@/components/dashboard/NicheSkillTemplates';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -651,6 +652,11 @@ const KnowledgeAdmin = () => {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* Niche Skill Templates — editable without redeploy */}
+        <div className="mt-8">
+          <NicheSkillTemplates />
+        </div>
       </div>
     </DashboardLayout>
   );
