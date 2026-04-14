@@ -214,6 +214,7 @@ ${scriptKnowledge.slice(0, 600)}
 🎯 HOOKS TOP: ${topHooks.slice(0, 400)}
 📐 ESTRUTURAS: ${structures.slice(0, 300)}
 ${rejectionContext}${consensusContext}${slopContext}${pastLessonsBlock}
+${nicheTemplateBlock}
 
 ${starterTier ? FLASH_REFINE_MASTERCLASS : ''}
 ${buildFlashQualityBoost({ durationMin: parseInt(duration) || 15, style: styleLC, isStarterTier: starterTier, phase: 'refine' })}
@@ -230,7 +231,9 @@ A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWord
 
     // ═══ SMART AI ROUTING — Choose engine based on style + tier ═══
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    const userTierRefine = (body?.userTier || 'starter').toLowerCase();
+    // Get user tier from subscription
+    const { data: tierData } = await sb.rpc("get_user_tier", { _user_id: _userId });
+    const userTierRefine = (tierData || 'starter').toString().toLowerCase();
     const starterTier = userTierRefine === 'starter';
     // Starter: always Gemini Flash (cost optimization — skip Claude & Pro)
     const useClaude = !starterTier && hasClaude && CLAUDE_STYLES.includes(styleLC);
