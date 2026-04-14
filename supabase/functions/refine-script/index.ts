@@ -236,10 +236,6 @@ A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWord
 
     // ═══ SMART AI ROUTING — Choose engine based on style + tier ═══
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    // Get user tier from subscription
-    const { data: tierData } = await sb.rpc("get_user_tier", { _user_id: _userId });
-    const userTierRefine = (tierData || 'starter').toString().toLowerCase();
-    const starterTier = userTierRefine === 'starter';
     // Starter: always Gemini Flash (cost optimization — skip Claude & Pro)
     const useClaude = !starterTier && hasClaude && CLAUDE_STYLES.includes(styleLC);
     const useGeminiPro = !starterTier && GEMINI_PRO_STYLES.includes(styleLC);
