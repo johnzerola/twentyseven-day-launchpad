@@ -544,6 +544,13 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
     const nicheLC = (niche || '').toLowerCase();
     const nicheSpecific = Object.entries(nicheGuides).find(([key]) => nicheLC.includes(key))?.[1] || '';
     const selectedStyle = styleGuides[styleLC] || styleGuides['narração'];
+
+    // ═══ NICHE SKILL TEMPLATE (from DB — editable without redeploy) ═══
+    const nicheTemplate = await fetchNicheTemplate(nicheLC, styleLC);
+    const nicheTemplateInjection = buildNicheInjection(nicheTemplate);
+    if (nicheTemplate) {
+      console.log(`[NICHE-TEMPLATE] runId=${runId} Injected template: "${nicheTemplate.display_name}" for niche="${nicheLC}" style="${styleLC}"`);
+    }
     
     // ========== Genre direction (auto-detect from style/niche) ==========
     const genreKey = styleLC || nicheLC || '';
