@@ -1,6 +1,7 @@
 import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,7 +46,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
+    const userId = _claims.claims.sub as string;
+
+    // ═══ CREDIT ENFORCEMENT ═══
+    const creditBlock = await enforceCreditGuard(userId, "viral-creation-engine");
+    if (creditBlock) return creditBlock;
 
     const {
       niche, language = "pt", video_type = "long",
