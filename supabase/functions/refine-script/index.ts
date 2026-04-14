@@ -83,6 +83,11 @@ serve(async (req) => {
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // Get user tier early (needed for system prompt)
+    const { data: tierData } = await sb.rpc("get_user_tier", { _user_id: _userId });
+    const userTierRefine = (tierData || 'starter').toString().toLowerCase();
+    const starterTier = userTierRefine === 'starter';
+
     // Fetch knowledge + past learnings in parallel
     const [ytRes, scriptRes, hookRes, structRes, rejectionsRes] = await Promise.all([
       sb.from("youtube_knowledge").select("category,title,content").order("priority", { ascending: false }).limit(5),
