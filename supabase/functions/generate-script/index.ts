@@ -4,6 +4,8 @@ import { callGeminiWithFallback, callGeminiStreaming, callClaude } from "../_sha
 import { DARK_CHANNEL_STRATEGY_INJECTION, THUMBNAIL_CTR_RULES_2026 } from "../_shared/dark-channel-strategy-2026.ts";
 import { buildSkillsInjection, CLAUDE_HOOK_POLISH_SYSTEM } from "../_shared/scriptwriting-skills.ts";
 import { buildFlashQualityBoost } from "../_shared/flash-quality-boost.ts";
+import { enforceCreditGuard } from "../_shared/credit-guard.ts";
+import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -267,6 +269,12 @@ serve(async (req) => {
       });
     }
     const currentUserId: string | null = userData.user.id || null;
+
+    // ═══ CREDIT ENFORCEMENT ═══
+    if (currentUserId) {
+      const creditBlock = await enforceCreditGuard(currentUserId, "generate-script");
+      if (creditBlock) return creditBlock;
+    }
 
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
