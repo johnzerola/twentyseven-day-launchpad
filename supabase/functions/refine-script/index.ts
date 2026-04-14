@@ -57,12 +57,21 @@ serve(async (req) => {
     if (_authErr || !_claims?.claims) {
       return errResp("Invalid or expired token", 401);
     }
+    const _userId = _claims.claims.sub as string;
+
+    // ═══ CREDIT ENFORCEMENT ═══
+    const creditBlock = await enforceCreditGuard(_userId, "refine-script");
+    if (creditBlock) return creditBlock;
 
     const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
     const styleLC = (style || '').toLowerCase();
     const isWebDoc = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'].includes(styleLC);
     
     if (!draft_script) throw new Error("draft_script is required");
+
+    // ═══ NICHE TEMPLATE ═══
+    const nicheTemplate = await fetchNicheTemplate(niche || '', styleLC);
+    const nicheTemplateBlock = buildNicheInjection(nicheTemplate);
 
     const runId = phaseId || crypto.randomUUID();
     const hasClaude = !!Deno.env.get("CLAUDE_API_KEY");
