@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callClaudeStreaming, callGeminiStreaming, callClaude } from "../_shared/gemini-direct.ts";
 import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_shared/scriptwriting-skills.ts";
 import { buildFlashQualityBoost, FLASH_REFINE_MASTERCLASS } from "../_shared/flash-quality-boost.ts";
+import { enforceCreditGuard } from "../_shared/credit-guard.ts";
+import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance

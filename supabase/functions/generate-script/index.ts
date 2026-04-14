@@ -934,6 +934,7 @@ ${smartKnowledgeBlock || 'N/A — usando conhecimento geral'}
 ${selectedStyle}
 ${genreDirection ? `\n${genreDirection}\n` : ''}
 ${nicheSpecific ? `\n${nicheSpecific}\n` : ''}
+${nicheTemplateInjection}
 ${viralInjection}
 ${intelBlock}
 ${hookInjection}
