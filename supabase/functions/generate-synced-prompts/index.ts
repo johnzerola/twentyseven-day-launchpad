@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX } from "../_shared/veo3-policy-filter.ts";
 import { PROMPT_ANATOMY_CHECKLIST, SCENE_COVERAGE_STRATEGY, CAMERA_SHOT_VARIETY_RULES, MULTI_CHARACTER_RULES, CHARACTER_TAG_FORMAT, validatePromptAnatomy, buildConditionalTraining } from "../_shared/video-production-training.ts";
+import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,18 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // ═══ AUTH + CREDIT CHECK ═══
+    const authHeader = req.headers.get("authorization") || '';
+    if (authHeader.startsWith("Bearer ")) {
+      const _authSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } });
+      const { data: _claims } = await _authSb.auth.getClaims(authHeader.replace("Bearer ", ""));
+      if (_claims?.claims?.sub) {
+        const creditBlock = await enforceCreditGuard(_claims.claims.sub as string, "generate-synced-prompts");
+        if (creditBlock) return creditBlock;
+      }
+    }
+
     const { script, videoStyle, characters, audioDurationSeconds, sceneDurationSeconds, language, niche, sceneBlueprintFromScript } = await req.json();
     
     // ★ LONGFORM GUARD: Reject single-request scene generation for content > 10 min

@@ -2104,6 +2104,60 @@ export type Database = {
         }
         Relationships: []
       }
+      niche_skill_templates: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          effectiveness_score: number | null
+          emotional_arc_template: string | null
+          example_hooks: string[] | null
+          forbidden_patterns: string[] | null
+          hook_guidelines: string | null
+          id: string
+          is_active: boolean | null
+          niche: string
+          pacing_notes: string | null
+          style: string
+          system_prompt_addition: string | null
+          tone_rules: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          effectiveness_score?: number | null
+          emotional_arc_template?: string | null
+          example_hooks?: string[] | null
+          forbidden_patterns?: string[] | null
+          hook_guidelines?: string | null
+          id?: string
+          is_active?: boolean | null
+          niche: string
+          pacing_notes?: string | null
+          style?: string
+          system_prompt_addition?: string | null
+          tone_rules?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          effectiveness_score?: number | null
+          emotional_arc_template?: string | null
+          example_hooks?: string[] | null
+          forbidden_patterns?: string[] | null
+          hook_guidelines?: string | null
+          id?: string
+          is_active?: boolean | null
+          niche?: string
+          pacing_notes?: string | null
+          style?: string
+          system_prompt_addition?: string | null
+          tone_rules?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       niche_velocity: {
         Row: {
           avg_views_per_video: number | null
@@ -4436,6 +4490,42 @@ export type Database = {
         }
         Relationships: []
       }
+      viral_alerts: {
+        Row: {
+          alert_type: string | null
+          channel_name: string | null
+          id: string
+          metadata: Json | null
+          pre_viral_score: number | null
+          sent_at: string | null
+          user_id: string
+          video_id: string
+          video_title: string | null
+        }
+        Insert: {
+          alert_type?: string | null
+          channel_name?: string | null
+          id?: string
+          metadata?: Json | null
+          pre_viral_score?: number | null
+          sent_at?: string | null
+          user_id: string
+          video_id: string
+          video_title?: string | null
+        }
+        Update: {
+          alert_type?: string | null
+          channel_name?: string | null
+          id?: string
+          metadata?: Json | null
+          pre_viral_score?: number | null
+          sent_at?: string | null
+          user_id?: string
+          video_id?: string
+          video_title?: string | null
+        }
+        Relationships: []
+      }
       viral_content_library: {
         Row: {
           category: string
@@ -4867,6 +4957,10 @@ export type Database = {
       consume_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: boolean
+      }
+      enforce_credits: {
+        Args: { _operation: string; _user_id: string }
+        Returns: Json
       }
       get_niche_benchmarks: { Args: { _niche?: string }; Returns: Json[] }
       get_user_tier: {

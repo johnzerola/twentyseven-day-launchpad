@@ -13,6 +13,7 @@ const useNoIndex = () => {
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BarChart3, Youtube, FileText, ArrowUpRight, TrendingUp, DollarSign, Zap, Target, Sparkles, Rocket, Eye, Clock, Layout, Brain, CheckCircle2, Lightbulb, Activity } from 'lucide-react';
 import { ViralDiagnosisPanel } from '@/components/dashboard/ViralDiagnosisPanel';
+import { ViralAlertsFeed } from '@/components/dashboard/ViralAlertsFeed';
 import { ApiUsageDashboard } from '@/components/dashboard/ApiUsageDashboard';
 import { ProductivityDashboard } from '@/components/dashboard/ProductivityDashboard';
 import { TrendNotifications } from '@/components/dashboard/TrendNotifications';
@@ -226,6 +227,9 @@ const Dashboard = () => {
 
         {/* 🚀 Next Best Action — Decision Engine */}
         <NextBestActionWidget />
+
+        {/* 🔥 Viral Alerts Feed */}
+        <ViralAlertsFeed />
 
         {/* Viral Diagnosis */}
         <ViralDiagnosisPanel />

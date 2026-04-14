@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callClaudeStreaming, callGeminiStreaming, callClaude } from "../_shared/gemini-direct.ts";
 import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_shared/scriptwriting-skills.ts";
 import { buildFlashQualityBoost, FLASH_REFINE_MASTERCLASS } from "../_shared/flash-quality-boost.ts";
+import { enforceCreditGuard } from "../_shared/credit-guard.ts";
+import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance
@@ -55,12 +57,21 @@ serve(async (req) => {
     if (_authErr || !_claims?.claims) {
       return errResp("Invalid or expired token", 401);
     }
+    const _userId = _claims.claims.sub as string;
+
+    // ═══ CREDIT ENFORCEMENT ═══
+    const creditBlock = await enforceCreditGuard(_userId, "refine-script");
+    if (creditBlock) return creditBlock;
 
     const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
     const styleLC = (style || '').toLowerCase();
     const isWebDoc = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'].includes(styleLC);
     
     if (!draft_script) throw new Error("draft_script is required");
+
+    // ═══ NICHE TEMPLATE ═══
+    const nicheTemplate = await fetchNicheTemplate(niche || '', styleLC);
+    const nicheTemplateBlock = buildNicheInjection(nicheTemplate);
 
     const runId = phaseId || crypto.randomUUID();
     const hasClaude = !!Deno.env.get("CLAUDE_API_KEY");
@@ -71,6 +82,11 @@ serve(async (req) => {
     console.log(`[PHASE-2 REFINE] runId=${runId} Slop score: ${slopCheck.score}`);
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Get user tier early (needed for system prompt)
+    const { data: tierData } = await sb.rpc("get_user_tier", { _user_id: _userId });
+    const userTierRefine = (tierData || 'starter').toString().toLowerCase();
+    const starterTier = userTierRefine === 'starter';
 
     // Fetch knowledge + past learnings in parallel
     const [ytRes, scriptRes, hookRes, structRes, rejectionsRes] = await Promise.all([
@@ -203,6 +219,7 @@ ${scriptKnowledge.slice(0, 600)}
 🎯 HOOKS TOP: ${topHooks.slice(0, 400)}
 📐 ESTRUTURAS: ${structures.slice(0, 300)}
 ${rejectionContext}${consensusContext}${slopContext}${pastLessonsBlock}
+${nicheTemplateBlock}
 
 ${starterTier ? FLASH_REFINE_MASTERCLASS : ''}
 ${buildFlashQualityBoost({ durationMin: parseInt(duration) || 15, style: styleLC, isStarterTier: starterTier, phase: 'refine' })}
@@ -219,8 +236,6 @@ A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWord
 
     // ═══ SMART AI ROUTING — Choose engine based on style + tier ═══
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    const userTierRefine = (body?.userTier || 'starter').toLowerCase();
-    const starterTier = userTierRefine === 'starter';
     // Starter: always Gemini Flash (cost optimization — skip Claude & Pro)
     const useClaude = !starterTier && hasClaude && CLAUDE_STYLES.includes(styleLC);
     const useGeminiPro = !starterTier && GEMINI_PRO_STYLES.includes(styleLC);

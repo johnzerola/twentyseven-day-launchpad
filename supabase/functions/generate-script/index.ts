@@ -4,6 +4,8 @@ import { callGeminiWithFallback, callGeminiStreaming, callClaude } from "../_sha
 import { DARK_CHANNEL_STRATEGY_INJECTION, THUMBNAIL_CTR_RULES_2026 } from "../_shared/dark-channel-strategy-2026.ts";
 import { buildSkillsInjection, CLAUDE_HOOK_POLISH_SYSTEM } from "../_shared/scriptwriting-skills.ts";
 import { buildFlashQualityBoost } from "../_shared/flash-quality-boost.ts";
+import { enforceCreditGuard } from "../_shared/credit-guard.ts";
+import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -267,6 +269,12 @@ serve(async (req) => {
       });
     }
     const currentUserId: string | null = userData.user.id || null;
+
+    // ═══ CREDIT ENFORCEMENT ═══
+    if (currentUserId) {
+      const creditBlock = await enforceCreditGuard(currentUserId, "generate-script");
+      if (creditBlock) return creditBlock;
+    }
 
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
     const isShort = videoType === 'short';
@@ -536,6 +544,13 @@ INSTRUÇÃO: PRIORIZE as técnicas com maior avg_score. Elas provaram funcionar 
     const nicheLC = (niche || '').toLowerCase();
     const nicheSpecific = Object.entries(nicheGuides).find(([key]) => nicheLC.includes(key))?.[1] || '';
     const selectedStyle = styleGuides[styleLC] || styleGuides['narração'];
+
+    // ═══ NICHE SKILL TEMPLATE (from DB — editable without redeploy) ═══
+    const nicheTemplate = await fetchNicheTemplate(nicheLC, styleLC);
+    const nicheTemplateInjection = buildNicheInjection(nicheTemplate);
+    if (nicheTemplate) {
+      console.log(`[NICHE-TEMPLATE] runId=${runId} Injected template: "${nicheTemplate.display_name}" for niche="${nicheLC}" style="${styleLC}"`);
+    }
     
     // ========== Genre direction (auto-detect from style/niche) ==========
     const genreKey = styleLC || nicheLC || '';
@@ -919,6 +934,7 @@ ${smartKnowledgeBlock || 'N/A — usando conhecimento geral'}
 ${selectedStyle}
 ${genreDirection ? `\n${genreDirection}\n` : ''}
 ${nicheSpecific ? `\n${nicheSpecific}\n` : ''}
+${nicheTemplateInjection}
 ${viralInjection}
 ${intelBlock}
 ${hookInjection}
