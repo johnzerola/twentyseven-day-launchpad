@@ -232,7 +232,7 @@ serve(async (req) => {
       }
     }
 
-    // Feed to ai_learning
+    // Feed to ai_learning + send viral alerts
     if (results.pre_viral_found > 0) {
       try {
         await sb.from("ai_learning").insert({
@@ -245,6 +245,50 @@ serve(async (req) => {
           }),
         });
       } catch (_) { /* ignore */ }
+
+      // ═══ VIRAL ALERTS — notify users who track these niches ═══
+      try {
+        const highScoreCandidates = results.candidates.filter((c: any) => c.pre_viral_score >= 85);
+        if (highScoreCandidates.length > 0) {
+          // Find users who have channels in this niche
+          const { data: users } = await sb.from("user_channels")
+            .select("user_id")
+            .ilike("niche", `%${niche || ''}%`)
+            .limit(50);
+          
+          if (users && users.length > 0) {
+            const alertRows = [];
+            for (const u of users) {
+              for (const c of highScoreCandidates.slice(0, 3)) {
+                alertRows.push({
+                  user_id: u.user_id,
+                  video_id: c.id,
+                  video_title: c.title,
+                  channel_name: c.channel,
+                  pre_viral_score: c.pre_viral_score,
+                  alert_type: 'email',
+                  metadata: { velocity_score: c.velocity_score, views: c.views },
+                });
+              }
+            }
+            // Upsert to avoid duplicate alerts
+            await sb.from("viral_alerts").upsert(alertRows, { onConflict: "user_id,video_id,alert_type" });
+            console.log(`[PRE-VIRAL] Queued ${alertRows.length} viral alerts for ${users.length} users`);
+
+            // Trigger email notification function
+            try {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-viral-alert`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({ candidates: highScoreCandidates.slice(0, 3), niche }),
+              });
+            } catch (_) { console.warn("[PRE-VIRAL] Alert email dispatch failed (non-critical)"); }
+          }
+        }
+      } catch (alertErr) { console.warn("[PRE-VIRAL] Alert system error:", alertErr); }
     }
 
     try {
