@@ -3558,6 +3558,160 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_step: number | null
+          id: string
+          input_params: Json | null
+          results: Json | null
+          squad_name: string
+          started_at: string | null
+          status: string
+          template_id: string | null
+          total_steps: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          input_params?: Json | null
+          results?: Json | null
+          squad_name: string
+          started_at?: string | null
+          status?: string
+          template_id?: string | null
+          total_steps?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          input_params?: Json | null
+          results?: Json | null
+          squad_name?: string
+          started_at?: string | null
+          status?: string
+          template_id?: string | null
+          total_steps?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_runs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "squad_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_steps: {
+        Row: {
+          agent_icon: string | null
+          agent_name: string
+          agent_role: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          input_data: Json | null
+          output_data: Json | null
+          requires_approval: boolean | null
+          run_id: string
+          started_at: string | null
+          status: string
+          step_index: number
+          task_description: string | null
+          user_feedback: string | null
+        }
+        Insert: {
+          agent_icon?: string | null
+          agent_name: string
+          agent_role?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          requires_approval?: boolean | null
+          run_id: string
+          started_at?: string | null
+          status?: string
+          step_index: number
+          task_description?: string | null
+          user_feedback?: string | null
+        }
+        Update: {
+          agent_icon?: string | null
+          agent_name?: string
+          agent_role?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          requires_approval?: boolean | null
+          run_id?: string
+          started_at?: string | null
+          status?: string
+          step_index?: number
+          task_description?: string | null
+          user_feedback?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_steps_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "squad_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_templates: {
+        Row: {
+          agents: Json
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          pipeline_steps: Json
+          squad_type: string
+        }
+        Insert: {
+          agents?: Json
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          pipeline_steps?: Json
+          squad_type: string
+        }
+        Update: {
+          agents?: Json
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          pipeline_steps?: Json
+          squad_type?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
