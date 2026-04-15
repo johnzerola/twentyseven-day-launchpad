@@ -2,6 +2,7 @@ import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ANTI_SLOP_FOR_THUMBNAILS } from "../_shared/anti-slop-rules.ts";
+import { enhanceWithCritic } from "../_shared/squad-runner.ts";
 
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
@@ -172,9 +173,30 @@ Output ONLY via tool call.` },
       ctr_boost_source: 'ai_estimate_uncalibrated',
     }));
 
+    // ═══ SQUAD ENHANCEMENT: Refine thumbnail concepts ═══
+    let squadEnhanced = null;
+    try {
+      const GOOGLE_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || '';
+      const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || '';
+      const criticResult = await enhanceWithCritic(
+        GOOGLE_KEY, LOVABLE_KEY,
+        JSON.stringify(labeledVariants, null, 2),
+        { video_title, niche, emotion, type: 'thumbnails' },
+        `Você é um diretor de arte de thumbnails YouTube com 10 anos de experiência.
+1. Avalie cada conceito: funciona em 120x90px (mobile)? Texto legível? Contraste suficiente?
+2. Identifique o conceito MAIS FRACO e sugira uma alternativa melhor
+3. Para o MELHOR conceito: gere 2 variações A/B (mudando cor ou composição)
+4. Otimize os prompts AI para gerar imagens mais impactantes
+5. Score final de CTR estimado para cada variante
+Responda em português.`
+      );
+      squadEnhanced = criticResult.enhanced ? { refinement: criticResult.enhanced } : null;
+    } catch (e) { console.warn("Squad enhancement skipped:", (e as Error).message); }
+
     return new Response(JSON.stringify({
       success: true, video_title, niche,
       confidence_source: 'ai_estimate',
+      squad_enhanced: squadEnhanced,
       variants: labeledVariants,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
