@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
 import CheckoutReturn from "./pages/CheckoutReturn";
 import Subscription from "./pages/Subscription";
