@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { TITLE_ENGINEERING_INJECTION } from "../_shared/dark-channel-strategy-2026.ts";
 import { ANTI_SLOP_FOR_TITLES } from "../_shared/anti-slop-rules.ts";
+import { enhanceWithCritic } from "../_shared/squad-runner.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -436,10 +437,34 @@ Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
         ctr_calibration_note: 'CTR estimado pela IA sem calibração por nicho/idioma/canal — use como referência relativa.',
       }));
 
+      // ═══ SQUAD ENHANCEMENT: Critic refines titles ═══
+      let squadEnhanced = null;
+      try {
+        const criticResult = await enhanceWithCritic(
+          GOOGLE_AI_API_KEY || '', LOVABLE_API_KEY || '',
+          JSON.stringify(labeledTitles, null, 2),
+          { niche, topic, language, type: 'titles' },
+          `Você é um crítico expert de títulos YouTube. Analise os títulos e:
+1. Identifique títulos genéricos/clichês e sugira versões mais impactantes
+2. Verifique se cada título tem curiosity gap REAL
+3. Elimine títulos muito longos (>60 chars) ou muito vagos
+4. Sugira 5 títulos ADICIONAIS que exploram ângulos que faltaram
+5. Reescreva os 3 piores títulos com versões 10x melhores
+Responda em JSON: {"improved_titles": [...], "extra_titles": [...], "removed": [...], "critique": "string"}`
+        );
+        if (criticResult.enhanced) {
+          try {
+            const enhancedData = JSON.parse(criticResult.enhanced.match(/\{[\s\S]*\}/)?.[0] || '{}');
+            squadEnhanced = enhancedData;
+          } catch { squadEnhanced = { raw_critique: criticResult.critique }; }
+        }
+      } catch (e) { console.warn("Squad enhancement skipped:", (e as Error).message); }
+
       return new Response(JSON.stringify({
         titles: labeledTitles,
         competitor_analysis: parsed.competitor_analysis,
         confidence_source: 'ai_estimate',
+        squad_enhanced: squadEnhanced,
         research: {
           competitors_analyzed: competitorBlock ? true : false,
           brave_trends_used: braveBlock ? true : false,
