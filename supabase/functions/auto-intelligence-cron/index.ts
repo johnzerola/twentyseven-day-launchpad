@@ -85,49 +85,16 @@ serve(async (req) => {
     const isWeekly = schedule === "weekly" || new Date().getUTCDay() === 0;
 
     // ═══ WEEKLY TASKS (Sunday 02:00 UTC) ═══
-    if (schedule === "weekly") {
-      // Full self-learning cycle
-      await invokeFunction("self-learning-engine", { mode: "full_cycle", maxVideos: 10 });
-
-      // Intelligence sync — deep modes
+    if (isWeekly) {
+      await invokeFunction("self-learning-engine", { mode: "full_cycle", maxVideos: 5 });
       await invokeFunction("intelligence-sync-engine", { mode: "sync_viral_to_knowledge" });
-      await invokeFunction("intelligence-sync-engine", { mode: "cross_pollinate" });
-
-      // Backfill embeddings (larger batch)
-      await invokeFunction("backfill-embeddings", { batchSize: 10 });
-
-      // Deep research
       await invokeFunction("weekly-deep-research", {});
-
-      // Detect emerging channels
       await invokeFunction("detect-emerging-channels", {});
-
-      // Weekly channel rescan
       await invokeFunction("weekly-channel-rescan", {});
-
-      // Recalculate viral scores
       await invokeFunction("viral-score-worker", {});
-
-      // Update niche benchmarks
       await invokeFunction("niche-benchmark", {});
-
-      // Classify unclassified channels
-      await invokeFunction("classify-channels", {});
-
-      // Generate adaptive plans for all active users
       await invokeFunction("generate-adaptive-plan", { mode: "all_users" });
 
-      // Knowledge base health check
-      const { data: embCount } = await sb.from("knowledge_embeddings")
-        .select("id", { count: "exact", head: true });
-      if ((embCount as any)?.length < 100 || !embCount) {
-        await invokeFunction("backfill-embeddings", { batchSize: 20 });
-      }
-
-      // Title score calibration
-      await invokeFunction("title-score", { mode: "calibrate" });
-
-      // Refresh materialized views
       try {
         await sb.rpc("refresh_materialized_views");
         report.push({ function: "refresh_materialized_views", success: true });
@@ -135,7 +102,6 @@ serve(async (req) => {
         report.push({ function: "refresh_materialized_views", success: false, error: (e as Error).message });
       }
 
-      // Update confirmed viral status
       await sb.from("emerging_videos")
         .update({ status: "confirmed_viral", confirmed_viral_at: new Date().toISOString() })
         .eq("status", "pre_viral")
