@@ -25,6 +25,7 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+  // OPTIMIZED: Everything runs ONCE per day to save AI credits
   const { schedule = "daily" } = await req.json().catch(() => ({}));
   const report: any[] = [];
 
@@ -48,104 +49,52 @@ serve(async (req) => {
   }
 
   try {
-    // ═══ DAILY TASKS (every day at 06:00 UTC) ═══
-    if (schedule === "daily" || schedule === "weekly") {
-      // 1. Sync real video metrics
-      await invokeFunction("sync-video-metrics", {});
+    // ═══ SINGLE DAILY RUN (06:00 UTC) — all tasks consolidated ═══
+    
+    // 1. Sync real video metrics (no AI)
+    await invokeFunction("sync-video-metrics", {});
 
-      // 2. Track video performance for all users
-      await invokeFunction("track-video-performance", { mode: "check_all" });
+    // 2. Track video performance
+    await invokeFunction("track-video-performance", { mode: "check_all" });
 
-      // 3. Daily data ingestion (Brave search + task queue)
-      await invokeFunction("daily-data-ingestion", {});
+    // 3. Daily data ingestion (Brave search + task queue)
+    await invokeFunction("daily-data-ingestion", {});
 
-      // 4. Light self-learning (scan trending + update patterns)
-      await invokeFunction("self-learning-engine", { mode: "scan_trending", maxVideos: 5 });
+    // 4. Light self-learning
+    await invokeFunction("self-learning-engine", { mode: "scan_trending", maxVideos: 3 });
 
-      // 5. Daily backfill embeddings
-      await invokeFunction("backfill-embeddings", { batchSize: 3 });
+    // 5. Backfill embeddings
+    await invokeFunction("backfill-embeddings", { batchSize: 3 });
 
-      // 6. Intelligence sync (user activity feed)
-      await invokeFunction("intelligence-sync-engine", { mode: "user_activity_feed" });
+    // 6. Intelligence sync
+    await invokeFunction("intelligence-sync-engine", { mode: "user_activity_feed" });
 
-      // 7. Ranking check for tracked videos
-      await invokeFunction("track-video-performance", { mode: "check_rankings" });
+    // 7. Backtesting
+    await invokeFunction("backtest-scores", {});
 
-      // 8. Backtesting — compare predictions vs reality
-      await invokeFunction("backtest-scores", {});
+    // 8. Velocity snapshot (1x/day instead of 2x)
+    await invokeFunction("velocity-tracker", {});
 
-      // 9. Pattern evolution — adjust hooks/patterns based on real results
-      await invokeFunction("evolve-patterns", {});
+    // 9. Self-learning worker (1x/day instead of 3x)
+    await invokeFunction("self-learning-worker", {});
 
-      // 10. Velocity snapshots
-      await invokeFunction("velocity-tracker", {});
+    // 10. Pre-viral detection (1x/day instead of 2x)
+    await invokeFunction("pre-viral-detection", {});
 
-      // 11. Self-learning worker — close feedback loop & calibrate weights
-      await invokeFunction("self-learning-worker", {});
-
-      // 12. Pre-viral detection — find videos about to explode
-      await invokeFunction("pre-viral-detection", {});
-
-      // 13. Extract user learnings from linked videos
-      await invokeFunction("extract-user-learnings", {});
-    }
-
-    // ═══ MIDDAY VELOCITY CHECK (12:00 UTC) ═══
-    if (schedule === "midday") {
-      await invokeFunction("velocity-tracker", {});
-      await invokeFunction("track-video-performance", { mode: "check_all" });
-
-      // ★ NEW: Pre-viral detection on midday for faster detection
-      await invokeFunction("pre-viral-detection", {});
-
-      // ★ NEW: Self-learning worker for fresh calibration data
-      await invokeFunction("self-learning-worker", {});
-    }
+    // ═══ WEEKLY EXTRAS (Sunday only) ═══
+    const isWeekly = schedule === "weekly" || new Date().getUTCDay() === 0;
 
     // ═══ WEEKLY TASKS (Sunday 02:00 UTC) ═══
-    if (schedule === "weekly") {
-      // Full self-learning cycle
-      await invokeFunction("self-learning-engine", { mode: "full_cycle", maxVideos: 10 });
-
-      // Intelligence sync — deep modes
+    if (isWeekly) {
+      await invokeFunction("self-learning-engine", { mode: "full_cycle", maxVideos: 5 });
       await invokeFunction("intelligence-sync-engine", { mode: "sync_viral_to_knowledge" });
-      await invokeFunction("intelligence-sync-engine", { mode: "cross_pollinate" });
-
-      // Backfill embeddings (larger batch)
-      await invokeFunction("backfill-embeddings", { batchSize: 10 });
-
-      // Deep research
       await invokeFunction("weekly-deep-research", {});
-
-      // Detect emerging channels
       await invokeFunction("detect-emerging-channels", {});
-
-      // Weekly channel rescan
       await invokeFunction("weekly-channel-rescan", {});
-
-      // Recalculate viral scores
       await invokeFunction("viral-score-worker", {});
-
-      // Update niche benchmarks
       await invokeFunction("niche-benchmark", {});
-
-      // Classify unclassified channels
-      await invokeFunction("classify-channels", {});
-
-      // Generate adaptive plans for all active users
       await invokeFunction("generate-adaptive-plan", { mode: "all_users" });
 
-      // Knowledge base health check
-      const { data: embCount } = await sb.from("knowledge_embeddings")
-        .select("id", { count: "exact", head: true });
-      if ((embCount as any)?.length < 100 || !embCount) {
-        await invokeFunction("backfill-embeddings", { batchSize: 20 });
-      }
-
-      // Title score calibration
-      await invokeFunction("title-score", { mode: "calibrate" });
-
-      // Refresh materialized views
       try {
         await sb.rpc("refresh_materialized_views");
         report.push({ function: "refresh_materialized_views", success: true });
@@ -153,7 +102,6 @@ serve(async (req) => {
         report.push({ function: "refresh_materialized_views", success: false, error: (e as Error).message });
       }
 
-      // Update confirmed viral status
       await sb.from("emerging_videos")
         .update({ status: "confirmed_viral", confirmed_viral_at: new Date().toISOString() })
         .eq("status", "pre_viral")
