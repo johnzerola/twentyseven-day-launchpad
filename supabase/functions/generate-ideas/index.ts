@@ -232,10 +232,31 @@ Ordene por idea_score decrescente.`;
     allIdeas.sort((a: any, b: any) => (b.idea_score || 0) - (a.idea_score || 0));
     const topIdeas = allIdeas.slice(0, count);
 
+    // ═══ SQUAD ENHANCEMENT: Validate and refine ideas ═══
+    let squadEnhanced = null;
+    try {
+      const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY") || '';
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || '';
+      const criticResult = await enhanceWithCritic(
+        GOOGLE_AI_API_KEY, LOVABLE_API_KEY,
+        JSON.stringify(topIdeas, null, 2),
+        { niche, channelName, type: 'ideas' },
+        `Você é um validador estratégico de ideias YouTube. Analise as ideias e:
+1. Identifique ideias genéricas que qualquer canal faria — sugira twist único
+2. Valide se os scores estão realistas (compare com benchmarks do nicho)
+3. Reordene por REAL potencial (não score inflado)
+4. Para as top 5: sugira título provisório + conceito de thumbnail
+5. Adicione 3 ideias que o gerador PERDEU (ângulos que ninguém cobriu)
+Responda em português. Seja direto e prático.`
+      );
+      squadEnhanced = criticResult.enhanced ? { refinement: criticResult.enhanced, critique: criticResult.critique } : null;
+    } catch (e) { console.warn("Squad enhancement skipped:", (e as Error).message); }
+
     return new Response(JSON.stringify({
       ideas: topIdeas,
       total_generated: allIdeas.length,
       all_ideas: allIdeas,
+      squad_enhanced: squadEnhanced,
       data_sources: {
         viral_titles: viralRes.data?.length || 0,
         channels: channelRes.data?.length || 0,
