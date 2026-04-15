@@ -3687,6 +3687,7 @@ export type Database = {
           name: string
           pipeline_steps: Json
           squad_type: string
+          tool_context: string | null
         }
         Insert: {
           agents?: Json
@@ -3698,6 +3699,7 @@ export type Database = {
           name: string
           pipeline_steps?: Json
           squad_type: string
+          tool_context?: string | null
         }
         Update: {
           agents?: Json
@@ -3709,6 +3711,7 @@ export type Database = {
           name?: string
           pipeline_steps?: Json
           squad_type?: string
+          tool_context?: string | null
         }
         Relationships: []
       }
