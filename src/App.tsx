@@ -7,6 +7,7 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
+import CheckoutReturn from "./pages/CheckoutReturn";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ChannelSearch from "./pages/ChannelSearch";
@@ -64,6 +65,7 @@ const App = () => (
 
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

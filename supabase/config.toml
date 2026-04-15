@@ -186,3 +186,15 @@ verify_jwt = false
 [functions.sync-oauth-performance]
 verify_jwt = false
 
+[functions.get-stripe-price]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.payments-webhook]
+verify_jwt = false
+
+[functions.create-portal-session]
+verify_jwt = false
+

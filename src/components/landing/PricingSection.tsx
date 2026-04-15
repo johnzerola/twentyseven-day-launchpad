@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Check, Shield, Star, RotateCcw } from 'lucide-react';
+import { Check, Shield, Star, RotateCcw, X } from 'lucide-react';
+import { useStripeCheckout } from '@/hooks/useStripeCheckout';
+import { PaymentTestModeBanner } from '@/components/PaymentTestModeBanner';
+import { supabase } from '@/integrations/supabase/client';
 
 const fadeUp = (delay: number) => ({
   initial: { opacity: 0, y: 24 },
@@ -13,9 +16,50 @@ const fadeUp = (delay: number) => ({
 export const PricingSection = () => {
   const navigate = useNavigate();
   const [annual, setAnnual] = useState(true);
+  const { openCheckout, closeCheckout, isOpen, CheckoutForm } = useStripeCheckout();
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUser({ id: data.user.id, email: data.user.email });
+    });
+  }, []);
+
+  const handleSubscribe = (priceId: string) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    openCheckout({
+      priceId,
+      quantity: 1,
+      customerEmail: user.email,
+      userId: user.id,
+      returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    });
+  };
+
+  // Checkout overlay
+  if (isOpen && CheckoutForm) {
+    return (
+      <section className="py-20 md:py-28">
+        <div className="max-w-3xl mx-auto px-4">
+          <PaymentTestModeBanner />
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-display font-bold text-2xl text-foreground">Finalizar assinatura</h2>
+            <button onClick={closeCheckout} className="p-2 rounded-lg hover:bg-muted transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <CheckoutForm />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="pricing" className="py-20 md:py-28">
+      <PaymentTestModeBanner />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div {...fadeUp(0)} className="text-center mb-12">
           <span className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-red-500/10 text-red-400 border border-red-500/20 mb-6">
@@ -79,7 +123,7 @@ export const PricingSection = () => {
               ))}
             </ul>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => handleSubscribe(annual ? 'starter_yearly' : 'starter_monthly')}
               className="w-full py-3 rounded-xl border border-white/15 text-white text-sm font-medium hover:border-white/30 transition-colors"
             >
               Começar agora
@@ -146,7 +190,7 @@ export const PricingSection = () => {
             </div>
 
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => handleSubscribe(annual ? 'creator_pro_yearly' : 'creator_pro_monthly')}
               className="w-full btn-youtube shimmer py-4 text-lg font-display font-bold"
             >
               ▶ Quero monetizar em 27 dias
@@ -184,8 +228,11 @@ export const PricingSection = () => {
                 </li>
               ))}
             </ul>
-            <button className="w-full py-3 rounded-xl border border-white/15 text-white text-sm font-medium hover:border-white/30 transition-colors">
-              Falar com consultor
+            <button
+              onClick={() => handleSubscribe(annual ? 'studio_yearly' : 'studio_monthly')}
+              className="w-full py-3 rounded-xl border border-white/15 text-white text-sm font-medium hover:border-white/30 transition-colors"
+            >
+              Assinar Studio
             </button>
           </motion.div>
         </div>
