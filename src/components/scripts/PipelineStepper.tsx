@@ -1,9 +1,9 @@
 import { memo } from 'react';
-import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight, Mic, DollarSign } from 'lucide-react';
+import { Check, FileText, Film, Users, Image, Sparkles, ChevronRight, Mic, DollarSign, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-export type PipelineStep = 'script' | 'voice' | 'style' | 'characters' | 'prompts' | 'titles' | 'monetize';
+export type PipelineStep = 'script' | 'voice' | 'style' | 'characters' | 'prompts' | 'titles' | 'monetize' | 'squads';
 
 const STEPS: { key: PipelineStep; label: string; shortLabel: string; icon: any; desc: string }[] = [
   { key: 'script', label: 'Roteiro', shortLabel: '1', icon: FileText, desc: 'Gere o roteiro com IA' },
@@ -13,6 +13,7 @@ const STEPS: { key: PipelineStep; label: string; shortLabel: string; icon: any; 
   { key: 'prompts', label: 'Cenas', shortLabel: '5', icon: Image, desc: 'Prompts visuais sincronizados' },
   { key: 'titles', label: 'Títulos & SEO', shortLabel: '6', icon: Sparkles, desc: 'Otimização para YouTube' },
   { key: 'monetize', label: 'Monetizar', shortLabel: '7', icon: DollarSign, desc: 'Afiliados + receita dia 1' },
+  { key: 'squads', label: 'AI Squads', shortLabel: '8', icon: Bot, desc: 'Pipeline multi-agente' },
 ];
 
 interface PipelineStepperProps {
