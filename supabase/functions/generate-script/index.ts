@@ -991,6 +991,7 @@ ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
 ${deepResearchBlock}
+${squadResearchBlock}
 ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
