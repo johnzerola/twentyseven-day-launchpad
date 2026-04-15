@@ -5188,6 +5188,7 @@ export type Database = {
           source_table: string
         }[]
       }
+      owns_squad_step: { Args: { _run_id: string }; Returns: boolean }
       refresh_materialized_views: { Args: never; Returns: undefined }
     }
     Enums: {
