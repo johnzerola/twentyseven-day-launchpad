@@ -703,6 +703,57 @@ Este é um estilo NARRATIVO/CRIATIVO. Você tem LIBERDADE para:
     }
 
     // ═══════════════════════════════════════════════════════
+    // SQUAD PRE-RESEARCH: Multi-agent strategic analysis before script generation
+    // Runs Pesquisador + Analista de Retenção to enrich the prompt
+    // ═══════════════════════════════════════════════════════
+    let squadResearchBlock = '';
+    try {
+      const squadStart = Date.now();
+      const { callAIForSquad } = await import("../_shared/squad-runner-lite.ts");
+      
+      // Agent 1: Pesquisador — find unique angles
+      const researchOutput = await callAIForSquad(
+        GOOGLE_AI_API_KEY,
+        `Você é um pesquisador de tópicos virais YouTube. Para o tema "${topic}" no nicho "${niche || 'geral'}" (estilo: ${style || 'narração'}):
+1. Identifique 3 ângulos únicos que NINGUÉM cobriu direito
+2. Para cada ângulo: dado surpreendente + gap de conteúdo  
+3. Sugira o MELHOR ângulo com justificativa em 1 linha
+4. Liste 3 fatos/dados específicos que tornam o tema irresistível
+Seja CONCISO (máx 400 palavras). Responda em ${language || 'português'}.`,
+        `Tema: "${topic}"\nNicho: ${niche}\nEstilo: ${style}\nDuração: ${dur}min\nPesquisa web disponível: ${deepResearchBlock ? 'sim' : 'não'}`,
+        { maxTokens: 2048 }
+      );
+
+      // Agent 2: Analista de Retenção — plan retention strategy
+      const retentionOutput = await callAIForSquad(
+        GOOGLE_AI_API_KEY,
+        `Você é especialista em retenção YouTube. Para um vídeo de ${dur}min sobre "${topic}" (${style || 'narração'}):
+1. Projete 4 pontos de drop-off e técnica de recuperação para cada
+2. Defina onde colocar: open loops (3-4), pattern interrupts (2-3), cliffhangers (2)
+3. Sugira a estrutura de pacing ideal em 1 parágrafo
+4. Identifique o momento ideal para o clímax (% do vídeo)
+Seja CONCISO (máx 300 palavras). Responda em ${language || 'português'}.`,
+        `Tema: "${topic}"\nÂngulos do pesquisador:\n${researchOutput.slice(0, 1500)}`,
+        { maxTokens: 1536 }
+      );
+
+      if (researchOutput && retentionOutput) {
+        squadResearchBlock = `\n🤖 SQUAD PRE-RESEARCH (2 agentes analisaram o tema antes de você):
+
+🔍 PESQUISADOR:
+${researchOutput.slice(0, 1500)}
+
+📊 ANALISTA DE RETENÇÃO:
+${retentionOutput.slice(0, 1200)}
+
+INSTRUÇÃO: Use as descobertas dos agentes como BASE. O ângulo recomendado e a estratégia de retenção devem guiar seu roteiro.\n`;
+        console.log(`[SQUAD-RESEARCH] runId=${runId} 2 agents completed in ${Date.now() - squadStart}ms`);
+      }
+    } catch (e) {
+      console.warn(`[SQUAD-RESEARCH] runId=${runId} Failed (continuing without):`, (e as Error).message);
+    }
+
+    // ═══════════════════════════════════════════════════════
     // PHASE CACHE: Check if a previous run was interrupted
     // ═══════════════════════════════════════════════════════
     const phaseCache: Record<string, string> = {};
@@ -940,6 +991,7 @@ ${intelBlock}
 ${hookInjection}
 ${creativeWarning}
 ${deepResearchBlock}
+${squadResearchBlock}
 ${voiceInjection}
 ${channelKnowledgeBlock}
 ${backtestBlock}
