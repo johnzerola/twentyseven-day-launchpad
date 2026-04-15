@@ -64,7 +64,7 @@ const App = () => (
             <Route path="/workflow" element={<Navigate to="/tracker" replace />} />
             <Route path="/intelligence" element={<Navigate to="/channels" replace />} />
             <Route path="/power-tools" element={<Navigate to="/growth-tools" replace />} />
-            <Route path="/knowledge" element={<P><KnowledgeAdmin /></P>} />
+            <Route path="/knowledge" element={<P><AdminRoute><KnowledgeAdmin /></AdminRoute></P>} />
 
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
