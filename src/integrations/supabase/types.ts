@@ -4219,6 +4219,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_script_preferences: {
         Row: {
           avg_score_achieved: number | null
@@ -5172,6 +5193,13 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["subscription_tier"]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       match_knowledge: {
         Args: {
           filter_tables?: string[]
@@ -5192,6 +5220,7 @@ export type Database = {
       refresh_materialized_views: { Args: never; Returns: undefined }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       subscription_tier: "starter" | "pro" | "full" | "studio"
       video_type: "long" | "short"
     }
@@ -5321,6 +5350,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       subscription_tier: ["starter", "pro", "full", "studio"],
       video_type: ["long", "short"],
     },
