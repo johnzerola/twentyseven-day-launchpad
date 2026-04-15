@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { enhanceWithCritic } from "../_shared/squad-runner.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -74,10 +75,29 @@ Return ONLY valid JSON, no markdown.`;
     if (!jsonMatch) throw new Error("Failed to parse AI response");
     
     const result = JSON.parse(jsonMatch[0]);
-
-    // Add epistemic honesty labels
     result.confidence_source = 'ai_estimate';
     result.calibration_note = '⚠️ Scores são estimativas da IA sem calibração empírica — use como referência, não como previsão.';
+
+    // ═══ SQUAD ENHANCEMENT: Second opinion on packaging ═══
+    let squadEnhanced = null;
+    try {
+      const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || '';
+      const criticResult = await enhanceWithCritic(
+        GOOGLE_AI_API_KEY, LOVABLE_KEY,
+        JSON.stringify(result, null, 2),
+        { title, thumbnailPrompt, hookText, niche, type: 'packaging' },
+        `Você é um segundo avaliador de packaging YouTube. Revise a análise:
+1. Os scores estão justos? Ajuste se necessário com justificativa
+2. As melhorias sugeridas são realmente acionáveis?
+3. Adicione: 3 variações de título alternativas que melhorariam o CTR
+4. Sugira um conceito de thumbnail alternativo
+5. Dê o veredicto final: publicar, otimizar ou reformular?
+Responda em português.`
+      );
+      squadEnhanced = criticResult.enhanced || null;
+    } catch (e) { console.warn("Squad enhancement skipped:", (e as Error).message); }
+
+    result.squad_enhanced = squadEnhanced;
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
