@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Youtube } from 'lucide-react';
+import { Sparkles, Copy, Loader2, TrendingUp, FlaskConical, FileText, Heart, Globe, Youtube, Bot } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { YouTubeExportPanel } from '@/components/YouTubeExportPanel';
+import { SquadTab } from '@/components/squads/SquadTab';
 
 // Debounce guard for generation buttons
 const useClickGuard = (cooldownMs = 3000) => {
@@ -75,7 +76,7 @@ const getStyleColor = (style: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-type ActiveTab = 'generate' | 'ab-test' | 'seo-desc';
+type ActiveTab = 'generate' | 'ab-test' | 'seo-desc' | 'squads';
 
 const Titles = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('generate');
@@ -226,6 +227,7 @@ const Titles = () => {
     { id: 'generate' as const, label: 'Gerar Títulos', icon: Sparkles },
     { id: 'ab-test' as const, label: 'A/B Tester', icon: FlaskConical },
     { id: 'seo-desc' as const, label: 'Descrição SEO', icon: FileText },
+    { id: 'squads' as const, label: 'AI Squads', icon: Bot },
   ];
 
   const avgCTR = titles.length ? (titles.reduce((a, t) => a + t.estimatedCTR, 0) / titles.length).toFixed(1) : '0';
