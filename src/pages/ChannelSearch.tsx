@@ -14,6 +14,7 @@ import {
 import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
 import { EmergingChannelsTab } from '@/components/dubspy/EmergingChannelsTab';
 import { ClusterTab } from '@/components/dubspy/ClusterTab';
+import { SquadTab } from '@/components/squads/SquadTab';
 import { formatNumber } from '@/lib/formatters';
 import { NICHES, COUNTRIES, LANGUAGES, PERIODS } from '@/lib/constants';
 
