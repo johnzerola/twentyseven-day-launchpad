@@ -49,7 +49,7 @@ export function SquadPipelineStepper({ runId, onBack }: Props) {
     if (stepsRes.data) {
       setSteps(stepsRes.data);
       // Auto-expand the last completed or running step
-      const activeStep = stepsRes.data.findLast((s: any) => s.status === 'approved' || s.status === 'running');
+      const activeStep = [...stepsRes.data].reverse().find((s: any) => s.status === 'approved' || s.status === 'running');
       if (activeStep) setExpandedStep(activeStep.step_index);
     }
   }
