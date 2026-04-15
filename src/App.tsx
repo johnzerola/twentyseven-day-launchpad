@@ -24,6 +24,7 @@ import KnowledgeAdmin from "./pages/KnowledgeAdmin";
 import Tracker30Days from "./pages/Tracker30Days";
 import GrowthTools from "./pages/GrowthTools";
 import ShortsTrends from "./pages/ShortsTrends";
+import Squads from "./pages/Squads";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/tracker" element={<P><Tracker30Days /></P>} />
             <Route path="/growth-tools" element={<P><GrowthTools /></P>} />
             <Route path="/shorts-trends" element={<P><ShortsTrends /></P>} />
+            <Route path="/squads" element={<P><Squads /></P>} />
 
             {/* Consolidated redirects — old routes point to merged pages */}
             <Route path="/branding" element={<Navigate to="/growth-tools" replace />} />
