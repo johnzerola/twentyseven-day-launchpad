@@ -213,23 +213,20 @@ async function continueRun(sb: any, apiKey: string, runId: string, template: any
     const result = await executeAgentStep(apiKey, agent, step, input, results);
     results.push(result);
 
-    // Update step
+    // Update step as completed (no checkpoints - runs fully in backend)
     await sb.from("squad_steps").update({
-      status: step.checkpoint ? "completed" : "approved",
+      status: "approved",
       output_data: result,
       completed_at: new Date().toISOString(),
     }).eq("run_id", runId).eq("step_index", i);
 
-    // Update run
+    // Update run progress
     await sb.from("squad_runs").update({
       current_step: i,
       results,
-      status: step.checkpoint ? "paused" : "running",
+      status: "running",
       updated_at: new Date().toISOString(),
     }).eq("id", runId);
-
-    // If checkpoint, pause and wait for approval
-    if (step.checkpoint) return;
   }
 
   // All steps completed
