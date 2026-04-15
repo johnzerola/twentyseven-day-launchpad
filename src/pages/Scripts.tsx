@@ -1376,7 +1376,19 @@ const Scripts = () => {
                 </motion.div>
               )}
 
-              {/* Script Performance Tracker - always visible when script exists */}
+              {/* Step 8: AI Squads */}
+              {activeStep === 'squads' && (
+                <motion.div key="squads" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Bot className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold">AI Squads — Roteiros</h3>
+                  </div>
+                  <SquadTab toolContext="scripts" defaultNiche={niche} />
+                  <StepNavButtons currentStep="squads" onNavigate={setActiveStep} />
+                </motion.div>
+              )}
+
               {script && (
                 <motion.div key="perf-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   className="bg-card border border-border rounded-xl p-5">
