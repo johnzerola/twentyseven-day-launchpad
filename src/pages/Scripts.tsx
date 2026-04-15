@@ -680,6 +680,7 @@ const Scripts = () => {
     prompts: syncedScenes.length > 0,
     titles: false,
     monetize: false,
+    squads: false,
   };
 
   return (
