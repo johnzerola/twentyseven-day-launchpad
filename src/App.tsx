@@ -65,6 +65,7 @@ const App = () => (
 
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
