@@ -511,6 +511,10 @@ const Titles = () => {
             )}
           </>
         )}
+
+        {activeTab === 'squads' && (
+          <SquadTab toolContext="titles" defaultNiche={niche} />
+        )}
       </div>
     </DashboardLayout>
   );
