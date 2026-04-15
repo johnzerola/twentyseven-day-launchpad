@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network, History, Trash2, Save } from 'lucide-react';
+import { Search, Eye, Star, ExternalLink, Filter, Copy, TrendingUp, Shield, ShieldOff, Clock, Users, BarChart3, Flame, AlertTriangle, Globe, MapPin, Video, Tv, HelpCircle, Brain, Loader2, Rocket, Zap, Network, History, Trash2, Save, Bot } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import {
 import { DeepScanPanel } from '@/components/tubespy/DeepScanPanel';
 import { EmergingChannelsTab } from '@/components/dubspy/EmergingChannelsTab';
 import { ClusterTab } from '@/components/dubspy/ClusterTab';
+import { SquadTab } from '@/components/squads/SquadTab';
 import { formatNumber } from '@/lib/formatters';
 import { NICHES, COUNTRIES, LANGUAGES, PERIODS } from '@/lib/constants';
 
@@ -46,6 +47,7 @@ const TABS = [
   { id: 'emerging', label: 'Emergentes', icon: Rocket, desc: 'Canais novos com crescimento rápido' },
   { id: 'escapees', label: 'Algorithm Escapees', icon: Zap, desc: 'Canais que escaparam da bolha' },
   { id: 'cluster', label: 'Micro-Nichos', icon: Network, desc: 'Clustering de canais por IA' },
+  { id: 'squads', label: 'AI Squads', icon: Bot, desc: 'Squad de inteligência competitiva' },
 ];
 
 const ChannelSearch = () => {
@@ -655,6 +657,7 @@ const ChannelSearch = () => {
         {activeTab === 'emerging' && <EmergingChannelsTab mode="emerging" />}
         {activeTab === 'escapees' && <EmergingChannelsTab mode="escapees" />}
         {activeTab === 'cluster' && <ClusterTab />}
+        {activeTab === 'squads' && <SquadTab toolContext="dubspy" />}
       </div>
     </DashboardLayout>
   );

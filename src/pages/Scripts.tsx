@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X, Bot } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,7 @@ import { ProductionPack } from '@/components/scripts/ProductionPack';
 import { AffiliateLinksGenerator } from '@/components/scripts/AffiliateLinksGenerator';
 import { AutoPilotEngine } from '@/components/scripts/AutoPilotEngine';
 import { VideoCreationWizard, type WizardConfig } from '@/components/scripts/VideoCreationWizard';
+import { SquadTab } from '@/components/squads/SquadTab';
 
 const VIDEO_STYLES: VideoStyleOption[] = [
   { value: 'cinematográfico', label: '🎬 Cinematic Dark', desc: 'Iluminação dramática, sombras profundas, estilo Netflix Original' },
@@ -680,6 +681,7 @@ const Scripts = () => {
     prompts: syncedScenes.length > 0,
     titles: false,
     monetize: false,
+    squads: false,
   };
 
   return (
@@ -1375,7 +1377,19 @@ const Scripts = () => {
                 </motion.div>
               )}
 
-              {/* Script Performance Tracker - always visible when script exists */}
+              {/* Step 8: AI Squads */}
+              {activeStep === 'squads' && (
+                <motion.div key="squads" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Bot className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold">AI Squads — Roteiros</h3>
+                  </div>
+                  <SquadTab toolContext="scripts" defaultNiche={niche} />
+                  <StepNavButtons currentStep="squads" onNavigate={setActiveStep} />
+                </motion.div>
+              )}
+
               {script && (
                 <motion.div key="perf-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   className="bg-card border border-border rounded-xl p-5">
