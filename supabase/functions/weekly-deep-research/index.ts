@@ -290,7 +290,12 @@ serve(async (req) => {
 
     // ========== PHASE 2: PERPLEXITY DEEP RESEARCH ==========
     if (PERPLEXITY_API_KEY && (mode === "full" || mode === "perplexity_deep")) {
-      console.log("Phase 2: Perplexity deep research...");
+      // ⭐ Budget guard — Perplexity is the most expensive provider in this function
+      const blocked = await assertBudget("perplexity");
+      if (blocked) {
+        console.warn("[WEEKLY-RESEARCH] Perplexity blocked by budget guard, skipping deep research phase");
+      } else {
+        console.log("Phase 2: Perplexity deep research...");
 
       for (const domain of RESEARCH_DOMAINS) {
         const dateKey = new Date().toISOString().slice(0, 10);
