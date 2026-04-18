@@ -110,6 +110,9 @@ serve(async (req) => {
       .order("viral_score", { ascending: false })
       .limit(30);
 
+    // ═══ 3.5 FETCH USER REFERENCE CHANNELS INTEL (auto-injection) ═══
+    const referenceIntelBlock = await fetchReferenceIntelBlock(sb, userId, { limit: 3 });
+
     // ═══ 4. CALCULATE RAW METRICS ═══
     const subs = mainChannel.subscribers || 0;
     const totalVideos = (perfData as any)?.length || 0;
@@ -160,6 +163,7 @@ serve(async (req) => {
 
     // ═══ 5. AI DIAGNOSIS ═══
     const diagnosisPrompt = `You are a world-class YouTube growth strategist. Analyze this channel and create a BRUTALLY HONEST diagnosis with a personalized viral action plan.
+${referenceIntelBlock}
 
 ## CHANNEL DATA:
 - Name: ${mainChannel.channel_name}

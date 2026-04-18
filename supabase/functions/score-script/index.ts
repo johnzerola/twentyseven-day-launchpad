@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callGemini } from "../_shared/gemini-direct.ts";
 import { calibrateScore, getCalibrationStatus } from "../_shared/calibration-engine.ts";
 import { predictRetention } from "../_shared/retention-predictor.ts";
+import { runSquadPipeline, SQUAD_PRESETS } from "../_shared/squad-runner.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { script, niche, style, language, topic, phaseId } = await req.json();
+    const { script, niche, style, language, topic, phaseId, use_squad } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!script?.trim()) throw new Error("Script text is required");
@@ -467,6 +468,33 @@ serve(async (req) => {
       retentionPrediction = predictRetention(script, estimatedDuration, niche || 'default', realBenchmarks);
     } catch (e) { console.warn("Retention prediction error:", e); }
 
+    // ═══ SQUAD LAYER (opt-in via use_squad=true) ═══
+    let squadInsights: any = null;
+    if (use_squad === true) {
+      try {
+        const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+        const squadResult = await runSquadPipeline(
+          GOOGLE_AI_API_KEY,
+          LOVABLE_KEY,
+          SQUAD_PRESETS.score,
+          {
+            script: scriptText.slice(0, 8000),
+            niche: niche || "general",
+            style: style || "default",
+            current_score: calibratedCombinedScore,
+            current_weaknesses: allWeaknesses.slice(0, 5),
+          },
+        );
+        squadInsights = {
+          pipeline: squadResult.pipeline_name,
+          duration_ms: squadResult.total_duration_ms,
+          agents: squadResult.all_outputs.map(o => ({ agent: o.agent, output: o.output.slice(0, 4000) })),
+        };
+      } catch (sqErr) {
+        console.warn("[score-script] squad layer failed:", (sqErr as Error).message);
+      }
+    }
+
     return new Response(JSON.stringify({
       approved,
       combinedScore: calibratedCombinedScore,
@@ -513,6 +541,7 @@ serve(async (req) => {
         drop_zones: retentionPrediction.drop_zones,
         curve_summary: retentionPrediction.curve.filter((_: any, i: number) => i % 6 === 0),
       } : null,
+      squad: squadInsights,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

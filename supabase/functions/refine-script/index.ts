@@ -5,6 +5,7 @@ import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_sha
 import { buildFlashQualityBoost, FLASH_REFINE_MASTERCLASS } from "../_shared/flash-quality-boost.ts";
 import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
+import { runSquadPipeline, SQUAD_PRESETS } from "../_shared/squad-runner.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance
@@ -63,7 +64,7 @@ serve(async (req) => {
     const creditBlock = await enforceCreditGuard(_userId, "refine-script");
     if (creditBlock) return creditBlock;
 
-    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
+    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId, use_squad } = await req.json();
     const styleLC = (style || '').toLowerCase();
     const isWebDoc = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'].includes(styleLC);
     
@@ -236,6 +237,45 @@ A história é INTOCÁVEL. NÃO resuma. NÃO encurte. Mínimo ${effectiveMinWord
 
     // ═══ SMART AI ROUTING — Choose engine based on style + tier ═══
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+
+    // ═══ SQUAD MODE (opt-in via use_squad=true) ═══
+    // Returns full refined script as JSON instead of streaming.
+    if (use_squad === true && GOOGLE_AI_API_KEY) {
+      try {
+        console.log(`[PHASE-2 REFINE] runId=${runId} SQUAD MODE active`);
+        const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+        const squadResult = await runSquadPipeline(
+          GOOGLE_AI_API_KEY,
+          LOVABLE_KEY,
+          SQUAD_PRESETS.refine,
+          {
+            draft_script,
+            target_min_words: effectiveMinWords,
+            niche: niche || "general",
+            style: styleLC,
+            language: language || "português",
+          },
+        );
+        // Refiner output (agent index 1) is the actual refined script
+        const refinedScript = squadResult.all_outputs[1]?.output || "";
+        const validatorRaw = squadResult.all_outputs[2]?.output || "{}";
+        let validation: any = {};
+        try { validation = JSON.parse(validatorRaw); } catch { /* keep empty */ }
+
+        return new Response(JSON.stringify({
+          mode: "squad",
+          refined_script: refinedScript,
+          critique: squadResult.all_outputs[0]?.output || "",
+          validation,
+          duration_ms: squadResult.total_duration_ms,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (sqErr) {
+        console.warn("[refine-script] squad mode failed, falling back to streaming:", (sqErr as Error).message);
+      }
+    }
+
     // Starter: always Gemini Flash (cost optimization — skip Claude & Pro)
     const useClaude = !starterTier && hasClaude && CLAUDE_STYLES.includes(styleLC);
     const useGeminiPro = !starterTier && GEMINI_PRO_STYLES.includes(styleLC);
