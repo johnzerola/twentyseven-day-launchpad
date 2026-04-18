@@ -1,21 +1,18 @@
 
-User wants 4 priorities. Let me check current state of each before planning.
+User raises valid architectural critique: 115 edge functions calling each other ad hoc, no central orchestration, no distributed tracing. Debugging is painful.
 
-Priority 2: Connect references to script generator
-- Need to check if generate-script already has reference injection
-- reference-intel-injector exists in _shared
+Let me check what observability exists already:
+- `execution_logs` table exists (used by task-worker)
+- `api_logs` exists
+- `ai_cost_ledger` exists
+- No correlation_id / trace_id pattern
+- No central orchestrator — task-worker is closest but only handles queued tasks
 
-Priority 3: Cron jobs
-- weekly-channel-rescan: I just added cron last turn (Sundays 03h UTC) — already done
-- refresh-references: need to check if cron exists
+The right fix is NOT to rewrite 115 functions. It's to add a **correlation layer** + **central tracing** + **a thin orchestrator wrapper** that wraps existing fetch calls. Minimal invasive, maximum debugging value.
 
-Priority 4: Budget guard global
-- cost-guard.ts already exists (created last turn)
-- assertBudget already in perplexity-research
-- Need to add to: elevenlabs-tts, dark-mega-batch-launcher, weekly-deep-research, generate-veo3-video, etc.
+Plan focuses on 3 things in order of ROI:
+1. Distributed tracing (trace_id propagation + central trace table + UI viewer)
+2. Standardized inter-function caller (replaces raw fetch with logged wrapper)
+3. Pipeline visualization for multi-step flows (autopilot, squad-orchestrator, video pipeline)
 
-Priority 5: Dashboard cost per agent
-- AiCostPanel exists but only shows per-provider, not per-function
-- Need per-function breakdown view
-
-Let me verify a few things quickly.
+Keep it tight.
