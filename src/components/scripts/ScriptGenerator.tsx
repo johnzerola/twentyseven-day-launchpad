@@ -127,6 +127,8 @@ export const ScriptGenerator = ({
   const [retryCount, setRetryCount] = useState(0);
   const [referenceScript, setReferenceScript] = useState('');
   const [showReferenceField, setShowReferenceField] = useState(false);
+  const [fidelity, setFidelity] = useState<{ score: number; channel_name: string | null; breakdown: any } | null>(null);
+  const [fidelityOpen, setFidelityOpen] = useState(false);
   const MAX_RETRIES = 2;
   const lastClickRef = useRef(0);
 
@@ -290,6 +292,9 @@ export const ScriptGenerator = ({
             if (p._meta.rag_failed) {
               toast.warning('⚠️ Base de conhecimento indisponível — roteiro gerado sem dados contextuais');
             }
+            if (p._meta.fidelity && p._meta.fidelity.channel_name) {
+              setFidelity(p._meta.fidelity);
+            }
             continue;
           }
           const c = p.choices?.[0]?.delta?.content;
@@ -319,6 +324,8 @@ export const ScriptGenerator = ({
     setSceneBlueprintJson([]);
     setWizardStep(1);
     setEditMode(false);
+    setFidelity(null);
+    setFidelityOpen(false);
 
     try {
       // Shorts use dedicated ShortSpy analysis; Longform uses analyze-topic
@@ -1061,6 +1068,29 @@ export const ScriptGenerator = ({
                       ({progressPercent}% do alvo)
                     </span>
                   </p>
+                )}
+                {fidelity && fidelity.channel_name && (
+                  <button
+                    onClick={() => setFidelityOpen(o => !o)}
+                    className={`mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors ${
+                      fidelity.score >= 70 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      fidelity.score >= 40 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
+                      'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    }`}
+                    title="Score de fidelidade ao canal modelo"
+                  >
+                    🎯 {fidelity.score}% alinhado com {fidelity.channel_name}
+                  </button>
+                )}
+                {fidelity && fidelityOpen && fidelity.breakdown && (
+                  <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] text-muted-foreground bg-muted/20 rounded-md p-2 border border-border/50">
+                    {Object.entries(fidelity.breakdown).map(([key, val]: any) => (
+                      <div key={key} className="flex items-start gap-1.5">
+                        <span className={`font-mono w-8 text-right ${val.score >= 70 ? 'text-emerald-400' : val.score >= 40 ? 'text-yellow-400' : 'text-rose-400'}`}>{val.score}</span>
+                        <span className="flex-1"><strong>{key.replace(/_/g, ' ')}:</strong> {val.detail}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
               <div className="flex gap-1.5">

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { runSquadPipeline, SQUAD_PRESETS } from "../_shared/squad-runner.ts";
+import { persistIntelEmbeddings } from "../_shared/reference-intel-injector.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,9 +80,22 @@ async function processChannel(
   const viralSpike = top[0]?.views > avgViews * 3;
   const useFull = forceFull || !hasPriorScan || viralSpike;
 
+  // Role-aware framing tells the squad how to extract intel
+  const ROLE_LENS: Record<string, string> = {
+    model: "Foco: padrões a COPIAR. Você está modelando este canal por completo.",
+    style: "Foco: ESTÉTICA visual e narração. Estrutura é secundária.",
+    hook: "Foco: APENAS abertura/hook. Outras seções são irrelevantes.",
+    format: "Foco: ESTRUTURA macro do vídeo. Tom é irrelevante.",
+    competitor: "Foco: o que eles fazem MAS NÃO devemos copiar — encontre LACUNAS que ainda não exploraram.",
+    benchmark: "Foco: padrões ASPIRACIONAIS escaláveis — o que esse canal grande faz que ainda não dá para replicar mas devemos buscar.",
+    "anti-model": "Foco: TRAPS — padrões que parecem bons mas afundam o canal. Liste explicitamente o que EVITAR.",
+  };
+  const roleLens = ROLE_LENS[ref.role] || ROLE_LENS.model;
+
   const inputData = {
     channel_name: ref.channel_name,
     role: ref.role,
+    role_lens: roleLens,
     avg_views: Math.round(avgViews),
     top_videos: top.map(v => ({
       title: v.title,
@@ -121,6 +135,7 @@ async function processChannel(
   const intel: any = {
     scanned_at: new Date().toISOString(),
     mode: useFull ? "full" : "light",
+    role: ref.role,
     duration_ms: result.total_duration_ms,
     recent_videos: top.slice(0, 5).map(v => ({ title: v.title, views: v.views })),
     avg_views: Math.round(avgViews),
@@ -134,11 +149,24 @@ async function processChannel(
     else if (out.agent.includes("Evolution")) intel.evolution = parsed;
   }
 
-  // 5. Save
+  // 5. Save intel
   await sb.from("user_reference_channels").update({
     latest_intel: intel,
     last_scanned_at: new Date().toISOString(),
   }).eq("id", ref.id);
+
+  // 6. Embed + persist as RAG chunks (so generate-script can semantic-retrieve them)
+  try {
+    const emb = await persistIntelEmbeddings(sb, googleKey, {
+      id: ref.id,
+      user_id: ref.user_id,
+      channel_name: ref.channel_name,
+      role: ref.role,
+    }, intel);
+    console.log(`[refresh-refs] embeddings ${ref.channel_name}: +${emb.inserted} (${emb.failed} failed)`);
+  } catch (e) {
+    console.warn(`[refresh-refs] embedding failed for ${ref.channel_name}:`, (e as Error).message);
+  }
 
   return { ok: true, mode: intel.mode };
 }

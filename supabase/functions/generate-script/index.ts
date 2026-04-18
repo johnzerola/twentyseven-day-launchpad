@@ -7,9 +7,9 @@ import { buildFlashQualityBoost } from "../_shared/flash-quality-boost.ts";
 import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 import { fetchHookPerformanceBlock, fetchUserCtrPatternsBlock } from "../_shared/learning-loop-injector.ts";
-import { fetchReferenceIntelBlock } from "../_shared/reference-intel-injector.ts";
+import { fetchReferenceIntelBlock, fetchRagChunks } from "../_shared/reference-intel-injector.ts";
 import { composeScriptPrompt } from "../_shared/prompt-composer.ts";
-import { validateScript, stripTechnicalTags, buildRepairPrompt } from "../_shared/script-validators.ts";
+import { validateScript, stripTechnicalTags, buildRepairPrompt, computeFidelityScore } from "../_shared/script-validators.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -909,12 +909,13 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
 
     // ⭐ LEARNING LOOP: inject real hook + CTR patterns + REFERENCE CHANNEL intel from this user
     const _learningUserId = (typeof currentUserId === 'string' && currentUserId) ? currentUserId : null;
-    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock] = await Promise.all([
+    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock, referenceRagBlock] = await Promise.all([
       fetchHookPerformanceBlock(sb, _learningUserId, niche),
       fetchUserCtrPatternsBlock(sb, _learningUserId, niche),
-      _learningUserId ? fetchReferenceIntelBlock(sb, _learningUserId, { limit: 3, niche }) : Promise.resolve(""),
+      _learningUserId ? fetchReferenceIntelBlock(sb, _learningUserId, { limit: 5, niche }) : Promise.resolve(""),
+      _learningUserId && topic ? fetchRagChunks(sb, GOOGLE_AI_API_KEY, _learningUserId, `${topic} ${niche || ''} ${style || ''}`.trim(), { matchCount: 4 }) : Promise.resolve(""),
     ]);
-    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}`;
+    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}${referenceRagBlock}`;
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
 Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.${learningLoopInjection}
@@ -1674,12 +1675,37 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
           console.log(`[REPAIR] runId=${runId} applied: ${repairsApplied.join(",")}`);
         }
 
+        // ═══ FIDELITY SCORE: how aligned is the script with the user's MODEL channel? ═══
+        let fidelity: any = null;
+        try {
+          if (_learningUserId) {
+            const { data: modelRefs } = await sb
+              .from("user_reference_channels")
+              .select("channel_name, latest_intel")
+              .eq("user_id", _learningUserId)
+              .eq("role", "model")
+              .not("latest_intel", "is", null)
+              .order("last_scanned_at", { ascending: false, nullsFirst: false })
+              .limit(1);
+            const modelRef = modelRefs && modelRefs[0];
+            if (modelRef) {
+              fidelity = computeFidelityScore(finalScript, {
+                channel_name: modelRef.channel_name,
+                intel: modelRef.latest_intel,
+              }, { isShort: false });
+              console.log(`[FIDELITY] runId=${runId} score=${fidelity.score} channel=${modelRef.channel_name}`);
+            }
+          }
+        } catch (e) {
+          console.warn(`[FIDELITY] runId=${runId} compute failed:`, (e as Error).message);
+        }
+
         // Stream the (possibly repaired) script as SSE chunks to the client
         const enc = new TextEncoder();
         const repairedStream = new ReadableStream({
           start(controller) {
             // Metadata first
-            controller.enqueue(enc.encode(`data: ${JSON.stringify({ _meta: { rag_failed: ragFailed, validation: { passed: validation.passed, slop_score: validation.slopScore, hook_strength: validation.hookStrength, repairs_applied: repairsApplied, issues: validation.issues.slice(0, 5) } } })}\n\n`));
+            controller.enqueue(enc.encode(`data: ${JSON.stringify({ _meta: { rag_failed: ragFailed, validation: { passed: validation.passed, slop_score: validation.slopScore, hook_strength: validation.hookStrength, repairs_applied: repairsApplied, issues: validation.issues.slice(0, 5) }, fidelity } })}\n\n`));
             // Send the final (possibly repaired) script in chunks of ~200 chars for smoother UX
             const CHUNK_SIZE = 200;
             for (let i = 0; i < finalScript.length; i += CHUNK_SIZE) {
@@ -1698,6 +1724,7 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
             "X-Rag-Status": ragFailed ? "failed" : "ok",
             "X-Validation-Passed": validation.passed ? "1" : "0",
             "X-Repairs-Applied": repairsApplied.join(",") || "none",
+            "X-Fidelity-Score": fidelity ? String(fidelity.score) : "0",
           },
         });
       } catch (e) {
