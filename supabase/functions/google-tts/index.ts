@@ -479,8 +479,10 @@ serve(async (req) => {
       }
     }
 
-    // ══════ ENGINE 3: ElevenLabs fallback ══════
-    if (ELEVENLABS_API_KEY) {
+    // ══════ ENGINE 3: ElevenLabs fallback (DISABLED in economy mode) ══════
+    // To re-enable: set ELEVENLABS_ENABLED=true in edge function secrets
+    const ELEVENLABS_ENABLED = Deno.env.get('ELEVENLABS_ENABLED') === 'true';
+    if (ELEVENLABS_API_KEY && ELEVENLABS_ENABLED) {
       try {
         const result = await synthesizeWithElevenLabs(text, ELEVENLABS_API_KEY, speakingRate, fallbackGender as 'MALE' | 'FEMALE');
         if (returnBinary) {
