@@ -1,7 +1,6 @@
 
-User flagged 3 cost concerns:
-1. perplexity-research being called by many agents — expensive
-2. elevenlabs-tts + google-tts — why both?
-3. generate-segment-image — risk of cost explosion in batch
+User wants to close the learning loop: real YouTube Analytics data → improve future generations. Three layers proposed. Let me design a focused, minimal plan.
 
-Let me check actual usage in codebase before planning.
+Key insight: data already exists (`video_performance`, `output_performance_feedback`, OAuth sync) but doesn't feed back into generators. Need: extraction job + storage tables + injection into generators.
+
+Plan in 3 phases, in order of ROI. Keep concise.
