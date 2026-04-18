@@ -1,6 +1,7 @@
 import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { assertBudget, logCost } from "../_shared/cost-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
