@@ -110,6 +110,9 @@ serve(async (req) => {
       .order("viral_score", { ascending: false })
       .limit(30);
 
+    // ═══ 3.5 FETCH USER REFERENCE CHANNELS INTEL (auto-injection) ═══
+    const referenceIntelBlock = await fetchReferenceIntelBlock(sb, userId, { limit: 3 });
+
     // ═══ 4. CALCULATE RAW METRICS ═══
     const subs = mainChannel.subscribers || 0;
     const totalVideos = (perfData as any)?.length || 0;
