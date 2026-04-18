@@ -1,18 +1,26 @@
 
-User raises sharp, valid concern: instruction dilution. 15k+ tokens of system prompt → Flash follows first 30%, ignores last 40%. Real research-backed problem.
+User raises two distinct gaps:
 
-Let me check current state of generate-script before planning.
+**Gap 1: Reference channels → script generation is broken**
+- `refresh-references` exists, runs weekly via cron (verified earlier)
+- `latest_intel` stored as JSON in `user_reference_channels`
+- BUT: `generate-script` doesn't auto-fetch reference intel — frontend must pass `intelligenceBriefing` explicitly
+- `reference-intel-injector.ts` exists in _shared but is it called automatically? Need to verify
+- Missing: vector embeddings of intel + RAG retrieval + post-gen fidelity score
+- Missing roles: `competitor`, `benchmark`, `anti-model`
 
-The fix isn't to dumb down the prompt — it's to **layer/route** instructions intelligently:
-1. **Tier 1 (always-on, ~2k tokens)**: hard rules, format, anti-slop, language
-2. **Tier 2 (conditional, ~3k tokens)**: only inject blueprints/structures relevant to chosen style+duration
-3. **Tier 3 (post-hoc validators)**: instead of prompting "don't do X", run cheap validator passes after generation that catch + auto-repair
+**Gap 2: No consolidated cost dashboard**
+- `AiCostPanel` exists (per-provider + per-function from `ai_cost_ledger`)
+- User wants money values per agent visible
+- This is mostly DONE already — but maybe needs surfacing/improvement
 
-Plan = three concrete moves:
-1. **Prompt sharding**: split monolithic prompt into modules, dynamically compose only relevant ones
-2. **Multi-pass with specialist roles**: instead of one Flash call doing everything, chain 2-3 cheaper focused passes (hook specialist → body writer → retention auditor)
-3. **Validator + repair loop**: post-gen checks (anti-slop regex, dopamine count, hook strength) → if fails, surgical repair pass on just the broken section
+Let me focus on Gap 1 (the real meat). For Gap 2, the panel exists; just confirm and link.
 
-This actually aligns with the meta-orchestrator we just built — generate-script becomes a mini-squad.
+Plan structure:
+1. Auto-injection of reference intel in generate-script (no frontend dependency)
+2. Embed intel into knowledge_embeddings → RAG retrieval at gen-time
+3. Expand role enum: add `competitor`, `benchmark`, `anti-model`
+4. Post-gen fidelity score
+5. Confirm cost panel already covers Gap 2
 
-Keep tight.
+Keep concise.
