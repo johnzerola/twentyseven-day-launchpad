@@ -59,6 +59,10 @@ serve(async (req) => {
     const { text, voiceId, segmentIndex } = await req.json();
     if (!text?.trim()) throw new Error("Text is required");
 
+    // ⭐ Budget guard — block ElevenLabs if over daily/monthly threshold
+    const blocked = await assertBudget("elevenlabs");
+    if (blocked) return blocked;
+
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const voice = voiceId || "onwK4e9ZLuTAKqWW03F9";
@@ -97,6 +101,18 @@ serve(async (req) => {
     }
 
     const audioBase64 = base64Encode(audioBuffer!);
+
+    // Log cost (approx $0.03/call for elevenlabs, ~free for browser fallback)
+    if (usedEngine === "elevenlabs") {
+      logCost({
+        provider: "elevenlabs",
+        functionName: "elevenlabs-tts",
+        estimateKey: "elevenlabs-tts",
+        userId: _claims.claims.sub as string,
+        metadata: { voice, chars: text.length, segmentIndex },
+      }).catch(() => {});
+    }
+
     return new Response(JSON.stringify({ audioBase64, segmentIndex, mimeType: "audio/mpeg", engine: usedEngine }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
