@@ -53,6 +53,95 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_memory: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          run_id: string
+          step_index: number | null
+          value: Json
+          written_by: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          run_id: string
+          step_index?: number | null
+          value: Json
+          written_by: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          run_id?: string
+          step_index?: number | null
+          value?: Json
+          written_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_memory_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_runs: {
+        Row: {
+          completed_at: string | null
+          context: Json | null
+          created_at: string
+          current_step: number
+          error_message: string | null
+          goal: string
+          id: string
+          plan: Json | null
+          result_summary: Json | null
+          status: string
+          total_steps: number
+          trace_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          context?: Json | null
+          created_at?: string
+          current_step?: number
+          error_message?: string | null
+          goal: string
+          id?: string
+          plan?: Json | null
+          result_summary?: Json | null
+          status?: string
+          total_steps?: number
+          trace_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          context?: Json | null
+          created_at?: string
+          current_step?: number
+          error_message?: string | null
+          goal?: string
+          id?: string
+          plan?: Json | null
+          result_summary?: Json | null
+          status?: string
+          total_steps?: number
+          trace_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_budget_thresholds: {
         Row: {
           alert_at_pct: number
