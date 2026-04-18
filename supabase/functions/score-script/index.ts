@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { callGemini } from "../_shared/gemini-direct.ts";
 import { calibrateScore, getCalibrationStatus } from "../_shared/calibration-engine.ts";
 import { predictRetention } from "../_shared/retention-predictor.ts";
+import { runSquadPipeline, SQUAD_PRESETS } from "../_shared/squad-runner.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { script, niche, style, language, topic, phaseId } = await req.json();
+    const { script, niche, style, language, topic, phaseId, use_squad } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     if (!script?.trim()) throw new Error("Script text is required");
