@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, RefreshCw, Loader2, Star, Eye, Zap, BookOpen, Target, TrendingUp, Clock } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Loader2, Star, Eye, Zap, BookOpen, Target, TrendingUp, Clock, Swords, Trophy, Ban } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,10 +21,13 @@ interface ReferenceChannel {
 }
 
 const ROLE_CONFIG: Record<string, { label: string; icon: any; color: string; desc: string }> = {
-  model: { label: 'Modelo Geral', icon: Star, color: 'text-amber-400', desc: 'Modelar tudo: estilo, hooks, formato' },
-  style: { label: 'Estilo Visual', icon: Eye, color: 'text-purple-400', desc: 'Copiar estilo de narração e visual' },
-  hook: { label: 'Hooks', icon: Zap, color: 'text-red-400', desc: 'Modelar ganchos e aberturas' },
-  format: { label: 'Formato', icon: BookOpen, color: 'text-blue-400', desc: 'Copiar estrutura e formato' },
+  model:        { label: 'Modelo Geral',  icon: Star,     color: 'text-amber-400',   desc: 'Modelar tudo: estilo, hooks, formato' },
+  style:        { label: 'Estilo Visual', icon: Eye,      color: 'text-purple-400',  desc: 'Copiar estilo de narração e visual' },
+  hook:         { label: 'Hooks',         icon: Zap,      color: 'text-red-400',     desc: 'Modelar ganchos e aberturas' },
+  format:       { label: 'Formato',       icon: BookOpen, color: 'text-blue-400',    desc: 'Copiar estrutura e formato' },
+  competitor:   { label: 'Competidor',    icon: Swords,   color: 'text-orange-400',  desc: 'Mesmo nicho — monitorar mas NÃO copiar; encontrar lacunas' },
+  benchmark:    { label: 'Benchmark',     icon: Trophy,   color: 'text-emerald-400', desc: 'Aspiracional — canal grande de referência distante' },
+  'anti-model': { label: 'Anti-modelo',   icon: Ban,      color: 'text-rose-500',    desc: 'Armadilhas explícitas a EVITAR' },
 };
 
 const MAX_REFS = 5;
@@ -182,8 +185,8 @@ export const ReferenceChannelsTab = () => {
                   {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
                 </Button>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                💡 Escolha o papel: <strong>Modelo</strong> = copiar tudo · <strong>Hooks</strong> = só ganchos · <strong>Estilo</strong> = narração/visual · <strong>Formato</strong> = estrutura
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                💡 <strong>Modelo</strong>: copia tudo · <strong>Estilo/Hook/Formato</strong>: facetas específicas · <strong className="text-orange-400">Competidor</strong>: mesmo nicho, busca lacunas · <strong className="text-emerald-400">Benchmark</strong>: aspiracional · <strong className="text-rose-500">Anti-modelo</strong>: o que EVITAR
               </p>
             </div>
           </motion.div>
