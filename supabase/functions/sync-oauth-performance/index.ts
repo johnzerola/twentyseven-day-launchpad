@@ -352,6 +352,34 @@ serve(async (req) => {
       feedbackResults.selfLearning = { error: (e as Error).message };
     }
 
+    // 3c: ⭐ LEARNING LOOP — extract CTR patterns per user (winning/losing title patterns)
+    feedbackResults.ctrLearning = [];
+    for (const uid of uniqueUserIds) {
+      try {
+        const r = await fetch(`${supabaseUrl}/functions/v1/learn-from-ctr`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: uid }),
+        });
+        const d = await r.json().catch(() => ({}));
+        feedbackResults.ctrLearning.push({ user_id: uid, ok: r.ok, niches: d.results?.[0]?.niches?.length || 0 });
+      } catch (e) {
+        feedbackResults.ctrLearning.push({ user_id: uid, error: (e as Error).message });
+      }
+    }
+
+    // 3d: ⭐ LEARNING LOOP — classify hook types of synced videos and link to retention
+    try {
+      const hcRes = await fetch(`${supabaseUrl}/functions/v1/classify-hook-performance`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      feedbackResults.hookClassify = await hcRes.json().catch(() => ({ ok: hcRes.ok }));
+    } catch (e) {
+      feedbackResults.hookClassify = { error: (e as Error).message };
+    }
+
     return new Response(JSON.stringify({
       success: true,
       synced: results.filter(r => !r.error).length,
