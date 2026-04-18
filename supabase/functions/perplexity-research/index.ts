@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertBudget, logCost } from "../_shared/cost-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +73,10 @@ serve(async (req) => {
       );
     }
 
+    // ⭐ Budget guard — block if over daily/monthly threshold
+    const blocked = await assertBudget("perplexity");
+    if (blocked) return blocked;
+
     const { queries, singleQuery, storeResults } = await req.json();
 
     // Single query mode (for TubeBot tool calling)
@@ -88,7 +93,9 @@ serve(async (req) => {
         const sb = createClient(
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        );
+      );
+      // Log cost (sonar-pro estimate)
+      await logCost({ provider: "perplexity", functionName: "perplexity-research", estimateKey: singleQuery.model === "sonar" ? "perplexity-sonar" : "perplexity-sonar-pro" });
 
         await sb.from("youtube_knowledge").insert({
           title: singleQuery.storageTitle || singleQuery.query.slice(0, 100),
@@ -119,6 +126,8 @@ serve(async (req) => {
             q.model || "sonar-pro",
             q.searchRecency,
           );
+          // Log cost per query
+          await logCost({ provider: "perplexity", functionName: "perplexity-research", estimateKey: q.model === "sonar" ? "perplexity-sonar" : "perplexity-sonar-pro" });
           results.push({
             query: q.query,
             category: q.category,

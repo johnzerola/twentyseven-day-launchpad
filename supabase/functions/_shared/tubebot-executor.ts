@@ -388,9 +388,9 @@ export async function executeTool(
       }
 
       case "perplexity_research":
-        result = await callFn("perplexity-research", {
-          singleQuery: { query: args.query, searchRecency: args.searchRecency, storeInKnowledge: args.storeInKnowledge || false, storageCategory: args.storageCategory || "perplexity_research", storageTitle: args.storageTitle || args.query.slice(0, 100) },
-        }); break;
+        // ⭐ Restricted: redirect to brave-search + Gemini summarization (cheaper, equivalent for tubebot context)
+        result = await callFn("brave-search", { query: args.query, count: 8 });
+        break;
 
       case "analyze_thumbnail_ctr": {
         try {
