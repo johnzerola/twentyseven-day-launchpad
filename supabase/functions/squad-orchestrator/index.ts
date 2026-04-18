@@ -94,8 +94,9 @@ serve(async (req) => {
         }).eq("id", run.id);
       }
 
-      return new Response(JSON.stringify({ success: true, run_id: run.id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      await rootSpan?.end("success", { run_id: run.id });
+      return new Response(JSON.stringify({ success: true, run_id: run.id, trace_id: rootSpan?.traceId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "x-trace-id": rootSpan?.traceId ?? "" },
       });
     }
 
@@ -188,7 +189,9 @@ serve(async (req) => {
     throw new Error(`Unknown action: ${action}`);
   } catch (e) {
     console.error("squad-orchestrator error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }), {
+    const msg = e instanceof Error ? e.message : "Unknown";
+    await rootSpan?.end("error", null, msg);
+    return new Response(JSON.stringify({ error: msg, trace_id: rootSpan?.traceId }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
