@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SquadPipelineStepper } from '@/components/squads/SquadPipelineStepper';
-import { Play, Bot, Zap, Flame, Film } from 'lucide-react';
+import { Play, Bot, Zap, Flame, Film, Brain, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SQUAD_ICONS: Record<string, typeof Bot> = {
   production: Film,
@@ -26,6 +27,28 @@ export default function Squads() {
   const [inputContext, setInputContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [runs, setRuns] = useState<any[]>([]);
+  const [smartGoal, setSmartGoal] = useState('');
+  const [smartLoading, setSmartLoading] = useState(false);
+  const navigate = useNavigate();
+
+  async function startSmartSquad() {
+    if (!smartGoal.trim()) return;
+    setSmartLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-orchestrator', {
+        body: { action: 'start', goal: smartGoal, context: { language: 'pt-BR' } },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Squad inteligente iniciado! ${data.plan?.length || 0} passos planejados.`);
+      setSmartGoal('');
+      navigate('/admin/traces');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao iniciar squad inteligente');
+    } finally {
+      setSmartLoading(false);
+    }
+  }
 
   useEffect(() => {
     loadTemplates();
@@ -93,6 +116,43 @@ export default function Squads() {
             Equipes de agentes IA que trabalham juntos em pipeline para criar conteúdo YouTube.
           </p>
         </div>
+
+        {/* Smart Mode — Meta Orchestrator */}
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Modo Inteligente
+                  <Badge variant="default" className="text-xs"><Sparkles className="w-3 h-3 mr-1" />NEW</Badge>
+                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Descreva seu objetivo. Um meta-agente IA escolhe e executa os agentes necessários.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              placeholder="Ex: Pesquise tendências virais de finanças pessoais no Brasil esta semana e gere um roteiro de 8 minutos com hook forte e curva de retenção otimizada"
+              value={smartGoal}
+              onChange={(e) => setSmartGoal(e.target.value)}
+              rows={2}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Acompanhe a execução em <button onClick={() => navigate('/admin/traces')} className="text-primary hover:underline">Observability</button>
+              </p>
+              <Button onClick={startSmartSquad} disabled={smartLoading || !smartGoal.trim()}>
+                {smartLoading ? 'Planejando...' : <><Brain className="w-4 h-4 mr-2" />Iniciar Squad Inteligente</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Squad Templates */}
         <div className="grid gap-4 md:grid-cols-3">
