@@ -278,7 +278,13 @@ serve(async (req) => {
       if (creditBlock) return creditBlock;
     }
 
-    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = await req.json();
+    const body = await req.json();
+    const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = body;
+    // Feature flags for prompt-dilution fix:
+    //   useComposer (default true): use sharded prompt composer (~6k tokens vs ~15k)
+    //   validateAndRepair (default true for non-shorts): post-gen checks + surgical repair
+    const useComposer: boolean = body?.useComposer !== false;
+    const validateAndRepair: boolean = body?.validateAndRepair !== false;
     const isShort = videoType === 'short';
 
     // ═══ GEMINI (PRIMARY) via Direct API ═══
