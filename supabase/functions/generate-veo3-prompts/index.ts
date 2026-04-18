@@ -2,6 +2,7 @@ import { callGemini, callGeminiWithFallback, callGeminiOpenAICompat } from "../_
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { applyVeo3PolicyFilter, VEO3_POLICY_PROMPT, ANTI_TEXT_SUFFIX, TRIGGER_REPLACEMENTS } from "../_shared/veo3-policy-filter.ts";
 import { getUserTier } from "../_shared/tier-limits.ts";
+import { runSquadPipeline, SQUAD_PRESETS } from "../_shared/squad-runner.ts";
 
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
@@ -99,7 +100,7 @@ serve(async (req) => {
       });
     }
 
-    const { segments, characterDescription, videoStyle, characters } = await req.json();
+    const { segments, characterDescription, videoStyle, characters, use_squad } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
@@ -277,6 +278,45 @@ Segments:\n${segmentTexts}`
       }
     }
 
+    // ═══ Step 11: Optional Squad layer (Policy Validator + Cinematógrafo) ═══
+    let squadEnhanced: any = null;
+    if (use_squad === true) {
+      try {
+        const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+        const promptsForSquad = parsed.prompts.map((p: any, i: number) => ({
+          index: i,
+          segment: p.segmentIndex,
+          prompt: p.veo3Prompt,
+        }));
+        const squadResult = await runSquadPipeline(
+          GOOGLE_AI_API_KEY,
+          LOVABLE_KEY,
+          SQUAD_PRESETS.veo3,
+          { prompts: promptsForSquad, style: effectiveStyle, contentType },
+        );
+        // Final agent (Cinematógrafo) returns enhanced prompts JSON
+        try {
+          const enhancedJson = JSON.parse(squadResult.final_output);
+          if (Array.isArray(enhancedJson.enhanced_prompts)) {
+            for (const ep of enhancedJson.enhanced_prompts) {
+              if (parsed.prompts[ep.index]) {
+                parsed.prompts[ep.index].veo3Prompt = ep.prompt;
+                parsed.prompts[ep.index].squadEnhanced = true;
+              }
+            }
+          }
+          squadEnhanced = {
+            duration_ms: squadResult.total_duration_ms,
+            agents: squadResult.all_outputs.map(o => o.agent),
+          };
+        } catch (parseErr) {
+          console.warn("[veo3-squad] failed to parse enhanced output:", (parseErr as Error).message);
+        }
+      } catch (sqErr) {
+        console.warn("[veo3-squad] failed:", (sqErr as Error).message);
+      }
+    }
+
     return new Response(JSON.stringify({
       ...parsed,
       metadata: {
@@ -289,6 +329,7 @@ Segments:\n${segmentTexts}`
         isDocumentary,
         validationWarnings,
         autoFixes,
+        squad: squadEnhanced,
         promptDensityFormula: `${estimatedDuration}s ÷ 40 = ${(estimatedDuration / 40).toFixed(1)} base, adjusted for ${contentType}`,
       }
     }), {
