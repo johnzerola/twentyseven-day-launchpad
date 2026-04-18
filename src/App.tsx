@@ -26,6 +26,7 @@ import Tracker30Days from "./pages/Tracker30Days";
 import GrowthTools from "./pages/GrowthTools";
 import ShortsTrends from "./pages/ShortsTrends";
 import Squads from "./pages/Squads";
+import AdminTraces from "./pages/AdminTraces";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/intelligence" element={<Navigate to="/channels" replace />} />
             <Route path="/power-tools" element={<Navigate to="/growth-tools" replace />} />
             <Route path="/knowledge" element={<P><AdminRoute><KnowledgeAdmin /></AdminRoute></P>} />
+            <Route path="/admin/traces" element={<P><AdminRoute><AdminTraces /></AdminRoute></P>} />
 
             <Route path="/onboarding" element={<P><Onboarding /></P>} />
             <Route path="/pricing" element={<Pricing />} />

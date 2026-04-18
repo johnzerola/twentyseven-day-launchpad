@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { startSpan } from "../_shared/tracer.ts";
+import { callEdgeFn } from "../_shared/call-fn.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-trace-id, x-parent-span-id",
 };
 
 const MAX_CONCURRENCY = parseInt(Deno.env.get("TASK_WORKER_CONCURRENCY") || "2");
@@ -19,8 +21,7 @@ serve(async (req) => {
 
   const startTime = Date.now();
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const rootSpan = await startSpan(req, "task-worker", { input: { trigger: "cron" } });
 
   // ═══════════════════════════════════════════════════════════════
   // THROTTLE — Limit total runs per day
@@ -43,12 +44,11 @@ serve(async (req) => {
   }
 
   const callFn = async (fnName: string, payload: any) => {
-    const resp = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-      body: JSON.stringify(payload || {}),
-    });
-    return await resp.json();
+    try {
+      return await callEdgeFn(fnName, payload, { parentSpan: rootSpan });
+    } catch (e: any) {
+      return { error: e.message };
+    }
   };
 
   try {
@@ -191,8 +191,9 @@ serve(async (req) => {
       metadata: { tasks_processed: results.length, failed: totalFailed, results },
     }).catch(() => {});
 
-    return new Response(JSON.stringify({ success: true, processed: results, economy_mode: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    await rootSpan.end(totalFailed === 0 ? "success" : "error", { processed: results.length, failed: totalFailed }, totalFailed > 0 ? `${totalFailed} tasks failed` : undefined, { tasks_processed: results.length });
+    return new Response(JSON.stringify({ success: true, processed: results, trace_id: rootSpan.traceId, economy_mode: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json", "x-trace-id": rootSpan.traceId },
     });
 
   } catch (e: any) {
@@ -202,8 +203,9 @@ serve(async (req) => {
       success: false,
       error_message: e.message,
     }).catch(() => {});
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    await rootSpan.end("error", null, e.message);
+    return new Response(JSON.stringify({ error: e.message, trace_id: rootSpan.traceId }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json", "x-trace-id": rootSpan.traceId },
     });
   }
 });
