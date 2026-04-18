@@ -117,6 +117,43 @@ export default function Squads() {
           </p>
         </div>
 
+        {/* Smart Mode — Meta Orchestrator */}
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Modo Inteligente
+                  <Badge variant="default" className="text-xs"><Sparkles className="w-3 h-3 mr-1" />NEW</Badge>
+                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Descreva seu objetivo. Um meta-agente IA escolhe e executa os agentes necessários.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              placeholder="Ex: Pesquise tendências virais de finanças pessoais no Brasil esta semana e gere um roteiro de 8 minutos com hook forte e curva de retenção otimizada"
+              value={smartGoal}
+              onChange={(e) => setSmartGoal(e.target.value)}
+              rows={2}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Acompanhe a execução em <button onClick={() => navigate('/admin/traces')} className="text-primary hover:underline">Observability</button>
+              </p>
+              <Button onClick={startSmartSquad} disabled={smartLoading || !smartGoal.trim()}>
+                {smartLoading ? 'Planejando...' : <><Brain className="w-4 h-4 mr-2" />Iniciar Squad Inteligente</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Squad Templates */}
         <div className="grid gap-4 md:grid-cols-3">
           {templates.map((t) => {
