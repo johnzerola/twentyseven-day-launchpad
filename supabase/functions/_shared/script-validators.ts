@@ -223,3 +223,167 @@ Substitua superlativos ("incrível", "fantástico") por dados específicos. Queb
       return { system: "", user: "" };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// FIDELITY SCORE — How closely does the generated script match
+// the patterns of the user's reference (model) channel?
+// 100% deterministic, zero LLM cost.
+// ═══════════════════════════════════════════════════════════════
+export interface FidelityBreakdown {
+  hook_match: { score: number; detail: string };
+  title_pattern: { score: number; detail: string };
+  pacing: { score: number; detail: string };
+  dopamine_density: { score: number; detail: string };
+  angle_alignment: { score: number; detail: string };
+}
+export interface FidelityResult {
+  score: number;            // 0-100 weighted
+  channel_name: string | null;
+  breakdown: FidelityBreakdown;
+}
+
+interface IntelLike {
+  patterns?: { title_patterns?: string[]; hook_types?: string[]; pacing?: string };
+  strategy?: { angles_to_steal?: string[]; video_ideas?: string[] };
+  title_patterns?: string[];
+  hook_types?: string[];
+  pacing?: string;
+}
+
+/**
+ * Try to detect simple "patterns" (e.g., "começa com número", "pergunta retórica")
+ * inside hook section of the script.
+ */
+function checkHookMatch(script: string, hookTypes: string[]): { score: number; detail: string } {
+  if (!hookTypes || hookTypes.length === 0) return { score: 50, detail: "Sem padrões de hook do canal modelo" };
+  const head = script.slice(0, 600).toLowerCase();
+  let hits = 0;
+  const matched: string[] = [];
+  for (const ht of hookTypes.slice(0, 6)) {
+    const lower = ht.toLowerCase();
+    // crude keyword matching with stems
+    const stems = lower.match(/\b[a-záéíóúãõâêô]{4,}\b/gi) || [];
+    const stemHits = stems.filter((s) => head.includes(s)).length;
+    if (stemHits >= 2 || /número|numero|pergunt|cold.?open|conflito|contradição/.test(lower) && /\d|\?|mas|porém/.test(head)) {
+      hits++;
+      matched.push(ht);
+    }
+  }
+  const score = Math.min(100, Math.round((hits / Math.max(1, Math.min(hookTypes.length, 6))) * 100));
+  return { score, detail: matched.length ? `Padrões detectados: ${matched.slice(0, 2).join("; ")}` : "Nenhum padrão de hook do modelo detectado" };
+}
+
+function checkTitlePattern(script: string, titlePatterns: string[]): { score: number; detail: string } {
+  if (!titlePatterns || titlePatterns.length === 0) return { score: 50, detail: "Sem padrões de título do canal modelo" };
+  // We score the FIRST sentence (often used as on-screen title) against the patterns
+  const firstLine = script.split(/[.\n!?]/)[0]?.toLowerCase() || "";
+  const hasNumber = /\d/.test(firstLine);
+  const hasQuestion = script.slice(0, 300).includes("?");
+  const wantsNumber = titlePatterns.some((t) => /\d|número|numero/i.test(t));
+  const wantsQuestion = titlePatterns.some((t) => /pergunt|\?/i.test(t));
+  let score = 60;
+  const notes: string[] = [];
+  if (wantsNumber) {
+    if (hasNumber) { score += 20; notes.push("✅ número presente"); }
+    else { score -= 15; notes.push("❌ falta número"); }
+  }
+  if (wantsQuestion) {
+    if (hasQuestion) { score += 15; notes.push("✅ pergunta presente"); }
+    else { score -= 10; notes.push("❌ falta pergunta"); }
+  }
+  return { score: Math.max(0, Math.min(100, score)), detail: notes.join(" · ") || "padrão neutro" };
+}
+
+function checkPacing(script: string, pacingHint: string | undefined, isShort: boolean): { score: number; detail: string } {
+  // Approximate pacing by counting paragraph + sentence lengths
+  const sentences = script.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  if (sentences.length === 0) return { score: 0, detail: "roteiro vazio" };
+  const avgWords = sentences.reduce((s, x) => s + x.trim().split(/\s+/).length, 0) / sentences.length;
+  const targetMin = isShort ? 6 : 10;
+  const targetMax = isShort ? 14 : 22;
+  let score = 70;
+  let detail = `~${avgWords.toFixed(1)} palavras/frase`;
+  if (avgWords < targetMin) { score -= 15; detail += " (muito curto)"; }
+  else if (avgWords > targetMax) { score -= 20; detail += " (muito longo — pode cansar)"; }
+  else { score += 20; detail += " (ritmo na faixa)"; }
+  if (pacingHint && /rápid|veloz|fast|punch/i.test(pacingHint) && avgWords > 14) score -= 10;
+  return { score: Math.max(0, Math.min(100, score)), detail };
+}
+
+function checkDopamine(script: string, isShort: boolean): { score: number; detail: string } {
+  let count = 0;
+  for (const pat of DOPAMINE_MARKERS) {
+    const m = script.match(pat);
+    if (m) count += m.length;
+  }
+  const wordCount = script.split(/\s+/).filter(Boolean).length;
+  const expected = isShort ? 2 : Math.max(3, Math.floor(wordCount / 200));
+  const ratio = count / expected;
+  const score = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  return { score, detail: `${count} dopamina markers (esperado ${expected}+)` };
+}
+
+function checkAngleAlignment(script: string, angles: string[]): { score: number; detail: string } {
+  if (!angles || angles.length === 0) return { score: 60, detail: "Sem ângulos definidos no canal modelo" };
+  const lower = script.toLowerCase();
+  let hits = 0;
+  const matched: string[] = [];
+  for (const a of angles.slice(0, 5)) {
+    const stems = a.toLowerCase().match(/\b[a-záéíóúãõâêô]{5,}\b/gi) || [];
+    const stemHits = stems.filter((s) => lower.includes(s)).length;
+    if (stemHits >= 2) {
+      hits++;
+      matched.push(a.slice(0, 60));
+    }
+  }
+  const score = Math.min(100, Math.round((hits / Math.max(1, Math.min(angles.length, 5))) * 100));
+  return { score, detail: matched.length ? `${hits} ângulo(s) aplicado(s)` : "Nenhum ângulo do modelo detectado" };
+}
+
+export function computeFidelityScore(
+  script: string,
+  modelChannel: { channel_name: string; intel: IntelLike } | null,
+  opts: { isShort?: boolean } = {},
+): FidelityResult {
+  const isShort = !!opts.isShort;
+  if (!modelChannel || !modelChannel.intel) {
+    return {
+      score: 0,
+      channel_name: null,
+      breakdown: {
+        hook_match: { score: 0, detail: "Sem canal modelo" },
+        title_pattern: { score: 0, detail: "Sem canal modelo" },
+        pacing: { score: 0, detail: "Sem canal modelo" },
+        dopamine_density: { score: 0, detail: "Sem canal modelo" },
+        angle_alignment: { score: 0, detail: "Sem canal modelo" },
+      },
+    };
+  }
+  const intel = modelChannel.intel;
+  const hookTypes = intel.patterns?.hook_types || intel.hook_types || [];
+  const titlePatterns = intel.patterns?.title_patterns || intel.title_patterns || [];
+  const pacingHint = intel.patterns?.pacing || intel.pacing;
+  const angles = intel.strategy?.angles_to_steal || [];
+
+  const breakdown: FidelityBreakdown = {
+    hook_match: checkHookMatch(script, hookTypes),
+    title_pattern: checkTitlePattern(script, titlePatterns),
+    pacing: checkPacing(script, pacingHint, isShort),
+    dopamine_density: checkDopamine(script, isShort),
+    angle_alignment: checkAngleAlignment(script, angles),
+  };
+
+  // Weighted average — hook + angle weigh most because they define editorial fingerprint
+  const weighted =
+    breakdown.hook_match.score * 0.30 +
+    breakdown.angle_alignment.score * 0.25 +
+    breakdown.dopamine_density.score * 0.20 +
+    breakdown.pacing.score * 0.15 +
+    breakdown.title_pattern.score * 0.10;
+
+  return {
+    score: Math.round(weighted),
+    channel_name: modelChannel.channel_name,
+    breakdown,
+  };
+}
