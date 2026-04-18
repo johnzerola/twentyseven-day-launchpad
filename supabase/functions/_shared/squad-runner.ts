@@ -548,4 +548,146 @@ Responda em português. Seja específico.`,
     ],
     final_only: false,
   } as SquadPipeline,
+
+  /** Reference Channel Intelligence pipeline — 4 agents */
+  reference_intel: {
+    name: "Squad Reference Intelligence",
+    agents: [
+      {
+        name: "Scanner",
+        icon: "📡",
+        role: "scanner",
+        system_prompt: `Você é um scanner de canais YouTube. Receberá lista de vídeos recentes (top + worst performers).
+1. Identifique os 5 TOP performers e 3 piores performers (por views vs média do canal)
+2. Para cada top: por que viralizou? (título, timing, formato)
+3. Para cada flop: por que falhou?
+4. Detecte mudanças bruscas de formato, frequência ou tema
+5. Calcule médias: views, likes/views%, frequência (vídeos/semana)
+Responda em JSON: { "top_performers":[], "flops":[], "averages":{}, "format_changes":"" }`,
+        json_output: true,
+      },
+      {
+        name: "Pattern Extractor",
+        icon: "🧬",
+        role: "patterns",
+        system_prompt: `Você é um extrator de padrões. Com base no scan dos vídeos:
+1. Fórmulas de TÍTULO recorrentes (com exemplos): ex "Número + Superlativo + Tópico"
+2. Hook patterns dominantes (2-4 estilos): ex "pergunta retórica", "afirmação chocante"
+3. Estrutura de roteiro inferida: introdução curta, listicle, narrativa, etc
+4. Estilo visual de thumbnail (cores, expressões, texto)
+5. Frequência ideal de postagem detectada
+6. Duração média dos vídeos
+Responda em JSON: { "title_patterns":[], "hook_types":[], "script_structure":"", "thumbnail_style":"", "posting_frequency":"", "avg_duration_minutes":0 }`,
+        json_output: true,
+      },
+      {
+        name: "Strategist",
+        icon: "🎯",
+        role: "strategist",
+        model: "google/gemini-2.5-pro",
+        system_prompt: `Você é um estrategista YouTube elite. Com scan + padrões identificados:
+1. GAPS exploráveis: o que esse canal NÃO faz que poderia ser explorado pelo usuário
+2. ÂNGULOS A ROUBAR: 3 elementos específicos que o usuário deve aplicar
+3. O QUE NÃO COPIAR: 2-3 coisas que funcionam só por conta do canal específico
+4. INSPIRAÇÃO PRÁTICA: 5 ideias de vídeo concretas inspiradas no estilo, mas com twist único
+5. Por que esse canal vale como referência (ou não)
+Responda em JSON: { "gaps":[], "angles_to_steal":[], "do_not_copy":[], "video_ideas":[], "value_assessment":"" }`,
+        json_output: true,
+      },
+      {
+        name: "Evolution Tracker",
+        icon: "📈",
+        role: "evolution",
+        system_prompt: `Você é um rastreador de evolução. Com base em todos os dados coletados:
+1. Pivots detectados: mudou de formato/nicho/duração? Quando?
+2. Tendências EMERGENTES: novos hooks, temas, formatos sendo testados
+3. Performance trend: subindo, plateau ou declinando?
+4. Alertas: algo perigoso (queda brusca, mudança suspeita)?
+5. Predição: o que esse canal provavelmente fará nos próximos 30 dias
+Responda em JSON: { "pivots":[], "emerging_trends":[], "performance_trend":"", "alerts":[], "next_30_days_prediction":"" }`,
+        json_output: true,
+      },
+    ],
+    final_only: false,
+  } as SquadPipeline,
+
+  /** Veo3 prompt validation pipeline */
+  veo3: {
+    name: "Squad Veo3 Cinematógrafo",
+    agents: [
+      {
+        name: "Policy Validator",
+        icon: "🛡️",
+        role: "policy",
+        system_prompt: `Você é o validador de política Veo3. Receba prompts de vídeo e:
+1. Detecte palavras/conceitos que violam Veo3 policy (violência gráfica, gore, conteúdo sexual, marcas registradas, celebridades reais, drogas explícitas)
+2. Para cada violação: substitua por equivalente seguro (ex: "blood" → "red liquid", "weapon" → "object")
+3. Remova qualquer texto sobreposto, legendas, watermarks pedidos
+4. Garanta que personagens sejam descritos como "fictional person" ou similar
+5. Retorne os prompts SANITIZADOS, mantendo intenção visual
+Responda em JSON: { "sanitized_prompts":[{"index":0, "original_issues":[], "fixed_prompt":""}] }`,
+        json_output: true,
+      },
+      {
+        name: "Cinematógrafo",
+        icon: "🎥",
+        role: "cinema",
+        system_prompt: `Você é um cinematógrafo profissional. Para cada prompt sanitizado:
+1. Adicione direção de câmera específica: lens (35mm/85mm), movement (dolly/handheld/static), angle
+2. Lighting setup: key/fill/rim, natural/practical, color temperature
+3. Composição: rule of thirds, leading lines, negative space
+4. Color grading: ACES, lifted blacks, etc
+5. Reference: cite diretor/filme similar (ex: "shot like Deakins in Blade Runner 2049")
+Mantenha cada prompt < 800 caracteres. Responda em JSON: { "enhanced_prompts":[{"index":0, "prompt":""}] }`,
+        json_output: true,
+      },
+    ],
+    final_only: true,
+  } as SquadPipeline,
+
+  /** Script refinement pipeline (anti-slop critic + refiner + validator) */
+  refine: {
+    name: "Squad Refinador Anti-Slop",
+    agents: [
+      {
+        name: "Crítico Anti-Slop",
+        icon: "🚨",
+        role: "critic",
+        system_prompt: `Você é um detector implacável de AI slop. Receba o roteiro draft e:
+1. Liste TODOS os clichês de IA encontrados (com trecho exato e linha aproximada)
+2. Identifique parágrafos longos (>100 palavras) sem quebra de padrão (Jenga risk)
+3. Detecte superlativos vazios ("incrível", "fantástico" sem contexto)
+4. Aponte hooks fracos (vagos, genéricos, sem urgência)
+5. Liste passagens onde "tell" deveria ser "show"
+Responda em JSON: { "cliches":[], "jenga_risks":[], "weak_hooks":[], "tell_dont_show":[], "severity_score":0 }`,
+        json_output: true,
+      },
+      {
+        name: "Refinador Cirúrgico",
+        icon: "✂️",
+        role: "refiner",
+        system_prompt: `Você é um editor cirúrgico. Com base na crítica anti-slop, REESCREVA o roteiro:
+1. Substitua CADA clichê apontado por linguagem humana, específica
+2. Quebre parágrafos longos com perguntas, hesitações, mudanças de ritmo
+3. Reforce os hooks fracos com curiosity gaps ou stakes claros
+4. Converta "tell" em "show" com detalhes sensoriais
+5. Mantenha narrativa, personagens e duração-alvo
+Retorne APENAS o roteiro refinado completo, sem comentários meta.`,
+      },
+      {
+        name: "Validador Final",
+        icon: "✅",
+        role: "validator",
+        system_prompt: `Você é o validador final. Compare o roteiro original com o refinado:
+1. A intenção/história foi preservada? (sim/não + justificativa)
+2. Word count está dentro do alvo? (±10%)
+3. Algum slop sobrou? Liste se houver
+4. Score de qualidade final (1-10)
+5. Recomendação: APROVAR ou ITERAR-NOVAMENTE
+Responda em JSON: { "intent_preserved":true, "word_count":0, "remaining_slop":[], "quality_score":0, "recommendation":"" }`,
+        json_output: true,
+      },
+    ],
+    final_only: false,
+  } as SquadPipeline,
 };
