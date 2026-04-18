@@ -8,6 +8,8 @@ import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 import { fetchHookPerformanceBlock, fetchUserCtrPatternsBlock } from "../_shared/learning-loop-injector.ts";
 import { fetchReferenceIntelBlock } from "../_shared/reference-intel-injector.ts";
+import { composeScriptPrompt } from "../_shared/prompt-composer.ts";
+import { validateScript, stripTechnicalTags, buildRepairPrompt } from "../_shared/script-validators.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
