@@ -163,6 +163,7 @@ serve(async (req) => {
 
     // ═══ 5. AI DIAGNOSIS ═══
     const diagnosisPrompt = `You are a world-class YouTube growth strategist. Analyze this channel and create a BRUTALLY HONEST diagnosis with a personalized viral action plan.
+${referenceIntelBlock}
 
 ## CHANNEL DATA:
 - Name: ${mainChannel.channel_name}
