@@ -388,9 +388,9 @@ export async function executeTool(
       }
 
       case "perplexity_research":
-        result = await callFn("perplexity-research", {
-          singleQuery: { query: args.query, searchRecency: args.searchRecency, storeInKnowledge: args.storeInKnowledge || false, storageCategory: args.storageCategory || "perplexity_research", storageTitle: args.storageTitle || args.query.slice(0, 100) },
-        }); break;
+        // ⭐ Restricted: redirect to brave-search + Gemini summarization (cheaper, equivalent for tubebot context)
+        result = await callFn("brave-search", { query: args.query, count: 8 });
+        break;
 
       case "analyze_thumbnail_ctr": {
         try {
@@ -428,17 +428,19 @@ export async function executeTool(
       }
 
       case "algorithm_current_status": {
-        const [intK, pxResult] = await Promise.all([
+        // ⭐ Perplexity removed from tubebot — use brave-search (cheaper) for live data
+        const [intK, braveResult] = await Promise.all([
           sb.from("youtube_algorithm_knowledge").select("title, content, data_json, category, confidence_score")
             .eq("applies_to_format", args.format === "shorts" ? "shorts" : args.format === "longform" ? "longform" : "both")
             .order("priority", { ascending: false }).limit(10),
-          callFn("perplexity-research", {
-            singleQuery: { query: `YouTube algorithm best practices 2025-2026 for ${args.niche} ${args.format || "both"} videos. What's working right now?`, searchRecency: "month" },
+          callFn("brave-search", {
+            query: `YouTube algorithm 2025 2026 ${args.niche} ${args.format || "both"} best practices`,
+            count: 8,
           }),
         ]);
         result = {
           internal_knowledge: (intK.data || []).map((k: any) => ({ title: k.title, content: k.content, data: k.data_json, confidence: k.confidence_score })),
-          live_research: pxResult, niche: args.niche, format: args.format,
+          live_research: braveResult, niche: args.niche, format: args.format,
         };
         break;
       }

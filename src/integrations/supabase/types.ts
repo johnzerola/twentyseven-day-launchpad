@@ -53,6 +53,66 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_budget_thresholds: {
+        Row: {
+          alert_at_pct: number
+          daily_limit_usd: number
+          hard_block: boolean
+          monthly_limit_usd: number
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          alert_at_pct?: number
+          daily_limit_usd: number
+          hard_block?: boolean
+          monthly_limit_usd: number
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          alert_at_pct?: number
+          daily_limit_usd?: number
+          hard_block?: boolean
+          monthly_limit_usd?: number
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_cost_ledger: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          function_name: string
+          id: string
+          metadata: Json | null
+          provider: string
+          tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          function_name: string
+          id?: string
+          metadata?: Json | null
+          provider: string
+          tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          function_name?: string
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_learning: {
         Row: {
           created_at: string | null
@@ -4645,6 +4705,7 @@ export type Database = {
           project_id: string | null
           published_at: string | null
           ranking_keywords: Json | null
+          retention_curve: Json | null
           script_id: string | null
           script_score: number | null
           subscribers_gained: number | null
@@ -4688,6 +4749,7 @@ export type Database = {
           project_id?: string | null
           published_at?: string | null
           ranking_keywords?: Json | null
+          retention_curve?: Json | null
           script_id?: string | null
           script_score?: number | null
           subscribers_gained?: number | null
@@ -4731,6 +4793,7 @@ export type Database = {
           project_id?: string | null
           published_at?: string | null
           ranking_keywords?: Json | null
+          retention_curve?: Json | null
           script_id?: string | null
           script_score?: number | null
           subscribers_gained?: number | null
@@ -5322,6 +5385,7 @@ export type Database = {
         Args: { _api_name: string }
         Returns: boolean
       }
+      check_budget: { Args: { _provider: string }; Returns: Json }
       check_tubebot_limit: { Args: { _user_id: string }; Returns: Json }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
       consume_credits: {
@@ -5333,6 +5397,10 @@ export type Database = {
         Returns: Json
       }
       get_niche_benchmarks: { Args: { _niche?: string }; Returns: Json[] }
+      get_provider_spend: {
+        Args: { _hours?: number; _provider: string }
+        Returns: number
+      }
       get_user_tier: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["subscription_tier"]

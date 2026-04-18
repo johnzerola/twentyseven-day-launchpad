@@ -481,10 +481,10 @@ const KnowledgeAdmin = () => {
                 toast.info('🧠 Inserindo base de conhecimento completa...');
                 try {
                   const headers = await getAuthHeaders();
-                  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seed-complete-knowledge`, {
+                  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/data-seeding-engine`, {
                     method: 'POST',
                     headers: { ...headers, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tables: ['all'] }),
+                    body: JSON.stringify({ mode: 'complete' }),
                   });
                   const result = await res.json();
                   if (result.success) {

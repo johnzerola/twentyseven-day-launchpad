@@ -207,7 +207,7 @@ const MultiChannel = () => {
     setGeneratingCalendar(true);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-30day-plan`, {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adaptive-plan`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -248,7 +248,7 @@ const MultiChannel = () => {
     setTrackingCompetitors(true);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/competitor-tracker`, {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/find-competitors-ai`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

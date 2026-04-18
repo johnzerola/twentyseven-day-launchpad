@@ -75,8 +75,8 @@ serve(async (req) => {
     // 8. Velocity snapshot (1x/day instead of 2x)
     await invokeFunction("velocity-tracker", {});
 
-    // 9. Self-learning worker (1x/day instead of 3x)
-    await invokeFunction("self-learning-worker", {});
+    // 9. Self-learning engine (merged from worker — single canonical entry point)
+    await invokeFunction("self-learning-engine", { mode: "worker_cycle" });
 
     // 10. Pre-viral detection (1x/day instead of 2x)
     await invokeFunction("pre-viral-detection", {});

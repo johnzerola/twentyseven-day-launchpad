@@ -225,6 +225,24 @@ serve(async (req) => {
             const viewsD7 = rows.length >= 7 ? rows.slice(0, 7).reduce((s: number, r: any) => s + (r[1] || 0), 0) : null;
             const viewsD30 = rows.length >= 30 ? rows.slice(0, 30).reduce((s: number, r: any) => s + (r[1] || 0), 0) : null;
 
+            // ⭐ NEW: Fetch real per-second retention curve (audienceWatchRatio by elapsedVideoTimeRatio)
+            let retentionCurve: number[] | null = null;
+            try {
+              const curveUrl = `https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${tokenRow.channel_id}&startDate=${startDate}&endDate=${endDate}&metrics=audienceWatchRatio,relativeRetentionPerformance&dimensions=elapsedVideoTimeRatio&filters=video==${video.videoId}&sort=elapsedVideoTimeRatio`;
+              const curveResp = await fetch(curveUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+              const curveData = await curveResp.json();
+              if (curveData.rows?.length) {
+                // Each row: [elapsedRatio (0..1), audienceWatchRatio, relativeRetention]
+                retentionCurve = curveData.rows.map((r: any) => ({
+                  t: r[0],
+                  ratio: r[1],
+                  rel: r[2],
+                }));
+              }
+            } catch (e) {
+              console.warn(`Retention curve unavailable for ${video.videoId}:`, (e as Error).message);
+            }
+
             // Determine performance grade
             let grade = 'C';
             if (avgRetention >= 60) grade = 'S';
@@ -252,6 +270,7 @@ serve(async (req) => {
               subscribers_gained: subsGained,
               watch_time_minutes: Math.round(totalMinutes),
               performance_grade: grade,
+              retention_curve: retentionCurve,
               oauth_synced: true,
               synced_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
@@ -340,12 +359,12 @@ serve(async (req) => {
       }
     }
 
-    // 3b: Run self-learning-worker (calibrates prediction scores with real data)
+    // 3b: Run self-learning-engine (merged from worker — calibrates prediction scores)
     try {
-      const slRes = await fetch(`${supabaseUrl}/functions/v1/self-learning-worker`, {
+      const slRes = await fetch(`${supabaseUrl}/functions/v1/self-learning-engine`, {
         method: "POST",
         headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ mode: "worker_cycle" }),
       });
       feedbackResults.selfLearning = await slRes.json().catch(() => ({ ok: slRes.ok }));
     } catch (e) {
