@@ -899,7 +899,7 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
     const nicheReferenceBlock = nicheRefKey ? NICHE_REFERENCE_MAP[nicheRefKey] : '';
 
     // ⭐ LEARNING LOOP: inject real hook + CTR patterns from this channel's published videos
-    const _learningUserId = (typeof userId === 'string' && userId) ? userId : null;
+    const _learningUserId = (typeof currentUserId === 'string' && currentUserId) ? currentUserId : null;
     const [hookPerfBlock, ctrPatternsBlockScript] = await Promise.all([
       fetchHookPerformanceBlock(sb, _learningUserId, niche),
       fetchUserCtrPatternsBlock(sb, _learningUserId, niche),
