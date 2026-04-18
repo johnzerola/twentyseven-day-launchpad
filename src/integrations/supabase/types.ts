@@ -717,6 +717,51 @@ export type Database = {
         }
         Relationships: []
       }
+      chosen_thumbnails: {
+        Row: {
+          chosen_at: string
+          ctr_actual: number | null
+          id: string
+          niche: string | null
+          script_id: string | null
+          style_summary: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+          variant_data: Json | null
+          variant_index: number | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          chosen_at?: string
+          ctr_actual?: number | null
+          id?: string
+          niche?: string | null
+          script_id?: string | null
+          style_summary?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+          variant_data?: Json | null
+          variant_index?: number | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          chosen_at?: string
+          ctr_actual?: number | null
+          id?: string
+          niche?: string | null
+          script_id?: string | null
+          style_summary?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+          variant_data?: Json | null
+          variant_index?: number | null
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       content_dna: {
         Row: {
           attention_score: number | null
@@ -1774,6 +1819,54 @@ export type Database = {
           psychology_trigger?: string | null
           source?: string | null
           template?: string
+        }
+        Relationships: []
+      }
+      hook_performance_real: {
+        Row: {
+          avg_retention: number | null
+          created_at: string
+          hook_text: string | null
+          hook_type: string | null
+          id: string
+          niche: string | null
+          published_at: string | null
+          retention_30s: number | null
+          retention_60s: number | null
+          script_id: string | null
+          user_id: string
+          views: number | null
+          youtube_video_id: string
+        }
+        Insert: {
+          avg_retention?: number | null
+          created_at?: string
+          hook_text?: string | null
+          hook_type?: string | null
+          id?: string
+          niche?: string | null
+          published_at?: string | null
+          retention_30s?: number | null
+          retention_60s?: number | null
+          script_id?: string | null
+          user_id: string
+          views?: number | null
+          youtube_video_id: string
+        }
+        Update: {
+          avg_retention?: number | null
+          created_at?: string
+          hook_text?: string | null
+          hook_type?: string | null
+          id?: string
+          niche?: string | null
+          published_at?: string | null
+          retention_30s?: number | null
+          retention_60s?: number | null
+          script_id?: string | null
+          user_id?: string
+          views?: number | null
+          youtube_video_id?: string
         }
         Relationships: []
       }
@@ -4147,6 +4240,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_ctr_patterns: {
+        Row: {
+          avg_ctr: number | null
+          best_openers: Json | null
+          created_at: string
+          data_points: number | null
+          id: string
+          last_analysis_notes: string | null
+          losing_patterns: Json | null
+          niche: string
+          niche_power_words: Json | null
+          optimal_length: number | null
+          top_ctr: number | null
+          updated_at: string
+          user_id: string
+          winning_patterns: Json | null
+        }
+        Insert: {
+          avg_ctr?: number | null
+          best_openers?: Json | null
+          created_at?: string
+          data_points?: number | null
+          id?: string
+          last_analysis_notes?: string | null
+          losing_patterns?: Json | null
+          niche?: string
+          niche_power_words?: Json | null
+          optimal_length?: number | null
+          top_ctr?: number | null
+          updated_at?: string
+          user_id: string
+          winning_patterns?: Json | null
+        }
+        Update: {
+          avg_ctr?: number | null
+          best_openers?: Json | null
+          created_at?: string
+          data_points?: number | null
+          id?: string
+          last_analysis_notes?: string | null
+          losing_patterns?: Json | null
+          niche?: string
+          niche_power_words?: Json | null
+          optimal_length?: number | null
+          top_ctr?: number | null
+          updated_at?: string
+          user_id?: string
+          winning_patterns?: Json | null
+        }
+        Relationships: []
       }
       user_progress: {
         Row: {
