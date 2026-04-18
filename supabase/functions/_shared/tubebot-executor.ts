@@ -196,7 +196,7 @@ export async function executeTool(
         result = await callFn("seo-analyzer", { title: args.title, description: args.description || "", tags: args.tags || [], niche: args.niche || "" }); break;
 
       case "find_competitors":
-        result = await callFn("find-competitors", { channelId: args.channelId || "", channelName: args.channelName || "", niche: args.niche }); break;
+        result = await callFn("find-competitors-ai", { channelId: args.channelId || "", channelName: args.channelName || "", niche: args.niche }); break;
 
       case "extract_content_dna":
         result = await callFn("extract-content-dna", { videoId: args.videoId, videoTitle: args.videoTitle || "", niche: args.niche || "" }); break;

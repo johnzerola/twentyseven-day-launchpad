@@ -86,7 +86,7 @@ const PowerTools = () => {
               <div className="flex gap-3">
                 <Input placeholder="Nome ou ID do canal de referência" value={competitorChannel}
                   onChange={e => setCompetitorChannel(e.target.value)} className="flex-1" />
-                <Button onClick={() => invoke('competitors', 'find-competitors', { channelId: competitorChannel })}
+                <Button onClick={() => invoke('competitors', 'find-competitors-ai', { channelName: competitorChannel })}
                   disabled={!competitorChannel || r('competitors').loading}>
                   {r('competitors').loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   <span className="ml-2">Buscar</span>
