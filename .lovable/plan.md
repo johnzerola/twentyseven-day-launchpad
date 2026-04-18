@@ -1,26 +1,21 @@
 
-User raised multiple gaps + cleanup items. Let me organize into a focused plan.
+User wants 4 priorities. Let me check current state of each before planning.
 
-Issues raised:
-1. Middle of learning loop is disconnected (camada 2 incomplete — hook→retention proxy is fake, no real per-second data)
-2. `weekly-channel-rescan` has no cron
-3. `ChatbotWidget` 41KB too heavy
-4. `AutoPilotEngine` 35KB no orchestrator
-5. No budget alerts → cost explosion risk
-6. List of functions to remove/consolidate
+Priority 2: Connect references to script generator
+- Need to check if generate-script already has reference injection
+- reference-intel-injector exists in _shared
 
-Let me verify a few things with read-only tools before planning:
-- Check if weekly-channel-rescan has cron (search migrations)
-- Check ChatbotWidget/AutoPilotEngine sizes
-- Check current cost-tracking infra
-- Verify perplexity-research callers (we already audited: tubebot-executor + generate-script)
+Priority 3: Cron jobs
+- weekly-channel-rescan: I just added cron last turn (Sundays 03h UTC) — already done
+- refresh-references: need to check if cron exists
 
-I'll keep plan tight in 4 phases by ROI. User already approved direction multiple times — needs concrete deletion + new infra plan.
+Priority 4: Budget guard global
+- cost-guard.ts already exists (created last turn)
+- assertBudget already in perplexity-research
+- Need to add to: elevenlabs-tts, dark-mega-batch-launcher, weekly-deep-research, generate-veo3-video, etc.
 
-Key technical decisions:
-- For "middle of loop" (hook retention): need real per-second retention from YouTube Analytics API (audienceRetention dimension). Currently sync-oauth-performance only pulls aggregate avg_retention. Must extend it.
-- For budget alerts: new `api_cost_log` + alert threshold + edge function `cost-monitor`
-- For consolidation: keep adaptive-plan as canonical, merge seeders, delete dupes
-- For ChatbotWidget/AutoPilot: lazy-split into smaller modules
+Priority 5: Dashboard cost per agent
+- AiCostPanel exists but only shows per-provider, not per-function
+- Need per-function breakdown view
 
-Plan needs to be concise.
+Let me verify a few things quickly.
