@@ -25,7 +25,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { mode = "full_cycle", niche, maxVideos = 10 } = await req.json();
+    let { mode = "full_cycle", niche, maxVideos = 10 } = await req.json();
+    // Backward compat: "worker_cycle" was the old self-learning-worker (calibration only)
+    if (mode === "worker_cycle") mode = "update_patterns";
     const YOUTUBE_API_KEY = Deno.env.get("YOUTUBE_API_KEY") || Deno.env.get("YOUTUBE_API_KEY_2") || Deno.env.get("YOUTUBE_API_KEY_3") || Deno.env.get("YOUTUBE_API_KEY_4");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     const BRAVE_API_KEY = Deno.env.get("BRAVE_API_KEY");
