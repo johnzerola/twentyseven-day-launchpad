@@ -58,11 +58,26 @@ async function processVideo(sb: any, userId: string, ytVideoId: string, googleKe
     .select("id").eq("user_id", userId).eq("youtube_video_id", ytVideoId).maybeSingle();
   if (existing) return { skipped: true, reason: "already classified" };
 
-  // Fetch performance metrics
+  // Fetch performance metrics + real retention curve
   const { data: perf } = await sb.from("video_performance")
-    .select("avg_retention_percent, views_current, niche, published_at, title")
+    .select("avg_retention_percent, views_current, niche, published_at, title, retention_curve")
     .eq("user_id", userId).eq("youtube_video_id", ytVideoId).maybeSingle();
   if (!perf) return { skipped: true, reason: "no perf row" };
+
+  // ⭐ Extract REAL retention at 30s and 60s from curve (if available)
+  // Curve rows: [{ t: elapsedRatio (0..1), ratio: audienceWatchRatio, rel: relative }]
+  const curve: any[] = Array.isArray(perf.retention_curve) ? perf.retention_curve : [];
+  function retAt(targetSec: number, totalSec: number): number {
+    if (!curve.length || !totalSec) return Number(perf.avg_retention_percent) || 0;
+    const targetT = Math.min(targetSec / totalSec, 1);
+    // Find closest bucket
+    const closest = curve.reduce((best, row) =>
+      Math.abs(row.t - targetT) < Math.abs(best.t - targetT) ? row : best
+    , curve[0]);
+    return Math.round((closest.ratio || 0) * 1000) / 10; // 0..100
+  }
+  // Estimate video duration from views/avg if no explicit duration; assume 600s for longs as fallback
+  const estDuration = 600;
 
   // Fetch linked script
   const { data: link } = await sb.from("script_performance_link")
@@ -86,9 +101,10 @@ async function processVideo(sb: any, userId: string, ytVideoId: string, googleKe
     console.warn(`[classify-hook] gemini failed:`, (e as Error).message);
   }
 
-  // Heuristic: retention_30s ≈ avg_retention * factor (we lack second-by-second data here)
-  // Use avg_retention as proxy; real 30s would require granular Analytics call
   const avgRet = Number(perf.avg_retention_percent) || 0;
+  // ⭐ REAL retention from per-second curve (with avg_retention fallback)
+  const ret30 = curve.length ? retAt(30, estDuration) : avgRet;
+  const ret60 = curve.length ? retAt(60, estDuration) : avgRet;
 
   const { error } = await sb.from("hook_performance_real").insert({
     user_id: userId,
@@ -96,8 +112,8 @@ async function processVideo(sb: any, userId: string, ytVideoId: string, googleKe
     script_id: scriptId,
     hook_type: classified.hook_type,
     hook_text: classified.hook_excerpt,
-    retention_30s: avgRet, // proxy until per-second data available
-    retention_60s: avgRet,
+    retention_30s: ret30,
+    retention_60s: ret60,
     avg_retention: avgRet,
     views: perf.views_current || 0,
     niche: perf.niche || null,
