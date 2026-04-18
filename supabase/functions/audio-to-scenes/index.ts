@@ -215,8 +215,9 @@ Rules: transcribe EVERY word with accurate timestamps. Return raw JSON, no markd
       }
     }
 
-    // ── METHOD 2 (FALLBACK — PAID): ElevenLabs Scribe v2 ──
-    if (!fullText.trim() && ELEVENLABS_API_KEY) {
+    // ── METHOD 2 (FALLBACK — PAID): ElevenLabs Scribe v2 (DISABLED in economy mode) ──
+    const ELEVENLABS_ENABLED = Deno.env.get("ELEVENLABS_ENABLED") === "true";
+    if (!fullText.trim() && ELEVENLABS_API_KEY && ELEVENLABS_ENABLED) {
       console.log("Step 1b: Falling back to ElevenLabs STT (paid)...");
       const sttFormData = new FormData();
       sttFormData.append("file", audioFile);
