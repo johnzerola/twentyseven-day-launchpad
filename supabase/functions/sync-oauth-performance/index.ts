@@ -359,12 +359,12 @@ serve(async (req) => {
       }
     }
 
-    // 3b: Run self-learning-worker (calibrates prediction scores with real data)
+    // 3b: Run self-learning-engine (merged from worker — calibrates prediction scores)
     try {
-      const slRes = await fetch(`${supabaseUrl}/functions/v1/self-learning-worker`, {
+      const slRes = await fetch(`${supabaseUrl}/functions/v1/self-learning-engine`, {
         method: "POST",
         headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ mode: "worker_cycle" }),
       });
       feedbackResults.selfLearning = await slRes.json().catch(() => ({ ok: slRes.ok }));
     } catch (e) {

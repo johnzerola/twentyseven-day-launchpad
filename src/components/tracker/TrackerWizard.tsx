@@ -142,7 +142,7 @@ export function TrackerWizard({ onPlanGenerated }: TrackerWizardProps) {
         both: 'hybrid',
       };
 
-      const { data, error } = await supabase.functions.invoke('generate-30day-plan', {
+      const { data, error } = await supabase.functions.invoke('generate-adaptive-plan', {
         body: {
           niche: wizard.customNiche || wizard.channel.niche || 'curiosidades',
           language: 'pt',
