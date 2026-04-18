@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { TITLE_ENGINEERING_INJECTION } from "../_shared/dark-channel-strategy-2026.ts";
 import { ANTI_SLOP_FOR_TITLES } from "../_shared/anti-slop-rules.ts";
 import { enhanceWithCritic } from "../_shared/squad-runner.ts";
+import { fetchUserCtrPatternsBlock } from "../_shared/learning-loop-injector.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -403,7 +404,10 @@ REGRAS PARA CTR MÁXIMO:
 
 Para cada título, classifique o estilo e estime o CTR de 5 a 35%.`;
 
-      const systemMsg = `Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}`;
+      // ⭐ LEARNING LOOP: inject real CTR patterns from this user's published videos
+      const ctrPatternsBlock = await fetchUserCtrPatternsBlock(sb, claimsData.claims.sub as string, niche);
+
+      const systemMsg = `Você é o maior especialista mundial em YouTube CTR optimization. Seus títulos consistentemente alcançam 15-30% de CTR. Você analisou os concorrentes em tempo real e conhece todos os padrões psicológicos que fazem as pessoas clicarem compulsivamente. Pense como MrBeast, VeeFriends e os melhores criadores. Seus títulos devem ser SUPERIORES aos concorrentes encontrados.\n\n${TITLE_ENGINEERING_INJECTION}\n\n${ANTI_SLOP_FOR_TITLES}${ctrPatternsBlock}`;
       const userMsg = `${prompt}\n\nResponda APENAS em JSON válido com esta estrutura:\n{"competitor_analysis": "string", "titles": [{"title": "string", "style": "string", "estimatedCTR": number, "hook_used": "string", "psychological_trigger": "string", "differentiation": "string"}]}`;
 
       let content: string;

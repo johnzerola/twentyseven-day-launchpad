@@ -6,6 +6,7 @@ import { buildSkillsInjection, CLAUDE_HOOK_POLISH_SYSTEM } from "../_shared/scri
 import { buildFlashQualityBoost } from "../_shared/flash-quality-boost.ts";
 import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
+import { fetchHookPerformanceBlock, fetchUserCtrPatternsBlock } from "../_shared/learning-loop-injector.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -897,8 +898,16 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
     const nicheRefKey = Object.keys(NICHE_REFERENCE_MAP).find(k => nicheLC.includes(k));
     const nicheReferenceBlock = nicheRefKey ? NICHE_REFERENCE_MAP[nicheRefKey] : '';
 
+    // ⭐ LEARNING LOOP: inject real hook + CTR patterns from this channel's published videos
+    const _learningUserId = (typeof currentUserId === 'string' && currentUserId) ? currentUserId : null;
+    const [hookPerfBlock, ctrPatternsBlockScript] = await Promise.all([
+      fetchHookPerformanceBlock(sb, _learningUserId, niche),
+      fetchUserCtrPatternsBlock(sb, _learningUserId, niche),
+    ]);
+    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}`;
+
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
-Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.
+Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.${learningLoopInjection}
 
 ═══ SEU PAPEL NESTA FASE ═══
 Você é o FASE 1: RASCUNHISTA. Seu trabalho é criar o rascunho completo do roteiro.

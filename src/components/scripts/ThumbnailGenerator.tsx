@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Copy, Loader2, Palette, Sparkles, Download, ImagePlus } from 'lucide-react';
+import { Image, Copy, Loader2, Palette, Sparkles, Download, ImagePlus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,12 +25,44 @@ interface Props {
   videoTitle: string;
   niche: string;
   scriptSummary?: string;
+  scriptId?: string;
 }
 
-export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) => {
+export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary, scriptId }: Props) => {
   const [variants, setVariants] = useState<ThumbnailVariant[]>([]);
   const [loading, setLoading] = useState(false);
   const [generatingImage, setGeneratingImage] = useState<number | null>(null);
+  const [chosenIndex, setChosenIndex] = useState<number | null>(null);
+  const [savingChoice, setSavingChoice] = useState<number | null>(null);
+
+  const markAsChosen = async (variantIndex: number) => {
+    const variant = variants[variantIndex];
+    if (!variant) return;
+    setSavingChoice(variantIndex);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Faça login para salvar'); return; }
+
+      const styleSummary = `${variant.style} | ${variant.emotion_target} | ${(variant.color_palette || []).slice(0, 3).join('+')}`;
+
+      const { error } = await supabase.from('chosen_thumbnails').insert({
+        user_id: user.id,
+        script_id: scriptId || null,
+        variant_index: variantIndex,
+        variant_data: variant as any,
+        style_summary: styleSummary,
+        thumbnail_url: variant.generated_image_url || null,
+        niche: niche || null,
+      });
+      if (error) throw error;
+      setChosenIndex(variantIndex);
+      toast.success('Marcada como thumb usada — vai treinar a próxima geração 🎯');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao marcar thumb');
+    } finally {
+      setSavingChoice(null);
+    }
+  };
 
   const generateThumbnails = async () => {
     if (!videoTitle.trim()) {
@@ -223,6 +255,24 @@ export const ThumbnailGenerator = ({ videoTitle, niche, scriptSummary }: Props) 
                 💡 Use emoção {v.emotion_target} porque vídeos de {niche || 'este nicho'} com expressão facial têm mais CTR
               </p>
             )}
+
+            {/* Mark-as-used button — feeds learning loop */}
+            <div className="flex justify-end pt-1">
+              <Button
+                size="sm"
+                variant={chosenIndex === i ? "default" : "outline"}
+                className="h-6 px-2 text-[10px] gap-1"
+                disabled={chosenIndex === i || savingChoice === i}
+                onClick={() => markAsChosen(i)}
+              >
+                {savingChoice === i ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Check className="w-3 h-3" />
+                )}
+                {chosenIndex === i ? 'Marcada como usada' : savingChoice === i ? 'Salvando...' : 'Esta foi a usada'}
+              </Button>
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
