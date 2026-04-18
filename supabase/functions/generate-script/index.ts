@@ -1533,10 +1533,39 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
     // ═══ SINGLE-ACT GENERATION (for scripts < 25 min) ═══
     console.log(`[PHASE-1 DRAFT] runId=${runId} Single-act generation for ${dur}min`);
 
+    // ═══ INSTRUCTION-DILUTION FIX: prompt composer (sharded modules) ═══
+    // Replaces ~15k-token monolithic prompt with ~5-7k composed only of relevant modules.
+    let activeSystemPrompt = systemPrompt;
+    let activeUserMessage = userMessage;
+    if (useComposer) {
+      const composed = composeScriptPrompt({
+        style: styleLC,
+        durationMin: dur,
+        niche,
+        tier: ((body?.userTier || 'starter').toLowerCase() as any),
+        knowledgeBlock: smartKnowledgeBlock,
+        voiceBlock: voiceInjection,
+        referenceBlock,
+        channelKnowledgeBlock,
+        intelBlock,
+        hookText,
+        topic,
+        language,
+        isShort,
+        targetWords,
+        minWords,
+        wpm,
+      });
+      activeSystemPrompt = composed.systemPrompt;
+      activeUserMessage = composed.userMessage;
+      const oldTokens = Math.ceil(systemPrompt.length / 4);
+      console.log(`[COMPOSER] runId=${runId} sharded prompt: ${composed.estimatedTokens} tokens (was ~${oldTokens}); modules=[${composed.modulesIncluded.join(",")}]`);
+    }
+
     const phase1Res = await callGeminiStreaming(
       GOOGLE_AI_API_KEY,
-      systemPrompt,
-      userMessage,
+      activeSystemPrompt,
+      activeUserMessage,
       {
         primaryModel: "gemini-2.5-flash",
         fallbackModel: "gemini-2.5-flash-lite",
@@ -1554,7 +1583,130 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
     }
 
     console.log(`[PHASE-1 DRAFT] runId=${runId} Streaming to client...`);
-    // If RAG failed, prepend a metadata SSE event so frontend can show warning
+
+    // ═══ VALIDATE & REPAIR: capture stream, run deterministic checks, repair surgically ═══
+    // Buffers full script before sending to client. Adds ~3-8s latency on success path,
+    // saves the user from re-generating broken scripts.
+    if (validateAndRepair && !isShort) {
+      try {
+        const dec = new TextDecoder();
+        const reader = phase1Res.body!.getReader();
+        let fullScript = '';
+        let sseBuffer = '';
+        const passthroughChunks: Uint8Array[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          passthroughChunks.push(value);
+          const chunk = dec.decode(value, { stream: true });
+          sseBuffer += chunk;
+          const lines = sseBuffer.split('\n');
+          sseBuffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const j = line.slice(6).trim();
+            if (j && j !== '[DONE]') {
+              try { const p = JSON.parse(j); const t = p.choices?.[0]?.delta?.content; if (t) fullScript += t; } catch {}
+            }
+          }
+        }
+        // Flush remaining buffer
+        if (sseBuffer.trim()) {
+          for (const line of sseBuffer.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const j = line.slice(6).trim();
+            if (j && j !== '[DONE]') {
+              try { const p = JSON.parse(j); const t = p.choices?.[0]?.delta?.content; if (t) fullScript += t; } catch {}
+            }
+          }
+        }
+
+        // Run validation
+        const validation = validateScript(fullScript, { targetWords, minWords, isShort });
+        console.log(`[VALIDATOR] runId=${runId} passed=${validation.passed} slop=${validation.slopScore} hook=${validation.hookStrength} dopa=${validation.dopamineCount} tags=${validation.hasTechnicalTags} words=${validation.wordCount} issues=${validation.issues.length}`);
+
+        let finalScript = fullScript;
+        const repairsApplied: string[] = [];
+
+        // Local fix: strip technical tags (no LLM call)
+        if (validation.hasTechnicalTags) {
+          finalScript = stripTechnicalTags(finalScript);
+          repairsApplied.push("strip_tags");
+        }
+
+        // Surgical LLM repairs (max 2 to avoid cost/latency blow-up)
+        const repairableActions = validation.repairActions.filter(a => a.type !== "remove_tags").slice(0, 2);
+        for (const action of repairableActions) {
+          try {
+            const { system, user } = buildRepairPrompt(action, finalScript, { topic: topic || '', language: language || 'português' });
+            if (!system) continue;
+            const repaired = await callGeminiWithFallback(
+              GOOGLE_AI_API_KEY,
+              system,
+              user,
+              { primaryModel: "gemini-2.5-flash", fallbackModel: "gemini-2.5-flash-lite", maxTokens: 2048, label: `REPAIR-${action.type} runId=${runId}` },
+            );
+            if (repaired && typeof repaired === 'string' && repaired.length > 50) {
+              if (action.type === "rewrite_hook") {
+                // Replace first ~80 words
+                const words = finalScript.split(/\s+/);
+                finalScript = repaired.trim() + "\n\n" + words.slice(80).join(' ');
+                repairsApplied.push("rewrite_hook");
+              } else if (action.type === "rewrite_ending") {
+                const words = finalScript.split(/\s+/);
+                finalScript = words.slice(0, Math.max(0, words.length - 80)).join(' ') + "\n\n" + repaired.trim();
+                repairsApplied.push("rewrite_ending");
+              } else if (action.type === "boost_density") {
+                // Boost rewrites a chunk; for safety only apply if returned text is comparable size
+                if (repaired.length > finalScript.length * 0.4) {
+                  finalScript = repaired.trim();
+                  repairsApplied.push("boost_density");
+                }
+              }
+            }
+          } catch (e) {
+            console.warn(`[REPAIR] runId=${runId} ${action.type} failed:`, e);
+          }
+        }
+
+        if (repairsApplied.length > 0) {
+          console.log(`[REPAIR] runId=${runId} applied: ${repairsApplied.join(",")}`);
+        }
+
+        // Stream the (possibly repaired) script as SSE chunks to the client
+        const enc = new TextEncoder();
+        const repairedStream = new ReadableStream({
+          start(controller) {
+            // Metadata first
+            controller.enqueue(enc.encode(`data: ${JSON.stringify({ _meta: { rag_failed: ragFailed, validation: { passed: validation.passed, slop_score: validation.slopScore, hook_strength: validation.hookStrength, repairs_applied: repairsApplied, issues: validation.issues.slice(0, 5) } } })}\n\n`));
+            // Send the final (possibly repaired) script in chunks of ~200 chars for smoother UX
+            const CHUNK_SIZE = 200;
+            for (let i = 0; i < finalScript.length; i += CHUNK_SIZE) {
+              const piece = finalScript.slice(i, i + CHUNK_SIZE);
+              controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: piece } }] })}\n\n`));
+            }
+            controller.enqueue(enc.encode("data: [DONE]\n\n"));
+            controller.close();
+          },
+        });
+
+        return new Response(repairedStream, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/event-stream",
+            "X-Rag-Status": ragFailed ? "failed" : "ok",
+            "X-Validation-Passed": validation.passed ? "1" : "0",
+            "X-Repairs-Applied": repairsApplied.join(",") || "none",
+          },
+        });
+      } catch (e) {
+        console.warn(`[VALIDATOR] runId=${runId} pipeline failed, falling back to passthrough:`, e);
+        // Fall through to passthrough below
+      }
+    }
+
+    // Passthrough mode (validator disabled or shorts or validator pipeline failed)
     if (ragFailed) {
       const metaEvent = new TextEncoder().encode(`data: ${JSON.stringify({ _meta: { rag_failed: true } })}\n\n`);
       const originalStream = phase1Res.body!;
