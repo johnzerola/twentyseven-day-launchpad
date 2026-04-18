@@ -1714,6 +1714,60 @@ export type Database = {
         }
         Relationships: []
       }
+      function_traces: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          ended_at: string | null
+          error_message: string | null
+          function_name: string
+          id: string
+          input_summary: Json | null
+          metadata: Json | null
+          output_summary: Json | null
+          parent_span_id: string | null
+          span_id: string
+          started_at: string
+          status: string
+          trace_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
+          error_message?: string | null
+          function_name: string
+          id?: string
+          input_summary?: Json | null
+          metadata?: Json | null
+          output_summary?: Json | null
+          parent_span_id?: string | null
+          span_id?: string
+          started_at?: string
+          status?: string
+          trace_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          input_summary?: Json | null
+          metadata?: Json | null
+          output_summary?: Json | null
+          parent_span_id?: string | null
+          span_id?: string
+          started_at?: string
+          status?: string
+          trace_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       generated_branding: {
         Row: {
           branding_data: Json | null
@@ -5388,6 +5442,7 @@ export type Database = {
       check_budget: { Args: { _provider: string }; Returns: Json }
       check_tubebot_limit: { Args: { _user_id: string }; Returns: Json }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
+      cleanup_old_function_traces: { Args: never; Returns: undefined }
       consume_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: boolean

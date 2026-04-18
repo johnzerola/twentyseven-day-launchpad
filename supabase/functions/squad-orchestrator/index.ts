@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { startSpan } from "../_shared/tracer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-trace-id, x-parent-span-id",
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -11,9 +12,11 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  let rootSpan: Awaited<ReturnType<typeof startSpan>> | null = null;
+
   try {
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Auth
@@ -24,6 +27,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+    rootSpan = await startSpan(req, `squad-orchestrator:${action}`, { userId: user.id, input: body });
 
     // ── START RUN ──
     if (action === "start_run") {
@@ -90,8 +94,9 @@ serve(async (req) => {
         }).eq("id", run.id);
       }
 
-      return new Response(JSON.stringify({ success: true, run_id: run.id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      await rootSpan?.end("success", { run_id: run.id });
+      return new Response(JSON.stringify({ success: true, run_id: run.id, trace_id: rootSpan?.traceId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "x-trace-id": rootSpan?.traceId ?? "" },
       });
     }
 
@@ -184,7 +189,9 @@ serve(async (req) => {
     throw new Error(`Unknown action: ${action}`);
   } catch (e) {
     console.error("squad-orchestrator error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }), {
+    const msg = e instanceof Error ? e.message : "Unknown";
+    await rootSpan?.end("error", null, msg);
+    return new Response(JSON.stringify({ error: msg, trace_id: rootSpan?.traceId }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
