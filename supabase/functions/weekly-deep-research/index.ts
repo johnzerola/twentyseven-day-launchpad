@@ -345,12 +345,15 @@ serve(async (req) => {
             } catch { /* parsing failed, data still cached */ }
 
             results.push({ domain: domain.id, success: true, source: "perplexity" });
+            // Log Perplexity sonar-pro cost (~$0.015/call)
+            logCost({ provider: "perplexity", functionName: "weekly-deep-research", estimateKey: "perplexity-sonar-pro", metadata: { domain: domain.id } }).catch(() => {});
           } else { await pResp.text(); results.push({ domain: domain.id, error: "perplexity_failed" }); }
         } catch (e) {
           console.error(`Perplexity error for ${domain.id}:`, e.message);
           results.push({ domain: domain.id, error: e.message });
         }
       }
+      } // close budget-guard else
     }
 
     // ========== PHASE 3: GEMINI FALLBACK FOR UNCOVERED DOMAINS ==========
