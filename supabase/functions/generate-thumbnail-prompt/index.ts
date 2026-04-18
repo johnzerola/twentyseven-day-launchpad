@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ANTI_SLOP_FOR_THUMBNAILS } from "../_shared/anti-slop-rules.ts";
 import { enhanceWithCritic } from "../_shared/squad-runner.ts";
+import { fetchThumbnailStyleBlock } from "../_shared/learning-loop-injector.ts";
 
 const _ai = async (body: any) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY")!;
@@ -18,10 +19,22 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { video_title, niche, emotion, style, count, script_context, generate_image, variant_index } = await req.json();
+    const { video_title, niche, emotion, style, count, script_context, generate_image, variant_index, user_id } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Try resolve user from auth header (for learning loop)
+    let learnUserId: string | null = user_id || null;
+    if (!learnUserId) {
+      const authHeader = req.headers.get("authorization") || "";
+      if (authHeader.startsWith("Bearer ")) {
+        try {
+          const { data: cd } = await sb.auth.getClaims(authHeader.replace("Bearer ", ""));
+          learnUserId = (cd?.claims?.sub as string) || null;
+        } catch { /* anonymous */ }
+      }
+    }
 
     // ═══ MODE 2: Generate actual image from a prompt ═══
     if (generate_image && variant_index !== undefined) {
@@ -88,6 +101,9 @@ RULES:
       ? `\n\nSCRIPT CONTEXT:\n${script_context.slice(0, 1500)}`
       : '';
 
+    // ⭐ LEARNING LOOP: inject real thumbnail style performance for this user
+    const thumbStyleBlock = await fetchThumbnailStyleBlock(sb, learnUserId);
+
     const prompt = `Generate ${count || 3} high-CTR YouTube thumbnail concepts for:
 Title: "${video_title}"
 Niche: ${niche || "general"}
@@ -100,6 +116,7 @@ Reference patterns:\n${referencePatterns || "None"}
 CTR mechanics:\n${(mechanics || []).map((m: any) => `- ${m.mechanic_name}: ${m.how_to_apply} (+${m.avg_ctr_boost_pct}% CTR)`).join("\n")}
 
 ${ANTI_SLOP_FOR_THUMBNAILS}
+${thumbStyleBlock}
 
 For each variant: Midjourney prompt, DALL-E 3 prompt, composition, color palette, CTR boost estimate.
 IMPORTANT: CTR boost is an AI ESTIMATE without empirical calibration.`;
