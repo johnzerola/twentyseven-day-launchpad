@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SquadPipelineStepper } from '@/components/squads/SquadPipelineStepper';
-import { Play, Bot, Zap, Flame, Film } from 'lucide-react';
+import { Play, Bot, Zap, Flame, Film, Brain, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SQUAD_ICONS: Record<string, typeof Bot> = {
   production: Film,
@@ -26,6 +27,28 @@ export default function Squads() {
   const [inputContext, setInputContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [runs, setRuns] = useState<any[]>([]);
+  const [smartGoal, setSmartGoal] = useState('');
+  const [smartLoading, setSmartLoading] = useState(false);
+  const navigate = useNavigate();
+
+  async function startSmartSquad() {
+    if (!smartGoal.trim()) return;
+    setSmartLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-orchestrator', {
+        body: { action: 'start', goal: smartGoal, context: { language: 'pt-BR' } },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Squad inteligente iniciado! ${data.plan?.length || 0} passos planejados.`);
+      setSmartGoal('');
+      navigate('/admin/traces');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao iniciar squad inteligente');
+    } finally {
+      setSmartLoading(false);
+    }
+  }
 
   useEffect(() => {
     loadTemplates();

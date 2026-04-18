@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TraceWaterfall } from "@/components/admin/TraceWaterfall";
-import { Activity, AlertTriangle, CheckCircle2, Clock, Search, RefreshCw } from "lucide-react";
+import { MetaOrchestratorRuns } from "@/components/admin/MetaOrchestratorRuns";
+import { Activity, AlertTriangle, CheckCircle2, Clock, Search, RefreshCw, Brain } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface TraceRow {
@@ -32,7 +34,7 @@ export default function AdminTraces() {
     let query = supabase
       .from("function_traces")
       .select("trace_id, function_name, status, started_at, duration_ms, error_message, user_id")
-      .is("parent_span_id", null) // only root spans
+      .is("parent_span_id", null)
       .order("started_at", { ascending: false })
       .limit(100);
 
@@ -59,88 +61,101 @@ export default function AdminTraces() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Activity className="w-6 h-6 text-primary" /> Function Traces
+              <Activity className="w-6 h-6 text-primary" /> Observability
             </h1>
-            <p className="text-sm text-muted-foreground">Distributed tracing — last 100 root traces (14-day retention)</p>
+            <p className="text-sm text-muted-foreground">Distributed tracing & meta-orchestrator runs</p>
           </div>
-          <Button onClick={load} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-          </Button>
         </div>
 
-        <Card className="p-4">
-          <div className="flex flex-wrap gap-2">
-            <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Filter by function name..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load()}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-                <SelectItem value="started">In progress</SelectItem>
-                <SelectItem value="timeout">Timeout</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
+        <Tabs defaultValue="traces" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="traces"><Activity className="w-4 h-4 mr-2" />Function Traces</TabsTrigger>
+            <TabsTrigger value="squads"><Brain className="w-4 h-4 mr-2" />Live Squads</TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="p-2 max-h-[70vh] overflow-y-auto">
-            {loading && <div className="p-4 text-sm text-muted-foreground">Loading traces...</div>}
-            {!loading && traces.length === 0 && (
-              <div className="p-8 text-center text-sm text-muted-foreground">No traces found.</div>
-            )}
-            <div className="divide-y">
-              {traces.map((t) => (
-                <button
-                  key={t.trace_id}
-                  onClick={() => setSelectedTrace(t.trace_id)}
-                  className={`w-full text-left p-3 hover:bg-muted/50 transition-colors rounded ${
-                    selectedTrace === t.trace_id ? "bg-muted" : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    {statusIcon(t.status)}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-sm truncate">{t.function_name}</span>
-                        <Badge variant={t.status === "error" ? "destructive" : "secondary"} className="text-xs">
-                          {t.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <span>{formatDistanceToNow(new Date(t.started_at), { addSuffix: true })}</span>
-                        {t.duration_ms != null && <span>· {t.duration_ms}ms</span>}
-                      </div>
-                      {t.error_message && (
-                        <div className="text-xs text-destructive mt-1 truncate">{t.error_message}</div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="p-4 max-h-[70vh] overflow-y-auto">
-            {selectedTrace ? (
-              <TraceWaterfall traceId={selectedTrace} />
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-12">
-                Select a trace to see the call tree
+          <TabsContent value="traces" className="space-y-4">
+            <Card className="p-4">
+              <div className="flex flex-wrap gap-2">
+                <div className="flex-1 min-w-[200px] relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Filter by function name..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && load()}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="success">Success</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="started">In progress</SelectItem>
+                    <SelectItem value="timeout">Timeout</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={load} variant="outline" size="sm">
+                  <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+                </Button>
               </div>
-            )}
-          </Card>
-        </div>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card className="p-2 max-h-[70vh] overflow-y-auto">
+                {loading && <div className="p-4 text-sm text-muted-foreground">Loading traces...</div>}
+                {!loading && traces.length === 0 && (
+                  <div className="p-8 text-center text-sm text-muted-foreground">No traces found.</div>
+                )}
+                <div className="divide-y">
+                  {traces.map((t) => (
+                    <button
+                      key={t.trace_id}
+                      onClick={() => setSelectedTrace(t.trace_id)}
+                      className={`w-full text-left p-3 hover:bg-muted/50 transition-colors rounded ${
+                        selectedTrace === t.trace_id ? "bg-muted" : ""
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {statusIcon(t.status)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-sm truncate">{t.function_name}</span>
+                            <Badge variant={t.status === "error" ? "destructive" : "secondary"} className="text-xs">
+                              {t.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                            <span>{formatDistanceToNow(new Date(t.started_at), { addSuffix: true })}</span>
+                            {t.duration_ms != null && <span>· {t.duration_ms}ms</span>}
+                          </div>
+                          {t.error_message && (
+                            <div className="text-xs text-destructive mt-1 truncate">{t.error_message}</div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-4 max-h-[70vh] overflow-y-auto">
+                {selectedTrace ? (
+                  <TraceWaterfall traceId={selectedTrace} />
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-12">
+                    Select a trace to see the call tree
+                  </div>
+                )}
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="squads">
+            <MetaOrchestratorRuns />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
