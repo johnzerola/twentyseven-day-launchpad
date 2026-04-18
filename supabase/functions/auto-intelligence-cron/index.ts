@@ -91,6 +91,8 @@ serve(async (req) => {
       await invokeFunction("weekly-deep-research", {});
       await invokeFunction("detect-emerging-channels", {});
       await invokeFunction("weekly-channel-rescan", {});
+      // Refresh user reference channels intel (7-day cycle)
+      await invokeFunction("refresh-references", { force: false });
       await invokeFunction("viral-score-worker", {});
       await invokeFunction("niche-benchmark", {});
       await invokeFunction("generate-adaptive-plan", { mode: "all_users" });

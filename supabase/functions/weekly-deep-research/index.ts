@@ -1,6 +1,7 @@
 import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertBudget, logCost } from "../_shared/cost-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -289,7 +290,12 @@ serve(async (req) => {
 
     // ========== PHASE 2: PERPLEXITY DEEP RESEARCH ==========
     if (PERPLEXITY_API_KEY && (mode === "full" || mode === "perplexity_deep")) {
-      console.log("Phase 2: Perplexity deep research...");
+      // ⭐ Budget guard — Perplexity is the most expensive provider in this function
+      const blocked = await assertBudget("perplexity");
+      if (blocked) {
+        console.warn("[WEEKLY-RESEARCH] Perplexity blocked by budget guard, skipping deep research phase");
+      } else {
+        console.log("Phase 2: Perplexity deep research...");
 
       for (const domain of RESEARCH_DOMAINS) {
         const dateKey = new Date().toISOString().slice(0, 10);
@@ -339,12 +345,15 @@ serve(async (req) => {
             } catch { /* parsing failed, data still cached */ }
 
             results.push({ domain: domain.id, success: true, source: "perplexity" });
+            // Log Perplexity sonar-pro cost (~$0.015/call)
+            logCost({ provider: "perplexity", functionName: "weekly-deep-research", estimateKey: "perplexity-sonar-pro", metadata: { domain: domain.id } }).catch(() => {});
           } else { await pResp.text(); results.push({ domain: domain.id, error: "perplexity_failed" }); }
         } catch (e) {
           console.error(`Perplexity error for ${domain.id}:`, e.message);
           results.push({ domain: domain.id, error: e.message });
         }
       }
+      } // close budget-guard else
     }
 
     // ========== PHASE 3: GEMINI FALLBACK FOR UNCOVERED DOMAINS ==========

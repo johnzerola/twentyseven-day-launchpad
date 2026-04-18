@@ -63,7 +63,31 @@ serve(async (req) => {
       }).then(() => {}, () => {});
     }
 
-    return new Response(JSON.stringify({ report, alerts_count: alerts.length, ts: new Date().toISOString() }), {
+    // ═══ Per-function breakdown (last 30 days) ═══
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const { data: ledgerRows } = await sb
+      .from("ai_cost_ledger")
+      .select("provider, function_name, cost_usd, tokens, created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(5000);
+
+    const byFunction = new Map<string, { provider: string; function_name: string; cost_usd: number; calls: number; tokens: number; last_call: string }>();
+    for (const r of (ledgerRows || []) as any[]) {
+      const key = `${r.provider}::${r.function_name}`;
+      const cur = byFunction.get(key) || { provider: r.provider, function_name: r.function_name, cost_usd: 0, calls: 0, tokens: 0, last_call: r.created_at };
+      cur.cost_usd += Number(r.cost_usd) || 0;
+      cur.calls += 1;
+      cur.tokens += Number(r.tokens) || 0;
+      if (r.created_at > cur.last_call) cur.last_call = r.created_at;
+      byFunction.set(key, cur);
+    }
+    const functionBreakdown = Array.from(byFunction.values())
+      .sort((a, b) => b.cost_usd - a.cost_usd)
+      .slice(0, 50)
+      .map(f => ({ ...f, cost_usd: Math.round(f.cost_usd * 10000) / 10000 }));
+
+    return new Response(JSON.stringify({ report, function_breakdown: functionBreakdown, alerts_count: alerts.length, ts: new Date().toISOString() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

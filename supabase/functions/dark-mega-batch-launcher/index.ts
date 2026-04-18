@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertBudget } from "../_shared/cost-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,6 +86,10 @@ serve(async (req) => {
     }
 
     console.log(`[DARK-MEGA] Batch ${startIndex}-${endIndex} of ${DARK_CATEGORIES.length}: ${batchNiches.join(', ')}`);
+
+    // ⭐ Budget guard — this batch fans out massively (gemini + youtube quota), block if exhausted
+    const blocked = await assertBudget("gemini");
+    if (blocked) return blocked;
 
     // Dispatch to discover-channels-gemini
     const resp = await fetch(`${supabaseUrl}/functions/v1/discover-channels-gemini`, {
