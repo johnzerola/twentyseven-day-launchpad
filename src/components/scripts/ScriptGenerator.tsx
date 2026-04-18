@@ -127,6 +127,8 @@ export const ScriptGenerator = ({
   const [retryCount, setRetryCount] = useState(0);
   const [referenceScript, setReferenceScript] = useState('');
   const [showReferenceField, setShowReferenceField] = useState(false);
+  const [fidelity, setFidelity] = useState<{ score: number; channel_name: string | null; breakdown: any } | null>(null);
+  const [fidelityOpen, setFidelityOpen] = useState(false);
   const MAX_RETRIES = 2;
   const lastClickRef = useRef(0);
 
@@ -290,6 +292,9 @@ export const ScriptGenerator = ({
             if (p._meta.rag_failed) {
               toast.warning('⚠️ Base de conhecimento indisponível — roteiro gerado sem dados contextuais');
             }
+            if (p._meta.fidelity && p._meta.fidelity.channel_name) {
+              setFidelity(p._meta.fidelity);
+            }
             continue;
           }
           const c = p.choices?.[0]?.delta?.content;
@@ -319,6 +324,8 @@ export const ScriptGenerator = ({
     setSceneBlueprintJson([]);
     setWizardStep(1);
     setEditMode(false);
+    setFidelity(null);
+    setFidelityOpen(false);
 
     try {
       // Shorts use dedicated ShortSpy analysis; Longform uses analyze-topic
