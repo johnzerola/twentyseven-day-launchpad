@@ -1,25 +1,18 @@
 
-User raises sharp critique: 115 functions ≠ squad. No structured handoff, no shared memory, no orchestrator agent. Wants real multi-agent architecture.
+User raises sharp, valid concern: instruction dilution. 15k+ tokens of system prompt → Flash follows first 30%, ignores last 40%. Real research-backed problem.
 
-Already exists:
-- `squad-orchestrator` (template-driven, sequential, no decision-making)
-- `task-worker` (queue processor)
-- `function_traces` (just built — observability layer)
-- `_shared/call-fn.ts` (standardized caller with tracing)
+Let me check current state of generate-script before planning.
 
-What's missing for "real squad":
-1. **Orchestrator Agent** — LLM-driven decision agent that picks next agent based on goal + context
-2. **Shared memory** — agents read/write to a shared scratchpad per run
-3. **Structured handoff** — typed contracts between agents (not free JSON)
-4. **Already-redundant cleanup** — user listed dupes (some already deleted last turn, but `video-orchestrator`, `discover-channels-gemini` still exist)
+The fix isn't to dumb down the prompt — it's to **layer/route** instructions intelligently:
+1. **Tier 1 (always-on, ~2k tokens)**: hard rules, format, anti-slop, language
+2. **Tier 2 (conditional, ~3k tokens)**: only inject blueprints/structures relevant to chosen style+duration
+3. **Tier 3 (post-hoc validators)**: instead of prompting "don't do X", run cheap validator passes after generation that catch + auto-repair
 
-Let me check what's already deleted vs still there, and design minimal real-squad architecture.
+Plan = three concrete moves:
+1. **Prompt sharding**: split monolithic prompt into modules, dynamically compose only relevant ones
+2. **Multi-pass with specialist roles**: instead of one Flash call doing everything, chain 2-3 cheaper focused passes (hook specialist → body writer → retention auditor)
+3. **Validator + repair loop**: post-gen checks (anti-slop regex, dopamine count, hook strength) → if fails, surgical repair pass on just the broken section
 
-I won't rewrite 115 functions. I'll:
-1. Build `meta-orchestrator` — single LLM agent that, given a goal ("make a viral script for niche X"), plans + executes a chain of existing functions, with shared memory.
-2. Add `agent_runs` + `agent_memory` tables for shared state.
-3. Define agent registry — typed manifest of what each "real agent" does (input/output schema, cost, latency).
-4. Delete final dupes user mentioned.
-5. UI: visualize the meta-orchestrator's decision tree (extends existing TraceWaterfall).
+This actually aligns with the meta-orchestrator we just built — generate-script becomes a mini-squad.
 
 Keep tight.
