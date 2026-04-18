@@ -5,6 +5,7 @@ import { CLAUDE_NATURALIZER_SYSTEM, SENSORY_DETAILS, MICRO_HOOKS } from "../_sha
 import { buildFlashQualityBoost, FLASH_REFINE_MASTERCLASS } from "../_shared/flash-quality-boost.ts";
 import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
+import { runSquadPipeline, SQUAD_PRESETS } from "../_shared/squad-runner.ts";
 
 // ═══ SMART AI ROUTING — Use Claude only where it adds value ═══
 // Claude excels at: emotional depth, literary polish, storytelling nuance
@@ -63,7 +64,7 @@ serve(async (req) => {
     const creditBlock = await enforceCreditGuard(_userId, "refine-script");
     if (creditBlock) return creditBlock;
 
-    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId } = await req.json();
+    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId, use_squad } = await req.json();
     const styleLC = (style || '').toLowerCase();
     const isWebDoc = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'].includes(styleLC);
     
