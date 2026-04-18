@@ -1,18 +1,25 @@
 
-User raises valid architectural critique: 115 edge functions calling each other ad hoc, no central orchestration, no distributed tracing. Debugging is painful.
+User raises sharp critique: 115 functions ≠ squad. No structured handoff, no shared memory, no orchestrator agent. Wants real multi-agent architecture.
 
-Let me check what observability exists already:
-- `execution_logs` table exists (used by task-worker)
-- `api_logs` exists
-- `ai_cost_ledger` exists
-- No correlation_id / trace_id pattern
-- No central orchestrator — task-worker is closest but only handles queued tasks
+Already exists:
+- `squad-orchestrator` (template-driven, sequential, no decision-making)
+- `task-worker` (queue processor)
+- `function_traces` (just built — observability layer)
+- `_shared/call-fn.ts` (standardized caller with tracing)
 
-The right fix is NOT to rewrite 115 functions. It's to add a **correlation layer** + **central tracing** + **a thin orchestrator wrapper** that wraps existing fetch calls. Minimal invasive, maximum debugging value.
+What's missing for "real squad":
+1. **Orchestrator Agent** — LLM-driven decision agent that picks next agent based on goal + context
+2. **Shared memory** — agents read/write to a shared scratchpad per run
+3. **Structured handoff** — typed contracts between agents (not free JSON)
+4. **Already-redundant cleanup** — user listed dupes (some already deleted last turn, but `video-orchestrator`, `discover-channels-gemini` still exist)
 
-Plan focuses on 3 things in order of ROI:
-1. Distributed tracing (trace_id propagation + central trace table + UI viewer)
-2. Standardized inter-function caller (replaces raw fetch with logged wrapper)
-3. Pipeline visualization for multi-step flows (autopilot, squad-orchestrator, video pipeline)
+Let me check what's already deleted vs still there, and design minimal real-squad architecture.
 
-Keep it tight.
+I won't rewrite 115 functions. I'll:
+1. Build `meta-orchestrator` — single LLM agent that, given a goal ("make a viral script for niche X"), plans + executes a chain of existing functions, with shared memory.
+2. Add `agent_runs` + `agent_memory` tables for shared state.
+3. Define agent registry — typed manifest of what each "real agent" does (input/output schema, cost, latency).
+4. Delete final dupes user mentioned.
+5. UI: visualize the meta-orchestrator's decision tree (extends existing TraceWaterfall).
+
+Keep tight.
