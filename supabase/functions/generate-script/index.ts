@@ -7,9 +7,9 @@ import { buildFlashQualityBoost } from "../_shared/flash-quality-boost.ts";
 import { enforceCreditGuard } from "../_shared/credit-guard.ts";
 import { fetchNicheTemplate, buildNicheInjection } from "../_shared/niche-templates.ts";
 import { fetchHookPerformanceBlock, fetchUserCtrPatternsBlock } from "../_shared/learning-loop-injector.ts";
-import { fetchReferenceIntelBlock } from "../_shared/reference-intel-injector.ts";
+import { fetchReferenceIntelBlock, fetchRagChunks } from "../_shared/reference-intel-injector.ts";
 import { composeScriptPrompt } from "../_shared/prompt-composer.ts";
-import { validateScript, stripTechnicalTags, buildRepairPrompt } from "../_shared/script-validators.ts";
+import { validateScript, stripTechnicalTags, buildRepairPrompt, computeFidelityScore } from "../_shared/script-validators.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -909,12 +909,13 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
 
     // ⭐ LEARNING LOOP: inject real hook + CTR patterns + REFERENCE CHANNEL intel from this user
     const _learningUserId = (typeof currentUserId === 'string' && currentUserId) ? currentUserId : null;
-    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock] = await Promise.all([
+    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock, referenceRagBlock] = await Promise.all([
       fetchHookPerformanceBlock(sb, _learningUserId, niche),
       fetchUserCtrPatternsBlock(sb, _learningUserId, niche),
-      _learningUserId ? fetchReferenceIntelBlock(sb, _learningUserId, { limit: 3, niche }) : Promise.resolve(""),
+      _learningUserId ? fetchReferenceIntelBlock(sb, _learningUserId, { limit: 5, niche }) : Promise.resolve(""),
+      _learningUserId && topic ? fetchRagChunks(sb, GOOGLE_AI_API_KEY, _learningUserId, `${topic} ${niche || ''} ${style || ''}`.trim(), { matchCount: 4 }) : Promise.resolve(""),
     ]);
-    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}`;
+    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}${referenceRagBlock}`;
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
 Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.${learningLoopInjection}
