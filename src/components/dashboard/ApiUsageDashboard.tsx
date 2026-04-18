@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Activity, AlertTriangle, CheckCircle, Clock, Database, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AiCostPanel } from './AiCostPanel';
 
 interface ApiUsageRow {
   api_name: string;
@@ -68,6 +69,9 @@ export const ApiUsageDashboard = () => {
 
   return (
     <div className="space-y-4">
+      {/* AI Cost Panel — budget enforcement view */}
+      <AiCostPanel />
+
       {/* API Usage Cards */}
       <div>
         <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
