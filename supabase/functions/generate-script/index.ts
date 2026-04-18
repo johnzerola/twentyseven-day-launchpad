@@ -1675,12 +1675,37 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
           console.log(`[REPAIR] runId=${runId} applied: ${repairsApplied.join(",")}`);
         }
 
+        // ═══ FIDELITY SCORE: how aligned is the script with the user's MODEL channel? ═══
+        let fidelity: any = null;
+        try {
+          if (_learningUserId) {
+            const { data: modelRefs } = await sb
+              .from("user_reference_channels")
+              .select("channel_name, latest_intel")
+              .eq("user_id", _learningUserId)
+              .eq("role", "model")
+              .not("latest_intel", "is", null)
+              .order("last_scanned_at", { ascending: false, nullsFirst: false })
+              .limit(1);
+            const modelRef = modelRefs && modelRefs[0];
+            if (modelRef) {
+              fidelity = computeFidelityScore(finalScript, {
+                channel_name: modelRef.channel_name,
+                intel: modelRef.latest_intel,
+              }, { isShort: false });
+              console.log(`[FIDELITY] runId=${runId} score=${fidelity.score} channel=${modelRef.channel_name}`);
+            }
+          }
+        } catch (e) {
+          console.warn(`[FIDELITY] runId=${runId} compute failed:`, (e as Error).message);
+        }
+
         // Stream the (possibly repaired) script as SSE chunks to the client
         const enc = new TextEncoder();
         const repairedStream = new ReadableStream({
           start(controller) {
             // Metadata first
-            controller.enqueue(enc.encode(`data: ${JSON.stringify({ _meta: { rag_failed: ragFailed, validation: { passed: validation.passed, slop_score: validation.slopScore, hook_strength: validation.hookStrength, repairs_applied: repairsApplied, issues: validation.issues.slice(0, 5) } } })}\n\n`));
+            controller.enqueue(enc.encode(`data: ${JSON.stringify({ _meta: { rag_failed: ragFailed, validation: { passed: validation.passed, slop_score: validation.slopScore, hook_strength: validation.hookStrength, repairs_applied: repairsApplied, issues: validation.issues.slice(0, 5) }, fidelity } })}\n\n`));
             // Send the final (possibly repaired) script in chunks of ~200 chars for smoother UX
             const CHUNK_SIZE = 200;
             for (let i = 0; i < finalScript.length; i += CHUNK_SIZE) {
@@ -1699,6 +1724,7 @@ NUNCA diga "Obrigado por assistir". O final deve ser a introdução do próximo 
             "X-Rag-Status": ragFailed ? "failed" : "ok",
             "X-Validation-Passed": validation.passed ? "1" : "0",
             "X-Repairs-Applied": repairsApplied.join(",") || "none",
+            "X-Fidelity-Score": fidelity ? String(fidelity.score) : "0",
           },
         });
       } catch (e) {
