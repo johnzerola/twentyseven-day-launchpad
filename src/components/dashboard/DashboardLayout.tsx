@@ -17,6 +17,7 @@ const navItems = [
   { key: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'Tracker 30 Dias', icon: Rocket, path: '/tracker' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
+  { key: 'AutoPilot', icon: Zap, path: '/autopilot' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
   { key: 'DubSpy', icon: Search, path: '/search' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },

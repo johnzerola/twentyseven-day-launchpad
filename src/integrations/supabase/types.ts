@@ -4966,49 +4966,61 @@ export type Database = {
       }
       video_projects: {
         Row: {
+          audio_url: string | null
           channel_id: string | null
           created_at: string | null
           duration_seconds: number | null
+          error_message: string | null
           id: string
           intelligence_json: Json | null
           niche: string | null
           scene_blueprint_json: Json | null
+          scheduled_at: string | null
           script: string | null
           status: string | null
           title: string
           updated_at: string | null
           user_id: string
           video_type: Database["public"]["Enums"]["video_type"]
+          youtube_video_id: string | null
         }
         Insert: {
+          audio_url?: string | null
           channel_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
+          error_message?: string | null
           id?: string
           intelligence_json?: Json | null
           niche?: string | null
           scene_blueprint_json?: Json | null
+          scheduled_at?: string | null
           script?: string | null
           status?: string | null
           title?: string
           updated_at?: string | null
           user_id: string
           video_type?: Database["public"]["Enums"]["video_type"]
+          youtube_video_id?: string | null
         }
         Update: {
+          audio_url?: string | null
           channel_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
+          error_message?: string | null
           id?: string
           intelligence_json?: Json | null
           niche?: string | null
           scene_blueprint_json?: Json | null
+          scheduled_at?: string | null
           script?: string | null
           status?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
           video_type?: Database["public"]["Enums"]["video_type"]
+          youtube_video_id?: string | null
         }
         Relationships: []
       }

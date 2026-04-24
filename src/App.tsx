@@ -26,6 +26,7 @@ import Tracker30Days from "./pages/Tracker30Days";
 import GrowthTools from "./pages/GrowthTools";
 import ShortsTrends from "./pages/ShortsTrends";
 import Squads from "./pages/Squads";
+import AutoPilot from "./pages/AutoPilot";
 import AdminTraces from "./pages/AdminTraces";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/search" element={<P><ChannelSearch /></P>} />
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
+            <Route path="/autopilot" element={<P><AutoPilot /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/multichannel" element={<P><MultiChannel /></P>} />

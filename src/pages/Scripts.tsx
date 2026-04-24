@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X, Bot } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X, Bot, Rocket } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
 import { PaginationControls } from '@/components/PaginationControls';
 import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 // Refactored components
 import { ScriptGenerator } from '@/components/scripts/ScriptGenerator';
@@ -96,6 +97,13 @@ const Scripts = () => {
   const [channelStyles, setChannelStyles] = useState<any[]>([]);
   const [showCreateStyle, setShowCreateStyle] = useState(false);
   const [newStyleName, setNewStyleName] = useState('');
+  const [autoPilotOpen, setAutoPilotOpen] = useState(false);
+  const [autoPilotScheduled, setAutoPilotScheduled] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(18, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [autoPilotSubmitting, setAutoPilotSubmitting] = useState(false);
   const [newStyleDesc, setNewStyleDesc] = useState('');
   const [newStyleNotes, setNewStyleNotes] = useState('');
   const [referenceImages, setReferenceImages] = useState<{ url: string; file?: File }[]>([]);
@@ -1426,6 +1434,76 @@ const Scripts = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating AutoPilot CTA — only when audio + scenes ready */}
+      {generatedAudioUrl && sceneBlueprintJson.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            size="lg"
+            onClick={() => setAutoPilotOpen(true)}
+            className="shadow-2xl gradient-hero text-primary-foreground hover:opacity-90 animate-pulse"
+          >
+            <Zap className="w-4 h-4" /> 🚀 Produzir Agora com AutoPilot
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={autoPilotOpen} onOpenChange={setAutoPilotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" /> Enviar para AutoPilot
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              O sistema vai produzir e agendar a publicação automaticamente. Escolha quando deve ir ao ar:
+            </p>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Data e hora</label>
+              <Input
+                type="datetime-local"
+                value={autoPilotScheduled}
+                onChange={(e) => setAutoPilotScheduled(e.target.value)}
+              />
+            </div>
+            {!projectId && (
+              <p className="text-xs text-destructive">
+                ⚠️ Projeto ainda não foi salvo. Complete o pipeline antes de enviar.
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAutoPilotOpen(false)}>Cancelar</Button>
+            <Button
+              disabled={autoPilotSubmitting || !projectId || !generatedAudioUrl}
+              onClick={async () => {
+                if (!projectId) { toast.error('Projeto não encontrado'); return; }
+                setAutoPilotSubmitting(true);
+                const scheduledIso = new Date(autoPilotScheduled).toISOString();
+                const { error } = await supabase.from('video_projects').update({
+                  status: 'ready_for_production',
+                  scheduled_at: scheduledIso,
+                  audio_url: generatedAudioUrl,
+                  error_message: null,
+                }).eq('id', projectId);
+                setAutoPilotSubmitting(false);
+                if (error) {
+                  toast.error('Falha: ' + error.message);
+                } else {
+                  setAutoPilotOpen(false);
+                  toast.success('🚀 Enviado ao AutoPilot!', {
+                    action: { label: 'Ver pipeline', onClick: () => window.location.assign('/autopilot') },
+                  });
+                }
+              }}
+            >
+              {autoPilotSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
