@@ -98,6 +98,13 @@ const Scripts = () => {
   const [channelStyles, setChannelStyles] = useState<any[]>([]);
   const [showCreateStyle, setShowCreateStyle] = useState(false);
   const [newStyleName, setNewStyleName] = useState('');
+  const [autoPilotOpen, setAutoPilotOpen] = useState(false);
+  const [autoPilotScheduled, setAutoPilotScheduled] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(18, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [autoPilotSubmitting, setAutoPilotSubmitting] = useState(false);
   const [newStyleDesc, setNewStyleDesc] = useState('');
   const [newStyleNotes, setNewStyleNotes] = useState('');
   const [referenceImages, setReferenceImages] = useState<{ url: string; file?: File }[]>([]);
