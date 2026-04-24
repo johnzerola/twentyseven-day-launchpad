@@ -1435,6 +1435,76 @@ const Scripts = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating AutoPilot CTA — only when audio + scenes ready */}
+      {generatedAudioUrl && sceneBlueprintJson.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            size="lg"
+            onClick={() => setAutoPilotOpen(true)}
+            className="shadow-2xl gradient-hero text-primary-foreground hover:opacity-90 animate-pulse"
+          >
+            <Zap className="w-4 h-4" /> 🚀 Produzir Agora com AutoPilot
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={autoPilotOpen} onOpenChange={setAutoPilotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" /> Enviar para AutoPilot
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              O sistema vai produzir e agendar a publicação automaticamente. Escolha quando deve ir ao ar:
+            </p>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Data e hora</label>
+              <Input
+                type="datetime-local"
+                value={autoPilotScheduled}
+                onChange={(e) => setAutoPilotScheduled(e.target.value)}
+              />
+            </div>
+            {!projectId && (
+              <p className="text-xs text-destructive">
+                ⚠️ Projeto ainda não foi salvo. Complete o pipeline antes de enviar.
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAutoPilotOpen(false)}>Cancelar</Button>
+            <Button
+              disabled={autoPilotSubmitting || !projectId || !generatedAudioUrl}
+              onClick={async () => {
+                if (!projectId) { toast.error('Projeto não encontrado'); return; }
+                setAutoPilotSubmitting(true);
+                const scheduledIso = new Date(autoPilotScheduled).toISOString();
+                const { error } = await supabase.from('video_projects').update({
+                  status: 'ready_for_production',
+                  scheduled_at: scheduledIso,
+                  audio_url: generatedAudioUrl,
+                  error_message: null,
+                }).eq('id', projectId);
+                setAutoPilotSubmitting(false);
+                if (error) {
+                  toast.error('Falha: ' + error.message);
+                } else {
+                  setAutoPilotOpen(false);
+                  toast.success('🚀 Enviado ao AutoPilot!', {
+                    action: { label: 'Ver pipeline', onClick: () => window.location.assign('/autopilot') },
+                  });
+                }
+              }}
+            >
+              {autoPilotSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
