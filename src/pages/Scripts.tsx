@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X, Bot } from 'lucide-react';
+import { FileText, History, Trash2, Flame, ChevronDown, ChevronUp, Target, BookOpen, Film, Users, Image, Check, Zap, Loader2, LayoutTemplate, Lightbulb, TrendingUp, ArrowRight, Sparkles, GitCompareArrows, Plus, Save, Palette, Upload, X, Bot, Rocket } from 'lucide-react';
 import { VIDEO_TYPES, VIDEO_TYPE_DEFAULTS, type VideoType } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
