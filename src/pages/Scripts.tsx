@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePagination, PAGE_SIZE } from '@/hooks/use-pagination';
 import { PaginationControls } from '@/components/PaginationControls';
 import { VIRAL_HOOKS, VIRAL_CTAS, STORY_STRUCTURES } from '@/lib/viralDatabase';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Link as RouterLink } from 'react-router-dom';
 
 // Refactored components
 import { ScriptGenerator } from '@/components/scripts/ScriptGenerator';
