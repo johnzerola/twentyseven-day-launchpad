@@ -141,8 +141,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       {/* Plan limits summary */}
       <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
         <div className="space-y-1.5 text-[10px] text-muted-foreground">
-          <div className="flex justify-between">
-            <span>Canais</span>
+          <div className="flex justify-between" title="Limite máximo de canais permitido pelo seu plano (não é a contagem atual)">
+            <span>Canais (limite)</span>
             <span className="font-mono">{limits.maxChannels === 20 ? '∞' : limits.maxChannels}</span>
           </div>
           <div className="flex justify-between">
