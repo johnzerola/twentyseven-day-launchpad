@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield, Crown, Bot, Calendar } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield, Crown, Bot, Calendar, BarChart2, CalendarDays } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,8 @@ const navItems = [
   { key: 'Tracker 30 Dias', icon: Rocket, path: '/tracker' },
   { key: 'Roteiros', icon: FileText, path: '/scripts' },
   { key: 'AutoPilot', icon: Zap, path: '/autopilot' },
+  { key: 'Performance', icon: BarChart2, path: '/autopilot/performance' },
+  { key: 'Agendamento', icon: CalendarDays, path: '/autopilot/scheduler' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
   { key: 'DubSpy', icon: Search, path: '/search' },
   { key: 'Meus Canais', icon: Youtube, path: '/channels' },
