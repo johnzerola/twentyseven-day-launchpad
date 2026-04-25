@@ -127,7 +127,7 @@ Return ONLY a JSON array: [{"index": 1, "category": "dark_storytelling", "second
             if (idx >= 0 && idx < batch.length && cl.category) {
               const updateData: any = { content_category: cl.category };
               if (cl.secondary) {
-                updateData.visual_style_notes = `secondary_category:${cl.secondary}|confidence:${cl.confidence || 0.8}|${batch[idx].visual_style_notes || ''}`;
+                updateData.visual_style_notes = `secondary_category:${cl.secondary}|confidence:${cl.confidence || 0.8}|${(batch[idx] as any).visual_style_notes || ''}`;
               }
               const { error: updErr } = await sb.from("channel_intelligence")
                 .update(updateData)
