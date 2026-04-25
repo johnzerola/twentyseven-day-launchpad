@@ -1097,6 +1097,12 @@ const Channels = () => {
           )}
         </AnimatePresence>
       </div>
+      <ChannelDNAModal
+        channel={dnaChannel}
+        open={!!dnaChannel}
+        onOpenChange={(v) => !v && setDnaChannel(null)}
+        onSaved={loadChannels}
+      />
     </DashboardLayout>
   );
 };
