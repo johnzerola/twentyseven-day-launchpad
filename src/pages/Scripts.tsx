@@ -1500,14 +1500,19 @@ const Scripts = () => {
               disabled={autoPilotSubmitting || !projectId || !generatedAudioUrl}
               onClick={async () => {
                 if (!projectId) { toast.error('Projeto não encontrado'); return; }
+                if (!selectedChannelId) {
+                  toast.error('Selecione o canal antes de enviar ao AutoPilot');
+                  return;
+                }
                 setAutoPilotSubmitting(true);
                 const scheduledIso = new Date(autoPilotScheduled).toISOString();
                 const { error } = await supabase.from('video_projects').update({
                   status: 'ready_for_production',
                   scheduled_at: scheduledIso,
                   audio_url: generatedAudioUrl,
+                  channel_id_ref: selectedChannelId,
                   error_message: null,
-                }).eq('id', projectId);
+                } as any).eq('id', projectId);
                 setAutoPilotSubmitting(false);
                 if (error) {
                   toast.error('Falha: ' + error.message);
