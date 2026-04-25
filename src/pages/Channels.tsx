@@ -3,7 +3,8 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { YouTubeOAuthConnect } from '@/components/dashboard/YouTubeOAuthConnect';
 import { ReferenceChannelsTab } from '@/components/dashboard/ReferenceChannelsTab';
 import { AutoPilotTab } from '@/components/dashboard/AutoPilotTab';
-import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap, ArrowUpRight, ArrowDownRight, Minus, Shield, Flame, Star, BookOpen, Settings } from 'lucide-react';
+import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap, ArrowUpRight, ArrowDownRight, Minus, Shield, Flame, Star, BookOpen, Settings, Link2 } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ interface Channel {
   niche: string | null;
   analysis_json: any;
   linked_at: string;
+  youtube_refresh_token?: string | null;
 }
 
 interface Competitor {
@@ -194,6 +196,41 @@ const Channels = () => {
     toast.success('Canal removido');
     if (selectedChannel?.id === id) setSelectedChannel(null);
     loadChannels();
+  };
+
+  const reconnectChannel = async (ch: Channel) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Faça login'); return; }
+      toast.info('🔗 Abrindo autorização do Google...');
+      const resp = await authFetch('youtube-oauth-start', { userId: user.id });
+      const { authUrl, error } = await resp.json();
+      if (error) throw new Error(error);
+      const popup = window.open(authUrl, 'youtube-oauth-reconnect', 'width=600,height=700');
+      const interval = setInterval(async () => {
+        if (popup?.closed) {
+          clearInterval(interval);
+          // Após o callback, o token já foi gravado em user_channels
+          // (o callback faz UPSERT por user_id+youtube_channel_id).
+          // Aqui forçamos apenas um refresh dos dados na tela.
+          await loadChannels();
+          // Verifica se o token ficou disponível
+          const { data: refreshed } = await supabase
+            .from('user_channels')
+            .select('youtube_refresh_token')
+            .eq('id', ch.id)
+            .maybeSingle();
+          if ((refreshed as any)?.youtube_refresh_token) {
+            toast.success('✅ Canal reconectado! Upload programático habilitado.');
+          } else {
+            toast.warning('Reconexão concluída, mas o token não foi sincronizado. Tente novamente.');
+          }
+        }
+      }, 1000);
+      setTimeout(() => clearInterval(interval), 300000);
+    } catch (e: any) {
+      toast.error('Erro ao reconectar: ' + (e?.message || 'desconhecido'));
+    }
   };
 
   const refreshChannel = async (ch: Channel) => {
@@ -474,6 +511,23 @@ const Channels = () => {
                         Configurar
                       </button>
                     </div>
+                  </div>
+                  {/* Reconnect / OAuth status row */}
+                  <div className="mt-1.5 pt-1.5 border-t border-border/30">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); reconnectChannel(ch as Channel); }}
+                      className={`w-full text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center justify-center gap-1 ${
+                        ch.youtube_refresh_token
+                          ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                      }`}
+                      title={ch.youtube_refresh_token
+                        ? 'Token de upload já configurado. Clique para atualizar/reautorizar.'
+                        : 'Necessário para que o sistema faça upload programático no seu canal.'}
+                    >
+                      <Link2 className="w-3 h-3" />
+                      {ch.youtube_refresh_token ? '✅ Upload conectado (reconectar)' : '🔗 Reconectar para upload'}
+                    </button>
                   </div>
                 </div>
               ))
