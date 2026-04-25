@@ -1,8 +1,12 @@
 /**
  * Learning Loop Injector
- * Fetches per-user (and optionally per-channel) learned patterns
- * (CTR + hook performance) and formats them as injection blocks
- * for system prompts in generators.
+ * Fetches per-user learned patterns (CTR + hook performance) and formats them
+ * as injection blocks for system prompts in generators.
+ *
+ * Note: per-channel scoping is handled by `script-learning-context`
+ * (which queries `video_performance` directly with channel_id).
+ * The tables here (hook_performance_real, user_ctr_patterns,
+ * chosen_thumbnails) are aggregated per-user only.
  */
 
 export interface CtrPatterns {
@@ -20,22 +24,18 @@ export async function fetchUserCtrPatternsBlock(
   sb: any,
   userId: string | null | undefined,
   niche: string | null | undefined,
-  channelId?: string | null,
 ): Promise<string> {
   if (!userId) return "";
   try {
     const targetNiche = (niche || "general").toLowerCase();
-    let q = sb
+    const { data } = await sb
       .from("user_ctr_patterns")
       .select("*")
       .eq("user_id", userId)
       .in("niche", [targetNiche, "general"])
       .order("data_points", { ascending: false })
-      .limit(1);
-    if (channelId) {
-      q = q.eq("channel_id", channelId);
-    }
-    const { data } = await q.maybeSingle();
+      .limit(1)
+      .maybeSingle();
 
     if (!data || !data.data_points || data.data_points < 3) return "";
 
@@ -65,18 +65,15 @@ export async function fetchHookPerformanceBlock(
   sb: any,
   userId: string | null | undefined,
   niche: string | null | undefined,
-  channelId?: string | null,
 ): Promise<string> {
   if (!userId) return "";
   try {
-    let q = sb
+    const { data } = await sb
       .from("hook_performance_real")
-      .select("hook_type, retention_30s, avg_retention, channel_id")
+      .select("hook_type, retention_30s, avg_retention")
       .eq("user_id", userId)
       .not("hook_type", "is", null)
       .not("retention_30s", "is", null);
-    if (channelId) q = q.eq("channel_id", channelId);
-    const { data } = await q;
 
     if (!data || data.length < 5) return "";
 
@@ -121,17 +118,14 @@ INSTRUÇÃO: Priorize o hook_type com maior retenção 30s comprovada para este 
 export async function fetchThumbnailStyleBlock(
   sb: any,
   userId: string | null | undefined,
-  channelId?: string | null,
 ): Promise<string> {
   if (!userId) return "";
   try {
-    let q = sb
+    const { data } = await sb
       .from("chosen_thumbnails")
-      .select("style_summary, ctr_actual, variant_data, channel_id")
+      .select("style_summary, ctr_actual, variant_data")
       .eq("user_id", userId)
       .not("ctr_actual", "is", null);
-    if (channelId) q = q.eq("channel_id", channelId);
-    const { data } = await q;
 
     if (!data || data.length < 3) return "";
 
