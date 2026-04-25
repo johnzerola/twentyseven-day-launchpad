@@ -512,6 +512,23 @@ const Channels = () => {
                       </button>
                     </div>
                   </div>
+                  {/* Reconnect / OAuth status row */}
+                  <div className="mt-1.5 pt-1.5 border-t border-border/30">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); reconnectChannel(ch as Channel); }}
+                      className={`w-full text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center justify-center gap-1 ${
+                        ch.youtube_refresh_token
+                          ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                      }`}
+                      title={ch.youtube_refresh_token
+                        ? 'Token de upload já configurado. Clique para atualizar/reautorizar.'
+                        : 'Necessário para que o sistema faça upload programático no seu canal.'}
+                    >
+                      <Link2 className="w-3 h-3" />
+                      {ch.youtube_refresh_token ? '✅ Upload conectado (reconectar)' : '🔗 Reconectar para upload'}
+                    </button>
+                  </div>
                 </div>
               ))
             )}
