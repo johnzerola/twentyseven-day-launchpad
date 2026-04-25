@@ -167,13 +167,22 @@ serve(async (req) => {
     errors: [],
   };
 
+  let runMode = "incremental";
+  let runUserId: string | null = null;
+  let runTriggeredBy = "cron";
+  let sbForLog: any = null;
+
   try {
     const body = await req.json().catch(() => ({}));
     const {
       mode = "incremental", // 'incremental' (≤48h) | 'daily' (≤30d) | 'all'
       user_id, // optional — limit to one user
       max_videos_per_channel = 50,
+      triggered_by = "cron",
     } = body || {};
+    runMode = mode;
+    runUserId = user_id ?? null;
+    runTriggeredBy = triggered_by;
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
