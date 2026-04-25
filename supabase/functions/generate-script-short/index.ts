@@ -198,7 +198,7 @@ OBJETIVO: >78% de completion. A história JUSTIFICA cada segundo.
 
     const modelBlock = bestModel ? `\n📐 MODELO ESTRUTURAL RECOMENDADO: ${bestModel.model_name} (${bestModel.best_for_duration})\n${bestModel.description}\nHook: ${bestModel.hook_pattern}\nPacing: ${bestModel.pacing_guide}\n` : '';
 
-    const systemPrompt = `Você é o MELHOR ROTEIRISTA DE SHORTS DO MUNDO. Taxa de conclusão: 95%+. Cada Short seu faz >1M views.${weeklyRefBrief}
+    const systemPrompt = `Você é o MELHOR ROTEIRISTA DE SHORTS DO MUNDO. Taxa de conclusão: 95%+. Cada Short seu faz >1M views.${channelLearningBrief}${weeklyRefBrief}
 
 ═══════════════════════════════════
 📱 FORMATO: YouTube Short / TikTok / Reels — VERTICAL 9:16
