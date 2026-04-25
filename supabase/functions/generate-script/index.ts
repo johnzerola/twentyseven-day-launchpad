@@ -936,14 +936,39 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
       }
     };
 
-    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock, referenceRagBlock, channelLearningBrief] = await Promise.all([
+    // Fetch latest weekly niche references report (top viral videos in this niche)
+    const fetchWeeklyReferenceBrief = async (): Promise<string> => {
+      if (!_learningUserId) return "";
+      try {
+        let q = sb
+          .from("niche_reference_reports")
+          .select("prompt_injection, week_start, niche")
+          .eq("user_id", _learningUserId)
+          .eq("status", "done")
+          .order("week_start", { ascending: false })
+          .limit(1);
+        if (niche) q = q.eq("niche", niche);
+        const { data } = await q.maybeSingle();
+        if (data?.prompt_injection) {
+          console.log(`[NICHE-REFS] runId=${runId} injected weekly brief (week ${data.week_start})`);
+          return `\n\n📅 REFERÊNCIAS VIRAIS DA SEMANA (${data.week_start}):\n${data.prompt_injection}\n`;
+        }
+        return "";
+      } catch (e) {
+        console.warn(`[NICHE-REFS] failed: ${(e as any)?.message}`);
+        return "";
+      }
+    };
+
+    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock, referenceRagBlock, channelLearningBrief, weeklyRefBrief] = await Promise.all([
       fetchHookPerformanceBlock(sb, _learningUserId, niche),
       fetchUserCtrPatternsBlock(sb, _learningUserId, niche),
       _learningUserId ? fetchReferenceIntelBlock(sb, _learningUserId, { limit: 5, niche }) : Promise.resolve(""),
       _learningUserId && topic ? fetchRagChunks(sb, GOOGLE_AI_API_KEY, _learningUserId, `${topic} ${niche || ''} ${style || ''}`.trim(), { matchCount: 4 }) : Promise.resolve(""),
       fetchChannelLearningBrief(),
+      fetchWeeklyReferenceBrief(),
     ]);
-    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}${referenceRagBlock}${channelLearningBrief}`;
+    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}${referenceRagBlock}${channelLearningBrief}${weeklyRefBrief}`;
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
 Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.${learningLoopInjection}
