@@ -122,9 +122,20 @@ export const YouTubeOAuthConnect = () => {
               <p className="text-sm font-medium truncate">{ch.channel_name}</p>
               <p className="text-[10px] text-muted-foreground">{ch.channel_id}</p>
             </div>
-            <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
-              <BarChart3 className="w-3 h-3" /> OAuth
-            </Badge>
+            <div className="flex flex-col gap-1 items-end">
+              <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
+                <BarChart3 className="w-3 h-3" /> OAuth
+              </Badge>
+              {ch.has_upload_scope ? (
+                <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
+                  ⬆ Upload OK
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] gap-1 text-amber-400 border-amber-400/30">
+                  ⚠ Reconectar p/ upload
+                </Badge>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"
