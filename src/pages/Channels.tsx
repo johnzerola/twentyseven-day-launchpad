@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { YouTubeOAuthConnect } from '@/components/dashboard/YouTubeOAuthConnect';
 import { ReferenceChannelsTab } from '@/components/dashboard/ReferenceChannelsTab';
+import { AutoPilotTab } from '@/components/dashboard/AutoPilotTab';
 import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap, ArrowUpRight, ArrowDownRight, Minus, Shield, Flame, Star, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -512,6 +513,7 @@ const Channels = () => {
                     <TabsTrigger value="competitors" className="gap-1"><Trophy className="w-4 h-4" />Concorrentes</TabsTrigger>
                     <TabsTrigger value="suggestions" className="gap-1"><Lightbulb className="w-4 h-4" />Sugestões</TabsTrigger>
                     <TabsTrigger value="references" className="gap-1"><Target className="w-4 h-4" />Referências</TabsTrigger>
+                    <TabsTrigger value="autopilot" className="gap-1"><Zap className="w-4 h-4" />AutoPilot</TabsTrigger>
                   </TabsList>
 
                   {/* ==================== OVERVIEW TAB ==================== */}
@@ -1053,6 +1055,11 @@ const Channels = () => {
                   {/* ==================== REFERENCES TAB ==================== */}
                   <TabsContent value="references" className="mt-4">
                     <ReferenceChannelsTab />
+                  </TabsContent>
+
+                  {/* ==================== AUTOPILOT TAB ==================== */}
+                  <TabsContent value="autopilot" className="mt-4">
+                    <AutoPilotTab />
                   </TabsContent>
                 </Tabs>
               </div>
