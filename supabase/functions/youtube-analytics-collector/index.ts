@@ -403,17 +403,58 @@ serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startTs;
+    if (sbForLog) {
+      await sbForLog
+        .from("analytics_collector_runs")
+        .insert({
+          started_at: new Date(startTs).toISOString(),
+          finished_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          mode: runMode,
+          triggered_by: runTriggeredBy,
+          user_id: runUserId,
+          channels_processed: stats.channels_processed,
+          videos_updated: stats.videos_updated,
+          videos_failed: stats.videos_failed,
+          videos_skipped: stats.videos_skipped,
+          errors: stats.errors,
+          ok: true,
+        })
+        .then(() => {}, () => {});
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
-        mode,
-        duration_ms: Date.now() - startTs,
+        mode: runMode,
+        duration_ms: durationMs,
         stats,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {
     console.error("youtube-analytics-collector error:", e);
+    const durationMs = Date.now() - startTs;
+    if (sbForLog) {
+      await sbForLog
+        .from("analytics_collector_runs")
+        .insert({
+          started_at: new Date(startTs).toISOString(),
+          finished_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          mode: runMode,
+          triggered_by: runTriggeredBy,
+          user_id: runUserId,
+          channels_processed: stats.channels_processed,
+          videos_updated: stats.videos_updated,
+          videos_failed: stats.videos_failed,
+          videos_skipped: stats.videos_skipped,
+          errors: [...stats.errors, `fatal: ${e?.message || "unknown"}`],
+          ok: false,
+        })
+        .then(() => {}, () => {});
+    }
     return new Response(
       JSON.stringify({
         ok: false,
