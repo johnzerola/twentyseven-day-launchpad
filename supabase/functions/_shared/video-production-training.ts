@@ -430,39 +430,39 @@ export function detectSpecialConditions(scriptText: string): SpecialConditions {
   const t = scriptText.toLowerCase();
   
   const hasNight = /noite|night|escuro|dark|midnight|meia-noite|madrugada|lua|moon/i.test(t);
-  const nightType = hasNight
+  const nightType = (hasNight
     ? (/cidade|city|urban|rua|street|neon/i.test(t) ? 'urban'
       : /interior|quarto|room|casa|house|escritório|office/i.test(t) ? 'interior'
-      : 'rural') as const
-    : null;
+      : 'rural')
+    : null) as SpecialConditions['nightType'];
 
   const hasRain = /chuva|rain|aguaceir/i.test(t);
-  const rainIntensity = hasRain
+  const rainIntensity = (hasRain
     ? (/tempestade|storm|trovão|thunder|relâmpago|lightning/i.test(t) ? 'storm'
       : /forte|heavy|torrencial|downpour/i.test(t) ? 'heavy'
-      : 'light') as const
-    : null;
+      : 'light')
+    : null) as SpecialConditions['rainIntensity'];
 
   const hasSnow = /neve|snow/i.test(t);
-  const snowIntensity = hasSnow
-    ? (/nevasca|blizzard|tempestade de neve/i.test(t) ? 'blizzard' : 'gentle') as const
-    : null;
+  const snowIntensity = (hasSnow
+    ? (/nevasca|blizzard|tempestade de neve/i.test(t) ? 'blizzard' : 'gentle')
+    : null) as SpecialConditions['snowIntensity'];
 
   const hasFog = /neblina|fog|névoa|mist|nevoeiro/i.test(t);
   const hasWind = /vento|wind/i.test(t);
-  const windIntensity = hasWind
-    ? (/forte|strong|violento|tempestade/i.test(t) ? 'strong' : 'gentle') as const
-    : null;
+  const windIntensity = (hasWind
+    ? (/forte|strong|violento|tempestade/i.test(t) ? 'strong' : 'gentle')
+    : null) as SpecialConditions['windIntensity'];
 
   const hasHistorical = /século|century|antigo|ancient|medieval|renascen|renaissance|império|empire|1\d{3}s|19\d{2}|18\d{2}|era |época|victorian|vitorian/i.test(t);
-  const historicalEra = hasHistorical
+  const historicalEra = (hasHistorical
     ? (/egíp|egypt|gre[gc]|rome|roma|antigo|ancient/i.test(t) ? 'ancient'
       : /medieval|idade média|middle age|castelo|castle/i.test(t) ? 'medieval'
       : /renascen|renaissance|barroc|baroque/i.test(t) ? 'renaissance'
       : /vitorian|victorian|industrial|séc.*19|18\d{2}|19th/i.test(t) ? 'victorian'
       : /19[4-6]\d|anos 50|anos 60|1950|1960|mid.?century|art deco/i.test(t) ? 'midcentury'
-      : null) as const
-    : null;
+      : null)
+    : null) as SpecialConditions['historicalEra'];
 
   return {
     hasNight, nightType,
