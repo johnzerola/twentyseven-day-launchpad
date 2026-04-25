@@ -57,6 +57,8 @@ const App = () => (
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
             <Route path="/autopilot" element={<P><AutoPilot /></P>} />
+            <Route path="/calendar" element={<P><CalendarPage /></P>} />
+            <Route path="/channels/:id/settings" element={<P><ChannelSettings /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />
             <Route path="/viral-db" element={<P><ViralDatabase /></P>} />
             <Route path="/multichannel" element={<P><MultiChannel /></P>} />
