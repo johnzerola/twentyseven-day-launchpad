@@ -96,9 +96,16 @@ export const YouTubeOAuthConnect = () => {
 
   const handleDisconnect = async (id: string, channelName: string) => {
     try {
+      // Apenas limpa as credenciais OAuth — o canal continua na lista do usuário.
       const { error } = await supabase
-        .from('youtube_oauth_tokens')
-        .delete()
+        .from('user_channels')
+        .update({
+          youtube_refresh_token: null,
+          youtube_access_token: null,
+          youtube_token_expires_at: null,
+          youtube_oauth_scope: null,
+          youtube_oauth_connected_at: null,
+        })
         .eq('id', id);
       if (error) throw error;
       toast.success(`Canal "${channelName}" desconectado do OAuth`);
