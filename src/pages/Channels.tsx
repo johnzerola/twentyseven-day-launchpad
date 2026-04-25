@@ -89,6 +89,7 @@ const ScoreGauge = ({ value, label, max = 100, color = 'primary' }: { value: num
 };
 
 const Channels = () => {
+  const navigate = useNavigate();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingChannel, setAddingChannel] = useState(false);
