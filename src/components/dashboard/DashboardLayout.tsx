@@ -30,6 +30,7 @@ const navItems = [
   { key: 'Viral Database', icon: Flame, path: '/viral-db' },
   { key: 'Growth Tools', icon: Shield, path: '/growth-tools' },
   { key: 'AI Squads', icon: Bot, path: '/squads' },
+  { key: 'Orquestrador', icon: Activity, path: '/agents' },
 ];
 
 const TIER_COLORS: Record<string, string> = {
