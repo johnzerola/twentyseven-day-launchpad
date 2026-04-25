@@ -382,8 +382,12 @@ export const AutoPilotEngine = ({
   const [scheduledLocal, setScheduledLocal] = useState<string>(tomorrow6pmLocal());
   const [confirmingLaunch, setConfirmingLaunch] = useState(false);
   const [launchPhase, setLaunchPhase] = useState<'idle' | 'pipeline' | 'saving' | 'done'>('idle');
+  // True when the modal is opened AFTER the pipeline already finished
+  // (post-pipeline sticky button) — confirm should skip pipeline.
+  const [skipPipelineOnConfirm, setSkipPipelineOnConfirm] = useState(false);
 
-  const openLaunchModal = useCallback(async () => {
+  const openLaunchModal = useCallback(async (opts?: { skipPipeline?: boolean }) => {
+    setSkipPipelineOnConfirm(!!opts?.skipPipeline);
     setShowLaunchModal(true);
     setLoadingChannels(true);
     try {
