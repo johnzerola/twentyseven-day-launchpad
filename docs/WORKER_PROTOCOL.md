@@ -5,6 +5,50 @@ Contrato completo entre o **Lovable Cloud** (cérebro editorial) e o **worker Py
 
 ---
 
+## 0. Máquina de estados de `video_projects.status`
+
+```text
+                       ┌──────────────────────┐
+                       │ ready_for_production │ ◄──────────────┐
+                       └──────────┬───────────┘                │
+                                  │ claim_next_project()        │
+                                  ▼                             │
+                          ┌──────────────┐                      │
+                          │   claimed    │                      │
+                          └──┬────────┬──┘                      │
+                             │        │                          │
+   worker reporta failed     │        │ worker reporta complete  │
+   (retry_count < max)       │        │                          │
+                             │        ▼                          │
+                             │  ┌───────────┐                    │
+                             │  │ published │ (terminal)         │
+                             │  └───────────┘                    │
+                             │                                   │
+                             ▼                                   │
+                     (incrementa retry_count,                    │
+                      libera worker_id, volta) ───────────────────┘
+                             │
+              retry_count >= max_retries
+                             ▼
+                    ┌───────────────────┐
+                    │ failed | failed_  │  (terminal — só recover --force tira)
+                    │ permanent         │
+                    └───────────────────┘
+```
+
+Recovery automático (`autopilot-recover`, cron 30min):
+- `status='claimed' AND claim_expires_at < now()` → volta para `ready_for_production` (libera worker órfão).
+- `status='ready_for_production' AND error_message IS NOT NULL AND retry_count < max` → reagenda com backoff.
+
+**Estados ATIVOS (worker pode trabalhar):** `ready_for_production`, `claimed`.
+**Estados TERMINAIS (worker NUNCA toca):** `published`, `failed`, `failed_permanent`, `cancelled`, `draft`.
+
+> Regra de ouro: o worker **nunca** muda `status` via UPDATE direto. Toda transição passa por `claim_next_project` (entrada) ou `worker-callback` (saída). Isso garante atomicidade e auditoria via `project_events`.
+
+---
+
+---
+
 ## 1. Endpoints
 
 Base URL:
