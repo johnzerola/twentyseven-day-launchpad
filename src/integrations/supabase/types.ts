@@ -4683,6 +4683,7 @@ export type Database = {
           reference_channels: Json | null
           safety_guard_enabled: boolean
           strategist_enabled: boolean
+          strategist_last_run_at: string | null
           subscribers: number | null
           thumbnail: string | null
           total_videos_posted: number | null
@@ -4727,6 +4728,7 @@ export type Database = {
           reference_channels?: Json | null
           safety_guard_enabled?: boolean
           strategist_enabled?: boolean
+          strategist_last_run_at?: string | null
           subscribers?: number | null
           thumbnail?: string | null
           total_videos_posted?: number | null
@@ -4771,6 +4773,7 @@ export type Database = {
           reference_channels?: Json | null
           safety_guard_enabled?: boolean
           strategist_enabled?: boolean
+          strategist_last_run_at?: string | null
           subscribers?: number | null
           thumbnail?: string | null
           total_videos_posted?: number | null
@@ -5879,6 +5882,68 @@ export type Database = {
           why_viral?: string | null
         }
         Relationships: []
+      }
+      weekly_strategy_plans: {
+        Row: {
+          applied_project_ids: string[] | null
+          channel_id: string
+          cost_usd: number | null
+          created_at: string
+          error_message: string | null
+          id: string
+          model_used: string | null
+          niche_signals: Json
+          performance_summary: Json
+          status: string
+          themes: Json
+          tokens_used: number | null
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          applied_project_ids?: string[] | null
+          channel_id: string
+          cost_usd?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          model_used?: string | null
+          niche_signals?: Json
+          performance_summary?: Json
+          status?: string
+          themes?: Json
+          tokens_used?: number | null
+          updated_at?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          applied_project_ids?: string[] | null
+          channel_id?: string
+          cost_usd?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          model_used?: string | null
+          niche_signals?: Json
+          performance_summary?: Json
+          status?: string
+          themes?: Json
+          tokens_used?: number | null
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_strategy_plans_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       worker_heartbeats: {
         Row: {
