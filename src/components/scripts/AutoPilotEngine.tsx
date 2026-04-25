@@ -8,6 +8,32 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeConcatAudioBlobs, measureAudioDuration, getMinDurationSeconds } from '@/lib/audio-concat';
 import type { PipelineStep } from './PipelineStepper';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Link } from 'react-router-dom';
+
+type ChannelOption = {
+  id: string;
+  channel_name: string | null;
+  thumbnail: string | null;
+};
+
+function tomorrow6pmLocal() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(18, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 interface AutoPilotStep {
   key: string;
@@ -346,7 +372,115 @@ export const AutoPilotEngine = ({
   const [showPanel, setShowPanel] = useState(false);
   const [loadingAutoTopic, setLoadingAutoTopic] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const runPipelineRef = useRef<(() => void) | null>(null);
+  const runPipelineRef = useRef<(() => Promise<void>) | null>(null);
+
+  // ── Launch modal: choose channel + scheduled date ──
+  const [showLaunchModal, setShowLaunchModal] = useState(false);
+  const [channels, setChannels] = useState<ChannelOption[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [scheduledLocal, setScheduledLocal] = useState<string>(tomorrow6pmLocal());
+  const [confirmingLaunch, setConfirmingLaunch] = useState(false);
+
+  const openLaunchModal = useCallback(async () => {
+    setShowLaunchModal(true);
+    setLoadingChannels(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Faça login primeiro');
+        setShowLaunchModal(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('user_channels')
+        .select('id, channel_name, thumbnail')
+        .eq('user_id', user.id)
+        .order('linked_at', { ascending: false });
+      if (error) throw error;
+      const list = (data || []) as ChannelOption[];
+      setChannels(list);
+      if (list.length === 1) setSelectedChannelId(list[0].id);
+      setScheduledLocal(tomorrow6pmLocal());
+    } catch (err: any) {
+      toast.error('Erro ao carregar canais: ' + err.message);
+    } finally {
+      setLoadingChannels(false);
+    }
+  }, []);
+
+  const handleConfirmLaunch = useCallback(async () => {
+    if (!selectedChannelId) {
+      toast.error('Selecione um canal');
+      return;
+    }
+    if (!scheduledLocal) {
+      toast.error('Defina a data de publicação');
+      return;
+    }
+    const scheduledAt = new Date(scheduledLocal).toISOString();
+    setConfirmingLaunch(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Login required');
+
+      // Close modal and run the original pipeline
+      setShowLaunchModal(false);
+      const launch = runPipelineRef.current;
+      if (launch) await launch();
+
+      // After pipeline completes, find the most recent project for this user
+      const { data: project, error: projErr } = await supabase
+        .from('video_projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (projErr) throw projErr;
+      if (!project?.id) {
+        toast.error('Não foi possível localizar o projeto recém-criado');
+        return;
+      }
+      const projectId = project.id;
+
+      // 1) Update project with channel + status + schedule
+      const { error: upErr } = await supabase
+        .from('video_projects')
+        .update({
+          status: 'ready_for_production',
+          channel_id_ref: selectedChannelId,
+          scheduled_at: scheduledAt,
+          error_message: null,
+        } as any)
+        .eq('id', projectId);
+      if (upErr) throw upErr;
+
+      // 2) Insert into channel_schedule
+      await supabase.from('channel_schedule' as any).insert({
+        user_id: user.id,
+        channel_id: selectedChannelId,
+        project_id: projectId,
+        topic: topic,
+        scheduled_at: scheduledAt,
+        status: 'scheduled',
+      } as any);
+
+      // 3) Update channel next_slot_at
+      await supabase
+        .from('user_channels' as any)
+        .update({ next_slot_at: scheduledAt } as any)
+        .eq('id', selectedChannelId);
+
+      toast.success('✅ Vídeo enviado para produção! O AutoPilot vai montar e postar automaticamente.');
+    } catch (err: any) {
+      console.error('Launch confirm failed:', err);
+      toast.error('Falha ao enviar para produção: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setConfirmingLaunch(false);
+    }
+  }, [selectedChannelId, scheduledLocal, topic]);
 
   const updateStep = (key: string, update: Partial<AutoPilotStep>) => {
     setSteps(prev => prev.map(s => s.key === key ? { ...s, ...update } : s));
@@ -797,7 +931,7 @@ export const AutoPilotEngine = ({
       <div className="flex flex-wrap gap-2">
         <Button
           id="autopilot-launch-btn"
-          onClick={() => runPipeline()}
+          onClick={() => openLaunchModal()}
           disabled={disabled || running || !topic.trim() || !niche.trim()}
           size="lg"
           className="gap-2 bg-gradient-to-r from-primary to-chart-4 hover:from-primary/90 hover:to-chart-4/90 text-primary-foreground shadow-lg shadow-primary/20"
@@ -919,6 +1053,99 @@ export const AutoPilotEngine = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Launch modal — choose channel + scheduled date */}
+      <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch) setShowLaunchModal(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Rocket className="w-4 h-4 text-primary" /> Enviar para o AutoPilot
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o canal de destino e quando o vídeo deve ser publicado.
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingChannels ? (
+            <div className="py-6 flex items-center justify-center text-sm text-muted-foreground gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando canais...
+            </div>
+          ) : channels.length === 0 ? (
+            <div className="py-4 text-sm">
+              <p className="text-muted-foreground mb-3">
+                Você ainda não tem canais cadastrados.
+              </p>
+              <Link to="/channels" className="text-primary underline text-sm">
+                Adicione um canal em /channels primeiro.
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="channel-select">Canal</Label>
+                <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+                  <SelectTrigger id="channel-select">
+                    <SelectValue placeholder="Selecione um canal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <div className="flex items-center gap-2">
+                          {c.thumbnail ? (
+                            <img
+                              src={c.thumbnail}
+                              alt={c.channel_name || 'canal'}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-muted" />
+                          )}
+                          <span className="truncate">{c.channel_name || 'Canal sem nome'}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="schedule-input">Publicar em:</Label>
+                <Input
+                  id="schedule-input"
+                  type="datetime-local"
+                  value={scheduledLocal}
+                  onChange={(e) => setScheduledLocal(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setShowLaunchModal(false)}
+              disabled={confirmingLaunch}
+            >
+              Cancelar
+            </Button>
+            {channels.length > 0 && (
+              <Button
+                onClick={handleConfirmLaunch}
+                disabled={confirmingLaunch || !selectedChannelId || !scheduledLocal}
+                className="gap-2"
+              >
+                {confirmingLaunch ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
+                  </>
+                ) : (
+                  <>🚀 Enviar para Produção</>
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
