@@ -381,6 +381,7 @@ export const AutoPilotEngine = ({
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [scheduledLocal, setScheduledLocal] = useState<string>(tomorrow6pmLocal());
   const [confirmingLaunch, setConfirmingLaunch] = useState(false);
+  const [launchPhase, setLaunchPhase] = useState<'idle' | 'pipeline' | 'saving' | 'done'>('idle');
 
   const openLaunchModal = useCallback(async () => {
     setShowLaunchModal(true);
