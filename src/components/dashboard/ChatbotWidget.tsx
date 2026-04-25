@@ -490,7 +490,11 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
   // Load user channels for save selector
   useEffect(() => {
     const loadChannels = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use getSession() (no lock) instead of a second getUser() call to
+      // avoid "lock stolen" warnings when this effect races with the
+      // checkOnboarding effect above.
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) return;
       const { data } = await supabase.from('user_channels').select('id, channel_name').eq('user_id', user.id).order('channel_name');
       setSaveChannels(data || []);
