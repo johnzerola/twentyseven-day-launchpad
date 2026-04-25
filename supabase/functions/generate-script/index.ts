@@ -282,6 +282,8 @@ serve(async (req) => {
 
     const body = await req.json();
     const { topic, duration, style, niche, language, viralContext, intelligenceBriefing, videoType, phaseId, channelKnowledge, referenceScript } = body;
+    // ⭐ Channel-scoped learning loop: when present, brief uses ONLY this channel's history
+    const channelIdForLearning: string | null = body?.channel_id || body?.channelId || body?.channel_id_ref || null;
     // Feature flags for prompt-dilution fix:
     //   useComposer (default true): use sharded prompt composer (~6k tokens vs ~15k)
     //   validateAndRepair (default true for non-shorts): post-gen checks + surgical repair
