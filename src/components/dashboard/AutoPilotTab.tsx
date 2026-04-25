@@ -494,15 +494,32 @@ export const AutoPilotTab = () => {
                         </div>
                       </Section>
 
-                      <Button
-                        onClick={() => saveDNA(ch.id)}
-                        disabled={savingId === ch.id}
-                        size="sm"
-                        className="w-full"
-                      >
-                        {savingId === ch.id ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-2" />}
-                        Salvar DNA
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => autoFillDNA(ch)}
+                          disabled={autoFillingId === ch.id || savingId === ch.id}
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-primary/40 text-primary hover:bg-primary/10"
+                          title="Analisa o canal com IA e preenche niche, character_bio, visual_style_prompt, reference_channels e defaults de agenda"
+                        >
+                          {autoFillingId === ch.id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3.5 h-3.5 mr-2" />
+                          )}
+                          🤖 Preencher com IA
+                        </Button>
+                        <Button
+                          onClick={() => saveDNA(ch.id)}
+                          disabled={savingId === ch.id || autoFillingId === ch.id}
+                          size="sm"
+                          className="w-full"
+                        >
+                          {savingId === ch.id ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-2" />}
+                          Salvar DNA
+                        </Button>
+                      </div>
                     </div>
                   </motion.div>
                 )}
