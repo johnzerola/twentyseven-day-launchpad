@@ -31,6 +31,7 @@ interface Channel {
   niche: string | null;
   analysis_json: any;
   linked_at: string;
+  youtube_refresh_token?: string | null;
 }
 
 interface Competitor {
