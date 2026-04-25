@@ -1100,7 +1100,7 @@ export const AutoPilotEngine = ({
         >
           <Button
             size="lg"
-            onClick={() => openLaunchModal()}
+            onClick={() => openLaunchModal({ skipPipeline: true })}
             className="gap-2 bg-gradient-to-r from-emerald-500 to-primary text-primary-foreground shadow-2xl shadow-emerald-500/30 hover:from-emerald-500/90 hover:to-primary/90 px-8"
           >
             <Rocket className="w-4 h-4" />
