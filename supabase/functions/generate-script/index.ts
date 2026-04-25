@@ -909,13 +909,41 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
 
     // ⭐ LEARNING LOOP: inject real hook + CTR patterns + REFERENCE CHANNEL intel from this user
     const _learningUserId = (typeof currentUserId === 'string' && currentUserId) ? currentUserId : null;
-    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock, referenceRagBlock] = await Promise.all([
+
+    // Fetch real-channel performance brief (top hooks/titles to reuse, weak ones to avoid)
+    const fetchChannelLearningBrief = async (): Promise<string> => {
+      if (!_learningUserId) return "";
+      try {
+        const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/script-learning-context`;
+        const r = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ user_id: _learningUserId, niche }),
+        });
+        if (!r.ok) return "";
+        const j = await r.json();
+        if (j?.has_data && j?.prompt_brief) {
+          console.log(`[CHANNEL-LEARNING] runId=${runId} injected brief (n=${j.sample_size})`);
+          return `\n\n${j.prompt_brief}\n`;
+        }
+        return "";
+      } catch (e) {
+        console.warn(`[CHANNEL-LEARNING] failed: ${(e as any)?.message}`);
+        return "";
+      }
+    };
+
+    const [hookPerfBlock, ctrPatternsBlockScript, referenceIntelBlock, referenceRagBlock, channelLearningBrief] = await Promise.all([
       fetchHookPerformanceBlock(sb, _learningUserId, niche),
       fetchUserCtrPatternsBlock(sb, _learningUserId, niche),
       _learningUserId ? fetchReferenceIntelBlock(sb, _learningUserId, { limit: 5, niche }) : Promise.resolve(""),
       _learningUserId && topic ? fetchRagChunks(sb, GOOGLE_AI_API_KEY, _learningUserId, `${topic} ${niche || ''} ${style || ''}`.trim(), { matchCount: 4 }) : Promise.resolve(""),
+      fetchChannelLearningBrief(),
     ]);
-    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}${referenceRagBlock}`;
+    const learningLoopInjection = `${hookPerfBlock}${ctrPatternsBlockScript}${referenceIntelBlock}${referenceRagBlock}${channelLearningBrief}`;
 
     const systemPrompt = `Você é o MELHOR ROTEIRISTA DO MUNDO para YouTube. 95%+ retenção.
 Sua força é escrita criativa com profundidade emocional, nuance humana e voz autêntica. USE isso.${learningLoopInjection}
