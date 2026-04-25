@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getCachedSession } from '@/lib/session-cache';
 import { Zap } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 
@@ -10,7 +11,7 @@ export const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getCachedSession();
       if (!session) {
         setLoading(false);
         return;

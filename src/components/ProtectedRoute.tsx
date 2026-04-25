@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getCachedSession, invalidateSessionCache } from '@/lib/session-cache';
 import { Zap } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 
@@ -9,12 +10,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getCachedSession().then((session) => {
       setAuthenticated(!!session);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      invalidateSessionCache();
       setAuthenticated(!!session);
       setLoading(false);
     });
