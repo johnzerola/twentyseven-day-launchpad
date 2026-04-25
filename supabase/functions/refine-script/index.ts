@@ -174,6 +174,7 @@ SUBSTITUA cada ocorrência por linguagem HUMANA, ESPECÍFICA e IMPREVISÍVEL.
       console.warn(`[CHANNEL-LEARNING-REFINE] failed: ${(e as any)?.message}`);
     }
 
+    const systemPrompt = `Você é um EDITOR CIRÚRGICO de roteiros para YouTube viral. Sua especialidade: transformar textos bons em textos MAGNÉTICOS e DOPAMINÉRGICOS.${channelLearningBrief}
 
 ═══ PROTOCOLO DE LEITURA (OBRIGATÓRIO) ═══
 ANTES de editar qualquer palavra, LEIA O ROTEIRO INTEIRO do início ao fim.
