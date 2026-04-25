@@ -5016,6 +5016,7 @@ export type Database = {
         Row: {
           audio_url: string | null
           channel_id: string | null
+          channel_id_ref: string | null
           created_at: string | null
           duration_seconds: number | null
           error_message: string | null
@@ -5035,6 +5036,7 @@ export type Database = {
         Insert: {
           audio_url?: string | null
           channel_id?: string | null
+          channel_id_ref?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           error_message?: string | null
@@ -5054,6 +5056,7 @@ export type Database = {
         Update: {
           audio_url?: string | null
           channel_id?: string | null
+          channel_id_ref?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           error_message?: string | null
