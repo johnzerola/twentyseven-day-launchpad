@@ -132,6 +132,28 @@ const Scheduler = () => {
             <h1 className="text-2xl font-bold font-display">Agendamento</h1>
             <p className="text-sm text-muted-foreground">Fila de publicações por canal</p>
           </div>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={busy === 'autopilot-run'}
+            onClick={async () => {
+              setBusy('autopilot-run');
+              const { data: { user } } = await supabase.auth.getUser();
+              const { data, error } = await supabase.functions.invoke('autopilot-scheduler', {
+                body: { userId: user?.id },
+              });
+              setBusy(null);
+              if (error) toast.error('Falha: ' + error.message);
+              else {
+                const created = (data?.report || []).reduce((s: number, r: any) => s + (r.created || 0), 0);
+                toast.success(`🤖 AutoPilot rodou — ${created} slots criados`);
+                fetchData();
+              }
+            }}
+          >
+            {busy === 'autopilot-run' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            Rodar AutoPilot agora
+          </Button>
           <Button onClick={() => setManualOpen(true)} className="gradient-hero border-0 gap-2">
             <Plus className="w-4 h-4" /> Agendar manualmente
           </Button>
