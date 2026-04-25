@@ -14,6 +14,8 @@ import { formatNumber } from '@/lib/formatters';
 import { COUNTRIES } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { ChannelDNAModal } from '@/components/dashboard/ChannelDNAModal';
+import { Switch } from '@/components/ui/switch';
 
 interface Channel {
   id: string;
