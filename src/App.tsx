@@ -28,6 +28,7 @@ import ShortsTrends from "./pages/ShortsTrends";
 import Squads from "./pages/Squads";
 import AutoPilot from "./pages/AutoPilot";
 import AutoPilotPerformance from "./pages/AutoPilotPerformance";
+import AutoPilotE2ETest from "./pages/AutoPilotE2ETest";
 import AutoPilotScheduler from "./pages/AutoPilotScheduler";
 import AutoPilotDiagnostics from "./pages/AutoPilotDiagnostics";
 import WorkerMonitor from "./pages/WorkerMonitor";
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/autopilot/scheduler" element={<P><AutoPilotScheduler /></P>} />
             <Route path="/autopilot/diagnostics" element={<P><AutoPilotDiagnostics /></P>} />
             <Route path="/autopilot/worker-monitor" element={<P><WorkerMonitor /></P>} />
+            <Route path="/autopilot/e2e-test" element={<P><AutoPilotE2ETest /></P>} />
             <Route path="/calendar" element={<P><CalendarPage /></P>} />
             <Route path="/channels/:id/settings" element={<P><ChannelSettings /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />
