@@ -60,6 +60,7 @@ const App = () => (
             <Route path="/search" element={<P><ChannelSearch /></P>} />
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
+            <Route path="/studio" element={<P><ChannelStudio /></P>} />
             <Route path="/autopilot" element={<P><AutoPilot /></P>} />
             <Route path="/autopilot/performance" element={<P><AutoPilotPerformance /></P>} />
             <Route path="/autopilot/scheduler" element={<P><AutoPilotScheduler /></P>} />
