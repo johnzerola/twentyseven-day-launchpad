@@ -6331,6 +6331,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_video_check_count: { Args: { _id: string }; Returns: undefined }
       match_knowledge: {
         Args: {
           filter_tables?: string[]
