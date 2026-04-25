@@ -13,12 +13,34 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, durationSeconds, style, niche, language, viralContext, channelKnowledge, durationCategory } = await req.json();
+    const { topic, durationSeconds, style, niche, language, viralContext, channelKnowledge, durationCategory, userId } = await req.json();
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const aiHeaders = { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" };
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Weekly niche references brief (top viral videos in this niche this week)
+    let weeklyRefBrief = "";
+    if (userId && niche) {
+      try {
+        const { data: refRow } = await sb
+          .from("niche_reference_reports")
+          .select("prompt_injection, week_start")
+          .eq("user_id", userId)
+          .eq("niche", niche)
+          .eq("status", "done")
+          .order("week_start", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (refRow?.prompt_injection) {
+          weeklyRefBrief = `\n\n📅 REFERÊNCIAS VIRAIS DA SEMANA (${refRow.week_start}):\n${refRow.prompt_injection}\n`;
+          console.log(`[NICHE-REFS-SHORT] injected brief week=${refRow.week_start}`);
+        }
+      } catch (e) {
+        console.warn(`[NICHE-REFS-SHORT] failed: ${(e as any)?.message}`);
+      }
+    }
 
     const dur = parseInt(durationSeconds) || 45;
     const wpm = 150;
