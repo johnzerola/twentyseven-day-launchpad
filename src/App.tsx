@@ -32,6 +32,7 @@ import AutoPilotScheduler from "./pages/AutoPilotScheduler";
 import ChannelSettings from "./pages/ChannelSettings";
 import CalendarPage from "./pages/CalendarPage";
 import MyChannelIntelligence from "./pages/MyChannelIntelligence";
+import ChannelStudio from "./pages/ChannelStudio";
 import AdminTraces from "./pages/AdminTraces";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/search" element={<P><ChannelSearch /></P>} />
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
+            <Route path="/studio" element={<P><ChannelStudio /></P>} />
             <Route path="/autopilot" element={<P><AutoPilot /></P>} />
             <Route path="/autopilot/performance" element={<P><AutoPilotPerformance /></P>} />
             <Route path="/autopilot/scheduler" element={<P><AutoPilotScheduler /></P>} />
