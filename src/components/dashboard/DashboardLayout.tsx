@@ -21,6 +21,7 @@ const navItems = [
   { key: 'AutoPilot', icon: Zap, path: '/autopilot' },
   { key: 'Performance', icon: BarChart2, path: '/autopilot/performance' },
   { key: 'Agendamento', icon: CalendarDays, path: '/autopilot/scheduler' },
+  { key: 'Calendar', icon: Calendar, path: '/calendar' },
   { key: 'Inteligência', icon: Brain, path: '/intelligence' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
   { key: 'DubSpy', icon: Search, path: '/search' },
