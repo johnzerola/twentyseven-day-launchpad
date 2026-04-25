@@ -1,0 +1,18 @@
+ALTER TABLE public.user_channels
+  ADD COLUMN IF NOT EXISTS character_name        TEXT,
+  ADD COLUMN IF NOT EXISTS character_bio         TEXT,
+  ADD COLUMN IF NOT EXISTS tts_voice_id          TEXT,
+  ADD COLUMN IF NOT EXISTS tts_voice_style       TEXT DEFAULT 'neutral',
+  ADD COLUMN IF NOT EXISTS visual_style_prompt   TEXT,
+  ADD COLUMN IF NOT EXISTS reference_channels    JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS language              TEXT DEFAULT 'pt-BR',
+  ADD COLUMN IF NOT EXISTS autopilot_enabled     BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS weekly_video_target   INTEGER DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS min_interval_hours    INTEGER DEFAULT 48,
+  ADD COLUMN IF NOT EXISTS posting_hour          INTEGER DEFAULT 18,
+  ADD COLUMN IF NOT EXISTS posting_days          JSONB DEFAULT '["mon","wed","fri"]'::jsonb,
+  ADD COLUMN IF NOT EXISTS last_posted_at        TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS next_slot_at          TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS total_videos_posted   INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS avg_views_30d         INTEGER,
+  ADD COLUMN IF NOT EXISTS avg_ctr_30d           NUMERIC;

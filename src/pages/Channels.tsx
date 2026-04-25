@@ -14,6 +14,8 @@ import { formatNumber } from '@/lib/formatters';
 import { COUNTRIES } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { ChannelDNAModal } from '@/components/dashboard/ChannelDNAModal';
+import { Switch } from '@/components/ui/switch';
 
 interface Channel {
   id: string;
@@ -93,6 +95,7 @@ const Channels = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [dnaChannel, setDnaChannel] = useState<any>(null);
 
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [competitorKeywords, setCompetitorKeywords] = useState<string[]>([]);
@@ -422,18 +425,42 @@ const Channels = () => {
                 <Button onClick={() => setShowAdd(true)} size="sm" className="mt-3 gradient-hero border-0">Adicionar</Button>
               </div>
             ) : (
-              channels.map(ch => (
-                <button key={ch.id} onClick={() => selectChannel(ch)}
-                  className={`w-full text-left glass rounded-xl p-3 transition-all ${selectedChannel?.id === ch.id ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/20'}`}>
-                  <div className="flex items-center gap-2">
-                    {ch.thumbnail && <img src={ch.thumbnail} alt="" className="w-8 h-8 rounded-full" />}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{ch.channel_name}</p>
-                      <p className="text-[10px] text-muted-foreground">{formatNumber(ch.subscribers)} subs</p>
+              channels.map((ch: any) => (
+                <div key={ch.id} className={`glass rounded-xl p-3 transition-all ${selectedChannel?.id === ch.id ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/20'}`}>
+                  <button onClick={() => selectChannel(ch)} className="w-full text-left">
+                    <div className="flex items-center gap-2">
+                      {ch.thumbnail && <img src={ch.thumbnail} alt="" className="w-8 h-8 rounded-full" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{ch.channel_name}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatNumber(ch.subscribers)} subs</p>
+                      </div>
+                      {ch.analysis_json && <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
                     </div>
-                    {ch.analysis_json && <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
+                  </button>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className={`w-3 h-3 ${ch.autopilot_enabled ? 'text-primary' : 'text-muted-foreground/50'}`} />
+                      <span className={`text-[9px] font-mono ${ch.autopilot_enabled ? 'text-primary' : 'text-muted-foreground/50'}`}>
+                        AutoPilot {ch.autopilot_enabled ? 'ON' : 'OFF'}
+                      </span>
+                      <Switch
+                        checked={!!ch.autopilot_enabled}
+                        onCheckedChange={async (v) => {
+                          await supabase.from('user_channels' as any).update({ autopilot_enabled: v } as any).eq('id', ch.id);
+                          toast.success(`AutoPilot ${v ? 'ativado' : 'desativado'}`);
+                          loadChannels();
+                        }}
+                        className="scale-75 origin-left"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setDnaChannel(ch)}
+                      className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                    >
+                      🧬 DNA
+                    </button>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -1070,6 +1097,12 @@ const Channels = () => {
           )}
         </AnimatePresence>
       </div>
+      <ChannelDNAModal
+        channel={dnaChannel}
+        open={!!dnaChannel}
+        onOpenChange={(v) => !v && setDnaChannel(null)}
+        onSaved={loadChannels}
+      />
     </DashboardLayout>
   );
 };

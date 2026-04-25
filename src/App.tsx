@@ -27,6 +27,8 @@ import GrowthTools from "./pages/GrowthTools";
 import ShortsTrends from "./pages/ShortsTrends";
 import Squads from "./pages/Squads";
 import AutoPilot from "./pages/AutoPilot";
+import AutoPilotPerformance from "./pages/AutoPilotPerformance";
+import AutoPilotScheduler from "./pages/AutoPilotScheduler";
 import ChannelSettings from "./pages/ChannelSettings";
 import CalendarPage from "./pages/CalendarPage";
 import AdminTraces from "./pages/AdminTraces";
@@ -57,6 +59,8 @@ const App = () => (
             <Route path="/niches" element={<P><NicheExplorer /></P>} />
             <Route path="/scripts" element={<P><Scripts /></P>} />
             <Route path="/autopilot" element={<P><AutoPilot /></P>} />
+            <Route path="/autopilot/performance" element={<P><AutoPilotPerformance /></P>} />
+            <Route path="/autopilot/scheduler" element={<P><AutoPilotScheduler /></P>} />
             <Route path="/calendar" element={<P><CalendarPage /></P>} />
             <Route path="/channels/:id/settings" element={<P><ChannelSettings /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />

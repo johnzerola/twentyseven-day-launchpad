@@ -4433,41 +4433,92 @@ export type Database = {
       user_channels: {
         Row: {
           analysis_json: Json | null
+          autopilot_enabled: boolean | null
+          avg_ctr_30d: number | null
+          avg_views_30d: number | null
           channel_name: string
+          character_bio: string | null
+          character_name: string | null
           id: string
+          language: string | null
+          last_posted_at: string | null
           linked_at: string
+          min_interval_hours: number | null
+          next_slot_at: string | null
           niche: string | null
+          posting_days: Json | null
+          posting_hour: number | null
+          reference_channels: Json | null
           subscribers: number | null
           thumbnail: string | null
+          total_videos_posted: number | null
+          tts_voice_id: string | null
+          tts_voice_style: string | null
           user_id: string
           videos: number | null
           views: number | null
+          visual_style_prompt: string | null
+          weekly_video_target: number | null
           youtube_channel_id: string
         }
         Insert: {
           analysis_json?: Json | null
+          autopilot_enabled?: boolean | null
+          avg_ctr_30d?: number | null
+          avg_views_30d?: number | null
           channel_name: string
+          character_bio?: string | null
+          character_name?: string | null
           id?: string
+          language?: string | null
+          last_posted_at?: string | null
           linked_at?: string
+          min_interval_hours?: number | null
+          next_slot_at?: string | null
           niche?: string | null
+          posting_days?: Json | null
+          posting_hour?: number | null
+          reference_channels?: Json | null
           subscribers?: number | null
           thumbnail?: string | null
+          total_videos_posted?: number | null
+          tts_voice_id?: string | null
+          tts_voice_style?: string | null
           user_id: string
           videos?: number | null
           views?: number | null
+          visual_style_prompt?: string | null
+          weekly_video_target?: number | null
           youtube_channel_id: string
         }
         Update: {
           analysis_json?: Json | null
+          autopilot_enabled?: boolean | null
+          avg_ctr_30d?: number | null
+          avg_views_30d?: number | null
           channel_name?: string
+          character_bio?: string | null
+          character_name?: string | null
           id?: string
+          language?: string | null
+          last_posted_at?: string | null
           linked_at?: string
+          min_interval_hours?: number | null
+          next_slot_at?: string | null
           niche?: string | null
+          posting_days?: Json | null
+          posting_hour?: number | null
+          reference_channels?: Json | null
           subscribers?: number | null
           thumbnail?: string | null
+          total_videos_posted?: number | null
+          tts_voice_id?: string | null
+          tts_voice_style?: string | null
           user_id?: string
           videos?: number | null
           views?: number | null
+          visual_style_prompt?: string | null
+          weekly_video_target?: number | null
           youtube_channel_id?: string
         }
         Relationships: []
