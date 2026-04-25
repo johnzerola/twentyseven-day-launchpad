@@ -2574,6 +2574,69 @@ export type Database = {
         }
         Relationships: []
       }
+      niche_reference_reports: {
+        Row: {
+          ai_summary: string | null
+          channel_id: string
+          created_at: string
+          duration_insights: Json
+          error_message: string | null
+          id: string
+          language: string | null
+          niche: string | null
+          prompt_injection: string | null
+          status: string
+          structure_insights: Json
+          thumbnail_patterns: Json
+          title_patterns: Json
+          top_videos: Json
+          updated_at: string
+          user_id: string
+          videos_analyzed: number
+          week_start: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          channel_id: string
+          created_at?: string
+          duration_insights?: Json
+          error_message?: string | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          prompt_injection?: string | null
+          status?: string
+          structure_insights?: Json
+          thumbnail_patterns?: Json
+          title_patterns?: Json
+          top_videos?: Json
+          updated_at?: string
+          user_id: string
+          videos_analyzed?: number
+          week_start: string
+        }
+        Update: {
+          ai_summary?: string | null
+          channel_id?: string
+          created_at?: string
+          duration_insights?: Json
+          error_message?: string | null
+          id?: string
+          language?: string | null
+          niche?: string | null
+          prompt_injection?: string | null
+          status?: string
+          structure_insights?: Json
+          thumbnail_patterns?: Json
+          title_patterns?: Json
+          top_videos?: Json
+          updated_at?: string
+          user_id?: string
+          videos_analyzed?: number
+          week_start?: string
+        }
+        Relationships: []
+      }
       niche_score_benchmarks: {
         Row: {
           avg_score: number | null
