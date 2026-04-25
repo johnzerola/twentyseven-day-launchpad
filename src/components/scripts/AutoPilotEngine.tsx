@@ -1087,6 +1087,24 @@ export const AutoPilotEngine = ({
         )}
       </AnimatePresence>
 
+      {/* Sticky post-pipeline launch CTA — visible after every step is done/skipped */}
+      {!running && steps.length > 0 && steps.every(s => s.status === 'done' || s.status === 'skipped') && launchPhase === 'idle' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sticky bottom-4 z-30 flex justify-center pt-2"
+        >
+          <Button
+            size="lg"
+            onClick={() => openLaunchModal()}
+            className="gap-2 bg-gradient-to-r from-emerald-500 to-primary text-primary-foreground shadow-2xl shadow-emerald-500/30 hover:from-emerald-500/90 hover:to-primary/90 px-8"
+          >
+            <Rocket className="w-4 h-4" />
+            🚀 Enviar para Produção
+          </Button>
+        </motion.div>
+      )}
+
       {/* Launch modal — choose channel + scheduled date */}
       <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch && launchPhase === 'idle') setShowLaunchModal(o); }}>
         <DialogContent className="max-w-md">
