@@ -35,7 +35,6 @@ interface ChannelRow {
   competitor_benchmark_json: any;
   posting_days: string[] | null;
   posting_hour: number | null;
-  default_video_type: string | null;
 }
 
 interface ThemeDecision {
@@ -174,7 +173,7 @@ async function processChannel(
 
   // 4. Prompt LLM
   const language = channel.language || "pt-BR";
-  const defaultType = (channel.default_video_type as "long" | "short") || "long";
+  const defaultType: "long" | "short" = "long";
   const defaultDuration = defaultType === "short" ? 60 : 480;
 
   const systemPrompt = `Você é o Estrategista Semanal do canal "${channel.channel_name}". Sua missão: escolher os ${N} próximos vídeos da semana que MAXIMIZAM views, retenção e crescimento de inscritos, com base em dados reais de performance e tendências do nicho.
@@ -397,7 +396,7 @@ serve(async (req) => {
 
     let query = admin
       .from("user_channels")
-      .select("id,user_id,channel_name,niche,language,character_name,character_bio,visual_style_prompt,weekly_video_target,strategist_enabled,competitor_benchmark_json,posting_days,posting_hour,default_video_type")
+      .select("id,user_id,channel_name,niche,language,character_name,character_bio,visual_style_prompt,weekly_video_target,strategist_enabled,competitor_benchmark_json,posting_days,posting_hour")
       .eq("strategist_enabled", true);
 
     if (channel_id) query = query.eq("id", channel_id);
