@@ -58,6 +58,42 @@ Deno.serve(async (req) => {
 
   const now = new Date();
 
+  // -----------------------------------------------------------
+  // 0) Libera claims órfãos: workers que sumiram (lease expirou)
+  //    Volta status para 'ready_for_production' para outro worker poder pegar.
+  //    Só age sobre projetos com status='claimed' e claim_expires_at < now.
+  // -----------------------------------------------------------
+  const orphanReport: any[] = [];
+  if (!projectIdFilter) {
+    const { data: orphans, error: oErr } = await admin
+      .from('video_projects')
+      .select('id, worker_id, claim_expires_at')
+      .eq('status', 'claimed')
+      .lt('claim_expires_at', now.toISOString())
+      .limit(50);
+    if (!oErr && orphans?.length) {
+      for (const o of orphans) {
+        await admin.from('video_projects').update({
+          status: 'ready_for_production',
+          worker_id: null,
+          claimed_at: null,
+          claim_expires_at: null,
+          updated_at: now.toISOString(),
+        }).eq('id', o.id);
+
+        await admin.from('project_events').insert({
+          project_id: o.id,
+          worker_id: o.worker_id,
+          stage: 'recover',
+          status: 'completed',
+          message: `Lease expired at ${o.claim_expires_at}, released for re-claim`,
+        });
+
+        orphanReport.push({ project_id: o.id, worker_id: o.worker_id, action: 'lease_released' });
+      }
+    }
+  }
+
   // Query projetos elegíveis
   let q = admin
     .from('video_projects')
@@ -177,6 +213,8 @@ Deno.serve(async (req) => {
     JSON.stringify({
       ok: true,
       now: now.toISOString(),
+      orphan_claims_released: orphanReport.length,
+      orphan_report: orphanReport,
       candidates: projects?.length || 0,
       processed: report.length,
       report,
