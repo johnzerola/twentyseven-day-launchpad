@@ -163,7 +163,7 @@ serve(async (req) => {
         expires_at: ttl,
         query: cache_key,
         ttl,
-      }, { onConflict: "cache_key" }).catch(() => {});
+      }, { onConflict: "cache_key" }).then(() => {}, () => {});
     }
 
     // ═══ 9) LOG USAGE ═══
@@ -175,7 +175,7 @@ serve(async (req) => {
         response_code: response.status,
         cost: 0,
         tokens_used: 0,
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     await logExec(sb, "api-proxy", Date.now() - startTime, response.ok, 1, {

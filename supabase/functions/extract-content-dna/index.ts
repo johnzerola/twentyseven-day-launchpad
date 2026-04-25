@@ -241,7 +241,7 @@ Extract the complete viral DNA.`
           niche: niche || "general",
           retention_score: dna.hook_strength || 7,
           source_video: vid,
-        }).catch(() => {})
+        }).then(() => {}, () => {})
       );
     }
 
@@ -262,7 +262,7 @@ Extract the complete viral DNA.`
             psychological_triggers: dna.psychological_triggers,
             scores: { attention: dna.attention_score, curiosity: dna.curiosity_score, dopamine: dna.dopamine_score },
           },
-        }, { onConflict: "pattern_name" }).catch(() => {})
+        }, { onConflict: "pattern_name" }).then(() => {}, () => {})
       );
     }
 
@@ -291,7 +291,7 @@ Extract the complete viral DNA.`
         },
         clone_template: { replication: dna.replication_template, content_model: dna.content_model },
         source: "content-dna-engine",
-      }, { onConflict: "video_id" }).catch(() => {})
+      }, { onConflict: "video_id" }).then(() => {}, () => {})
     );
 
     // Feed attention_library with retention hooks
@@ -308,7 +308,7 @@ Extract the complete viral DNA.`
             niche: niche || "general",
             example_text: `[${video_title}] ${hook.description || hook.technique}`,
             source: "content-dna-auto",
-          }).catch(() => {})
+          }).then(() => {}, () => {})
         );
       }
     }
@@ -326,7 +326,7 @@ Extract the complete viral DNA.`
         scores: { attention: dna.attention_score, curiosity: dna.curiosity_score, dopamine: dna.dopamine_score },
         tables_fed: feedPromises.length,
       },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({
       success: true,

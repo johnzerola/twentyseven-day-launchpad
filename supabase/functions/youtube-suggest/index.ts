@@ -134,7 +134,7 @@ serve(async (req) => {
       query: keyword,
       result_json: result,
       expires_at: new Date(Date.now() + 24 * 3600000).toISOString(),
-    }, { onConflict: "cache_key" }).catch(() => {});
+    }, { onConflict: "cache_key" }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({ success: true, ...result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

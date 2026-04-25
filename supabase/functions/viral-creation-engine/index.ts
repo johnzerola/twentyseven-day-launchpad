@@ -451,7 +451,7 @@ One viral Short (50K+ views) = more growth than 50 mediocre Shorts.
           dopamine: (result.concepts.reduce((s: number, c: any) => s + (c.predicted_dopamine_score || 0), 0) / result.concepts.length).toFixed(1),
         } : null,
       },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     // Save top concepts to ai_learning for self-improvement
     if (result.concepts?.length > 0) {
@@ -467,7 +467,7 @@ One viral Short (50K+ views) = more growth than 50 mediocre Shorts.
           top_viral_probability: result.concepts[0]?.viral_probability,
           niche_summary: result.niche_summary,
         }),
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return new Response(JSON.stringify({

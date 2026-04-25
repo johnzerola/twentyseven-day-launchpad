@@ -215,7 +215,7 @@ Extract 8-15 NEW patterns with specific examples from the data.`
       duration_ms: Date.now() - startTime,
       success: false,
       error_message: e instanceof Error ? e.message : "Unknown error",
-    }).catch(() => {});
+    }).then(() => {}, () => {});
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

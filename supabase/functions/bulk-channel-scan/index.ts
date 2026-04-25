@@ -281,7 +281,7 @@ Provide JSON with: { niche, sub_niche, content_style, what_works (array of patte
         duration_seconds: outlier.duration_seconds,
         published_at: outlier.published_at,
         niche: aiAnalysis?.niche || "general",
-      }, { onConflict: "title" }).catch(() => {});
+      }, { onConflict: "title" }).then(() => {}, () => {});
     }
 
     // Log execution
@@ -291,7 +291,7 @@ Provide JSON with: { niche, sub_niche, content_style, what_works (array of patte
       duration_ms: Date.now() - startTime,
       api_calls_made: Math.ceil(allVideos.length / 50) + 2,
       metadata: { channel_id: resolvedChannelId, videos_scanned: videos.length, outliers_found: outliers.length },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({
       success: true,

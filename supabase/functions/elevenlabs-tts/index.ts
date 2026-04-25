@@ -110,7 +110,7 @@ serve(async (req) => {
         estimateKey: "elevenlabs-tts",
         userId: _claims.claims.sub as string,
         metadata: { voice, chars: text.length, segmentIndex },
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return new Response(JSON.stringify({ audioBase64, segmentIndex, mimeType: "audio/mpeg", engine: usedEngine }), {
