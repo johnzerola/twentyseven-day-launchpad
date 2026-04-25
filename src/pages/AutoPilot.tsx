@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, Loader2 } from 'lucide-react';
+import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, Loader2, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 type VideoProject = {
@@ -23,10 +23,14 @@ type VideoProject = {
   channel_id?: string | null;
   created_at: string;
   updated_at?: string | null;
+  retry_count?: number | null;
+  max_retries?: number | null;
+  next_retry_at?: string | null;
+  last_error_at?: string | null;
 };
 
 const ACTIVE_STATUSES = ['processing', 'waiting_videos', 'assembling', 'uploading', 'ready_for_production'];
-const ERROR_STATUSES = ['error', 'failed'];
+const ERROR_STATUSES = ['error', 'failed', 'failed_permanent'];
 const PUBLISHED_STATUSES = ['published', 'completed'];
 
 const STATUS_PROGRESS: Record<string, number> = {
@@ -153,13 +157,41 @@ const AutoPilot = () => {
 
   const handleRetry = async (id: string) => {
     setBusy(id);
+    const { data, error } = await supabase.functions.invoke('autopilot-recover', {
+      body: { projectId: id, force: true },
+    });
+    setBusy(null);
+    if (error) {
+      toast.error('Falha ao retentar: ' + error.message);
+      return;
+    }
+    const r = (data as any)?.report?.[0];
+    if (r?.action === 'marked_permanent') {
+      toast.warning('Limite de tentativas atingido — projeto marcado como falha permanente');
+    } else if (r?.action === 'retried') {
+      const when = r.scheduled_at ? new Date(r.scheduled_at).toLocaleString() : '';
+      toast.success(`Reagendado para ${when} (tentativa ${r.retry_count})`);
+    } else {
+      toast.success('Projeto reenviado para produção');
+    }
+    fetchProjects();
+  };
+
+  const handleCancel = async (id: string) => {
+    setBusy(id);
     const { error } = await supabase
       .from('video_projects')
-      .update({ status: 'ready_for_production', error_message: null })
+      .update({ status: 'failed_permanent' })
       .eq('id', id);
+    if (!error) {
+      await supabase
+        .from('channel_schedule' as any)
+        .update({ status: 'cancelled' } as any)
+        .eq('project_id', id);
+    }
     setBusy(null);
-    if (error) toast.error('Falha ao retentar: ' + error.message);
-    else { toast.success('Projeto reenviado para produção'); fetchProjects(); }
+    if (error) toast.error('Falha ao cancelar: ' + error.message);
+    else { toast.success('Projeto cancelado'); fetchProjects(); }
   };
 
   const handleProduce = async (p: VideoProject) => {
@@ -266,21 +298,59 @@ const AutoPilot = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {errored.map(p => (
-                <div key={p.id} className="border border-destructive/30 bg-destructive/5 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium truncate">{p.title || p.topic || p.id}</span>
-                    <Button size="sm" variant="outline" disabled={busy === p.id} onClick={() => handleRetry(p.id)}>
-                      {busy === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />} Retentar
-                    </Button>
+              {errored.map(p => {
+                const tries = p.retry_count || 0;
+                const max = p.max_retries || 3;
+                const exhausted = p.status === 'failed_permanent' || tries >= max;
+                const nextRetryFuture = p.next_retry_at && new Date(p.next_retry_at).getTime() > Date.now();
+                return (
+                  <div key={p.id} className="border border-destructive/30 bg-destructive/5 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate">{p.title || p.topic || p.id}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {tries}/{max} tentativas
+                        </Badge>
+                        {exhausted && (
+                          <Badge variant="destructive" className="text-[10px] shrink-0">Esgotado</Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy === p.id || exhausted}
+                          onClick={() => handleRetry(p.id)}
+                          title={exhausted ? 'Limite de tentativas atingido' : ''}
+                        >
+                          {busy === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />} Retentar
+                        </Button>
+                        {!exhausted && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy === p.id}
+                            onClick={() => handleCancel(p.id)}
+                          >
+                            <XCircle className="w-3 h-3" /> Cancelar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {nextRetryFuture && !exhausted && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Próxima tentativa automática: {new Date(p.next_retry_at!).toLocaleString()}
+                      </p>
+                    )}
+                    {p.error_message && (
+                      <p className="text-xs text-destructive/90 font-mono bg-background/50 p-2 rounded break-all">
+                        {p.error_message}
+                      </p>
+                    )}
                   </div>
-                  {p.error_message && (
-                    <p className="text-xs text-destructive/90 font-mono bg-background/50 p-2 rounded">
-                      {p.error_message}
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         )}
