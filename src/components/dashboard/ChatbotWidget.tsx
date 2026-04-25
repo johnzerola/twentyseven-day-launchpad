@@ -858,4 +858,5 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
       </AnimatePresence>
     </>
   );
-};
+});
+ChatbotWidget.displayName = 'ChatbotWidget';
