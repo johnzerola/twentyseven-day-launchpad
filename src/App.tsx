@@ -30,6 +30,7 @@ import AutoPilot from "./pages/AutoPilot";
 import AutoPilotPerformance from "./pages/AutoPilotPerformance";
 import AutoPilotScheduler from "./pages/AutoPilotScheduler";
 import AutoPilotDiagnostics from "./pages/AutoPilotDiagnostics";
+import WorkerMonitor from "./pages/WorkerMonitor";
 import ChannelSettings from "./pages/ChannelSettings";
 import CalendarPage from "./pages/CalendarPage";
 import MyChannelIntelligence from "./pages/MyChannelIntelligence";
