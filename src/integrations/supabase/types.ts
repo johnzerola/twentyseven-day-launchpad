@@ -694,6 +694,63 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_intelligence_per_user: {
+        Row: {
+          ai_suggestions: Json | null
+          avg_ctr_all_time: number | null
+          avg_views_all_time: number | null
+          best_posting_days: string[] | null
+          best_posting_hours: number[] | null
+          best_video_id: string | null
+          best_video_views: number | null
+          channel_id: string
+          created_at: string | null
+          id: string
+          last_analyzed_at: string | null
+          low_performing_topics: string[] | null
+          top_performing_hooks: string[] | null
+          top_performing_topics: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_suggestions?: Json | null
+          avg_ctr_all_time?: number | null
+          avg_views_all_time?: number | null
+          best_posting_days?: string[] | null
+          best_posting_hours?: number[] | null
+          best_video_id?: string | null
+          best_video_views?: number | null
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          last_analyzed_at?: string | null
+          low_performing_topics?: string[] | null
+          top_performing_hooks?: string[] | null
+          top_performing_topics?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_suggestions?: Json | null
+          avg_ctr_all_time?: number | null
+          avg_views_all_time?: number | null
+          best_posting_days?: string[] | null
+          best_posting_hours?: number[] | null
+          best_video_id?: string | null
+          best_video_views?: number | null
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          last_analyzed_at?: string | null
+          low_performing_topics?: string[] | null
+          top_performing_hooks?: string[] | null
+          top_performing_topics?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       channel_schedule: {
         Row: {
           channel_id: string
