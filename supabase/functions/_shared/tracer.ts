@@ -66,7 +66,7 @@ export async function startSpan(
     user_id: opts.userId ?? null,
     input_summary: opts.input ? { preview: truncate(opts.input) } : null,
     started_at: new Date(startedAt).toISOString(),
-  }).then(() => {}).catch(() => {});
+  }).then(() => {}, () => {});
 
   return {
     traceId,

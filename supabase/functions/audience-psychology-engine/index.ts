@@ -189,7 +189,7 @@ Extract 8-15 NEW patterns with specific examples from the data.`
         niches: p.best_niches || [],
         effectiveness_score: p.retention_score,
         language: "en",
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     await sb.from("execution_logs").insert({
