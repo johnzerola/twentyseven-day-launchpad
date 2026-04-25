@@ -157,13 +157,41 @@ const AutoPilot = () => {
 
   const handleRetry = async (id: string) => {
     setBusy(id);
+    const { data, error } = await supabase.functions.invoke('autopilot-recover', {
+      body: { projectId: id, force: true },
+    });
+    setBusy(null);
+    if (error) {
+      toast.error('Falha ao retentar: ' + error.message);
+      return;
+    }
+    const r = (data as any)?.report?.[0];
+    if (r?.action === 'marked_permanent') {
+      toast.warning('Limite de tentativas atingido — projeto marcado como falha permanente');
+    } else if (r?.action === 'retried') {
+      const when = r.scheduled_at ? new Date(r.scheduled_at).toLocaleString() : '';
+      toast.success(`Reagendado para ${when} (tentativa ${r.retry_count})`);
+    } else {
+      toast.success('Projeto reenviado para produção');
+    }
+    fetchProjects();
+  };
+
+  const handleCancel = async (id: string) => {
+    setBusy(id);
     const { error } = await supabase
       .from('video_projects')
-      .update({ status: 'ready_for_production', error_message: null })
+      .update({ status: 'failed_permanent' })
       .eq('id', id);
+    if (!error) {
+      await supabase
+        .from('channel_schedule' as any)
+        .update({ status: 'cancelled' } as any)
+        .eq('project_id', id);
+    }
     setBusy(null);
-    if (error) toast.error('Falha ao retentar: ' + error.message);
-    else { toast.success('Projeto reenviado para produção'); fetchProjects(); }
+    if (error) toast.error('Falha ao cancelar: ' + error.message);
+    else { toast.success('Projeto cancelado'); fetchProjects(); }
   };
 
   const handleProduce = async (p: VideoProject) => {
