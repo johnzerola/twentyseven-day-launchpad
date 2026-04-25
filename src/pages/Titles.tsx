@@ -125,7 +125,8 @@ const Titles = () => {
   }, []);
 
   const saveTitles = async (titlesData: TitleSuggestion[], topicStr?: string, nicheStr?: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
     await supabase.from('saved_titles').insert({
       user_id: user.id,
