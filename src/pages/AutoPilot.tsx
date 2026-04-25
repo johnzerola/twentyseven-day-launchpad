@@ -19,6 +19,8 @@ type VideoProject = {
   scheduled_at: string | null;
   error_message: string | null;
   youtube_video_id: string | null;
+  channel_id_ref?: string | null;
+  channel_id?: string | null;
   created_at: string;
   updated_at?: string | null;
 };
@@ -134,9 +136,27 @@ const AutoPilot = () => {
         error_message: null,
       })
       .eq('id', p.id);
+    if (error) { setBusy(null); toast.error('Falha: ' + error.message); return; }
+
+    // Link with channel_schedule + bump next_slot_at on user_channels
+    const channelRef = (p as any).channel_id_ref || (p as any).channel_id;
+    if (channelRef) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('channel_schedule' as any).insert({
+          user_id: user.id,
+          channel_id: channelRef,
+          project_id: p.id,
+          scheduled_at: scheduledAt,
+          title: p.title || p.topic || null,
+          status: 'scheduled',
+        } as any);
+        await supabase.from('user_channels' as any).update({ next_slot_at: scheduledAt } as any).eq('id', channelRef);
+      }
+    }
     setBusy(null);
-    if (error) toast.error('Falha: ' + error.message);
-    else { toast.success('🚀 Enviado ao AutoPilot'); fetchProjects(); }
+    toast.success('🚀 Enviado ao AutoPilot');
+    fetchProjects();
   };
 
   return (
