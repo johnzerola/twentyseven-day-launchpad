@@ -4493,6 +4493,8 @@ export type Database = {
           channel_name: string
           character_bio: string | null
           character_name: string | null
+          daily_render_limit: number | null
+          flow_account_id: string | null
           id: string
           language: string | null
           last_posted_at: string | null
@@ -4524,6 +4526,8 @@ export type Database = {
           channel_name: string
           character_bio?: string | null
           character_name?: string | null
+          daily_render_limit?: number | null
+          flow_account_id?: string | null
           id?: string
           language?: string | null
           last_posted_at?: string | null
@@ -4555,6 +4559,8 @@ export type Database = {
           channel_name?: string
           character_bio?: string | null
           character_name?: string | null
+          daily_render_limit?: number | null
+          flow_account_id?: string | null
           id?: string
           language?: string | null
           last_posted_at?: string | null
@@ -5877,6 +5883,14 @@ export type Database = {
       }
       check_budget: { Args: { _provider: string }; Returns: Json }
       check_tubebot_limit: { Args: { _user_id: string }; Returns: Json }
+      claim_next_project: {
+        Args: {
+          _flow_account_id?: string
+          _lease_minutes?: number
+          _worker_id: string
+        }
+        Returns: Json
+      }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
       cleanup_old_function_traces: { Args: never; Returns: undefined }
       consume_credits: {
