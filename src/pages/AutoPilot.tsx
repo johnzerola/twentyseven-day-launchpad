@@ -81,9 +81,51 @@ const AutoPilot = () => {
     fetchProjects();
     const channel = supabase
       .channel('autopilot-video-projects')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'video_projects' }, () => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'video_projects' }, async (payload: any) => {
+        const newRow = payload.new;
+        const oldRow = payload.old;
+        // Detect transition to "published"
+        const becamePublished =
+          newRow?.status === 'published' &&
+          oldRow?.status !== 'published' &&
+          newRow?.youtube_video_id;
+        if (becamePublished) {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const channelRef = newRow.channel_id_ref || newRow.channel_id;
+            if (user) {
+              await supabase.from('video_performance' as any).insert({
+                user_id: user.id,
+                channel_id: channelRef,
+                project_id: newRow.id,
+                youtube_video_id: newRow.youtube_video_id,
+                title: newRow.title || null,
+                published_at: new Date().toISOString(),
+              } as any);
+              if (channelRef) {
+                const { data: ch } = await supabase
+                  .from('user_channels' as any)
+                  .select('total_videos_posted')
+                  .eq('id', channelRef)
+                  .maybeSingle() as any;
+                await supabase.from('user_channels' as any).update({
+                  last_posted_at: new Date().toISOString(),
+                  total_videos_posted: (ch?.total_videos_posted || 0) + 1,
+                } as any).eq('id', channelRef);
+                await supabase.from('channel_schedule' as any).update({
+                  status: 'published',
+                  published_at: new Date().toISOString(),
+                  youtube_video_id: newRow.youtube_video_id,
+                } as any).eq('project_id', newRow.id);
+              }
+            }
+          } catch (e) {
+            console.error('post-publish hook failed', e);
+          }
+        }
         fetchProjects();
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'video_projects' }, () => fetchProjects())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchProjects]);
