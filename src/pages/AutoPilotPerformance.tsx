@@ -85,6 +85,64 @@ const Performance = () => {
     })();
   }, []);
 
+  // ============ FEEDBACK LOOP ============
+  // When a video gets its FIRST real sync (sync_count === 1) AND has a real
+  // performance_score, fire the self-learning-engine so the next script
+  // benefits from this published video's outcome. De-duped per video id.
+  useEffect(() => {
+    let cancelled = false;
+    const firedRef = new Set<string>();
+
+    const start = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      const triggerLearning = async (v: any) => {
+        if (!v?.id || firedRef.has(v.id)) return;
+        const score = Number(v.performance_score ?? 0);
+        const syncs = Number(v.sync_count ?? 0);
+        if (!(score > 0 && syncs === 1)) return;
+        firedRef.add(v.id);
+        try {
+          await supabase.functions.invoke('self-learning-engine', {
+            body: {
+              mode: 'update_patterns',
+              niche: v.niche,
+              video_data: {
+                title: v.title,
+                views: v.views ?? v.views_current,
+                ctr: v.ctr ?? v.ctr_percent,
+                performance_score: score,
+                topic: v.topic,
+                hook_type: v.hook_type,
+                title_pattern: v.title_pattern,
+                avg_retention_percent: v.avg_retention_percent,
+                youtube_video_id: v.youtube_video_id,
+              },
+            },
+          });
+        } catch (err) {
+          console.warn('[feedback-loop] self-learning-engine invoke failed', err);
+        }
+      };
+
+      const channel = supabase
+        .channel('vp-feedback-loop')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'video_performance', filter: `user_id=eq.${user.id}` },
+          (payload) => triggerLearning(payload.new),
+        )
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    };
+
+    let cleanup: any;
+    start().then((c) => { cleanup = c; });
+    return () => { cancelled = true; cleanup?.(); };
+  }, []);
+
   const filtered = useMemo(() => {
     const days = PERIODS[periodFilter];
     const cutoff = days ? Date.now() - days * 86400000 : 0;
