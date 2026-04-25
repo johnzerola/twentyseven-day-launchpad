@@ -86,7 +86,7 @@ export async function startSpan(
           metadata: metadata ?? {},
         })
         .eq("span_id", spanId)
-        .then(() => {}).catch(() => {});
+        .then(() => {}, () => {});
     },
   };
 }
