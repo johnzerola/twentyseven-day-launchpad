@@ -128,6 +128,8 @@ serve(async (req) => {
     }
 
     // 2. Also sync to user_channels so the channel gets ALL platform features
+    //    (incluindo refresh_token / access_token para o worker Python da VPS
+    //    fazer upload programático via youtube-upload edge function).
     const stats = channel.statistics;
     try {
       const { error: syncError } = await supabase
@@ -140,6 +142,12 @@ serve(async (req) => {
           subscribers: parseInt(stats?.subscriberCount || "0"),
           views: parseInt(stats?.viewCount || "0"),
           videos: parseInt(stats?.videoCount || "0"),
+          youtube_refresh_token: tokens.refresh_token,
+          youtube_access_token: tokens.access_token,
+          youtube_token_expires_at: expiresAt,
+          youtube_oauth_email: channel.snippet?.title ?? null,
+          youtube_oauth_scope: tokens.scope ?? null,
+          youtube_oauth_connected_at: new Date().toISOString(),
         }, {
           onConflict: "user_id,youtube_channel_id",
           ignoreDuplicates: false,
