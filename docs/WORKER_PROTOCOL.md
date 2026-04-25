@@ -740,3 +740,125 @@ SELECT vp.title, ya.attempt_number, ya.status, ya.error_message, ya.http_status,
    AND ya.created_at > now() - interval '24 hours'
  ORDER BY ya.created_at DESC;
 ```
+
+---
+
+## 14. Lock por Canal — Garantia de 1 job por canal por vez
+
+Para evitar **vídeos duplicados no YouTube** e race conditions quando você roda múltiplos workers (ou múltiplos processos Python na mesma VPS), o sistema impõe um lock atômico por canal.
+
+### 14.1 Como funciona
+
+A tabela `channel_locks` tem **PK = `channel_id`** — só pode existir 1 lock por canal. As RPCs `claim_next_project` e `claim_next_upload` agora fazem 3 coisas atomicamente:
+
+1. `LEFT JOIN channel_locks` na busca do próximo projeto, filtrando por `(lock inexistente OR lock meu OR lock expirado)`.
+2. `INSERT … ON CONFLICT (channel_id) DO UPDATE` no lock — se outro worker correu na frente, o `WHERE` da clause de UPDATE não casa e o lock fica intacto.
+3. Verifica com `PERFORM 1 FROM channel_locks WHERE worker_id=meu` — se não pegou, retorna `claimed=false, reason='channel_locked_by_other_worker'`.
+
+Resultado: **dois workers nunca processam o mesmo canal ao mesmo tempo**, mesmo que peguem projetos diferentes desse canal.
+
+### 14.2 Fluxo no Python
+
+```python
+def worker_loop():
+    while True:
+        job = rpc("claim_next_project", {"_worker_id": WORKER_ID, "_lease_minutes": 180})
+
+        if job is None:
+            time.sleep(60); continue                    # nada na fila
+
+        if job.get("claimed") is False:
+            reason = job.get("reason")
+            if reason == "channel_locked_by_other_worker":
+                # outro worker está nesse canal — pula e tenta outro
+                time.sleep(10); continue
+            if reason == "daily_render_limit_reached":
+                time.sleep(300); continue               # canal saturado
+            time.sleep(30); continue
+
+        project = job["project"]
+        channel = job["channel"]
+        lock_until = job["channel_lock"]["expires_at"]
+
+        try:
+            render_video(project, channel)
+            upload_to_youtube(project, channel)
+            mark_complete(project)
+        except Exception as e:
+            mark_failed(project, str(e))
+        finally:
+            # SEMPRE liberar o lock no final (sucesso OU falha)
+            rpc("release_channel_lock", {
+                "_channel_id": channel["id"],
+                "_worker_id": WORKER_ID,
+            })
+```
+
+### 14.3 Heartbeat para jobs longos
+
+Render Veo3 + edição + upload pode passar de 3h. Se não renovar o lock, ele expira e outro worker pode pegar o canal. Use `extend_channel_lock` em paralelo com o heartbeat do projeto:
+
+```python
+# Thread de heartbeat (rodar em background a cada 60s)
+def heartbeat_loop(channel_id, project_id):
+    while not done:
+        rpc("extend_channel_lock", {
+            "_channel_id": channel_id,
+            "_worker_id": WORKER_ID,
+            "_additional_minutes": 60,
+        })
+        post_to_lovable("worker-callback", {
+            "action": "heartbeat", "project_id": project_id, "worker_id": WORKER_ID,
+        })
+        time.sleep(60)
+```
+
+### 14.4 Recovery automático de locks órfãos
+
+- **Limpeza preventiva**: cada chamada de `claim_next_*` faz `DELETE FROM channel_locks WHERE expires_at < now()` no início. Isso é barato (índice `idx_channel_locks_expires`).
+- **Cron `autopilot-recover` (30min)**: pode chamar `cleanup_expired_channel_locks()` explicitamente para garantir limpeza mesmo quando ninguém está fazendo claim.
+
+### 14.5 Stages do lock
+
+A coluna `stage` (`'render'` | `'upload'` | `'edit'`) permite distinguir em que fase o canal está. Útil para:
+- Dashboard: "Canal X — renderizando cena 7/12"
+- Monitoramento: alertar se um canal fica em `'upload'` por mais de 30min
+- Permitir que a VPS de upload pegue o canal logo depois do render terminar (release_channel_lock + claim_next_upload imediato)
+
+### 14.6 Por que isso evita vídeos duplicados
+
+Sem lock, este cenário aconteceria:
+```
+T=0   Worker A faz claim_next_project → projeto P1 do canal C1
+T=1   Worker B faz claim_next_project → projeto P2 do canal C1
+T=180 Worker A faz upload do P1 → YouTube ID = abc123
+T=190 Worker B faz upload do P2 → YouTube ID = def456
+      MAS: P1 e P2 podem ter títulos parecidos (gerados pelo mesmo prompt-base),
+           o canal acaba postando 2 vídeos no mesmo minuto, algoritmo do YT pune.
+```
+
+Com lock:
+```
+T=0   Worker A faz claim_next_project → pega P1 + lock canal C1 até T=180
+T=1   Worker B faz claim_next_project → vê C1 travado, retorna claimed=false → pega P3 do canal C2
+T=180 Worker A termina P1, libera lock C1
+T=181 Worker A ou B pode pegar P2 do canal C1 — agora com 3h de espaçamento natural
+```
+
+Combine isso com `min_interval_hours` em `user_channels` (configurável por canal) para garantir o espaçamento mínimo entre posts, mesmo com múltiplos workers correndo.
+
+### 14.7 Query de monitoramento
+
+```sql
+-- Quem está travando o quê agora
+SELECT cl.channel_id, uc.channel_name, cl.worker_id, cl.stage,
+       vp.title AS current_project,
+       cl.acquired_at,
+       cl.expires_at,
+       (cl.expires_at - now()) AS time_remaining,
+       (now() - cl.heartbeat_at) AS time_since_heartbeat
+  FROM channel_locks cl
+  JOIN user_channels uc ON uc.id = cl.channel_id
+  LEFT JOIN video_projects vp ON vp.id = cl.project_id
+ ORDER BY cl.acquired_at DESC;
+```

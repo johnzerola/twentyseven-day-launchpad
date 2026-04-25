@@ -751,6 +751,51 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_locks: {
+        Row: {
+          acquired_at: string
+          channel_id: string
+          expires_at: string
+          heartbeat_at: string
+          project_id: string | null
+          stage: string
+          worker_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          channel_id: string
+          expires_at: string
+          heartbeat_at?: string
+          project_id?: string | null
+          stage?: string
+          worker_id: string
+        }
+        Update: {
+          acquired_at?: string
+          channel_id?: string
+          expires_at?: string
+          heartbeat_at?: string
+          project_id?: string | null
+          stage?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_locks_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_locks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_schedule: {
         Row: {
           channel_id: string
@@ -6011,6 +6056,7 @@ export type Database = {
         Args: { _lease_minutes?: number; _worker_id: string }
         Returns: Json
       }
+      cleanup_expired_channel_locks: { Args: never; Returns: number }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
       cleanup_old_function_traces: { Args: never; Returns: undefined }
       consume_credits: {
@@ -6020,6 +6066,14 @@ export type Database = {
       enforce_credits: {
         Args: { _operation: string; _user_id: string }
         Returns: Json
+      }
+      extend_channel_lock: {
+        Args: {
+          _additional_minutes?: number
+          _channel_id: string
+          _worker_id: string
+        }
+        Returns: boolean
       }
       get_autopilot_cron_runs: {
         Args: { _limit?: number }
@@ -6067,6 +6121,10 @@ export type Database = {
       }
       owns_squad_step: { Args: { _run_id: string }; Returns: boolean }
       refresh_materialized_views: { Args: never; Returns: undefined }
+      release_channel_lock: {
+        Args: { _channel_id: string; _worker_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
