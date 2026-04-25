@@ -29,6 +29,7 @@ import Squads from "./pages/Squads";
 import AutoPilot from "./pages/AutoPilot";
 import AutoPilotPerformance from "./pages/AutoPilotPerformance";
 import AutoPilotScheduler from "./pages/AutoPilotScheduler";
+import AutoPilotDiagnostics from "./pages/AutoPilotDiagnostics";
 import ChannelSettings from "./pages/ChannelSettings";
 import CalendarPage from "./pages/CalendarPage";
 import MyChannelIntelligence from "./pages/MyChannelIntelligence";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/autopilot" element={<P><AutoPilot /></P>} />
             <Route path="/autopilot/performance" element={<P><AutoPilotPerformance /></P>} />
             <Route path="/autopilot/scheduler" element={<P><AutoPilotScheduler /></P>} />
+            <Route path="/autopilot/diagnostics" element={<P><AutoPilotDiagnostics /></P>} />
             <Route path="/calendar" element={<P><CalendarPage /></P>} />
             <Route path="/channels/:id/settings" element={<P><ChannelSettings /></P>} />
             <Route path="/titles" element={<P><Titles /></P>} />

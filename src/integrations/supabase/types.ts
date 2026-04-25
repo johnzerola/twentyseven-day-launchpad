@@ -5781,6 +5781,18 @@ export type Database = {
         Args: { _operation: string; _user_id: string }
         Returns: Json
       }
+      get_autopilot_cron_runs: {
+        Args: { _limit?: number }
+        Returns: {
+          duration_ms: number
+          end_time: string
+          jobname: string
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+        }[]
+      }
       get_niche_benchmarks: { Args: { _niche?: string }; Returns: Json[] }
       get_provider_spend: {
         Args: { _hours?: number; _provider: string }

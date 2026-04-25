@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChatbotWidget, PAGE_TOOLTIPS } from '@/components/dashboard/ChatbotWidget';
-import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield, Crown, Bot, Calendar, BarChart2, CalendarDays, Brain, Wand2 } from 'lucide-react';
+import { Zap, LayoutDashboard, Youtube, Search, FileText, Menu, Sparkles, Flame, Layers, HelpCircle, Lock, CreditCard, X, Rocket, Shield, Crown, Bot, Calendar, BarChart2, CalendarDays, Brain, Wand2, Activity } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +21,7 @@ const navItems = [
   { key: 'AutoPilot', icon: Zap, path: '/autopilot' },
   { key: 'Performance', icon: BarChart2, path: '/autopilot/performance' },
   { key: 'Agendamento', icon: CalendarDays, path: '/autopilot/scheduler' },
+  { key: 'Diagnóstico', icon: Activity, path: '/autopilot/diagnostics' },
   { key: 'Calendar', icon: Calendar, path: '/calendar' },
   { key: 'Inteligência', icon: Brain, path: '/intelligence' },
   { key: 'Títulos Virais', icon: Sparkles, path: '/titles' },
