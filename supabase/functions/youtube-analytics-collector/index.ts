@@ -31,6 +31,13 @@ interface CollectStats {
   errors: string[];
 }
 
+class OAuthInvalidGrant extends Error {
+  constructor(public detail: string) {
+    super(`oauth_invalid_grant:${detail}`);
+    this.name = "OAuthInvalidGrant";
+  }
+}
+
 async function refreshToken(rt: string) {
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -43,7 +50,13 @@ async function refreshToken(rt: string) {
     }),
   });
   const data = await res.json();
-  if (data.error) throw new Error(`oauth_refresh_failed:${data.error}`);
+  if (data.error) {
+    // invalid_grant means user revoked access or refresh_token expired
+    if (data.error === "invalid_grant") {
+      throw new OAuthInvalidGrant(data.error_description || data.error);
+    }
+    throw new Error(`oauth_refresh_failed:${data.error}`);
+  }
   return data as { access_token: string; expires_in: number };
 }
 
