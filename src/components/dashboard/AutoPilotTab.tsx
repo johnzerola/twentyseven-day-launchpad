@@ -31,6 +31,11 @@ interface Channel {
   min_interval_hours: number | null;
   weekly_video_target: number | null;
   avoided_topics: string[] | null;
+  youtube_channel_id?: string | null;
+  subscribers?: number | null;
+  language?: string | null;
+  reference_channels?: string[] | null;
+  analysis_json?: any;
 }
 
 interface ScheduleItem {
