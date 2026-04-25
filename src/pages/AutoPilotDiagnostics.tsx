@@ -166,6 +166,12 @@ const AutoPilotDiagnostics = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link to="/autopilot/worker-monitor">
+              <Button variant="outline" size="sm">
+                <Activity className="w-4 h-4 mr-2" />
+                Monitor de worker
+              </Button>
+            </Link>
             <Button onClick={load} variant="outline" size="sm" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Atualizar
