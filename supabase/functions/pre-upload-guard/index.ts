@@ -183,7 +183,7 @@ serve(async (req) => {
     const { data: project, error: projErr } = await sb
       .from("video_projects")
       .select(
-        "id,user_id,channel_id_ref,title,description,script,thumbnail_url,monetization_score,originality_score,intelligence_json"
+        "id,user_id,channel_id_ref,title,description,script,thumbnail_url,intelligence_json"
       )
       .eq("id", project_id)
       .maybeSingle();
@@ -203,13 +203,14 @@ serve(async (req) => {
     const recommendations: string[] = [];
     const raw: Record<string, any> = {};
 
-    // 1) Existing scores from upstream functions
-    const monetiza_score = project.monetization_score != null
-      ? Number(project.monetization_score)
+    // 1) Existing scores from upstream functions (read from intelligence_json)
+    const intel = (project.intelligence_json || {}) as any;
+    const monetiza_score =
+      intel.monetization_score != null ? Number(intel.monetization_score)
+      : intel.monetiza_score != null ? Number(intel.monetiza_score)
       : null;
-    const originality_score = project.originality_score != null
-      ? Number(project.originality_score)
-      : null;
+    const originality_score =
+      intel.originality_score != null ? Number(intel.originality_score) : null;
 
     if (monetiza_score != null && monetiza_score < 60) {
       issues.push({
