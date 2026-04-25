@@ -1,13 +1,16 @@
-import { supabase } from '@/integrations/supabase/client';
+import { getCachedSession } from '@/lib/session-cache';
 
 /**
  * Returns proper auth headers for edge function calls.
  * Uses the user's session access_token (not the anon key) as Bearer,
  * so RLS policies based on auth.uid() work correctly.
  * Falls back to anon key if no session (public endpoints).
+ *
+ * Uses a per-page session cache to avoid concurrent getSession() calls
+ * (which would otherwise trigger noisy "navigator lock stolen" warnings).
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = await getCachedSession();
   const accessToken = session?.access_token;
   
   return {
