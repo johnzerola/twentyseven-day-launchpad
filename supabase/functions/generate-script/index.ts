@@ -923,12 +923,13 @@ ESCREVA os primeiros 90 SEGUNDOS de narração (não apenas 30s). Desenvolva cad
             "Content-Type": "application/json",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           },
-          body: JSON.stringify({ user_id: _learningUserId, niche }),
+          body: JSON.stringify({ user_id: _learningUserId, niche, channel_id: channelIdForLearning }),
         });
         if (!r.ok) return "";
         const j = await r.json();
         if (j?.has_data && j?.prompt_brief) {
-          console.log(`[CHANNEL-LEARNING] runId=${runId} injected brief (n=${j.sample_size})`);
+          const topHook = j?.top_hooks?.[0]?.hook_type ?? "—";
+          console.log(`[CHANNEL-LEARNING] runId=${runId} channel=${channelIdForLearning ?? "all"} sample=${j.sample_size} top_hook="${topHook}"`);
           return `\n\n${j.prompt_brief}\n`;
         }
         return "";
