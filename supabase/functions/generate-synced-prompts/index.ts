@@ -18,7 +18,7 @@ serve(async (req) => {
     if (authHeader.startsWith("Bearer ")) {
       const _authSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } });
-      const { data: _claims } = await _authSb.auth.getClaims(authHeader.replace("Bearer ", ""));
+      const { data: _claims } = await (_authSb.auth as any).getClaims(authHeader.replace("Bearer ", ""));
       if (_claims?.claims?.sub) {
         const creditBlock = await enforceCreditGuard(_claims.claims.sub as string, "generate-synced-prompts");
         if (creditBlock) return creditBlock;

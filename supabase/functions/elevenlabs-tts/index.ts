@@ -49,7 +49,7 @@ serve(async (req) => {
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.4");
     const _authSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } });
-    const { data: _claims, error: _authErr } = await _authSb.auth.getClaims(authHeader.replace("Bearer ", ""));
+    const { data: _claims, error: _authErr } = await (_authSb.auth as any).getClaims(authHeader.replace("Bearer ", ""));
     if (_authErr || !_claims?.claims) {
       return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
