@@ -298,21 +298,59 @@ const AutoPilot = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {errored.map(p => (
-                <div key={p.id} className="border border-destructive/30 bg-destructive/5 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium truncate">{p.title || p.topic || p.id}</span>
-                    <Button size="sm" variant="outline" disabled={busy === p.id} onClick={() => handleRetry(p.id)}>
-                      {busy === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />} Retentar
-                    </Button>
+              {errored.map(p => {
+                const tries = p.retry_count || 0;
+                const max = p.max_retries || 3;
+                const exhausted = p.status === 'failed_permanent' || tries >= max;
+                const nextRetryFuture = p.next_retry_at && new Date(p.next_retry_at).getTime() > Date.now();
+                return (
+                  <div key={p.id} className="border border-destructive/30 bg-destructive/5 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate">{p.title || p.topic || p.id}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {tries}/{max} tentativas
+                        </Badge>
+                        {exhausted && (
+                          <Badge variant="destructive" className="text-[10px] shrink-0">Esgotado</Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy === p.id || exhausted}
+                          onClick={() => handleRetry(p.id)}
+                          title={exhausted ? 'Limite de tentativas atingido' : ''}
+                        >
+                          {busy === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCw className="w-3 h-3" />} Retentar
+                        </Button>
+                        {!exhausted && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy === p.id}
+                            onClick={() => handleCancel(p.id)}
+                          >
+                            <XCircle className="w-3 h-3" /> Cancelar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {nextRetryFuture && !exhausted && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Próxima tentativa automática: {new Date(p.next_retry_at!).toLocaleString()}
+                      </p>
+                    )}
+                    {p.error_message && (
+                      <p className="text-xs text-destructive/90 font-mono bg-background/50 p-2 rounded break-all">
+                        {p.error_message}
+                      </p>
+                    )}
                   </div>
-                  {p.error_message && (
-                    <p className="text-xs text-destructive/90 font-mono bg-background/50 p-2 rounded">
-                      {p.error_message}
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         )}
