@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   // Query projetos elegíveis
   let q = admin
     .from('video_projects')
-    .select('id, user_id, status, error_message, retry_count, max_retries, next_retry_at, scheduled_at, channel_id_ref, channel_id, title, topic')
+    .select('id, user_id, status, error_message, retry_count, max_retries, next_retry_at, scheduled_at, channel_id_ref, channel_id, title')
     .not('error_message', 'is', null);
   if (projectIdFilter) q = q.eq('id', projectIdFilter);
   if (userIdFilter) q = q.eq('user_id', userIdFilter);
