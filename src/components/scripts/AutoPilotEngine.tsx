@@ -1053,6 +1053,99 @@ export const AutoPilotEngine = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Launch modal — choose channel + scheduled date */}
+      <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch) setShowLaunchModal(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Rocket className="w-4 h-4 text-primary" /> Enviar para o AutoPilot
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o canal de destino e quando o vídeo deve ser publicado.
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingChannels ? (
+            <div className="py-6 flex items-center justify-center text-sm text-muted-foreground gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando canais...
+            </div>
+          ) : channels.length === 0 ? (
+            <div className="py-4 text-sm">
+              <p className="text-muted-foreground mb-3">
+                Você ainda não tem canais cadastrados.
+              </p>
+              <Link to="/channels" className="text-primary underline text-sm">
+                Adicione um canal em /channels primeiro.
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="channel-select">Canal</Label>
+                <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+                  <SelectTrigger id="channel-select">
+                    <SelectValue placeholder="Selecione um canal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <div className="flex items-center gap-2">
+                          {c.thumbnail ? (
+                            <img
+                              src={c.thumbnail}
+                              alt={c.channel_name || 'canal'}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-muted" />
+                          )}
+                          <span className="truncate">{c.channel_name || 'Canal sem nome'}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="schedule-input">Publicar em:</Label>
+                <Input
+                  id="schedule-input"
+                  type="datetime-local"
+                  value={scheduledLocal}
+                  onChange={(e) => setScheduledLocal(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setShowLaunchModal(false)}
+              disabled={confirmingLaunch}
+            >
+              Cancelar
+            </Button>
+            {channels.length > 0 && (
+              <Button
+                onClick={handleConfirmLaunch}
+                disabled={confirmingLaunch || !selectedChannelId || !scheduledLocal}
+                className="gap-2"
+              >
+                {confirmingLaunch ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
+                  </>
+                ) : (
+                  <>🚀 Enviar para Produção</>
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
