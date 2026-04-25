@@ -13,7 +13,11 @@ interface ConnectedChannel {
   channel_name: string;
   channel_thumbnail: string;
   connected_at: string;
+  scopes?: string[] | null;
+  has_upload_scope?: boolean;
 }
+
+const UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
 
 export const YouTubeOAuthConnect = () => {
   const [connectedChannels, setConnectedChannels] = useState<ConnectedChannel[]>([]);
@@ -28,9 +32,15 @@ export const YouTubeOAuthConnect = () => {
     try {
       const { data, error } = await supabase
         .from('youtube_oauth_tokens_safe' as any)
-        .select('id, channel_id, channel_name, channel_thumbnail, connected_at');
+        .select('id, channel_id, channel_name, channel_thumbnail, connected_at, scopes');
       if (error) throw error;
-      setConnectedChannels((data as unknown as ConnectedChannel[]) || []);
+      const rows = (data as unknown as ConnectedChannel[]) || [];
+      setConnectedChannels(
+        rows.map((r) => ({
+          ...r,
+          has_upload_scope: Array.isArray(r.scopes) && r.scopes.includes(UPLOAD_SCOPE),
+        })),
+      );
     } catch (err) {
       console.error('Error fetching connected channels:', err);
     } finally {
