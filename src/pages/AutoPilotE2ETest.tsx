@@ -132,17 +132,18 @@ export default function AutoPilotE2ETest() {
         _slot_window_minutes: 30,
       });
       if (error) throw error;
-      claimResult = data;
-      if (!data?.ok) {
+      const d = data as any;
+      claimResult = d;
+      if (!d?.ok) {
         updateStep("claim", {
           status: "fail",
-          detail: `RPC retornou ok=false: reason=${data?.reason}`,
+          detail: `RPC retornou ok=false: reason=${d?.reason}`,
         });
         setFinalReport({ failed_at: "claim", claimResult });
         setRunning(false);
         return;
       }
-      updateStep("claim", { status: "ok", detail: `RPC ok=true · scheduled_at=${data.scheduled_at}` });
+      updateStep("claim", { status: "ok", detail: `RPC ok=true · scheduled_at=${d.scheduled_at}` });
     } catch (e: any) {
       updateStep("claim", { status: "fail", detail: e.message });
       setFinalReport({ failed_at: "claim", error: e.message });
