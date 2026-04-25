@@ -73,11 +73,56 @@ export const YouTubeOAuthConnect = () => {
       // Open OAuth consent screen in popup
       const popup = window.open(authUrl, 'youtube-oauth', 'width=600,height=700');
 
-      // Poll for popup close, then refresh
+      // Poll for popup close, then refresh + auto-fill DNA
       const interval = setInterval(async () => {
         if (popup?.closed) {
           clearInterval(interval);
           await fetchConnectedChannels();
+          // Auto-preencher DNA dos canais recém-conectados (sem token de DNA preenchido)
+          try {
+            const { data: freshChannels } = await supabase
+              .from('user_channels')
+              .select('id, youtube_channel_id, niche, character_bio, visual_style_prompt')
+              .eq('user_id', user.id)
+              .not('youtube_refresh_token', 'is', null);
+
+            const pending = (freshChannels || []).filter(
+              (c: any) => !c.niche || !c.character_bio || !c.visual_style_prompt
+            );
+
+            if (pending.length > 0) {
+              toast.info('🧠 Analisando canal e preenchendo DNA automaticamente...');
+              for (const ch of pending) {
+                try {
+                  const { data: ana } = await supabase.functions.invoke('analyze-channel', {
+                    body: { channelInput: ch.youtube_channel_id },
+                  });
+                  if (ana?.analysis) {
+                    const a = ana.analysis;
+                    await supabase.from('user_channels').update({
+                      niche: a.niche_detected || null,
+                      character_bio: [a.best_content_type, a.recommended_video_length]
+                        .filter(Boolean).join('. ') || null,
+                      visual_style_prompt: a.content_strategy || null,
+                      language: 'pt-BR',
+                      analysis_json: {
+                        ...a,
+                        recentVideos: ana.recentVideos,
+                        topVideos: ana.topVideos,
+                        avgRecentViews: ana.avgRecentViews,
+                        realMetrics: ana.realMetrics,
+                      },
+                    } as any).eq('id', ch.id).eq('user_id', user.id);
+                  }
+                } catch (e) {
+                  console.error('Auto-DNA falhou para canal', ch.youtube_channel_id, e);
+                }
+              }
+              toast.success('✅ DNA preenchido automaticamente! Revise em Canais → AutoPilot.');
+            }
+          } catch (e) {
+            console.error('Erro no auto-preenchimento de DNA:', e);
+          }
           // Reload the page to refresh user_channels list
           window.location.reload();
         }
