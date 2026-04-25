@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, Loader2, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AnalyticsCollectorCard } from '@/components/autopilot/AnalyticsCollectorCard';
+import { WeeklyStrategistCard } from '@/components/autopilot/WeeklyStrategistCard';
+import { Sparkles } from 'lucide-react';
 
 type VideoProject = {
   id: string;
@@ -28,6 +30,7 @@ type VideoProject = {
   max_retries?: number | null;
   next_retry_at?: string | null;
   last_error_at?: string | null;
+  created_by_agent?: boolean | null;
 };
 
 const ACTIVE_STATUSES = ['processing', 'waiting_videos', 'assembling', 'uploading', 'ready_for_production'];
@@ -263,6 +266,9 @@ const AutoPilot = () => {
         {/* Coletor de métricas (auto a cada 4h) */}
         <AnalyticsCollectorCard />
 
+        {/* Agente Estratégico Semanal */}
+        <WeeklyStrategistCard />
+
         {/* Pipeline */}
         <Card>
           <CardHeader>
@@ -282,7 +288,14 @@ const AutoPilot = () => {
                 {pipeline.map(p => (
                   <div key={p.id} className="border border-border rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">{p.title || p.topic || p.id}</span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate">{p.title || p.topic || p.id}</span>
+                        {p.created_by_agent && (
+                          <Badge variant="outline" className="text-[10px] gap-1 shrink-0 border-primary/40 text-primary">
+                            <Sparkles className="w-3 h-3" /> Agente Semanal
+                          </Badge>
+                        )}
+                      </div>
                       <Badge className="bg-primary/20 text-primary animate-pulse text-[10px]">{STATUS_LABEL[p.status] || p.status}</Badge>
                     </div>
                     <Progress value={STATUS_PROGRESS[p.status] || 20} className="h-1.5" />
