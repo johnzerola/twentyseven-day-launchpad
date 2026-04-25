@@ -115,7 +115,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Webhook error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as any)?.message ?? "Unknown error" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });

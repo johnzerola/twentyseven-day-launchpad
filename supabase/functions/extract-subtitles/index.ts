@@ -170,7 +170,7 @@ serve(async (req) => {
         params: { language: captionLanguage, method },
         result_json: { transcript, word_count: transcript.split(/\s+/).length, line_count: transcript.split("\n").length },
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      }, { onConflict: "cache_key" }).catch(() => {});
+      }, { onConflict: "cache_key" }).then(() => {}, () => {});
     }
 
     return new Response(JSON.stringify({

@@ -82,7 +82,7 @@ serve(async (req) => {
                     niche,
                     thumbnail_url: v.snippet.thumbnails?.medium?.url,
                     multiplier: 1,
-                  }, { onConflict: "user_id,video_title" }).catch(() => {});
+                  }, { onConflict: "user_id,video_title" }).then(() => {}, () => {});
                   results.competitors_found++;
                 }
               }
@@ -134,7 +134,7 @@ Responda em JSON: { ideas: [{ title, description, priority }] }`
                   status: 'idea',
                   scheduled_date: scheduledDate.toISOString().slice(0, 10),
                   video_type: 'short',
-                }).catch(() => {});
+                }).then(() => {}, () => {});
                 results.queue_items_created++;
               }
             }
@@ -174,14 +174,14 @@ Responda em JSON: { ideas: [{ title, description, priority }] }`
         column_id: starterCards[i].column_id,
         priority: starterCards[i].priority,
         position: i,
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     await sb.from("execution_logs").insert({
       function_name: "smart-onboarding",
       success: true,
       metadata: results,
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

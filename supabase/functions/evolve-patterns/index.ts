@@ -183,7 +183,7 @@ Em formato JSON, retorne:
             failures: perf.fCount,
             timestamp: new Date().toISOString(),
           }),
-        }).catch(() => {});
+        }).then(() => {}, () => {});
         results.patterns_updated++;
       }
     }
@@ -192,7 +192,7 @@ Em formato JSON, retorne:
       function_name: "evolve-patterns",
       success: true,
       metadata: results,
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -130,7 +130,7 @@ serve(async (req) => {
 
         if (error) {
           console.error("Upsert error:", error);
-          results.push({ index: i + j, success: false, error: error.message });
+          results.push({ index: i + j, success: false, error: (error as any)?.message ?? "Unknown error" });
         } else {
           results.push({ index: i + j, success: true });
         }

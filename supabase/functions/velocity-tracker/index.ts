@@ -141,7 +141,7 @@ serve(async (req) => {
             top_rising: results.rising_videos.slice(0, 5),
             timestamp: new Date().toISOString(),
           }),
-        }).catch(() => {});
+        }).then(() => {}, () => {});
       }
     }
 
@@ -199,7 +199,7 @@ serve(async (req) => {
       success: true,
       api_calls_made: Math.ceil(results.snapshots_taken / 50),
       metadata: results,
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

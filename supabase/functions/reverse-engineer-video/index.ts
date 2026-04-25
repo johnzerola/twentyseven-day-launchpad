@@ -293,10 +293,10 @@ REQUIREMENTS:
       clone_template: analysis.clone_template,
       scores: { viral: analysis.viral_score, quality: analysis.quality_score, monetization: analysis.monetization_score },
       source: "reverse-engineer",
-    }, { onConflict: "video_id" }).catch(() => {});
+    }, { onConflict: "video_id" }).then(() => {}, () => {});
 
     // ═══ AUTO-FEED PIPELINE ═══
-    const feedPromises: Promise<any>[] = [];
+    const feedPromises: any[] = [];
 
     if (analysis.hook_analysis?.hook_text_estimate) {
       feedPromises.push(
@@ -306,7 +306,7 @@ REQUIREMENTS:
           niche: niche || "general",
           retention_score: analysis.hook_analysis.retention_loop_count ? Math.min(analysis.hook_analysis.retention_loop_count + 5, 10) : 7,
           source_video: video_id || video_title,
-        }, { onConflict: "hook_text" }).catch(() => {})
+        }, { onConflict: "hook_text" }).then(() => {}, () => {})
       );
     }
 
@@ -324,7 +324,7 @@ REQUIREMENTS:
             niche: niche || "general",
             example_text: `[${video_title}] ${scene.purpose}: ${scene.visual_style}`,
             source: "reverse-engineer-auto",
-          }).catch(() => {})
+          }).then(() => {}, () => {})
         );
       }
     }
@@ -343,7 +343,7 @@ REQUIREMENTS:
             pacing: analysis.pacing_analysis,
             psychological_triggers: analysis.psychological_triggers,
           },
-        }, { onConflict: "pattern_name" }).catch(() => {})
+        }, { onConflict: "pattern_name" }).then(() => {}, () => {})
       );
     }
 
@@ -360,7 +360,7 @@ REQUIREMENTS:
           emotional_triggers: analysis.psychological_triggers || [],
           title_pattern: analysis.hook_analysis?.hook_type || null,
           why_viral: `Viral Score: ${analysis.viral_score}. Triggers: ${(analysis.psychological_triggers || []).join(", ")}`,
-        }, { onConflict: "title" }).catch(() => {})
+        }, { onConflict: "title" }).then(() => {}, () => {})
       );
     }
 
@@ -375,7 +375,7 @@ REQUIREMENTS:
             example_hooks: analysis.hook_analysis?.hook_text_estimate ? [analysis.hook_analysis.hook_text_estimate] : [],
             retention_score: Math.round((analysis.viral_score || 5)),
             source: "reverse-engineer-auto",
-          }).catch(() => {})
+          }).then(() => {}, () => {})
         );
       }
     }
@@ -415,7 +415,7 @@ REQUIREMENTS:
         gold_score: analysis.quality_score || 0,
         source: "reverse-engineer",
         duration_seconds: totalDurationSec,
-      }, { onConflict: "video_id" }).catch(() => {})
+      }, { onConflict: "video_id" }).then(() => {}, () => {})
     );
 
     await Promise.all(feedPromises);
@@ -426,7 +426,7 @@ REQUIREMENTS:
       duration_ms: Date.now() - startTime,
       api_calls_made: 2,
       metadata: { video_id, niche, viral_score: analysis.viral_score, scenes: (analysis.scene_timeline || []).length, libraries_fed: feedPromises.length },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({
       success: true,

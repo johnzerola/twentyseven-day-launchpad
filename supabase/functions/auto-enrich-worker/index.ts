@@ -2,6 +2,10 @@ import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || "";
+
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -162,7 +166,7 @@ serve(async (req) => {
       duration_ms: Date.now() - startTime,
       api_calls_made: results.enriched,
       metadata: results,
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -337,7 +341,7 @@ async function buildRagContext(sb: any, braveKey: string | undefined, title: str
     await sb.from("research_cache").insert({
       cache_key: cacheKey, query, source: "brave",
       result_json: results, expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return JSON.stringify(results).slice(0, 2000);
   } catch (e) {
@@ -416,7 +420,7 @@ async function reverseEngineerVideo(sb: any, aiH: any, video: any, niche: string
           video_id: video.id, start_seconds: 0, end_seconds: 8,
           segment_type: "hook", metric: 1.0,
           meta: { hook_type: p.hook_type, hook_text: p.hook_text },
-        }).catch(() => {});
+        }).then(() => {}, () => {});
 
         return p;
       }

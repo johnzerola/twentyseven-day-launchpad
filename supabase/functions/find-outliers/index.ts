@@ -304,7 +304,7 @@ serve(async (req) => {
 
               // ═══ AUTO-FEED: Save DNA to viral database ═══
               const sbService = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-              const feedPromises: Promise<any>[] = [];
+              const feedPromises: any[] = [];
 
               for (let i = 0; i < dnaResults.length && i < topOutliers.length; i++) {
                 const dnaVideo = dnaResults[i];
@@ -322,7 +322,7 @@ serve(async (req) => {
                     title_pattern: dnaVideo.title_pattern || null,
                     emotional_triggers: [dnaVideo.emotion_primary, dnaVideo.emotion_secondary].filter(Boolean),
                     why_viral: dnaVideo.why_viral || `Outlier: ${outlier.multiplier}x com ${outlier.subscribers} subs`,
-                  }, { onConflict: "title" }).catch(() => {})
+                  }, { onConflict: "title" }).then(() => {}, () => {})
                 );
 
                 // Feed hook_library
@@ -334,7 +334,7 @@ serve(async (req) => {
                       niche: keywords,
                       retention_score: Math.min(10, Math.round(outlier.gold_score / 10)),
                       source_video: outlier.video_url,
-                    }).catch(() => {})
+                    }).then(() => {}, () => {})
                   );
                 }
 
@@ -360,7 +360,7 @@ serve(async (req) => {
                       engagement_rate: outlier.engagement_rate,
                     },
                     source: "outlier-dna-auto",
-                  }, { onConflict: "video_id" }).catch(() => {})
+                  }, { onConflict: "video_id" }).then(() => {}, () => {})
                 );
               }
 
@@ -377,7 +377,7 @@ serve(async (req) => {
                       avg_multiplier: topOutliers.reduce((s, o) => s + o.multiplier, 0) / topOutliers.length,
                       extracted_at: new Date().toISOString(),
                     }),
-                  }).catch(() => {})
+                  }).then(() => {}, () => {})
                 );
               }
 
@@ -411,7 +411,7 @@ serve(async (req) => {
                     gold_score: ol.gold_score || 0,
                     viral_score: ol.gold_score || 0,
                     source: "outlier-engine-auto",
-                  }, { onConflict: "video_id" }).catch(() => {})
+                  }, { onConflict: "video_id" }).then(() => {}, () => {})
                 );
               }
 

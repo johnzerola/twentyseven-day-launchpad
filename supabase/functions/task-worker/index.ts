@@ -80,7 +80,7 @@ serve(async (req) => {
         function_name: `task-worker:${task.task_type}`,
         success: true,
         metadata: { phase: "started", task_id: task.id, attempt: task.attempts + 1 },
-      }).catch(() => {});
+      }).then(() => {}, () => {});
 
       try {
         let result: any = null;
@@ -145,7 +145,7 @@ serve(async (req) => {
           success: true,
           duration_ms: Date.now() - taskStart,
           metadata: { phase: "completed", task_id: task.id },
-        }).catch(() => {});
+        }).then(() => {}, () => {});
 
         results.push({ id: task.id, task_type: task.task_type, status: "done" });
       } catch (e: any) {
@@ -166,7 +166,7 @@ serve(async (req) => {
             max_attempts: task.max_attempts || 3,
             payload_preview: JSON.stringify(task.payload || {}).slice(0, 200),
           },
-        }).catch(() => {});
+        }).then(() => {}, () => {});
 
         if (shouldRetry) {
           const backoff = BACKOFF_BASE_MS * Math.pow(2, attempts - 1);
@@ -189,7 +189,7 @@ serve(async (req) => {
       success: totalFailed === 0,
       error_message: totalFailed > 0 ? `${totalFailed}/${results.length} tasks failed` : null,
       metadata: { tasks_processed: results.length, failed: totalFailed, results },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     await rootSpan.end(totalFailed === 0 ? "success" : "error", { processed: results.length, failed: totalFailed }, totalFailed > 0 ? `${totalFailed} tasks failed` : undefined, { tasks_processed: results.length });
     return new Response(JSON.stringify({ success: true, processed: results, trace_id: rootSpan.traceId, economy_mode: true }), {
@@ -202,7 +202,7 @@ serve(async (req) => {
       duration_ms: Date.now() - startTime,
       success: false,
       error_message: e.message,
-    }).catch(() => {});
+    }).then(() => {}, () => {});
     await rootSpan.end("error", null, e.message);
     return new Response(JSON.stringify({ error: e.message, trace_id: rootSpan.traceId }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json", "x-trace-id": rootSpan.traceId },

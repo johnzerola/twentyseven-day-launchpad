@@ -51,7 +51,7 @@ serve(async (req) => {
     }
 
     // ═══ FETCH INTELLIGENCE (parallel) — now includes real-time freshness ═══
-    const fetchPromises: Promise<any>[] = [
+    const fetchPromises: any[] = [
       // 0: Channel intelligence
       sb.from("channel_intelligence")
         .select("channel_name,niche,style,viral_patterns,top_videos,avg_views,growth_rate")

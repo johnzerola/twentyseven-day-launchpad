@@ -92,7 +92,7 @@ serve(async (req) => {
         topic: `backtest_${vid.niche || 'general'}_${direction}`,
         source: "backtest-scores",
         insight: JSON.stringify(insight),
-      }).catch(() => {});
+      }).then(() => {}, () => {});
 
       results.accuracy_improvements.push({
         title: vid.title?.slice(0, 50),
@@ -129,7 +129,7 @@ serve(async (req) => {
               topic: "backtest_meta_analysis",
               source: "backtest-scores",
               insight: `[Accuracy: ${results.avg_accuracy}%] ${metaInsight}`,
-            }).catch(() => {});
+            }).then(() => {}, () => {});
           }
         }
       } catch (e) { console.warn("Meta-analysis error:", e); }
@@ -139,7 +139,7 @@ serve(async (req) => {
       function_name: "backtest-scores",
       success: true,
       metadata: { backtested: results.backtested, avg_accuracy: results.avg_accuracy },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

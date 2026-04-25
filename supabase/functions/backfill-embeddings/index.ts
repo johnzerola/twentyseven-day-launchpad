@@ -276,7 +276,7 @@ serve(async (req) => {
         .eq("source_table", source.table);
 
       const existingIds = new Set((existing || []).map(e => e.source_id));
-      const newRows = rows.filter(r => !existingIds.has(r.id)).slice(0, maxItems);
+      const newRows = (rows as any[]).filter(r => !existingIds.has(r.id)).slice(0, maxItems);
 
       console.log(`${source.table}: ${newRows.length} rows to embed (capped at ${maxItems})`);
 

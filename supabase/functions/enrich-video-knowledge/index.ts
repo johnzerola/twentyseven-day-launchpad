@@ -2,6 +2,10 @@ import { callGemini, callGeminiWithFallback } from "../_shared/gemini-direct.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || "";
+
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -219,7 +223,7 @@ Extract:
         const k = JSON.parse(toolCall.function.arguments);
 
         // 3. Store extracted knowledge in tables
-        const inserts: Promise<any>[] = [];
+        const inserts: any[] = [];
 
         // 3a. Store narrative structure in script_knowledge
         if (k.narrativeStructure?.effectiveness >= 7) {
@@ -343,7 +347,7 @@ Extract:
               const d = video.contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
               return d ? (parseInt(d[1]||'0')*3600 + parseInt(d[2]||'0')*60 + parseInt(d[3]||'0')) : 0;
             })(),
-          }).then(() => {}).catch(() => {}));
+          }).then(() => {}, () => {}));
         }
 
         await Promise.allSettled(inserts);
