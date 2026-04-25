@@ -18,7 +18,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MODEL = "gemini-2.5-pro";
+const MODEL = "gemini-2.5-flash";
+const FALLBACK_MODEL = "gemini-2.5-pro";
 const CONCURRENCY = 3;
 
 interface ChannelRow {
