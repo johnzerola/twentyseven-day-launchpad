@@ -410,7 +410,9 @@ export const AutoPilotEngine = ({
     }
   }, []);
 
-  const handleConfirmLaunch = useCallback(async () => {
+  // skipPipeline = true when the pipeline already ran outside the modal
+  // (post-pipeline sticky "Send to Production" button).
+  const handleConfirmLaunch = useCallback(async (opts?: { skipPipeline?: boolean }) => {
     if (!selectedChannelId) {
       toast.error('Selecione um canal');
       return;
@@ -421,14 +423,16 @@ export const AutoPilotEngine = ({
     }
     const scheduledAt = new Date(scheduledLocal).toISOString();
     setConfirmingLaunch(true);
-    setLaunchPhase('pipeline');
+    setLaunchPhase(opts?.skipPipeline ? 'saving' : 'pipeline');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Login required');
 
       // Run the original pipeline (modal stays open showing progress)
-      const launch = runPipelineRef.current;
-      if (launch) await launch();
+      if (!opts?.skipPipeline) {
+        const launch = runPipelineRef.current;
+        if (launch) await launch();
+      }
 
       setLaunchPhase('saving');
 
