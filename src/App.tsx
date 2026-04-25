@@ -32,6 +32,7 @@ import AutoPilotScheduler from "./pages/AutoPilotScheduler";
 import ChannelSettings from "./pages/ChannelSettings";
 import CalendarPage from "./pages/CalendarPage";
 import MyChannelIntelligence from "./pages/MyChannelIntelligence";
+import ChannelStudio from "./pages/ChannelStudio";
 import AdminTraces from "./pages/AdminTraces";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
