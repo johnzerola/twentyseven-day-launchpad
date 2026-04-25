@@ -862,3 +862,116 @@ SELECT cl.channel_id, uc.channel_name, cl.worker_id, cl.stage,
   LEFT JOIN video_projects vp ON vp.id = cl.project_id
  ORDER BY cl.acquired_at DESC;
 ```
+
+---
+
+## 15. Timeline Sync & Validação (`timeline-sync`)
+
+Antes de exportar o vídeo final, o worker DEVE chamar a edge function
+`timeline-sync` para sincronizar todos os assets na timeline e validar
+duração/TC. Sem `validation.ready_to_export === true`, NÃO renderize.
+
+### Endpoint
+`POST /functions/v1/timeline-sync`
+
+### Headers
+- `x-worker-token: $WORKER_API_TOKEN` — bypass de auth para o worker da VPS
+
+### Body
+```json
+{
+  "project_id": "uuid",
+  "fps": 30,                 // opcional, default 30
+  "persist": true,           // opcional, default true (grava timeline_json + scenes.start/end)
+  "dry_run": false           // opcional, se true não persiste nada
+}
+```
+
+### O que a função faz
+1. Carrega cenas ordenadas por `sequence_order`
+2. **Mede duração real do áudio TTS** (HEAD request, header `x-duration` quando disponível, fallback por bitrate estimado)
+3. Calcula `start_time_sec` / `end_time_sec` de cada cena sequencialmente
+4. Sincroniza `broll_url` e `caption_text` ao slot da cena
+5. **Gera SRT completo** (`captions_srt`) com TC sincronizado
+6. **Valida**:
+   - `audio_url` ausente → erro
+   - `video_clip_url`/`media_url` ausente → erro
+   - drift TTS real vs planejado > 0.5s → warning
+   - gaps entre cenas → erro
+   - duração total < 5s ou > 1h → erro
+7. Persiste `video_projects.timeline_json`, `duration_seconds`, `timeline_validated_at`, `timeline_validation_errors` e atualiza `scenes.start_time_sec/end_time_sec/audio_duration_sec/caption_text`
+8. Insere evento em `project_events` (stage=`timeline`, status=`completed`/`failed`)
+
+### Resposta
+```json
+{
+  "ok": true,
+  "project_id": "uuid",
+  "timeline": {
+    "fps": 30,
+    "total_duration_sec": 142.350,
+    "total_frames": 4271,
+    "clips": [
+      {
+        "scene_id": "uuid",
+        "order": 0,
+        "start_sec": 0,
+        "end_sec": 8.21,
+        "duration_sec": 8.21,
+        "audio_url": "https://...",
+        "audio_duration_sec": 8.21,
+        "video_url": "https://...",
+        "broll_url": null,
+        "caption": "Texto da fala...",
+        "drift_sec": 0.21
+      }
+    ],
+    "captions_srt": "1\n00:00:00,000 --> 00:00:08,210\n...",
+    "generated_at": "2025-01-15T10:00:00Z"
+  },
+  "validation": {
+    "errors": [],
+    "warnings": ["Cena 3: drift de 0.62s entre TTS real (8.62s) e planejado (8s)"],
+    "ready_to_export": true
+  }
+}
+```
+
+### Fluxo no worker Python
+```python
+import requests
+
+# Após gerar TTS de TODAS as cenas e baixar o B-roll:
+resp = requests.post(
+    f"{SUPABASE_URL}/functions/v1/timeline-sync",
+    headers={"x-worker-token": WORKER_API_TOKEN, "content-type": "application/json"},
+    json={"project_id": project_id, "fps": 30}
+)
+result = resp.json()
+
+if not result["validation"]["ready_to_export"]:
+    # Reporta o erro via worker-callback (status=failed) e não renderiza
+    callback("event", {
+        "project_id": project_id,
+        "stage": "timeline",
+        "status": "failed",
+        "message": "; ".join(result["validation"]["errors"]),
+        "metadata": {"validation": result["validation"]}
+    })
+    return
+
+# Usa o timeline retornado para montar o ffmpeg / NLE / Remotion render
+timeline = result["timeline"]
+# - timeline["clips"] já tem start/end em segundos sincronizados com áudio real
+# - timeline["captions_srt"] é o SRT pronto para queimar ou subir como legenda
+# - timeline["total_frames"] é a contagem de frames final exata
+```
+
+### Idempotência
+A função é idempotente: pode ser chamada N vezes; sempre regenera a timeline a partir das cenas atuais. Útil para re-validar após substituir um asset (ex.: regerar TTS de uma cena).
+
+### Quando re-rodar
+- Após gerar/regerar TTS de qualquer cena
+- Após associar B-roll
+- Após editar `tts_text` ou `duration_sec` de uma cena
+- Imediatamente antes de iniciar o estágio de `render`

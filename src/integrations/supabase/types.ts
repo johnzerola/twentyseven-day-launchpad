@@ -3672,12 +3672,16 @@ export type Database = {
       }
       scenes: {
         Row: {
+          audio_duration_sec: number | null
           audio_url: string | null
+          broll_url: string | null
           camera_movement: string | null
+          caption_text: string | null
           character_ref: string | null
           created_at: string | null
           duration_sec: number | null
           emotional_intent: string | null
+          end_time_sec: number | null
           id: string
           lighting: string | null
           media_url: string | null
@@ -3686,6 +3690,7 @@ export type Database = {
           reference_image_url: string | null
           segment_index: number | null
           sequence_order: number
+          start_time_sec: number | null
           status: string | null
           style_tags: Json | null
           text_content: string | null
@@ -3694,12 +3699,16 @@ export type Database = {
           video_clip_url: string | null
         }
         Insert: {
+          audio_duration_sec?: number | null
           audio_url?: string | null
+          broll_url?: string | null
           camera_movement?: string | null
+          caption_text?: string | null
           character_ref?: string | null
           created_at?: string | null
           duration_sec?: number | null
           emotional_intent?: string | null
+          end_time_sec?: number | null
           id?: string
           lighting?: string | null
           media_url?: string | null
@@ -3708,6 +3717,7 @@ export type Database = {
           reference_image_url?: string | null
           segment_index?: number | null
           sequence_order: number
+          start_time_sec?: number | null
           status?: string | null
           style_tags?: Json | null
           text_content?: string | null
@@ -3716,12 +3726,16 @@ export type Database = {
           video_clip_url?: string | null
         }
         Update: {
+          audio_duration_sec?: number | null
           audio_url?: string | null
+          broll_url?: string | null
           camera_movement?: string | null
+          caption_text?: string | null
           character_ref?: string | null
           created_at?: string | null
           duration_sec?: number | null
           emotional_intent?: string | null
+          end_time_sec?: number | null
           id?: string
           lighting?: string | null
           media_url?: string | null
@@ -3730,6 +3744,7 @@ export type Database = {
           reference_image_url?: string | null
           segment_index?: number | null
           sequence_order?: number
+          start_time_sec?: number | null
           status?: string | null
           style_tags?: Json | null
           text_content?: string | null
@@ -5297,6 +5312,8 @@ export type Database = {
       video_projects: {
         Row: {
           audio_url: string | null
+          broll_urls: Json | null
+          captions_url: string | null
           channel_id: string | null
           channel_id_ref: string | null
           claim_expires_at: string | null
@@ -5325,6 +5342,9 @@ export type Database = {
           status: string | null
           tags: string[] | null
           thumbnail_url: string | null
+          timeline_json: Json | null
+          timeline_validated_at: string | null
+          timeline_validation_errors: Json | null
           title: string
           total_render_cost_usd: number | null
           updated_at: string | null
@@ -5341,6 +5361,8 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          broll_urls?: Json | null
+          captions_url?: string | null
           channel_id?: string | null
           channel_id_ref?: string | null
           claim_expires_at?: string | null
@@ -5369,6 +5391,9 @@ export type Database = {
           status?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
+          timeline_json?: Json | null
+          timeline_validated_at?: string | null
+          timeline_validation_errors?: Json | null
           title?: string
           total_render_cost_usd?: number | null
           updated_at?: string | null
@@ -5385,6 +5410,8 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          broll_urls?: Json | null
+          captions_url?: string | null
           channel_id?: string | null
           channel_id_ref?: string | null
           claim_expires_at?: string | null
@@ -5413,6 +5440,9 @@ export type Database = {
           status?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
+          timeline_json?: Json | null
+          timeline_validated_at?: string | null
+          timeline_validation_errors?: Json | null
           title?: string
           total_render_cost_usd?: number | null
           updated_at?: string | null
