@@ -420,14 +420,16 @@ export const AutoPilotEngine = ({
     }
     const scheduledAt = new Date(scheduledLocal).toISOString();
     setConfirmingLaunch(true);
+    setLaunchPhase('pipeline');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Login required');
 
-      // Close modal and run the original pipeline
-      setShowLaunchModal(false);
+      // Run the original pipeline (modal stays open showing progress)
       const launch = runPipelineRef.current;
       if (launch) await launch();
+
+      setLaunchPhase('saving');
 
       // After pipeline completes, find the most recent project for this user
       const { data: project, error: projErr } = await supabase
@@ -473,10 +475,17 @@ export const AutoPilotEngine = ({
         .update({ next_slot_at: scheduledAt } as any)
         .eq('id', selectedChannelId);
 
+      setLaunchPhase('done');
       toast.success('✅ Vídeo enviado para produção! O AutoPilot vai montar e postar automaticamente.');
+      // Auto-close modal shortly after success
+      setTimeout(() => {
+        setShowLaunchModal(false);
+        setLaunchPhase('idle');
+      }, 1500);
     } catch (err: any) {
       console.error('Launch confirm failed:', err);
       toast.error('Falha ao enviar para produção: ' + (err.message || 'erro desconhecido'));
+      setLaunchPhase('idle');
     } finally {
       setConfirmingLaunch(false);
     }
