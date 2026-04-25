@@ -198,6 +198,41 @@ const Channels = () => {
     loadChannels();
   };
 
+  const reconnectChannel = async (ch: Channel) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Faça login'); return; }
+      toast.info('🔗 Abrindo autorização do Google...');
+      const resp = await authFetch('youtube-oauth-start', { userId: user.id });
+      const { authUrl, error } = await resp.json();
+      if (error) throw new Error(error);
+      const popup = window.open(authUrl, 'youtube-oauth-reconnect', 'width=600,height=700');
+      const interval = setInterval(async () => {
+        if (popup?.closed) {
+          clearInterval(interval);
+          // Após o callback, o token já foi gravado em user_channels
+          // (o callback faz UPSERT por user_id+youtube_channel_id).
+          // Aqui forçamos apenas um refresh dos dados na tela.
+          await loadChannels();
+          // Verifica se o token ficou disponível
+          const { data: refreshed } = await supabase
+            .from('user_channels')
+            .select('youtube_refresh_token')
+            .eq('id', ch.id)
+            .maybeSingle();
+          if ((refreshed as any)?.youtube_refresh_token) {
+            toast.success('✅ Canal reconectado! Upload programático habilitado.');
+          } else {
+            toast.warning('Reconexão concluída, mas o token não foi sincronizado. Tente novamente.');
+          }
+        }
+      }, 1000);
+      setTimeout(() => clearInterval(interval), 300000);
+    } catch (e: any) {
+      toast.error('Erro ao reconectar: ' + (e?.message || 'desconhecido'));
+    }
+  };
+
   const refreshChannel = async (ch: Channel) => {
     try {
       toast.info('Atualizando e analisando...');
