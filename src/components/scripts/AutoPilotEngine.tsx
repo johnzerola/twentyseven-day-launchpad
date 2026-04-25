@@ -1232,7 +1232,7 @@ export const AutoPilotEngine = ({
                 </Button>
                 {channels.length > 0 && (
                   <Button
-                    onClick={handleConfirmLaunch}
+                    onClick={() => handleConfirmLaunch()}
                     disabled={confirmingLaunch || !selectedChannelId || !scheduledLocal}
                     className="gap-2"
                   >
