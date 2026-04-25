@@ -107,7 +107,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("youtube-analytics error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: (e as any)?.message ?? "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
