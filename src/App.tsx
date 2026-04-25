@@ -27,6 +27,8 @@ import GrowthTools from "./pages/GrowthTools";
 import ShortsTrends from "./pages/ShortsTrends";
 import Squads from "./pages/Squads";
 import AutoPilot from "./pages/AutoPilot";
+import ChannelSettings from "./pages/ChannelSettings";
+import CalendarPage from "./pages/CalendarPage";
 import AdminTraces from "./pages/AdminTraces";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
