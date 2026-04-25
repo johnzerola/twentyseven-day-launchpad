@@ -456,12 +456,22 @@ const Channels = () => {
                         className="scale-75 origin-left"
                       />
                     </div>
-                    <button
-                      onClick={() => setDnaChannel(ch)}
-                      className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
-                    >
-                      🧬 DNA
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDnaChannel(ch); }}
+                        className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                      >
+                        🧬 DNA
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/channels/${ch.id}/settings`); }}
+                        className="text-[10px] px-2 py-0.5 rounded bg-muted/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors font-medium flex items-center gap-1"
+                        title="Configurar canal"
+                      >
+                        <Settings className="w-3 h-3" />
+                        Configurar
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
