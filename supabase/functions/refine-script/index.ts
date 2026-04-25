@@ -64,7 +64,9 @@ serve(async (req) => {
     const creditBlock = await enforceCreditGuard(_userId, "refine-script");
     if (creditBlock) return creditBlock;
 
-    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId, use_squad } = await req.json();
+    const reqBody = await req.json();
+    const { draft_script, niche, language, duration, style, target_words, rejection_feedback, consensus_improvements, phaseId, use_squad } = reqBody;
+    const channelIdForLearning: string | null = reqBody?.channel_id || reqBody?.channelId || reqBody?.channel_id_ref || null;
     const styleLC = (style || '').toLowerCase();
     const isWebDoc = ['webdocumentário', 'webdocumentario', 'documentário', 'documentario'].includes(styleLC);
     
