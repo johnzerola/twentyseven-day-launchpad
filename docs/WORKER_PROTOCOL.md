@@ -525,3 +525,218 @@ Isso fecha o ciclo. Se o worker crashar entre `complete` enviado e `state_file` 
 ## 12. Resumo do contrato em uma frase
 
 > **O servidor sempre tem a verdade. O worker só age sobre projetos que pegou via `claim_next_project`, reporta tudo via `worker-callback`, e nunca toca em status terminais nem retenta operações sem idempotency key.**
+
+---
+
+## 13. Upload no YouTube — `POST /youtube-upload`
+
+Endpoint dedicado para o ciclo completo de upload. **Mesmo `x-worker-token`** do `worker-callback`. Todas as requisições são `POST` com `action` no body.
+
+### 13.1 `action=init` — criar sessão resumable
+
+Servidor: refresca token OAuth do canal (se necessário), chama `videos.insert?uploadType=resumable` no YouTube, persiste `upload_session_uri` no projeto e devolve a URI + `access_token` curto pro worker fazer os PUT chunks diretamente.
+
+```json
+// REQUEST
+{
+  "action": "init",
+  "project_id": "uuid",
+  "worker_id": "vps-abc12345",
+  "file_size_bytes": 87432109,
+  "mime_type": "video/mp4"
+}
+
+// RESPONSE 200 (nova sessão)
+{
+  "upload_session_uri": "https://www.googleapis.com/upload/youtube/v3/videos?...&upload_id=...",
+  "idempotency_key": "uuid",
+  "access_token": "ya29....",
+  "snippet": { "title": "...", "description": "...", "tags": [...], "categoryId": "22" },
+  "status": { "privacyStatus": "private", "selfDeclaredMadeForKids": false, "embeddable": true }
+}
+
+// RESPONSE 200 (já tem sessão ativa — reaproveitar)
+{ "reused": true, "upload_session_uri": "...", "idempotency_key": "uuid" }
+
+// RESPONSE 200 (já publicado — no-op)
+{ "already_published": true, "youtube_video_id": "abc123" }
+```
+
+### 13.2 Worker faz o PUT direto no YouTube
+
+Não passa pelo servidor — é byte direto VPS → Google. Permite chunks de 256KB×N, retomar do offset salvo, etc.
+
+```python
+# Pseudocode Python
+headers = {"Authorization": f"Bearer {access_token}", "Content-Length": str(size),
+           "Content-Type": "video/mp4"}
+r = requests.put(upload_session_uri, data=open(path, "rb"), headers=headers)
+
+if r.status_code in (200, 201):
+    youtube_video_id = r.json()["id"]
+    call_complete(youtube_video_id)
+elif r.status_code == 308:
+    # Resumable: reler "Range: bytes=0-X" e enviar restante
+    resume_from(int(r.headers["Range"].split("-")[1]) + 1)
+elif r.status_code in (500, 502, 503, 504):
+    # Retentar com backoff (1s, 2s, 4s, 8s, 16s)
+    retry_with_backoff()
+elif r.status_code == 401:
+    # Token expirou no meio → action=refresh, depois retomar do offset
+    new_token = call_refresh(); resume_from(last_offset)
+elif r.status_code == 403 and "quotaExceeded" in r.text:
+    call_fail(reason="quota", http_status=403)
+else:
+    call_fail(reason="upload_error", error_message=r.text, http_status=r.status_code)
+```
+
+### 13.3 `action=complete` — sincronizar IDs com o projeto
+
+Idempotente via `idempotency_key`. Se chamado 2x com mesmo `youtube_video_id`, retorna `already_published: true` sem efeito colateral.
+
+```json
+// REQUEST
+{
+  "action": "complete",
+  "project_id": "uuid",
+  "worker_id": "vps-abc12345",
+  "youtube_video_id": "dQw4w9WgXcQ",
+  "idempotency_key": "uuid"   // do claim
+}
+
+// RESPONSE 200
+{
+  "success": true,
+  "youtube_video_id": "dQw4w9WgXcQ",
+  "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "published_at": "2026-04-25T15:14:17Z"
+}
+```
+
+Servidor faz tudo isso em uma transação:
+- `video_projects.youtube_video_id`, `youtube_url`, `published_at`, `upload_completed_at`
+- `status = 'published'` (terminal), libera `worker_id` e `claim_expires_at`
+- Incrementa `user_channels.total_videos_posted` + atualiza `last_posted_at`
+- Insere `youtube_upload_attempts (status='completed')` e `project_events (stage='publish', status='completed')`
+
+### 13.4 `action=fail` — registrar falha + decidir retry
+
+Servidor calcula backoff automaticamente: **5min → 30min → 2h → 8h → 24h** (max 5 tentativas). Quota excedida não consome retry — sempre reagenda em +24h.
+
+```json
+// REQUEST
+{
+  "action": "fail",
+  "project_id": "uuid",
+  "worker_id": "vps-abc12345",
+  "reason": "upload_error" | "quota" | "session_expired" | "token_invalid" | "network",
+  "error_message": "Connection reset after chunk 47",
+  "http_status": 503
+}
+
+// RESPONSE 200
+{
+  "attempts": 2,
+  "next_retry_at": "2026-04-25T17:14:17Z",
+  "given_up": false,
+  "backoff_minutes": 30
+}
+
+// RESPONSE 200 (esgotou)
+{ "attempts": 5, "next_retry_at": null, "given_up": true, "backoff_minutes": 1440 }
+```
+
+Se `reason="session_expired"` ou `given_up=true`, o servidor limpa `upload_session_uri` para forçar criação de nova sessão na próxima tentativa.
+
+### 13.5 `action=metadata` — atualizar título/descrição/tags pós-publicação
+
+Útil pra A/B test de título 24h depois ou correção manual. Pega o estado atual do projeto e faz `videos.update`.
+
+```json
+// REQUEST
+{ "action": "metadata", "project_id": "uuid" }
+
+// RESPONSE 200
+{ "success": true, "updated": { "id": "...", "snippet": {...}, "status": {...} } }
+```
+
+### 13.6 `action=refresh` — só refrescar token (raro)
+
+```json
+// REQUEST
+{ "action": "refresh", "channel_id": "uuid" }
+// RESPONSE
+{ "access_token": "ya29...." }
+```
+
+### 13.7 Fluxo completo recomendado no worker Python
+
+```python
+def upload_to_youtube(project, channel):
+    state_file = f"/var/lovable-worker/state/{project['id']}.json"
+    state = load(state_file) or {"offset": 0, "session_uri": None, "access_token": None}
+
+    # 1. INIT (ou reaproveitar sessão existente)
+    if not state["session_uri"]:
+        r = post_to_lovable("youtube-upload", {
+            "action": "init", "project_id": project["id"],
+            "worker_id": WORKER_ID,
+            "file_size_bytes": os.path.getsize(project["rendered_video_url_local"]),
+            "mime_type": "video/mp4",
+        })
+        if r.get("already_published"):
+            return r["youtube_video_id"]  # nada a fazer
+        state["session_uri"] = r["upload_session_uri"]
+        state["access_token"] = r["access_token"]
+        save(state_file, state)
+
+    # 2. PUT chunks com retry/backoff
+    for attempt in range(5):
+        try:
+            video_id = put_resumable(state["session_uri"], state["access_token"],
+                                     project["rendered_video_url_local"], state["offset"])
+            break
+        except TokenExpired:
+            state["access_token"] = post_to_lovable("youtube-upload",
+                {"action": "refresh", "channel_id": channel["id"]})["access_token"]
+            save(state_file, state)
+        except Resumable308 as e:
+            state["offset"] = e.next_offset
+            save(state_file, state)
+        except QuotaExceeded:
+            post_to_lovable("youtube-upload", {"action": "fail", "project_id": project["id"],
+                "worker_id": WORKER_ID, "reason": "quota", "http_status": 403,
+                "error_message": "daily quota exceeded"})
+            return None  # servidor reagenda em +24h
+        except TransientError as e:
+            time.sleep(2 ** attempt)  # 1, 2, 4, 8, 16
+    else:
+        post_to_lovable("youtube-upload", {"action": "fail", "project_id": project["id"],
+            "worker_id": WORKER_ID, "reason": "upload_error",
+            "error_message": "exhausted local retries"})
+        return None
+
+    # 3. COMPLETE — sincroniza IDs no banco (idempotente)
+    post_to_lovable("youtube-upload", {
+        "action": "complete", "project_id": project["id"],
+        "worker_id": WORKER_ID, "youtube_video_id": video_id,
+        "idempotency_key": project["idempotency_key"],
+    })
+
+    # 4. Limpa state local — ciclo fechado
+    os.remove(state_file)
+    return video_id
+```
+
+### 13.8 Auditoria
+
+Cada chamada cria 1 linha em `youtube_upload_attempts` com `status`, `error_code`, `http_status`, `bytes_uploaded`. Use pra dashboard de "uploads que falharam nas últimas 24h":
+
+```sql
+SELECT vp.title, ya.attempt_number, ya.status, ya.error_message, ya.http_status, ya.created_at
+  FROM youtube_upload_attempts ya
+  JOIN video_projects vp ON vp.id = ya.project_id
+ WHERE ya.status IN ('failed','quota_exceeded')
+   AND ya.created_at > now() - interval '24 hours'
+ ORDER BY ya.created_at DESC;
+```
