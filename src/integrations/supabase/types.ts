@@ -694,6 +694,111 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_intelligence_per_user: {
+        Row: {
+          ai_suggestions: Json | null
+          avg_ctr_all_time: number | null
+          avg_views_all_time: number | null
+          best_posting_days: string[] | null
+          best_posting_hours: number[] | null
+          best_video_id: string | null
+          best_video_views: number | null
+          channel_id: string
+          created_at: string | null
+          id: string
+          last_analyzed_at: string | null
+          low_performing_topics: string[] | null
+          top_performing_hooks: string[] | null
+          top_performing_topics: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_suggestions?: Json | null
+          avg_ctr_all_time?: number | null
+          avg_views_all_time?: number | null
+          best_posting_days?: string[] | null
+          best_posting_hours?: number[] | null
+          best_video_id?: string | null
+          best_video_views?: number | null
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          last_analyzed_at?: string | null
+          low_performing_topics?: string[] | null
+          top_performing_hooks?: string[] | null
+          top_performing_topics?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_suggestions?: Json | null
+          avg_ctr_all_time?: number | null
+          avg_views_all_time?: number | null
+          best_posting_days?: string[] | null
+          best_posting_hours?: number[] | null
+          best_video_id?: string | null
+          best_video_views?: number | null
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          last_analyzed_at?: string | null
+          low_performing_topics?: string[] | null
+          top_performing_hooks?: string[] | null
+          top_performing_topics?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      channel_schedule: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          niche: string | null
+          project_id: string | null
+          published_at: string | null
+          scheduled_at: string
+          status: string | null
+          title: string | null
+          topic: string | null
+          updated_at: string | null
+          user_id: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          project_id?: string | null
+          published_at?: string | null
+          scheduled_at: string
+          status?: string | null
+          title?: string | null
+          topic?: string | null
+          updated_at?: string | null
+          user_id: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          project_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string
+          status?: string | null
+          title?: string | null
+          topic?: string | null
+          updated_at?: string | null
+          user_id?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       channel_styles: {
         Row: {
           channel_id: string | null
@@ -4825,23 +4930,30 @@ export type Database = {
         Row: {
           ai_feedback: Json | null
           avg_retention_percent: number | null
+          avg_view_duration_s: number | null
           avg_view_duration_seconds: number | null
           backtested_at: string | null
           best_ranking_position: number | null
+          channel_id: string | null
           check_count: number | null
           comments: number | null
+          content_tags: string[] | null
           created_at: string | null
+          ctr: number | null
           ctr_percent: number | null
           duration_seconds: number | null
           hook_type: string | null
           id: string
           impressions: number | null
           last_checked_at: string | null
+          last_synced_at: string | null
+          learning_notes: string | null
           lessons_learned: string[] | null
           likes: number | null
           niche: string | null
           oauth_synced: boolean | null
           performance_grade: string | null
+          performance_score: number | null
           predicted_attention_score: number | null
           predicted_viral_score: number | null
           prediction_accuracy: number | null
@@ -4849,19 +4961,26 @@ export type Database = {
           published_at: string | null
           ranking_keywords: Json | null
           retention_curve: Json | null
+          retention_score: number | null
           script_id: string | null
           script_score: number | null
+          subscriber_gain: number | null
           subscribers_gained: number | null
+          sync_count: number | null
           synced_at: string | null
           title: string
           title_pattern: string | null
+          topic: string | null
           updated_at: string | null
           user_id: string
+          video_type: string | null
+          views: number | null
           views_current: number | null
           views_day1: number | null
           views_day3: number | null
           views_day30: number | null
           views_day7: number | null
+          virality_score: number | null
           watch_time_hours: number | null
           watch_time_minutes: number | null
           youtube_video_id: string
@@ -4869,23 +4988,30 @@ export type Database = {
         Insert: {
           ai_feedback?: Json | null
           avg_retention_percent?: number | null
+          avg_view_duration_s?: number | null
           avg_view_duration_seconds?: number | null
           backtested_at?: string | null
           best_ranking_position?: number | null
+          channel_id?: string | null
           check_count?: number | null
           comments?: number | null
+          content_tags?: string[] | null
           created_at?: string | null
+          ctr?: number | null
           ctr_percent?: number | null
           duration_seconds?: number | null
           hook_type?: string | null
           id?: string
           impressions?: number | null
           last_checked_at?: string | null
+          last_synced_at?: string | null
+          learning_notes?: string | null
           lessons_learned?: string[] | null
           likes?: number | null
           niche?: string | null
           oauth_synced?: boolean | null
           performance_grade?: string | null
+          performance_score?: number | null
           predicted_attention_score?: number | null
           predicted_viral_score?: number | null
           prediction_accuracy?: number | null
@@ -4893,19 +5019,26 @@ export type Database = {
           published_at?: string | null
           ranking_keywords?: Json | null
           retention_curve?: Json | null
+          retention_score?: number | null
           script_id?: string | null
           script_score?: number | null
+          subscriber_gain?: number | null
           subscribers_gained?: number | null
+          sync_count?: number | null
           synced_at?: string | null
           title?: string
           title_pattern?: string | null
+          topic?: string | null
           updated_at?: string | null
           user_id: string
+          video_type?: string | null
+          views?: number | null
           views_current?: number | null
           views_day1?: number | null
           views_day3?: number | null
           views_day30?: number | null
           views_day7?: number | null
+          virality_score?: number | null
           watch_time_hours?: number | null
           watch_time_minutes?: number | null
           youtube_video_id: string
@@ -4913,23 +5046,30 @@ export type Database = {
         Update: {
           ai_feedback?: Json | null
           avg_retention_percent?: number | null
+          avg_view_duration_s?: number | null
           avg_view_duration_seconds?: number | null
           backtested_at?: string | null
           best_ranking_position?: number | null
+          channel_id?: string | null
           check_count?: number | null
           comments?: number | null
+          content_tags?: string[] | null
           created_at?: string | null
+          ctr?: number | null
           ctr_percent?: number | null
           duration_seconds?: number | null
           hook_type?: string | null
           id?: string
           impressions?: number | null
           last_checked_at?: string | null
+          last_synced_at?: string | null
+          learning_notes?: string | null
           lessons_learned?: string[] | null
           likes?: number | null
           niche?: string | null
           oauth_synced?: boolean | null
           performance_grade?: string | null
+          performance_score?: number | null
           predicted_attention_score?: number | null
           predicted_viral_score?: number | null
           prediction_accuracy?: number | null
@@ -4937,24 +5077,38 @@ export type Database = {
           published_at?: string | null
           ranking_keywords?: Json | null
           retention_curve?: Json | null
+          retention_score?: number | null
           script_id?: string | null
           script_score?: number | null
+          subscriber_gain?: number | null
           subscribers_gained?: number | null
+          sync_count?: number | null
           synced_at?: string | null
           title?: string
           title_pattern?: string | null
+          topic?: string | null
           updated_at?: string | null
           user_id?: string
+          video_type?: string | null
+          views?: number | null
           views_current?: number | null
           views_day1?: number | null
           views_day3?: number | null
           views_day30?: number | null
           views_day7?: number | null
+          virality_score?: number | null
           watch_time_hours?: number | null
           watch_time_minutes?: number | null
           youtube_video_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "video_performance_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "video_performance_project_id_fkey"
             columns: ["project_id"]
@@ -4968,6 +5122,7 @@ export type Database = {
         Row: {
           audio_url: string | null
           channel_id: string | null
+          channel_id_ref: string | null
           created_at: string | null
           duration_seconds: number | null
           error_message: string | null
@@ -4987,6 +5142,7 @@ export type Database = {
         Insert: {
           audio_url?: string | null
           channel_id?: string | null
+          channel_id_ref?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           error_message?: string | null
@@ -5006,6 +5162,7 @@ export type Database = {
         Update: {
           audio_url?: string | null
           channel_id?: string | null
+          channel_id_ref?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           error_message?: string | null
