@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, Loader2, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AnalyticsCollectorCard } from '@/components/autopilot/AnalyticsCollectorCard';
 
 type VideoProject = {
   id: string;
@@ -258,6 +259,9 @@ const AutoPilot = () => {
           <StatCard icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} label="Publicados" value={stats.published} tone="success" />
           <StatCard icon={<FileEdit className="w-4 h-4 text-muted-foreground" />} label="Em rascunho" value={stats.drafts} />
         </div>
+
+        {/* Coletor de métricas (auto a cada 4h) */}
+        <AnalyticsCollectorCard />
 
         {/* Pipeline */}
         <Card>
