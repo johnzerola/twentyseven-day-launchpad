@@ -437,3 +437,91 @@ PLAYWRIGHT_USER_DATA=/var/lib/worker/playwright-profile
 - [ ] `complete` marca o projeto como `published` e cria `video_performance`.
 - [ ] Reupload com mesmo `idempotency_key` no YouTube não duplica.
 - [ ] ffmpeg final tem `loudnorm` aplicado (verificar com `ffmpeg-normalize` ou medidor LUFS).
+
+---
+
+## 10. Matriz de Retries — Quem é Responsável pelo Quê
+
+Política única para evitar duplo-retry (worker repetindo o que o servidor já vai repetir).
+
+| Cenário                                  | Quem decide  | Ação                                                                                       |
+|------------------------------------------|--------------|--------------------------------------------------------------------------------------------|
+| Cena Flow.io retornou erro transitório   | **Worker**   | Retry local até **3x** com backoff `2s, 8s, 30s` antes de reportar `event status=failed`. |
+| Veo3 prompt rejeitado (safety/policy)    | **Worker**   | Sanitiza prompt 1x (remover violência/marca) e retenta. Se falhar de novo → `failed`.     |
+| Worker crash / VPS reboot                | **Servidor** | `autopilot-recover` libera projeto após `claim_expires_at` expirar.                       |
+| `event status=failed` recebido           | **Servidor** | `retry_count++`. Se `< max_retries`: volta a `ready_for_production` com backoff `30m / 2h / 8h`. |
+| `retry_count >= max_retries`             | **Servidor** | `status='failed'`, slot do `channel_schedule` marcado como `cancelled`, alerta no painel. |
+| Upload YouTube falhou no meio (resumable)| **Worker**   | Reusar **mesma sessão resumable** + `idempotency_key` por até 7 dias antes de reportar.   |
+| YouTube retornou `quotaExceeded`         | **Worker**   | NÃO retentar. Reportar `event stage=upload status=failed reason=quota`. Servidor reagenda em +24h automaticamente. |
+| ffmpeg crashou (OOM, codec)              | **Worker**   | 1 retry com `-preset ultrafast`. Se persistir → `failed`.                                 |
+| Render passou de **60% do lease**        | **Worker**   | Chamar `extend_lease` proativamente (+60min). Não esperar expirar.                        |
+| Storage upload falhou (rendered-videos)  | **Worker**   | Retry exponencial até 5x. Bucket é o ponto de não-retorno: sem upload → sem `complete`.   |
+
+### Backoff de retry server-side (após `event status=failed`)
+
+```
+retry_count = 0  →  scheduled_at += 30 minutos
+retry_count = 1  →  scheduled_at += 2 horas
+retry_count = 2  →  scheduled_at += 8 horas
+retry_count = 3  →  status = 'failed' (terminal)
+```
+
+`max_retries` default = 3, configurável por projeto via coluna `max_retries`.
+
+---
+
+## 11. Operações Idempotentes vs Não-Idempotentes
+
+Tabela definitiva — leia antes de implementar qualquer retry no Python.
+
+| Operação                          | Idempotente? | Como garantir segurança no retry                                          |
+|-----------------------------------|--------------|---------------------------------------------------------------------------|
+| `claim_next_project`              | ✅ Sim       | Já é `FOR UPDATE SKIP LOCKED`. Pode chamar quantas vezes quiser.          |
+| `worker-callback action=heartbeat`| ✅ Sim       | UPSERT no servidor. Repetir sem medo (a cada 30s).                        |
+| `worker-callback action=event`    | ⚠️ Parcial   | Cada chamada cria 1 linha em `project_events`. OK duplicar (logs ricos).  |
+| `worker-callback action=extend_lease` | ✅ Sim   | Apenas atualiza `claim_expires_at`. Pode repetir.                         |
+| `worker-callback action=complete` | ❌ **NÃO**   | Marca `status=published` e debita slot. **Use `idempotency_key` único do projeto** — servidor faz no-op se já estiver `published`. |
+| Upload Storage `rendered-videos`  | ⚠️ Parcial   | Use `path = "{project_id}/{idempotency_key}.mp4"`. UPSERT sobrescreve.    |
+| YouTube `videos.insert` resumable | ❌ **NÃO**   | Persistir `upload_session_uri` em disco local. Retomar a mesma sessão por até 7 dias. NUNCA criar nova sessão para o mesmo `idempotency_key`. |
+| Flow.io geração de cena           | ❌ **NÃO**   | Cada chamada gasta crédito. Persistir `flow_job_id` em arquivo local antes de aguardar resultado, para retomar polling após crash. |
+
+### Checklist de idempotência no worker Python
+
+```python
+# Antes de QUALQUER chamada custosa (Flow.io, YouTube), faça:
+state_file = f"/var/lovable-worker/state/{project_id}.json"
+if os.path.exists(state_file):
+    state = json.load(open(state_file))
+    # Já temos flow_job_id ou upload_session_uri? Retoma de onde parou.
+else:
+    state = {"project_id": project_id, "scenes_done": [], "youtube_session": None}
+
+# Salvar a CADA passo bem-sucedido
+state["scenes_done"].append(scene_id)
+json.dump(state, open(state_file, "w"))
+
+# No worker-callback action=complete, sempre passe:
+{
+  "action": "complete",
+  "project_id": project_id,
+  "idempotency_key": project["idempotency_key"],  # vem do claim
+  "youtube_video_id": "...",
+  "rendered_url": "..."
+}
+# Servidor faz no-op silencioso se já marcou published com mesma key.
+```
+
+### Limpeza do state local
+
+Após `complete` retornar `200 OK` **e** `published=true`:
+```python
+os.remove(state_file)
+```
+
+Isso fecha o ciclo. Se o worker crashar entre `complete` enviado e `state_file` removido, o próximo boot tentará `complete` de novo — e o servidor responderá `{"already_published": true}` sem efeito colateral.
+
+---
+
+## 12. Resumo do contrato em uma frase
+
+> **O servidor sempre tem a verdade. O worker só age sobre projetos que pegou via `claim_next_project`, reporta tudo via `worker-callback`, e nunca toca em status terminais nem retenta operações sem idempotency key.**
