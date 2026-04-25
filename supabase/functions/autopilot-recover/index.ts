@@ -213,6 +213,8 @@ Deno.serve(async (req) => {
     JSON.stringify({
       ok: true,
       now: now.toISOString(),
+      orphan_claims_released: orphanReport.length,
+      orphan_report: orphanReport,
       candidates: projects?.length || 0,
       processed: report.length,
       report,
