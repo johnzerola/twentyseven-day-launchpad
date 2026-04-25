@@ -11,6 +11,7 @@ import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, 
 import { Link } from 'react-router-dom';
 import { AnalyticsCollectorCard } from '@/components/autopilot/AnalyticsCollectorCard';
 import { WeeklyStrategistCard } from '@/components/autopilot/WeeklyStrategistCard';
+import { WeeklyReferencesCard } from '@/components/autopilot/WeeklyReferencesCard';
 import { Sparkles } from 'lucide-react';
 
 type VideoProject = {
@@ -268,6 +269,9 @@ const AutoPilot = () => {
 
         {/* Agente Estratégico Semanal */}
         <WeeklyStrategistCard />
+
+        {/* Referências virais semanais (descoberta automática) */}
+        <WeeklyReferencesCard />
 
         {/* Pipeline */}
         <Card>
