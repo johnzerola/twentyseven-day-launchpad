@@ -31,6 +31,7 @@ import AutoPilotPerformance from "./pages/AutoPilotPerformance";
 import AutoPilotScheduler from "./pages/AutoPilotScheduler";
 import ChannelSettings from "./pages/ChannelSettings";
 import CalendarPage from "./pages/CalendarPage";
+import MyChannelIntelligence from "./pages/MyChannelIntelligence";
 import AdminTraces from "./pages/AdminTraces";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
@@ -74,7 +75,7 @@ const App = () => (
             {/* Consolidated redirects — old routes point to merged pages */}
             <Route path="/branding" element={<Navigate to="/growth-tools" replace />} />
             <Route path="/workflow" element={<Navigate to="/tracker" replace />} />
-            <Route path="/intelligence" element={<Navigate to="/channels" replace />} />
+            <Route path="/intelligence" element={<P><MyChannelIntelligence /></P>} />
             <Route path="/power-tools" element={<Navigate to="/growth-tools" replace />} />
             <Route path="/knowledge" element={<P><AdminRoute><KnowledgeAdmin /></AdminRoute></P>} />
             <Route path="/admin/traces" element={<P><AdminRoute><AdminTraces /></AdminRoute></P>} />
