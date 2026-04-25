@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ function timeAgo(iso: string) {
   return `há ${d} d`;
 }
 
-export const AnalyticsCollectorCard = () => {
+export const AnalyticsCollectorCard = forwardRef<HTMLDivElement>((_props, _ref) => {
   const [lastRun, setLastRun] = useState<RunRow | null>(null);
   const [needsReauthCount, setNeedsReauthCount] = useState(0);
   const [oauthChannelCount, setOauthChannelCount] = useState(0);
@@ -197,7 +197,8 @@ export const AnalyticsCollectorCard = () => {
       </CardContent>
     </Card>
   );
-};
+});
+AnalyticsCollectorCard.displayName = 'AnalyticsCollectorCard';
 
 const Metric = ({
   icon,

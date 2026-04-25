@@ -102,7 +102,10 @@ const Titles = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use getSession() (no lock) instead of getUser() in parallel-mounted
+      // effects to avoid "Acquire navigator lock ... lock stolen" warnings.
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) return;
       const { data: saved } = await supabase
         .from('saved_titles')
@@ -122,7 +125,8 @@ const Titles = () => {
   }, []);
 
   const saveTitles = async (titlesData: TitleSuggestion[], topicStr?: string, nicheStr?: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
     await supabase.from('saved_titles').insert({
       user_id: user.id,

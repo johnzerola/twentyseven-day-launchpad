@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
 import { Bot, X, Send, Loader2, Trash2, HelpCircle, ArrowRight, SkipForward, ImagePlus, Youtube, Save, History, Bookmark, Edit3, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ import { QUICK_ACTIONS, PAGE_TOOLTIPS, NUDGE_MESSAGES } from './chatbot-config';
 
 export { PAGE_TOOLTIPS };
 
-export const ChatbotWidget = () => {
+export const ChatbotWidget = forwardRef<HTMLDivElement>((_props, _ref) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -490,7 +490,11 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
   // Load user channels for save selector
   useEffect(() => {
     const loadChannels = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use getSession() (no lock) instead of a second getUser() call to
+      // avoid "lock stolen" warnings when this effect races with the
+      // checkOnboarding effect above.
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) return;
       const { data } = await supabase.from('user_channels').select('id, channel_name').eq('user_id', user.id).order('channel_name');
       setSaveChannels(data || []);
@@ -854,4 +858,5 @@ ${state.preference ? `- Preferência: ${state.preference}` : ''}` }],
       </AnimatePresence>
     </>
   );
-};
+});
+ChatbotWidget.displayName = 'ChatbotWidget';

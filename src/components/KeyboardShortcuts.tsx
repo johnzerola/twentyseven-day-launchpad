@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, forwardRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,7 @@ const SHORTCUTS = [
   { keys: ['?'], label: 'Abrir atalhos', path: null },
 ];
 
-export const KeyboardShortcuts = () => {
+export const KeyboardShortcuts = forwardRef<HTMLDivElement>((_props, _ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -106,4 +106,5 @@ export const KeyboardShortcuts = () => {
       </Dialog>
     </>
   );
-};
+});
+KeyboardShortcuts.displayName = 'KeyboardShortcuts';
