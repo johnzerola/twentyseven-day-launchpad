@@ -562,14 +562,35 @@ const Scripts = () => {
   };
 
   const getOrCreateProject = async (): Promise<string> => {
-    if (projectId) return projectId;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Login required');
-    const { data: proj } = await supabase.from('video_projects').insert({
-      user_id: user.id, title: topic || 'Script Project', script: script, niche: niche || undefined,
+
+    // If project already exists, ensure channel_id_ref is in sync with current selection
+    if (projectId) {
+      if (selectedChannelId) {
+        await supabase
+          .from('video_projects')
+          .update({ channel_id_ref: selectedChannelId } as any)
+          .eq('id', projectId);
+      }
+      return projectId;
+    }
+
+    const insertPayload: any = {
+      user_id: user.id,
+      title: topic || 'Script Project',
+      script: script,
+      niche: niche || undefined,
       video_type: videoType,
-    } as any).select('id').single();
-    if (!proj) throw new Error('Failed to create project');
+      channel_id_ref: selectedChannelId || null,
+    };
+
+    const { data: proj, error } = await supabase
+      .from('video_projects')
+      .insert(insertPayload)
+      .select('id')
+      .single();
+    if (error || !proj) throw new Error(error?.message || 'Failed to create project');
     setProjectId(proj.id);
     return proj.id;
   };
