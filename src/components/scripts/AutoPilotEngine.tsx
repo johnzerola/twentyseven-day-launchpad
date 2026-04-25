@@ -931,7 +931,7 @@ export const AutoPilotEngine = ({
       <div className="flex flex-wrap gap-2">
         <Button
           id="autopilot-launch-btn"
-          onClick={() => runPipeline()}
+          onClick={() => openLaunchModal()}
           disabled={disabled || running || !topic.trim() || !niche.trim()}
           size="lg"
           className="gap-2 bg-gradient-to-r from-primary to-chart-4 hover:from-primary/90 hover:to-chart-4/90 text-primary-foreground shadow-lg shadow-primary/20"
