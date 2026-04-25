@@ -3,7 +3,8 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { YouTubeOAuthConnect } from '@/components/dashboard/YouTubeOAuthConnect';
 import { ReferenceChannelsTab } from '@/components/dashboard/ReferenceChannelsTab';
 import { AutoPilotTab } from '@/components/dashboard/AutoPilotTab';
-import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap, ArrowUpRight, ArrowDownRight, Minus, Shield, Flame, Star, BookOpen } from 'lucide-react';
+import { Youtube, Plus, Trash2, BarChart3, Users, Eye, Video, RefreshCw, ExternalLink, Globe, TrendingUp, Sparkles, Loader2, Bot, Send, Search, Trophy, Lightbulb, X, AlertTriangle, CheckCircle2, Target, DollarSign, Clock, Zap, ArrowUpRight, ArrowDownRight, Minus, Shield, Flame, Star, BookOpen, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +89,7 @@ const ScoreGauge = ({ value, label, max = 100, color = 'primary' }: { value: num
 };
 
 const Channels = () => {
+  const navigate = useNavigate();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingChannel, setAddingChannel] = useState(false);
@@ -454,12 +456,22 @@ const Channels = () => {
                         className="scale-75 origin-left"
                       />
                     </div>
-                    <button
-                      onClick={() => setDnaChannel(ch)}
-                      className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
-                    >
-                      🧬 DNA
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDnaChannel(ch); }}
+                        className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                      >
+                        🧬 DNA
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/channels/${ch.id}/settings`); }}
+                        className="text-[10px] px-2 py-0.5 rounded bg-muted/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors font-medium flex items-center gap-1"
+                        title="Configurar canal"
+                      >
+                        <Settings className="w-3 h-3" />
+                        Configurar
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
