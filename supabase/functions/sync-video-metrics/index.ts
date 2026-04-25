@@ -161,7 +161,108 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, synced, errors, total: links.length }), {
+    // ============ CLOSED FEEDBACK LOOP → viral_patterns ============
+    // Promote winners (grade S/A) into viral_patterns so future scripts use proven structures.
+    let promoted = 0;
+    let promotionSkipped = 0;
+    const winners = links.filter((l: any) =>
+      ["S", "A"].includes(l.performance_grade) && (l.views_7d || l.views_30d || 0) >= 1000
+    );
+    const geminiKey = Deno.env.get("GOOGLE_AI_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+
+    for (const w of winners.slice(0, 10)) { // safety cap per run
+      try {
+        // Idempotency: skip if we already have a pattern from this video
+        const { data: existing } = await sb
+          .from("viral_patterns")
+          .select("id")
+          .eq("source_video", w.video_title || w.youtube_video_id)
+          .maybeSingle();
+        if (existing) { promotionSkipped++; continue; }
+
+        // Pull the script that produced this video (when linked)
+        let scriptContent: string | null = null;
+        let niche: string | null = null;
+        if (w.script_id) {
+          const { data: s } = await sb
+            .from("saved_scripts")
+            .select("script_content, topic, style, video_type")
+            .eq("id", w.script_id)
+            .maybeSingle();
+          if (s) {
+            scriptContent = s.script_content;
+            niche = s.topic;
+          }
+        }
+
+        // Also pull niche/hook info from video_performance if present
+        if (!niche && w.youtube_video_id) {
+          const { data: vp } = await sb
+            .from("video_performance")
+            .select("niche, hook_type, title_pattern")
+            .eq("user_id", w.user_id)
+            .eq("youtube_video_id", w.youtube_video_id)
+            .maybeSingle();
+          if (vp?.niche) niche = vp.niche;
+        }
+
+        // Build pattern via Gemini (fallback to heuristic if no key)
+        let patternJson: any = null;
+        if (geminiKey && scriptContent) {
+          const prompt = `Extract a reusable viral pattern from this proven YouTube winner.\n\nTITLE: ${w.video_title}\nVIEWS_7D: ${w.views_7d ?? "n/a"} | GRADE: ${w.performance_grade}\nSCRIPT (truncated):\n${(scriptContent || "").slice(0, 4000)}\n\nReturn STRICT JSON: { "hook_types": string[], "narrative_structure": string, "title_formulas": string[], "emotional_triggers": string[], "pacing": "fast"|"medium"|"slow", "success_factor": string, "replication_guide_pt": string }`;
+          try {
+            const resp = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ role: "user", parts: [{ text: prompt }] }],
+                  generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
+                }),
+              }
+            );
+            const j = await resp.json();
+            const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) patternJson = JSON.parse(text);
+          } catch (err) {
+            console.warn("Pattern extraction failed for", w.id, err);
+          }
+        }
+
+        // Heuristic fallback so we still close the loop
+        if (!patternJson) {
+          patternJson = {
+            hook_types: [],
+            narrative_structure: "winner-derived (heuristic)",
+            title_formulas: [w.video_title].filter(Boolean),
+            success_factor: `Beat channel average; grade ${w.performance_grade}; views_7d=${w.views_7d ?? "?"}`,
+            metrics: {
+              views_48h: w.views_48h, views_7d: w.views_7d, views_30d: w.views_30d,
+              ctr_pct: w.ctr_pct, retention_pct: w.avg_retention_pct,
+            },
+          };
+        } else {
+          patternJson.metrics = {
+            views_48h: w.views_48h, views_7d: w.views_7d, views_30d: w.views_30d,
+            ctr_pct: w.ctr_pct, retention_pct: w.avg_retention_pct,
+          };
+        }
+
+        const { error: insErr } = await sb.from("viral_patterns").insert({
+          pattern_name: `winner_${(w.video_title || w.youtube_video_id || "").slice(0, 40)}`,
+          pattern_json: patternJson,
+          niche: niche || "general",
+          source_video: w.video_title || w.youtube_video_id,
+        });
+        if (insErr) console.warn("viral_patterns insert error:", insErr.message);
+        else promoted++;
+      } catch (e) {
+        console.error("Promotion error for link", w.id, e);
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true, synced, errors, total: links.length, promoted, promotionSkipped }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
