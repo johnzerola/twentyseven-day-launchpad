@@ -755,10 +755,12 @@ export type Database = {
         Row: {
           channel_id: string
           created_at: string | null
+          error_message: string | null
           id: string
           niche: string | null
           project_id: string | null
           published_at: string | null
+          retry_count: number
           scheduled_at: string
           status: string | null
           title: string | null
@@ -770,10 +772,12 @@ export type Database = {
         Insert: {
           channel_id: string
           created_at?: string | null
+          error_message?: string | null
           id?: string
           niche?: string | null
           project_id?: string | null
           published_at?: string | null
+          retry_count?: number
           scheduled_at: string
           status?: string | null
           title?: string | null
@@ -785,10 +789,12 @@ export type Database = {
         Update: {
           channel_id?: string
           created_at?: string | null
+          error_message?: string | null
           id?: string
           niche?: string | null
           project_id?: string | null
           published_at?: string | null
+          retry_count?: number
           scheduled_at?: string
           status?: string | null
           title?: string | null
@@ -5182,7 +5188,11 @@ export type Database = {
           error_message: string | null
           id: string
           intelligence_json: Json | null
+          last_error_at: string | null
+          max_retries: number
+          next_retry_at: string | null
           niche: string | null
+          retry_count: number
           scene_blueprint_json: Json | null
           scheduled_at: string | null
           script: string | null
@@ -5202,7 +5212,11 @@ export type Database = {
           error_message?: string | null
           id?: string
           intelligence_json?: Json | null
+          last_error_at?: string | null
+          max_retries?: number
+          next_retry_at?: string | null
           niche?: string | null
+          retry_count?: number
           scene_blueprint_json?: Json | null
           scheduled_at?: string | null
           script?: string | null
@@ -5222,7 +5236,11 @@ export type Database = {
           error_message?: string | null
           id?: string
           intelligence_json?: Json | null
+          last_error_at?: string | null
+          max_retries?: number
+          next_retry_at?: string | null
           niche?: string | null
+          retry_count?: number
           scene_blueprint_json?: Json | null
           scheduled_at?: string | null
           script?: string | null
