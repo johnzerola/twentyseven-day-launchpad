@@ -31,6 +31,13 @@ interface CollectStats {
   errors: string[];
 }
 
+class OAuthInvalidGrant extends Error {
+  constructor(public detail: string) {
+    super(`oauth_invalid_grant:${detail}`);
+    this.name = "OAuthInvalidGrant";
+  }
+}
+
 async function refreshToken(rt: string) {
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -43,7 +50,13 @@ async function refreshToken(rt: string) {
     }),
   });
   const data = await res.json();
-  if (data.error) throw new Error(`oauth_refresh_failed:${data.error}`);
+  if (data.error) {
+    // invalid_grant means user revoked access or refresh_token expired
+    if (data.error === "invalid_grant") {
+      throw new OAuthInvalidGrant(data.error_description || data.error);
+    }
+    throw new Error(`oauth_refresh_failed:${data.error}`);
+  }
   return data as { access_token: string; expires_in: number };
 }
 
@@ -154,18 +167,28 @@ serve(async (req) => {
     errors: [],
   };
 
+  let runMode = "incremental";
+  let runUserId: string | null = null;
+  let runTriggeredBy = "cron";
+  let sbForLog: any = null;
+
   try {
     const body = await req.json().catch(() => ({}));
     const {
       mode = "incremental", // 'incremental' (≤48h) | 'daily' (≤30d) | 'all'
       user_id, // optional — limit to one user
       max_videos_per_channel = 50,
+      triggered_by = "cron",
     } = body || {};
+    runMode = mode;
+    runUserId = user_id ?? null;
+    runTriggeredBy = triggered_by;
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    sbForLog = sb;
 
     // 1) Pick OAuth-connected channels
     let tokQ = sb.from("youtube_oauth_tokens").select("*");
@@ -345,12 +368,9 @@ serve(async (req) => {
               continue;
             }
 
-            // Increment check_count
-            await sb.rpc("noop").then(() => {}, () => {});
+            // Atomically bump check_count via RPC
             await sb
-              .from("video_performance")
-              .update({ check_count: 1 })
-              .eq("id", v.id)
+              .rpc("increment_video_check_count", { _id: v.id })
               .then(() => {}, () => {});
 
             stats.videos_updated++;
@@ -365,23 +385,76 @@ serve(async (req) => {
           }
         }
       } catch (e: any) {
-        stats.errors.push(
-          `channel ${tok.channel_id}: ${e?.message || "unknown"}`
-        );
+        const msg = e?.message || "unknown";
+        stats.errors.push(`channel ${tok.channel_id}: ${msg}`);
+
+        // OAuth revoked/expired → flag for reconnect, don't keep retrying
+        if (e instanceof OAuthInvalidGrant || msg.includes("oauth_invalid_grant")) {
+          await sb
+            .from("youtube_oauth_tokens")
+            .update({
+              needs_reauth: true,
+              last_oauth_error: msg.slice(0, 500),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", tok.id)
+            .then(() => {}, () => {});
+        }
       }
+    }
+
+    const durationMs = Date.now() - startTs;
+    if (sbForLog) {
+      await sbForLog
+        .from("analytics_collector_runs")
+        .insert({
+          started_at: new Date(startTs).toISOString(),
+          finished_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          mode: runMode,
+          triggered_by: runTriggeredBy,
+          user_id: runUserId,
+          channels_processed: stats.channels_processed,
+          videos_updated: stats.videos_updated,
+          videos_failed: stats.videos_failed,
+          videos_skipped: stats.videos_skipped,
+          errors: stats.errors,
+          ok: true,
+        })
+        .then(() => {}, () => {});
     }
 
     return new Response(
       JSON.stringify({
         ok: true,
-        mode,
-        duration_ms: Date.now() - startTs,
+        mode: runMode,
+        duration_ms: durationMs,
         stats,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {
     console.error("youtube-analytics-collector error:", e);
+    const durationMs = Date.now() - startTs;
+    if (sbForLog) {
+      await sbForLog
+        .from("analytics_collector_runs")
+        .insert({
+          started_at: new Date(startTs).toISOString(),
+          finished_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          mode: runMode,
+          triggered_by: runTriggeredBy,
+          user_id: runUserId,
+          channels_processed: stats.channels_processed,
+          videos_updated: stats.videos_updated,
+          videos_failed: stats.videos_failed,
+          videos_skipped: stats.videos_skipped,
+          errors: [...stats.errors, `fatal: ${e?.message || "unknown"}`],
+          ok: false,
+        })
+        .then(() => {}, () => {});
+    }
     return new Response(
       JSON.stringify({
         ok: false,

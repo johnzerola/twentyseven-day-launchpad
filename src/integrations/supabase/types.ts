@@ -226,6 +226,54 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_collector_runs: {
+        Row: {
+          channels_processed: number
+          duration_ms: number | null
+          errors: Json
+          finished_at: string | null
+          id: string
+          mode: string
+          ok: boolean
+          started_at: string
+          triggered_by: string
+          user_id: string | null
+          videos_failed: number
+          videos_skipped: number
+          videos_updated: number
+        }
+        Insert: {
+          channels_processed?: number
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          mode: string
+          ok?: boolean
+          started_at?: string
+          triggered_by?: string
+          user_id?: string | null
+          videos_failed?: number
+          videos_skipped?: number
+          videos_updated?: number
+        }
+        Update: {
+          channels_processed?: number
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          ok?: boolean
+          started_at?: string
+          triggered_by?: string
+          user_id?: string | null
+          videos_failed?: number
+          videos_skipped?: number
+          videos_updated?: number
+        }
+        Relationships: []
+      }
       api_config: {
         Row: {
           api_name: string
@@ -6007,6 +6055,8 @@ export type Database = {
           channel_thumbnail: string | null
           connected_at: string | null
           id: string
+          last_oauth_error: string | null
+          needs_reauth: boolean
           refresh_token: string
           scopes: string[] | null
           token_expires_at: string | null
@@ -6020,6 +6070,8 @@ export type Database = {
           channel_thumbnail?: string | null
           connected_at?: string | null
           id?: string
+          last_oauth_error?: string | null
+          needs_reauth?: boolean
           refresh_token: string
           scopes?: string[] | null
           token_expires_at?: string | null
@@ -6033,6 +6085,8 @@ export type Database = {
           channel_thumbnail?: string | null
           connected_at?: string | null
           id?: string
+          last_oauth_error?: string | null
+          needs_reauth?: boolean
           refresh_token?: string
           scopes?: string[] | null
           token_expires_at?: string | null
@@ -6277,6 +6331,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_video_check_count: { Args: { _id: string }; Returns: undefined }
       match_knowledge: {
         Args: {
           filter_tables?: string[]
