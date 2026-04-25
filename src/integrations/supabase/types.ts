@@ -2909,6 +2909,71 @@ export type Database = {
         }
         Relationships: []
       }
+      pre_upload_audits: {
+        Row: {
+          action: string
+          channel_id: string | null
+          composite_score: number | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          issues_json: Json | null
+          monetiza_score: number | null
+          originality_score: number | null
+          passed: boolean
+          project_id: string
+          raw_responses: Json | null
+          recommendations_json: Json | null
+          thumbnail_score: number | null
+          title_score: number | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          channel_id?: string | null
+          composite_score?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          issues_json?: Json | null
+          monetiza_score?: number | null
+          originality_score?: number | null
+          passed: boolean
+          project_id: string
+          raw_responses?: Json | null
+          recommendations_json?: Json | null
+          thumbnail_score?: number | null
+          title_score?: number | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          channel_id?: string | null
+          composite_score?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          issues_json?: Json | null
+          monetiza_score?: number | null
+          originality_score?: number | null
+          passed?: boolean
+          project_id?: string
+          raw_responses?: Json | null
+          recommendations_json?: Json | null
+          thumbnail_score?: number | null
+          title_score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_upload_audits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prediction_vs_result: {
         Row: {
           calibrated_at: string | null
@@ -4546,6 +4611,7 @@ export type Database = {
       user_channels: {
         Row: {
           analysis_json: Json | null
+          auto_reply_enabled: boolean
           autopilot_enabled: boolean | null
           avg_ctr_30d: number | null
           avg_views_30d: number | null
@@ -4553,10 +4619,12 @@ export type Database = {
           channel_name: string
           character_bio: string | null
           character_name: string | null
+          competitor_benchmark_json: Json | null
           daily_render_limit: number | null
           flow_account_id: string | null
           id: string
           language: string | null
+          last_competitor_scan_at: string | null
           last_posted_at: string | null
           linked_at: string
           min_interval_hours: number | null
@@ -4565,6 +4633,8 @@ export type Database = {
           posting_days: Json | null
           posting_hour: number | null
           reference_channels: Json | null
+          safety_guard_enabled: boolean
+          strategist_enabled: boolean
           subscribers: number | null
           thumbnail: string | null
           total_videos_posted: number | null
@@ -4585,6 +4655,7 @@ export type Database = {
         }
         Insert: {
           analysis_json?: Json | null
+          auto_reply_enabled?: boolean
           autopilot_enabled?: boolean | null
           avg_ctr_30d?: number | null
           avg_views_30d?: number | null
@@ -4592,10 +4663,12 @@ export type Database = {
           channel_name: string
           character_bio?: string | null
           character_name?: string | null
+          competitor_benchmark_json?: Json | null
           daily_render_limit?: number | null
           flow_account_id?: string | null
           id?: string
           language?: string | null
+          last_competitor_scan_at?: string | null
           last_posted_at?: string | null
           linked_at?: string
           min_interval_hours?: number | null
@@ -4604,6 +4677,8 @@ export type Database = {
           posting_days?: Json | null
           posting_hour?: number | null
           reference_channels?: Json | null
+          safety_guard_enabled?: boolean
+          strategist_enabled?: boolean
           subscribers?: number | null
           thumbnail?: string | null
           total_videos_posted?: number | null
@@ -4624,6 +4699,7 @@ export type Database = {
         }
         Update: {
           analysis_json?: Json | null
+          auto_reply_enabled?: boolean
           autopilot_enabled?: boolean | null
           avg_ctr_30d?: number | null
           avg_views_30d?: number | null
@@ -4631,10 +4707,12 @@ export type Database = {
           channel_name?: string
           character_bio?: string | null
           character_name?: string | null
+          competitor_benchmark_json?: Json | null
           daily_render_limit?: number | null
           flow_account_id?: string | null
           id?: string
           language?: string | null
+          last_competitor_scan_at?: string | null
           last_posted_at?: string | null
           linked_at?: string
           min_interval_hours?: number | null
@@ -4643,6 +4721,8 @@ export type Database = {
           posting_days?: Json | null
           posting_hour?: number | null
           reference_channels?: Json | null
+          safety_guard_enabled?: boolean
+          strategist_enabled?: boolean
           subscribers?: number | null
           thumbnail?: string | null
           total_videos_posted?: number | null
@@ -5319,6 +5399,7 @@ export type Database = {
           claim_expires_at: string | null
           claimed_at: string | null
           created_at: string | null
+          created_by_agent: boolean
           description: string | null
           duration_seconds: number | null
           error_message: string | null
@@ -5331,15 +5412,19 @@ export type Database = {
           max_retries: number
           next_retry_at: string | null
           niche: string | null
+          pre_upload_audit_id: string | null
+          pre_upload_passed: boolean | null
           privacy_status: string | null
           published_at: string | null
           rendered_video_sha256: string | null
           rendered_video_url: string | null
           retry_count: number
+          safety_block_reason: string | null
           scene_blueprint_json: Json | null
           scheduled_at: string | null
           script: string | null
           status: string | null
+          strategy_plan_id: string | null
           tags: string[] | null
           thumbnail_url: string | null
           timeline_json: Json | null
@@ -5368,6 +5453,7 @@ export type Database = {
           claim_expires_at?: string | null
           claimed_at?: string | null
           created_at?: string | null
+          created_by_agent?: boolean
           description?: string | null
           duration_seconds?: number | null
           error_message?: string | null
@@ -5380,15 +5466,19 @@ export type Database = {
           max_retries?: number
           next_retry_at?: string | null
           niche?: string | null
+          pre_upload_audit_id?: string | null
+          pre_upload_passed?: boolean | null
           privacy_status?: string | null
           published_at?: string | null
           rendered_video_sha256?: string | null
           rendered_video_url?: string | null
           retry_count?: number
+          safety_block_reason?: string | null
           scene_blueprint_json?: Json | null
           scheduled_at?: string | null
           script?: string | null
           status?: string | null
+          strategy_plan_id?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
           timeline_json?: Json | null
@@ -5417,6 +5507,7 @@ export type Database = {
           claim_expires_at?: string | null
           claimed_at?: string | null
           created_at?: string | null
+          created_by_agent?: boolean
           description?: string | null
           duration_seconds?: number | null
           error_message?: string | null
@@ -5429,15 +5520,19 @@ export type Database = {
           max_retries?: number
           next_retry_at?: string | null
           niche?: string | null
+          pre_upload_audit_id?: string | null
+          pre_upload_passed?: boolean | null
           privacy_status?: string | null
           published_at?: string | null
           rendered_video_sha256?: string | null
           rendered_video_url?: string | null
           retry_count?: number
+          safety_block_reason?: string | null
           scene_blueprint_json?: Json | null
           scheduled_at?: string | null
           script?: string | null
           status?: string | null
+          strategy_plan_id?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
           timeline_json?: Json | null
@@ -5457,7 +5552,15 @@ export type Database = {
           youtube_url?: string | null
           youtube_video_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "video_projects_pre_upload_audit_id_fkey"
+            columns: ["pre_upload_audit_id"]
+            isOneToOne: false
+            referencedRelation: "pre_upload_audits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_retention_curve: {
         Row: {
@@ -6048,6 +6151,36 @@ export type Database = {
           views: number | null
         }
         Relationships: []
+      }
+      v_channel_top_performers: {
+        Row: {
+          avg_retention_percent: number | null
+          channel_id: string | null
+          ctr_percent: number | null
+          duration_seconds: number | null
+          hook_type: string | null
+          performance_grade: string | null
+          performance_score: number | null
+          published_at: string | null
+          rank_in_channel: number | null
+          reverse_rank_in_channel: number | null
+          title: string | null
+          title_pattern: string | null
+          topic: string | null
+          user_id: string | null
+          video_type: string | null
+          views_current: number | null
+          youtube_video_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_performance_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "user_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

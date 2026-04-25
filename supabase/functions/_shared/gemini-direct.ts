@@ -137,7 +137,7 @@ function convertMessages(messages: any[]): { systemInstruction?: any; contents: 
       contents.push({ role: "user", parts: [{ text: sanitizeUnicode(msg.content || "") }] });
     } else if (msg.role === "assistant") {
       if (msg.tool_calls?.length) {
-        const parts = msg.content ? [{ text: msg.content }] : [];
+        const parts: any[] = msg.content ? [{ text: msg.content }] : [];
         for (const tc of msg.tool_calls) {
           parts.push({
             functionCall: {
