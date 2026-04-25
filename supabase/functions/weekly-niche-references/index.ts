@@ -76,48 +76,76 @@ async function fetchNicheTopVideos(
   const publishedAfter = new Date(Date.now() - 14 * 86400000).toISOString();
   const langParam = language ? `&relevanceLanguage=${language.split("-")[0]}` : "";
 
-  const searchUrl =
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(niche)}` +
-    `&type=video&publishedAfter=${publishedAfter}&order=viewCount&maxResults=${maxResults}` +
-    `${langParam}&key=${ytKey}`;
-  const sRes = await fetch(searchUrl);
-  if (!sRes.ok) {
-    console.warn(`[YT search] ${sRes.status}: ${await sRes.text()}`);
-    return [];
+  // Build a list of progressively shorter queries to widen the funnel
+  // when the niche description is too verbose for YouTube search.
+  const words = niche.split(/\s+/).filter(Boolean);
+  const queries: string[] = [];
+  queries.push(niche);
+  if (words.length > 4) queries.push(words.slice(0, 4).join(" "));
+  if (words.length > 2) queries.push(words.slice(0, 2).join(" "));
+
+  const seen = new Set<string>();
+  const all: TopVideo[] = [];
+
+  for (const q of queries) {
+    const searchUrl =
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}` +
+      `&type=video&publishedAfter=${publishedAfter}&order=viewCount&maxResults=${maxResults}` +
+      `${langParam}&key=${ytKey}`;
+    const sRes = await fetch(searchUrl);
+    if (!sRes.ok) {
+      console.warn(`[YT search "${q}"] ${sRes.status}: ${await sRes.text()}`);
+      continue;
+    }
+    const sData = await sRes.json();
+    const items = (sData.items || []).filter((i: any) => i.id?.videoId);
+    if (!items.length) continue;
+
+    const ids = items
+      .map((i: any) => i.id.videoId)
+      .filter((id: string) => !seen.has(id))
+      .join(",");
+    if (!ids) continue;
+
+    const statsUrl =
+      `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet` +
+      `&id=${ids}&key=${ytKey}`;
+    const stRes = await fetch(statsUrl);
+    if (!stRes.ok) continue;
+    const stData = await stRes.json();
+
+    for (const v of stData.items || []) {
+      if (seen.has(v.id)) continue;
+      seen.add(v.id);
+      all.push({
+        video_id: v.id,
+        title: v.snippet?.title || "",
+        channel_id: v.snippet?.channelId || "",
+        channel_name: v.snippet?.channelTitle || "",
+        thumbnail:
+          v.snippet?.thumbnails?.maxres?.url ||
+          v.snippet?.thumbnails?.high?.url ||
+          v.snippet?.thumbnails?.medium?.url ||
+          "",
+        views: parseInt(v.statistics?.viewCount || "0"),
+        likes: parseInt(v.statistics?.likeCount || "0"),
+        comments: parseInt(v.statistics?.commentCount || "0"),
+        duration_seconds: parseDuration(v.contentDetails?.duration),
+        published_at: v.snippet?.publishedAt || "",
+        url: `https://www.youtube.com/watch?v=${v.id}`,
+      });
+    }
+
+    // Filter long-form (>=60s) with non-trivial views
+    const filtered = all
+      .filter((v) => v.duration_seconds >= 60 && v.views > 500)
+      .sort((a, b) => b.views - a.views);
+
+    if (filtered.length >= 8) return filtered.slice(0, 8);
   }
-  const sData = await sRes.json();
-  const items = (sData.items || []).filter((i: any) => i.id?.videoId);
-  if (!items.length) return [];
 
-  const ids = items.map((i: any) => i.id.videoId).join(",");
-  const statsUrl =
-    `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet` +
-    `&id=${ids}&key=${ytKey}`;
-  const stRes = await fetch(statsUrl);
-  if (!stRes.ok) return [];
-  const stData = await stRes.json();
-
-  const out: TopVideo[] = (stData.items || []).map((v: any) => ({
-    video_id: v.id,
-    title: v.snippet?.title || "",
-    channel_id: v.snippet?.channelId || "",
-    channel_name: v.snippet?.channelTitle || "",
-    thumbnail:
-      v.snippet?.thumbnails?.maxres?.url ||
-      v.snippet?.thumbnails?.high?.url ||
-      v.snippet?.thumbnails?.medium?.url ||
-      "",
-    views: parseInt(v.statistics?.viewCount || "0"),
-    likes: parseInt(v.statistics?.likeCount || "0"),
-    comments: parseInt(v.statistics?.commentCount || "0"),
-    duration_seconds: parseDuration(v.contentDetails?.duration),
-    published_at: v.snippet?.publishedAt || "",
-    url: `https://www.youtube.com/watch?v=${v.id}`,
-  }));
-
-  // Filter shorts (<60s) and zero-views noise
-  return out
-    .filter((v) => v.duration_seconds >= 60 && v.views > 1000)
+  return all
+    .filter((v) => v.duration_seconds >= 60 && v.views > 500)
     .sort((a, b) => b.views - a.views)
     .slice(0, 8);
 }
