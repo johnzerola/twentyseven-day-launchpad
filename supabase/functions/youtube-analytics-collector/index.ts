@@ -358,12 +358,9 @@ serve(async (req) => {
               continue;
             }
 
-            // Increment check_count
-            await sb.rpc("noop").then(() => {}, () => {});
+            // Atomically bump check_count via RPC
             await sb
-              .from("video_performance")
-              .update({ check_count: 1 })
-              .eq("id", v.id)
+              .rpc("increment_video_check_count", { _id: v.id })
               .then(() => {}, () => {});
 
             stats.videos_updated++;
@@ -378,9 +375,21 @@ serve(async (req) => {
           }
         }
       } catch (e: any) {
-        stats.errors.push(
-          `channel ${tok.channel_id}: ${e?.message || "unknown"}`
-        );
+        const msg = e?.message || "unknown";
+        stats.errors.push(`channel ${tok.channel_id}: ${msg}`);
+
+        // OAuth revoked/expired → flag for reconnect, don't keep retrying
+        if (e instanceof OAuthInvalidGrant || msg.includes("oauth_invalid_grant")) {
+          await sb
+            .from("youtube_oauth_tokens")
+            .update({
+              needs_reauth: true,
+              last_oauth_error: msg.slice(0, 500),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", tok.id)
+            .then(() => {}, () => {});
+        }
       }
     }
 
