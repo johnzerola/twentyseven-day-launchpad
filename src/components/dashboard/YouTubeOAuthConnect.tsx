@@ -13,7 +13,11 @@ interface ConnectedChannel {
   channel_name: string;
   channel_thumbnail: string;
   connected_at: string;
+  scopes?: string[] | null;
+  has_upload_scope?: boolean;
 }
+
+const UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
 
 export const YouTubeOAuthConnect = () => {
   const [connectedChannels, setConnectedChannels] = useState<ConnectedChannel[]>([]);
@@ -26,11 +30,29 @@ export const YouTubeOAuthConnect = () => {
 
   const fetchConnectedChannels = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setFetching(false); return; }
+
       const { data, error } = await supabase
-        .from('youtube_oauth_tokens_safe' as any)
-        .select('id, channel_id, channel_name, channel_thumbnail, connected_at');
+        .from('user_channels')
+        .select('id, youtube_channel_id, channel_name, thumbnail, youtube_oauth_connected_at, youtube_oauth_scope, youtube_refresh_token')
+        .eq('user_id', user.id)
+        .not('youtube_refresh_token', 'is', null);
       if (error) throw error;
-      setConnectedChannels((data as unknown as ConnectedChannel[]) || []);
+
+      const rows = (data || []).map((r: any) => {
+        const scopes: string[] = (r.youtube_oauth_scope ?? '').split(/\s+/).filter(Boolean);
+        return {
+          id: r.id,
+          channel_id: r.youtube_channel_id,
+          channel_name: r.channel_name,
+          channel_thumbnail: r.thumbnail,
+          connected_at: r.youtube_oauth_connected_at,
+          scopes,
+          has_upload_scope: scopes.includes(UPLOAD_SCOPE),
+        } as ConnectedChannel;
+      });
+      setConnectedChannels(rows);
     } catch (err) {
       console.error('Error fetching connected channels:', err);
     } finally {
@@ -74,9 +96,16 @@ export const YouTubeOAuthConnect = () => {
 
   const handleDisconnect = async (id: string, channelName: string) => {
     try {
+      // Apenas limpa as credenciais OAuth — o canal continua na lista do usuário.
       const { error } = await supabase
-        .from('youtube_oauth_tokens')
-        .delete()
+        .from('user_channels')
+        .update({
+          youtube_refresh_token: null,
+          youtube_access_token: null,
+          youtube_token_expires_at: null,
+          youtube_oauth_scope: null,
+          youtube_oauth_connected_at: null,
+        })
         .eq('id', id);
       if (error) throw error;
       toast.success(`Canal "${channelName}" desconectado do OAuth`);
@@ -112,9 +141,20 @@ export const YouTubeOAuthConnect = () => {
               <p className="text-sm font-medium truncate">{ch.channel_name}</p>
               <p className="text-[10px] text-muted-foreground">{ch.channel_id}</p>
             </div>
-            <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
-              <BarChart3 className="w-3 h-3" /> OAuth
-            </Badge>
+            <div className="flex flex-col gap-1 items-end">
+              <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
+                <BarChart3 className="w-3 h-3" /> OAuth
+              </Badge>
+              {ch.has_upload_scope ? (
+                <Badge variant="outline" className="text-[10px] gap-1 text-emerald-400 border-emerald-400/30">
+                  ⬆ Upload OK
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] gap-1 text-amber-400 border-amber-400/30">
+                  ⚠ Reconectar p/ upload
+                </Badge>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"

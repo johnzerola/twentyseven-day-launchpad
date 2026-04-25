@@ -37,9 +37,16 @@ serve(async (req) => {
 
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/youtube-oauth-callback`;
 
+    // Scopes:
+    // - yt-analytics.readonly: leitura de métricas do canal
+    // - youtube.readonly:      leitura de canal/vídeos
+    // - youtube.upload:        UPLOAD programático (worker Python na VPS)
+    // - youtube.force-ssl:     gerenciar vídeo após upload (thumbnails, edição de metadata)
     const scopes = [
       "https://www.googleapis.com/auth/yt-analytics.readonly",
       "https://www.googleapis.com/auth/youtube.readonly",
+      "https://www.googleapis.com/auth/youtube.upload",
+      "https://www.googleapis.com/auth/youtube.force-ssl",
     ];
 
     // Generate a signed state token to prevent CSRF
