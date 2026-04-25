@@ -6086,6 +6086,17 @@ export type Database = {
         Args: { _lease_minutes?: number; _worker_id: string }
         Returns: Json
       }
+      claim_publish_slot: {
+        Args: {
+          _channel_id: string
+          _project_id: string
+          _scheduled_at: string
+          _slot_window_minutes?: number
+          _topic?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       cleanup_expired_channel_locks: { Args: never; Returns: number }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
       cleanup_old_function_traces: { Args: never; Returns: undefined }
