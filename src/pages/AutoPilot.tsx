@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, Loader2 } from 'lucide-react';
+import { Zap, AlertTriangle, CheckCircle2, FileEdit, RotateCw, Rocket, Youtube, Loader2, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 type VideoProject = {
@@ -23,10 +23,14 @@ type VideoProject = {
   channel_id?: string | null;
   created_at: string;
   updated_at?: string | null;
+  retry_count?: number | null;
+  max_retries?: number | null;
+  next_retry_at?: string | null;
+  last_error_at?: string | null;
 };
 
 const ACTIVE_STATUSES = ['processing', 'waiting_videos', 'assembling', 'uploading', 'ready_for_production'];
-const ERROR_STATUSES = ['error', 'failed'];
+const ERROR_STATUSES = ['error', 'failed', 'failed_permanent'];
 const PUBLISHED_STATUSES = ['published', 'completed'];
 
 const STATUS_PROGRESS: Record<string, number> = {
