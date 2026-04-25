@@ -10,7 +10,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { callGeminiWithFallback } from "../_shared/gemini-direct.ts";
+import { callGeminiOpenAICompat } from "../_shared/gemini-direct.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -201,65 +201,77 @@ ${JSON.stringify(nicheSignals, null, 2)}
 
 Decida agora os ${N} temas da próxima semana (week_start=${weekStartISO}).`;
 
-  const aiResponse = await callGeminiWithFallback({
-    apiKey: Deno.env.get("GOOGLE_AI_API_KEY")!,
+  const themesSchema = {
+    type: "object",
+    properties: {
+      themes: {
+        type: "array",
+        minItems: N,
+        maxItems: N,
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            topic: { type: "string" },
+            angle: { type: "string" },
+            hook: { type: "string" },
+            video_type: { type: "string", enum: ["long", "short"] },
+            duration_seconds: { type: "number" },
+            reasoning: { type: "string" },
+          },
+          required: ["title", "topic", "angle", "hook", "video_type", "duration_seconds", "reasoning"],
+        },
+      },
+    },
+    required: ["themes"],
+  };
+
+  const aiResp = await callGeminiOpenAICompat(Deno.env.get("GOOGLE_AI_API_KEY")!, {
     model: MODEL,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    tools: [
-      {
-        type: "function",
-        function: {
-          name: "submit_weekly_themes",
-          description: `Submit exactly ${N} video themes for the upcoming week.`,
-          parameters: {
-            type: "object",
-            properties: {
-              themes: {
-                type: "array",
-                minItems: N,
-                maxItems: N,
-                items: {
-                  type: "object",
-                  properties: {
-                    title: { type: "string", description: "Título final do vídeo, <60 chars" },
-                    topic: { type: "string", description: "Tema central em 1 frase" },
-                    angle: { type: "string", description: "Ângulo único / abordagem" },
-                    hook: { type: "string", description: "Hook dos primeiros 3 segundos" },
-                    video_type: { type: "string", enum: ["long", "short"] },
-                    duration_seconds: { type: "number" },
-                    reasoning: { type: "string", description: "Por que este tema, com base nos dados" },
-                  },
-                  required: ["title", "topic", "angle", "hook", "video_type", "duration_seconds", "reasoning"],
-                },
-              },
-            },
-            required: ["themes"],
-          },
-        },
+    tools: [{
+      type: "function",
+      function: {
+        name: "submit_weekly_themes",
+        description: `Submit exactly ${N} video themes for the upcoming week.`,
+        parameters: themesSchema,
       },
-    ],
+    }],
     tool_choice: { type: "function", function: { name: "submit_weekly_themes" } },
     temperature: 0.7,
   });
 
-  // Extrai tool call
-  const toolCall = aiResponse?.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) {
-    throw new Error("LLM did not return tool call");
+  if (!aiResp.ok) {
+    const errBody = await aiResp.text();
+    throw new Error(`Gemini call failed [${aiResp.status}]: ${errBody.slice(0, 500)}`);
   }
+  const aiJson = await aiResp.json();
+
+  // Direct path returns plain JSON content; gateway path returns tool_calls
   let themes: ThemeDecision[] = [];
+  const choice = aiJson?.choices?.[0]?.message;
+  const toolCall = choice?.tool_calls?.[0];
+  let rawArgs = "";
+  if (toolCall?.function?.arguments) {
+    rawArgs = toolCall.function.arguments;
+  } else if (typeof choice?.content === "string" && choice.content.trim()) {
+    rawArgs = choice.content.trim();
+    // strip markdown fences if any
+    rawArgs = rawArgs.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+  }
+  if (!rawArgs) throw new Error("LLM returned empty payload");
   try {
-    const parsed = JSON.parse(toolCall.function.arguments);
-    themes = parsed.themes || [];
+    const parsed = JSON.parse(rawArgs);
+    themes = Array.isArray(parsed.themes) ? parsed.themes : [];
   } catch (e) {
-    throw new Error(`Failed to parse tool args: ${e instanceof Error ? e.message : e}`);
+    throw new Error(`Failed to parse LLM payload: ${e instanceof Error ? e.message : e} :: ${rawArgs.slice(0, 200)}`);
   }
   if (!themes.length) throw new Error("Empty themes from LLM");
 
-  const tokensUsed = aiResponse?.usage?.total_tokens || 0;
+  const tokensUsed = aiJson?.usage?.total_tokens || 0;
   const costUsd = (tokensUsed / 1_000_000) * 5; // pro estimate
 
   // 5. Persiste plano
