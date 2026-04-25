@@ -694,6 +694,54 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_schedule: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          niche: string | null
+          project_id: string | null
+          published_at: string | null
+          scheduled_at: string
+          status: string | null
+          title: string | null
+          topic: string | null
+          updated_at: string | null
+          user_id: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          project_id?: string | null
+          published_at?: string | null
+          scheduled_at: string
+          status?: string | null
+          title?: string | null
+          topic?: string | null
+          updated_at?: string | null
+          user_id: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          project_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string
+          status?: string | null
+          title?: string | null
+          topic?: string | null
+          updated_at?: string | null
+          user_id?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       channel_styles: {
         Row: {
           channel_id: string | null
