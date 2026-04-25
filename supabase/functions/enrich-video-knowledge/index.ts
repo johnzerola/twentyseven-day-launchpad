@@ -223,7 +223,7 @@ Extract:
         const k = JSON.parse(toolCall.function.arguments);
 
         // 3. Store extracted knowledge in tables
-        const inserts: Promise<any>[] = [];
+        const inserts: any[] = [];
 
         // 3a. Store narrative structure in script_knowledge
         if (k.narrativeStructure?.effectiveness >= 7) {
