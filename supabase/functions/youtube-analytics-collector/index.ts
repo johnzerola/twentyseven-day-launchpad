@@ -188,6 +188,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    sbForLog = sb;
 
     // 1) Pick OAuth-connected channels
     let tokQ = sb.from("youtube_oauth_tokens").select("*");
