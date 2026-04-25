@@ -1,128 +1,91 @@
+## Diagnóstico
+
+O feedback loop **está implementado** no `generate-script` (chama `script-learning-context`, `fetchHookPerformanceBlock` e `fetchUserCtrPatternsBlock`), mas **morre na fonte de dados**:
+
+| Métrica | Estado real |
+|---|---|
+| Vídeos em `video_performance` | 28 |
+| Com `channel_id` preenchido | **0** |
+| Com `hook_type` extraído | **0** |
+| Com `title_pattern` extraído | **0** |
+| Com `niche` preenchido | **0** |
+| Linhas em `hook_performance_real` | **0** |
+| Linhas em `user_ctr_patterns` | **0** |
+
+Resultado: o brief sempre retorna `has_data: false` → o LLM nunca recebe os padrões reais do canal. Há também duplicatas (cada vídeo aparece 2x).
+
+Além disso, o `generate-script` chama `script-learning-context` apenas com `{ user_id, niche }` — nunca passa o `channel_id`, então quando o usuário tem múltiplos canais o brief mistura tudo.
+
 ## Objetivo
 
-Toda semana, para cada canal do usuário, varrer o YouTube em busca de **vídeos viralizando no nicho dele** e gerar um **dossiê de referências** com padrões consolidados (títulos, thumbnails, duração, estrutura narrativa). O dossiê:
+Fazer o feedback loop funcionar de ponta a ponta: cada `generate-script` recebe os melhores hooks/títulos **comprovados naquele canal específico** e evita os padrões fracos.
 
-1. Aparece em uma nova aba na UI do AutoPilot.
-2. É injetado automaticamente no `generate-script` para guiar a próxima leva de roteiros.
+## Plano (3 frentes)
 
-## Por que isso (o que já existe vs. o que falta)
+### 1. Backfill + enriquecimento dos dados (a base)
+- Nova edge function **`enrich-video-performance`**: lê os 28 vídeos existentes (e os novos), e para cada um:
+  - Resolve `channel_id` cruzando `youtube_video_id` → `video_projects.channel_id_ref` ou `user_channels.youtube_channel_id`
+  - Resolve `niche` a partir do canal/projeto
+  - Extrai `hook_type` (lista controlada: `pergunta`, `choque`, `historia`, `dado`, `polemica`, `curiosidade`, `lista`, `mistério`) via Gemini Flash analisando `title` + primeiros 200 chars do script (quando houver `script_id`)
+  - Extrai `title_pattern` (template normalizado: ex. "PERGUNTA + REVELAÇÃO", "NÚMERO + CHOQUE", "NEGAÇÃO + AUTORIDADE")
+  - Faz dedup por `(user_id, youtube_video_id)` mantendo o registro mais recente
+- Migration: adiciona índice único `(user_id, youtube_video_id)` em `video_performance` para evitar novas duplicatas
+- Cron diário: roda `enrich-video-performance` para vídeos com `hook_type IS NULL` (batch de 20)
 
-Já existe muita base:
-- `find-outliers` (caça vídeos virais por keyword) — só roda **manual**
-- `weekly-deep-research` (insights globais)
-- `weekly-channel-rescan` (rescan de canais já cadastrados)
-- Tabelas `emerging_videos`, `thumbnail_patterns`, `hook_patterns`
+### 2. Filtro por canal no generate-script
+- `generate-script/index.ts`: aceitar `channel_id` no body (já vem do AutoPilot via `channel_id_ref`)
+- Passar `channel_id` para `script-learning-context` — quando presente, brief é **só do canal**, não da conta inteira
+- Mesma mudança em `generate-script-short` e `refine-script` (pequena edição de 1 chamada de fetch cada)
 
-O que **não existe**:
-- Job semanal que roda `find-outliers` automaticamente para cada nicho dos canais ativos do usuário
-- Consolidação dos achados em um "boletim semanal" persistido e navegável
-- Extração explícita de padrões de **duração** e **estrutura narrativa** (atos, hook, payoff)
-- Injeção desses padrões no prompt do `generate-script` (hoje só usa canais de referência cadastrados manualmente)
-
-## O que será construído
-
-### 1. Tabela `niche_reference_reports`
-
-Um relatório por canal/semana com tudo consolidado.
-
-```text
-niche_reference_reports
-├── id, user_id, channel_id, niche, language
-├── week_start (date)             -- segunda-feira da semana ISO
-├── status (queued|running|done|failed)
-├── videos_analyzed (int)
-├── top_videos (jsonb)            -- [{video_id, title, thumb, views, duration_s,
-│                                     channel_name, multiplier, published_at, url}]
-├── title_patterns (jsonb)        -- [{pattern, examples, avg_views, why_works}]
-├── thumbnail_patterns (jsonb)    -- [{style, emotion, color_scheme, text_overlay,
-│                                     examples_urls, ctr_signal}]
-├── duration_insights (jsonb)     -- {sweet_spot_seconds, range, distribution}
-├── structure_insights (jsonb)    -- {acts:[{name, avg_seconds, beats}],
-│                                     hook_styles, payoff_styles, retention_tactics}
-├── ai_summary (text)             -- briefing de 1 página em PT
-├── prompt_injection (text)       -- bloco compacto pronto para o generate-script
-└── created_at, updated_at
-```
-
-RLS: dono lê/escreve; service_role faz tudo.
-
-### 2. Edge function `weekly-niche-references` (nova)
-
-Para cada `user_channels` com `autopilot_enabled = true` (ou rodada manual para um canal específico):
-
-1. Lê niche/idioma/país do canal.
-2. Chama `find-outliers` internamente (já existe) com `keywords = niche`, `publishedAfterDays = 14`, `minMultiplier = 5`, `maxResults = 30`, `extractDNA = true`.
-3. Para os top 8 vídeos retornados:
-   - Reaproveita `extract-content-dna` ou `reverse-engineer-video` para obter estrutura/atos/hook.
-   - Calcula sweet spot de duração (mediana + p25/p75 dos top performers).
-4. Roda **uma chamada Gemini Flash** que recebe os 8 dossiês e devolve via tool-call estruturado:
-   - `title_patterns`, `thumbnail_patterns`, `duration_insights`, `structure_insights`, `ai_summary`, `prompt_injection`.
-5. Salva em `niche_reference_reports` (upsert por `channel_id + week_start`).
-
-Status passa por `queued → running → done` para a UI poder mostrar progresso.
-
-### 3. Cron semanal
-
-`pg_cron`: **toda segunda às 06:00 UTC** dispara `weekly-niche-references` em modo "all channels". O cron processa os canais em sequência (5/lote) para não estourar a quota da YouTube API.
-
-Também adiciono cron para `detect-emerging-channels` (que está parado há 7+ dias) — **terça às 07:00 UTC**.
-
-### 4. Integração com `generate-script` (o ponto que fecha o loop)
-
-Em `generate-script/index.ts`, junto com o `channelLearningBrief` que já existe, adicionar:
-
-```ts
-const fetchWeeklyReferenceBrief = async () => {
-  const { data } = await sb
-    .from("niche_reference_reports")
-    .select("prompt_injection, week_start")
-    .eq("channel_id", channel_id)
-    .eq("status", "done")
-    .order("week_start", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.prompt_injection ? `\n\n📅 REFERÊNCIAS DA SEMANA (${data.week_start}):\n${data.prompt_injection}\n` : "";
-};
-```
-
-E concatena no `learningLoopInjection` existente. Mesma coisa em `generate-script-short`.
-
-### 5. UI: aba "Referências Semanais" no AutoPilot
-
-Novo componente `WeeklyReferencesCard.tsx`:
-- Selector de canal (reaproveita o pattern dos cards já existentes).
-- Card do relatório mais recente:
-  - Resumo IA (1 parágrafo)
-  - Grid 4×2 dos top vídeos (thumb + título + views + multiplicador + link YouTube)
-  - 4 mini-blocos: **Padrões de título**, **Padrões de thumbnail**, **Duração ideal**, **Estrutura narrativa**
-  - Botão "Atualizar agora" (dispara a função para esse canal)
-  - Selector de semanas anteriores
-- Estado vazio: "Nenhum relatório ainda — rodando primeira coleta…" com botão para disparar.
-
-Integrado em `src/pages/AutoPilot.tsx` ao lado do `WeeklyStrategistCard` (faz par natural: este descobre referências, o outro decide os 7 temas).
+### 3. UI de transparência (mínima)
+- Card no AutoPilot: **"Aprendizado do canal"** — mostra "X vídeos analisados, hook campeão: Y (retenção Z%)" puxando direto de `video_performance` agregado
+- Na geração de roteiro, quando o brief é injetado, log estruturado `[CHANNEL-LEARNING] runId=… channel=… top_hook=… sample=…` para auditoria
 
 ## Detalhes técnicos
 
-- **Custos**: 1 chamada Gemini Flash por relatório (~600 tokens de input, ~1500 de output). 10 canais × 1×/semana ≈ irrelevante (~$0.02/semana). Reuso do `find-outliers` evita refazer chamadas YouTube API.
-- **Idempotência**: `UNIQUE (channel_id, week_start)` em `niche_reference_reports`. Re-execuções na mesma semana só atualizam.
-- **Quota YouTube**: usa o helper `check_and_increment_api_usage` antes de cada lote de chamadas.
-- **Schema do tool-call**: Gemini é forçado a JSON via `tool_choice` (padrão já usado em `weekly-strategy-agent`).
-- **`script-learning-context`**: não muda — é complementar (aquele aprende do canal próprio; este traz referências de fora).
+**Função enrich-video-performance** (Deno edge):
+```
+POST /enrich-video-performance
+body: { user_id?, channel_id?, limit?: 20, force?: false }
+→ { processed, hooks_extracted, channels_resolved, errors[] }
+```
+Usa `LOVABLE_API_KEY` + `google/gemini-2.5-flash-lite` com prompt JSON estruturado:
+```
+Classifique este vídeo:
+title: "..."
+script_intro: "..." (opcional)
+Retorne {hook_type, title_pattern, niche_inferred}
+```
 
-## Arquivos
+**Migration:**
+```sql
+-- Dedup primeiro
+DELETE FROM video_performance a USING video_performance b
+WHERE a.id < b.id
+  AND a.user_id = b.user_id
+  AND a.youtube_video_id = b.youtube_video_id;
 
-**Criar:**
-- `supabase/migrations/<ts>_weekly_niche_references.sql` — tabela + índices + RLS + cron (segunda 06:00 UTC) + cron emerging-channels (terça 07:00)
-- `supabase/functions/weekly-niche-references/index.ts`
-- `src/components/autopilot/WeeklyReferencesCard.tsx`
+CREATE UNIQUE INDEX IF NOT EXISTS video_performance_user_yt_unique
+  ON video_performance(user_id, youtube_video_id);
 
-**Editar:**
-- `src/pages/AutoPilot.tsx` — adicionar o novo card
-- `supabase/functions/generate-script/index.ts` — adicionar `fetchWeeklyReferenceBrief` ao bloco `learningLoopInjection`
-- `supabase/functions/generate-script-short/index.ts` — mesma injeção
+CREATE INDEX IF NOT EXISTS video_performance_channel_idx
+  ON video_performance(channel_id) WHERE channel_id IS NOT NULL;
+```
 
-## Fora de escopo desta sprint
+**Cron** (pg_cron, diário 04:00 UTC) chamando `enrich-video-performance` com service role.
 
-- Análise frame-a-frame de thumbnails (já dá pra descobrir padrão pelo que `find-outliers` extrai + URLs).
-- Comparação cross-canal entre referências semanais (ex.: "essa semana surgiu padrão novo X que não existia mês passado") — fica para sprint seguinte se você quiser.
-- Tradução automática das referências para outros idiomas do canal (já trato `language` na busca, mas não traduzo título de retorno).
+**Edits cirúrgicos:**
+- `script-learning-context/index.ts`: já aceita `channel_id` — sem mudança
+- `generate-script/index.ts` linha ~924: `body: JSON.stringify({ user_id, niche, channel_id })`
+- `generate-script-short/index.ts` e `refine-script/index.ts`: adicionar mesma chamada (hoje não chamam)
+
+## Validação
+
+1. Rodar `enrich-video-performance` manualmente → verificar 28 vídeos com `hook_type` + `channel_id` populados
+2. Chamar `script-learning-context` com `{user_id, channel_id}` → deve retornar `has_data: true, sample_size: ≥3`
+3. Gerar 1 roteiro novo → conferir log `[CHANNEL-LEARNING] injected brief (n=…)` e que o roteiro segue o hook campeão
+
+## Fora de escopo (próximas sprints)
+- Análise de retention curve (drop-off por segundo)
+- Análise de estrutura de atos (já mencionada na sprint anterior)
+- A/B test automático de hooks
