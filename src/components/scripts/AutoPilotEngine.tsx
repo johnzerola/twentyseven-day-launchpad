@@ -1065,7 +1065,7 @@ export const AutoPilotEngine = ({
       </AnimatePresence>
 
       {/* Launch modal — choose channel + scheduled date */}
-      <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch) setShowLaunchModal(o); }}>
+      <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch && launchPhase === 'idle') setShowLaunchModal(o); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
