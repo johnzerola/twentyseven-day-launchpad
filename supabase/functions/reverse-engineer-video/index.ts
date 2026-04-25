@@ -296,7 +296,7 @@ REQUIREMENTS:
     }, { onConflict: "video_id" }).then(() => {}, () => {});
 
     // ═══ AUTO-FEED PIPELINE ═══
-    const feedPromises: Promise<any>[] = [];
+    const feedPromises: any[] = [];
 
     if (analysis.hook_analysis?.hook_text_estimate) {
       feedPromises.push(

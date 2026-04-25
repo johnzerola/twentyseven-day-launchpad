@@ -230,7 +230,7 @@ Extract the complete viral DNA.`
     if (insertErr) console.error("DNA insert error:", insertErr);
 
     // ═══ AUTO-FEED OTHER TABLES ═══
-    const feedPromises: Promise<any>[] = [];
+    const feedPromises: any[] = [];
 
     // Feed hook_library
     if (dna.hook_pattern) {

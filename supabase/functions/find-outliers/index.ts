@@ -304,7 +304,7 @@ serve(async (req) => {
 
               // ═══ AUTO-FEED: Save DNA to viral database ═══
               const sbService = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-              const feedPromises: Promise<any>[] = [];
+              const feedPromises: any[] = [];
 
               for (let i = 0; i < dnaResults.length && i < topOutliers.length; i++) {
                 const dnaVideo = dnaResults[i];
