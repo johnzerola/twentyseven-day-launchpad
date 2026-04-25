@@ -4436,6 +4436,7 @@ export type Database = {
           autopilot_enabled: boolean | null
           avg_ctr_30d: number | null
           avg_views_30d: number | null
+          avoided_topics: string[] | null
           channel_name: string
           character_bio: string | null
           character_name: string | null
@@ -4466,6 +4467,7 @@ export type Database = {
           autopilot_enabled?: boolean | null
           avg_ctr_30d?: number | null
           avg_views_30d?: number | null
+          avoided_topics?: string[] | null
           channel_name: string
           character_bio?: string | null
           character_name?: string | null
@@ -4496,6 +4498,7 @@ export type Database = {
           autopilot_enabled?: boolean | null
           avg_ctr_30d?: number | null
           avg_views_30d?: number | null
+          avoided_topics?: string[] | null
           channel_name?: string
           character_bio?: string | null
           character_name?: string | null

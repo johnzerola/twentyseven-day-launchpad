@@ -136,8 +136,42 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Insere slots novos (anti-duplicação +/- 30min)
+      // Pré-gera lista de tópicos sugeridos via suggest-themes (uma chamada por canal, reaproveita p/ todos os slots)
+      let suggestedTopics: string[] = [];
+      try {
+        const suggestRes = await fetch(`${supabaseUrl}/functions/v1/suggest-themes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            niche: ch.niche || 'general',
+            style: ch.character_bio || undefined,
+            language: ch.language || 'pt-BR',
+            count: Math.max(newSlots.length, 3),
+            channelKnowledge: {
+              character_name: ch.character_name,
+              character_bio: ch.character_bio,
+              visual_style_prompt: ch.visual_style_prompt,
+              avoided_topics: ch.avoided_topics || [],
+            },
+          }),
+        });
+        if (suggestRes.ok) {
+          const json: any = await suggestRes.json();
+          const themes = json?.themes || json?.suggestions || json?.ideas || [];
+          suggestedTopics = (Array.isArray(themes) ? themes : [])
+            .map((t: any) => typeof t === 'string' ? t : (t?.title || t?.topic || t?.theme))
+            .filter(Boolean);
+        }
+      } catch (e) {
+        console.warn('suggest-themes failed', e);
+      }
+
+      // Insere slots novos (anti-duplicação +/- 30min) e cria video_project por slot
       const created: string[] = [];
+      let topicIdx = 0;
       for (const slot of newSlots) {
         const lo = new Date(slot.getTime() - 30 * 60 * 1000).toISOString();
         const hi = new Date(slot.getTime() + 30 * 60 * 1000).toISOString();
@@ -151,15 +185,35 @@ Deno.serve(async (req) => {
           .limit(1);
         if (dup && dup.length > 0) continue;
 
+        const topic = suggestedTopics[topicIdx++] || null;
+
+        // Cria video_project queued para esse slot
+        let projectId: string | null = null;
+        if (topic) {
+          const { data: proj } = await admin
+            .from('video_projects')
+            .insert({
+              user_id: ch.user_id,
+              channel_id_ref: ch.id,
+              title: topic,
+              niche: ch.niche || null,
+              status: 'queued',
+              scheduled_at: slot.toISOString(),
+            } as any)
+            .select('id')
+            .single();
+          projectId = proj?.id || null;
+        }
+
         const { error: insErr } = await admin.from('channel_schedule').insert({
           user_id: ch.user_id,
           channel_id: ch.id,
+          project_id: projectId,
           scheduled_at: slot.toISOString(),
           status: 'scheduled',
-          niche: ch.niche || null,
-          title: null,
-          topic: null,
-        });
+          title: topic,
+          topic,
+        } as any);
         if (!insErr) created.push(slot.toISOString());
       }
 
@@ -173,6 +227,7 @@ Deno.serve(async (req) => {
         channel_id: ch.id,
         channel_name: ch.channel_name,
         created: created.length,
+        topics_used: suggestedTopics.slice(0, created.length),
         slots: created,
       });
     } catch (e: any) {
