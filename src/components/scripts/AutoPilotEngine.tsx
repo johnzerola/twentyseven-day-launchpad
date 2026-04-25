@@ -426,7 +426,8 @@ export const AutoPilotEngine = ({
 
       // Close modal and run the original pipeline
       setShowLaunchModal(false);
-      await runPipeline();
+      const launch = runPipelineRef.current;
+      if (launch) await launch();
 
       // After pipeline completes, find the most recent project for this user
       const { data: project, error: projErr } = await supabase
