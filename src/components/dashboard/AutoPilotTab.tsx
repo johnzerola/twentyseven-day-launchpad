@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Zap, Loader2, Settings, Plus, X, Calendar, Mic, User, Palette, Clock, Save, Trash2, Play } from 'lucide-react';
+import { Zap, Loader2, Settings, Plus, X, Calendar, Mic, User, Palette, Clock, Save, Trash2, Play, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
