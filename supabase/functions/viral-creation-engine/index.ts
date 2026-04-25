@@ -46,6 +46,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
     const userId = _claims.claims.sub as string;
 
     // ═══ CREDIT ENFORCEMENT ═══
