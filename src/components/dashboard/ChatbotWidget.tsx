@@ -31,7 +31,7 @@ import { QUICK_ACTIONS, PAGE_TOOLTIPS, NUDGE_MESSAGES } from './chatbot-config';
 
 export { PAGE_TOOLTIPS };
 
-export const ChatbotWidget = () => {
+export const ChatbotWidget = forwardRef<HTMLDivElement>((_props, _ref) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
