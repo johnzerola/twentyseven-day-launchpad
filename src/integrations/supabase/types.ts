@@ -3037,6 +3037,53 @@ export type Database = {
         }
         Relationships: []
       }
+      project_events: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          message: string | null
+          metadata: Json | null
+          project_id: string
+          stage: string
+          status: string
+          worker_id: string | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          project_id: string
+          stage: string
+          status: string
+          worker_id?: string | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          project_id?: string
+          stage?: string
+          status?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prompt_library: {
         Row: {
           created_at: string | null
@@ -5183,72 +5230,93 @@ export type Database = {
           audio_url: string | null
           channel_id: string | null
           channel_id_ref: string | null
+          claim_expires_at: string | null
+          claimed_at: string | null
           created_at: string | null
           duration_seconds: number | null
           error_message: string | null
           id: string
+          idempotency_key: string | null
           intelligence_json: Json | null
           last_error_at: string | null
           max_retries: number
           next_retry_at: string | null
           niche: string | null
+          rendered_video_sha256: string | null
+          rendered_video_url: string | null
           retry_count: number
           scene_blueprint_json: Json | null
           scheduled_at: string | null
           script: string | null
           status: string | null
           title: string
+          total_render_cost_usd: number | null
           updated_at: string | null
           user_id: string
           video_type: Database["public"]["Enums"]["video_type"]
+          worker_id: string | null
           youtube_video_id: string | null
         }
         Insert: {
           audio_url?: string | null
           channel_id?: string | null
           channel_id_ref?: string | null
+          claim_expires_at?: string | null
+          claimed_at?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           error_message?: string | null
           id?: string
+          idempotency_key?: string | null
           intelligence_json?: Json | null
           last_error_at?: string | null
           max_retries?: number
           next_retry_at?: string | null
           niche?: string | null
+          rendered_video_sha256?: string | null
+          rendered_video_url?: string | null
           retry_count?: number
           scene_blueprint_json?: Json | null
           scheduled_at?: string | null
           script?: string | null
           status?: string | null
           title?: string
+          total_render_cost_usd?: number | null
           updated_at?: string | null
           user_id: string
           video_type?: Database["public"]["Enums"]["video_type"]
+          worker_id?: string | null
           youtube_video_id?: string | null
         }
         Update: {
           audio_url?: string | null
           channel_id?: string | null
           channel_id_ref?: string | null
+          claim_expires_at?: string | null
+          claimed_at?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           error_message?: string | null
           id?: string
+          idempotency_key?: string | null
           intelligence_json?: Json | null
           last_error_at?: string | null
           max_retries?: number
           next_retry_at?: string | null
           niche?: string | null
+          rendered_video_sha256?: string | null
+          rendered_video_url?: string | null
           retry_count?: number
           scene_blueprint_json?: Json | null
           scheduled_at?: string | null
           script?: string | null
           status?: string | null
           title?: string
+          total_render_cost_usd?: number | null
           updated_at?: string | null
           user_id?: string
           video_type?: Database["public"]["Enums"]["video_type"]
+          worker_id?: string | null
           youtube_video_id?: string | null
         }
         Relationships: []
@@ -5522,6 +5590,44 @@ export type Database = {
           why_viral?: string | null
         }
         Relationships: []
+      }
+      worker_heartbeats: {
+        Row: {
+          created_at: string
+          current_project_id: string | null
+          current_stage: string | null
+          last_seen: string
+          meta: Json | null
+          progress_pct: number | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_project_id?: string | null
+          current_stage?: string | null
+          last_seen?: string
+          meta?: Json | null
+          progress_pct?: number | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          current_project_id?: string | null
+          current_stage?: string | null
+          last_seen?: string
+          meta?: Json | null
+          progress_pct?: number | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_heartbeats_current_project_id_fkey"
+            columns: ["current_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       youtube_algorithm_knowledge: {
         Row: {
