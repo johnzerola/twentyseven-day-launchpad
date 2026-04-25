@@ -95,6 +95,7 @@ const Channels = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [dnaChannel, setDnaChannel] = useState<any>(null);
 
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [competitorKeywords, setCompetitorKeywords] = useState<string[]>([]);
