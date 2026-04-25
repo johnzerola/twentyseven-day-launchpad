@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  BarChart2, ExternalLink, Sparkles, Eye, MousePointer, Clock, Trophy, Loader2,
+  BarChart2, ExternalLink, Sparkles, Eye, MousePointer, Clock, Trophy, Loader2, RefreshCw,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { formatNumber } from '@/lib/formatters';
@@ -33,6 +33,40 @@ const Performance = () => {
   const [periodFilter, setPeriodFilter] = useState<string>('30d');
   const [loading, setLoading] = useState(true);
   const [insightOpen, setInsightOpen] = useState<Perf | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const reloadData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const [c, p, i] = await Promise.all([
+      supabase.from('user_channels' as any).select('id,channel_name,thumbnail,last_synced_at').eq('user_id', user.id),
+      supabase.from('video_performance' as any).select('*').eq('user_id', user.id).order('published_at', { ascending: false }).limit(500),
+      supabase.from('channel_intelligence_per_user' as any).select('*').eq('user_id', user.id),
+    ]);
+    setChannels((c.data || []) as any[]);
+    setPerf((p.data || []) as Perf[]);
+    setIntel((i.data || []) as any[]);
+  };
+
+  const syncNow = async () => {
+    setSyncing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSyncing(false); return; }
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-sync-video-metrics', {
+        body: { userId: user.id, force: true, maxChannels: 20 },
+      });
+      if (error) throw error;
+      const processed = (data as any)?.processed ?? 0;
+      const quota = (data as any)?.quotaUnits ?? 0;
+      toast.success(`Sincronizados ${processed} canais (${quota} unidades de quota)`);
+      await reloadData();
+    } catch (e: any) {
+      toast.error('Falha ao sincronizar: ' + (e?.message || 'erro'));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -98,14 +132,22 @@ const Performance = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center">
-            <BarChart2 className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center">
+              <BarChart2 className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold font-display">Performance</h1>
+              <p className="text-sm text-muted-foreground">
+                Métricas e inteligência consolidada • Sync diário automático às 05:00 UTC
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold font-display">Performance</h1>
-            <p className="text-sm text-muted-foreground">Métricas e inteligência consolidada dos seus canais</p>
-          </div>
+          <Button onClick={syncNow} disabled={syncing} variant="default" size="sm">
+            {syncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Sincronizar agora
+          </Button>
         </div>
 
         {/* Filters */}
