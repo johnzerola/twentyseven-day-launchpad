@@ -432,7 +432,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("[weekly-strategy-agent] fatal:", e);
     return new Response(
-      JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) }),
+      JSON.stringify({ ok: false, error: e instanceof Error ? e.message : (typeof e === "string" ? e : JSON.stringify(e)) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
