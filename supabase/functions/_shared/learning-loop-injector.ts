@@ -1,7 +1,8 @@
 /**
  * Learning Loop Injector
- * Fetches per-user learned patterns (CTR + hook performance) and formats them
- * as injection blocks for system prompts in generators.
+ * Fetches per-user (and optionally per-channel) learned patterns
+ * (CTR + hook performance) and formats them as injection blocks
+ * for system prompts in generators.
  */
 
 export interface CtrPatterns {
@@ -18,19 +19,23 @@ export interface CtrPatterns {
 export async function fetchUserCtrPatternsBlock(
   sb: any,
   userId: string | null | undefined,
-  niche: string | null | undefined
+  niche: string | null | undefined,
+  channelId?: string | null,
 ): Promise<string> {
   if (!userId) return "";
   try {
     const targetNiche = (niche || "general").toLowerCase();
-    const { data } = await sb
+    let q = sb
       .from("user_ctr_patterns")
       .select("*")
       .eq("user_id", userId)
       .in("niche", [targetNiche, "general"])
       .order("data_points", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (channelId) {
+      q = q.eq("channel_id", channelId);
+    }
+    const { data } = await q.maybeSingle();
 
     if (!data || !data.data_points || data.data_points < 3) return "";
 
@@ -59,16 +64,19 @@ INSTRUÇÃO: Priorize esses padrões reais sobre teoria genérica. Evite os padr
 export async function fetchHookPerformanceBlock(
   sb: any,
   userId: string | null | undefined,
-  niche: string | null | undefined
+  niche: string | null | undefined,
+  channelId?: string | null,
 ): Promise<string> {
   if (!userId) return "";
   try {
-    const { data } = await sb
+    let q = sb
       .from("hook_performance_real")
-      .select("hook_type, retention_30s, avg_retention")
+      .select("hook_type, retention_30s, avg_retention, channel_id")
       .eq("user_id", userId)
       .not("hook_type", "is", null)
       .not("retention_30s", "is", null);
+    if (channelId) q = q.eq("channel_id", channelId);
+    const { data } = await q;
 
     if (!data || data.length < 5) return "";
 
@@ -112,15 +120,18 @@ INSTRUÇÃO: Priorize o hook_type com maior retenção 30s comprovada para este 
 
 export async function fetchThumbnailStyleBlock(
   sb: any,
-  userId: string | null | undefined
+  userId: string | null | undefined,
+  channelId?: string | null,
 ): Promise<string> {
   if (!userId) return "";
   try {
-    const { data } = await sb
+    let q = sb
       .from("chosen_thumbnails")
-      .select("style_summary, ctr_actual, variant_data")
+      .select("style_summary, ctr_actual, variant_data, channel_id")
       .eq("user_id", userId)
       .not("ctr_actual", "is", null);
+    if (channelId) q = q.eq("channel_id", channelId);
+    const { data } = await q;
 
     if (!data || data.length < 3) return "";
 
