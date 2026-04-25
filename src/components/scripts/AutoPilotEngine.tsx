@@ -374,6 +374,113 @@ export const AutoPilotEngine = ({
   const abortRef = useRef<AbortController | null>(null);
   const runPipelineRef = useRef<(() => void) | null>(null);
 
+  // ── Launch modal: choose channel + scheduled date ──
+  const [showLaunchModal, setShowLaunchModal] = useState(false);
+  const [channels, setChannels] = useState<ChannelOption[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [scheduledLocal, setScheduledLocal] = useState<string>(tomorrow6pmLocal());
+  const [confirmingLaunch, setConfirmingLaunch] = useState(false);
+
+  const openLaunchModal = useCallback(async () => {
+    setShowLaunchModal(true);
+    setLoadingChannels(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Faça login primeiro');
+        setShowLaunchModal(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('user_channels')
+        .select('id, channel_name, thumbnail')
+        .eq('user_id', user.id)
+        .order('linked_at', { ascending: false });
+      if (error) throw error;
+      const list = (data || []) as ChannelOption[];
+      setChannels(list);
+      if (list.length === 1) setSelectedChannelId(list[0].id);
+      setScheduledLocal(tomorrow6pmLocal());
+    } catch (err: any) {
+      toast.error('Erro ao carregar canais: ' + err.message);
+    } finally {
+      setLoadingChannels(false);
+    }
+  }, []);
+
+  const handleConfirmLaunch = useCallback(async () => {
+    if (!selectedChannelId) {
+      toast.error('Selecione um canal');
+      return;
+    }
+    if (!scheduledLocal) {
+      toast.error('Defina a data de publicação');
+      return;
+    }
+    const scheduledAt = new Date(scheduledLocal).toISOString();
+    setConfirmingLaunch(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Login required');
+
+      // Close modal and run the original pipeline
+      setShowLaunchModal(false);
+      await runPipeline();
+
+      // After pipeline completes, find the most recent project for this user
+      const { data: project, error: projErr } = await supabase
+        .from('video_projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (projErr) throw projErr;
+      if (!project?.id) {
+        toast.error('Não foi possível localizar o projeto recém-criado');
+        return;
+      }
+      const projectId = project.id;
+
+      // 1) Update project with channel + status + schedule
+      const { error: upErr } = await supabase
+        .from('video_projects')
+        .update({
+          status: 'ready_for_production',
+          channel_id_ref: selectedChannelId,
+          scheduled_at: scheduledAt,
+          error_message: null,
+        } as any)
+        .eq('id', projectId);
+      if (upErr) throw upErr;
+
+      // 2) Insert into channel_schedule
+      await supabase.from('channel_schedule' as any).insert({
+        user_id: user.id,
+        channel_id: selectedChannelId,
+        project_id: projectId,
+        topic: topic,
+        scheduled_at: scheduledAt,
+        status: 'scheduled',
+      } as any);
+
+      // 3) Update channel next_slot_at
+      await supabase
+        .from('user_channels' as any)
+        .update({ next_slot_at: scheduledAt } as any)
+        .eq('id', selectedChannelId);
+
+      toast.success('✅ Vídeo enviado para produção! O AutoPilot vai montar e postar automaticamente.');
+    } catch (err: any) {
+      console.error('Launch confirm failed:', err);
+      toast.error('Falha ao enviar para produção: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setConfirmingLaunch(false);
+    }
+  }, [selectedChannelId, scheduledLocal, topic]);
+
   const updateStep = (key: string, update: Partial<AutoPilotStep>) => {
     setSteps(prev => prev.map(s => s.key === key ? { ...s, ...update } : s));
   };
