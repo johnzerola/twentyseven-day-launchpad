@@ -17,7 +17,7 @@ const SHORTCUTS = [
   { keys: ['?'], label: 'Abrir atalhos', path: null },
 ];
 
-export const KeyboardShortcuts = () => {
+export const KeyboardShortcuts = forwardRef<HTMLDivElement>((_props, _ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
