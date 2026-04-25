@@ -197,7 +197,8 @@ export const AnalyticsCollectorCard = forwardRef<HTMLDivElement>((_props, _ref) 
       </CardContent>
     </Card>
   );
-};
+});
+AnalyticsCollectorCard.displayName = 'AnalyticsCollectorCard';
 
 const Metric = ({
   icon,
