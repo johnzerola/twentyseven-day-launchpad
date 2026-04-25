@@ -448,33 +448,52 @@ export const AutoPilotEngine = ({
       }
       const projectId = project.id;
 
-      // 1) Update project with channel + status + schedule
-      const { error: upErr } = await supabase
-        .from('video_projects')
-        .update({
-          status: 'ready_for_production',
-          channel_id_ref: selectedChannelId,
-          scheduled_at: scheduledAt,
-          error_message: null,
-        } as any)
-        .eq('id', projectId);
-      if (upErr) throw upErr;
+      // Atomic slot reservation — backend rejects if another project of the
+      // same channel already occupies this slot (±30 min window).
+      const { data: claimRes, error: claimErr } = await supabase.rpc(
+        'claim_publish_slot' as any,
+        {
+          _user_id: user.id,
+          _project_id: projectId,
+          _channel_id: selectedChannelId,
+          _scheduled_at: scheduledAt,
+          _topic: topic || null,
+          _slot_window_minutes: 30,
+        } as any,
+      );
 
-      // 2) Insert into channel_schedule
-      await supabase.from('channel_schedule' as any).insert({
-        user_id: user.id,
-        channel_id: selectedChannelId,
-        project_id: projectId,
-        topic: topic,
-        scheduled_at: scheduledAt,
-        status: 'scheduled',
-      } as any);
+      if (claimErr) throw claimErr;
+      const claim = claimRes as any;
+      if (!claim?.ok) {
+        const reason = claim?.reason as string | undefined;
+        const conflictAt = claim?.conflicting_scheduled_at
+          ? new Date(claim.conflicting_scheduled_at).toLocaleString()
+          : null;
+        const conflictTitle = claim?.conflicting_title as string | undefined;
 
-      // 3) Update channel next_slot_at
-      await supabase
-        .from('user_channels' as any)
-        .update({ next_slot_at: scheduledAt } as any)
-        .eq('id', selectedChannelId);
+        let msg = 'Não foi possível reservar este slot.';
+        if (reason === 'slot_conflict_project' || reason === 'slot_conflict_schedule') {
+          msg =
+            `⛔ Este canal já tem outro vídeo ${reason === 'slot_conflict_schedule' ? 'agendado' : 'em produção'}` +
+            (conflictAt ? ` em ${conflictAt}` : '') +
+            (conflictTitle ? ` ("${conflictTitle}")` : '') +
+            `. Escolha outro horário (mín. ${claim?.window_minutes || 30} min de distância).`;
+        } else if (reason === 'project_not_found') {
+          msg = 'Projeto não encontrado.';
+        } else if (reason === 'channel_not_found') {
+          msg = 'Canal não encontrado.';
+        } else if (reason === 'project_not_owned_by_user' || reason === 'channel_not_owned_by_user') {
+          msg = 'Você não tem permissão sobre este projeto/canal.';
+        } else if (reason) {
+          msg = `Não foi possível reservar este slot (${reason}).`;
+        }
+
+        toast.error(msg, { duration: 8000 });
+        setLaunchPhase('idle');
+        // Reopen the form so the user can pick a different time
+        setShowLaunchModal(true);
+        return;
+      }
 
       setLaunchPhase('done');
       toast.success('✅ Vídeo enviado para produção! O AutoPilot vai montar e postar automaticamente.');
