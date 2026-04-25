@@ -13,7 +13,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { topic, durationSeconds, style, niche, language, viralContext, channelKnowledge, durationCategory, userId } = await req.json();
+    const reqBody = await req.json();
+    const { topic, durationSeconds, style, niche, language, viralContext, channelKnowledge, durationCategory, userId } = reqBody;
+    const channelIdForLearning: string | null = reqBody?.channel_id || reqBody?.channelId || reqBody?.channel_id_ref || null;
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
 
@@ -39,6 +41,31 @@ serve(async (req) => {
         }
       } catch (e) {
         console.warn(`[NICHE-REFS-SHORT] failed: ${(e as any)?.message}`);
+      }
+    }
+
+    // ⭐ CHANNEL LEARNING BRIEF — proven hooks/title patterns from this channel
+    let channelLearningBrief = "";
+    if (userId) {
+      try {
+        const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/script-learning-context`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ user_id: userId, niche, channel_id: channelIdForLearning }),
+        });
+        if (r.ok) {
+          const j = await r.json();
+          if (j?.has_data && j?.prompt_brief) {
+            channelLearningBrief = `\n\n${j.prompt_brief}\n`;
+            const topHook = j?.top_hooks?.[0]?.hook_type ?? "—";
+            console.log(`[CHANNEL-LEARNING-SHORT] channel=${channelIdForLearning ?? "all"} sample=${j.sample_size} top_hook="${topHook}"`);
+          }
+        }
+      } catch (e) {
+        console.warn(`[CHANNEL-LEARNING-SHORT] failed: ${(e as any)?.message}`);
       }
     }
 
@@ -171,7 +198,7 @@ OBJETIVO: >78% de completion. A história JUSTIFICA cada segundo.
 
     const modelBlock = bestModel ? `\n📐 MODELO ESTRUTURAL RECOMENDADO: ${bestModel.model_name} (${bestModel.best_for_duration})\n${bestModel.description}\nHook: ${bestModel.hook_pattern}\nPacing: ${bestModel.pacing_guide}\n` : '';
 
-    const systemPrompt = `Você é o MELHOR ROTEIRISTA DE SHORTS DO MUNDO. Taxa de conclusão: 95%+. Cada Short seu faz >1M views.${weeklyRefBrief}
+    const systemPrompt = `Você é o MELHOR ROTEIRISTA DE SHORTS DO MUNDO. Taxa de conclusão: 95%+. Cada Short seu faz >1M views.${channelLearningBrief}${weeklyRefBrief}
 
 ═══════════════════════════════════
 📱 FORMATO: YouTube Short / TikTok / Reels — VERTICAL 9:16

@@ -2,6 +2,11 @@
  * Learning Loop Injector
  * Fetches per-user learned patterns (CTR + hook performance) and formats them
  * as injection blocks for system prompts in generators.
+ *
+ * Note: per-channel scoping is handled by `script-learning-context`
+ * (which queries `video_performance` directly with channel_id).
+ * The tables here (hook_performance_real, user_ctr_patterns,
+ * chosen_thumbnails) are aggregated per-user only.
  */
 
 export interface CtrPatterns {
@@ -18,7 +23,7 @@ export interface CtrPatterns {
 export async function fetchUserCtrPatternsBlock(
   sb: any,
   userId: string | null | undefined,
-  niche: string | null | undefined
+  niche: string | null | undefined,
 ): Promise<string> {
   if (!userId) return "";
   try {
@@ -59,7 +64,7 @@ INSTRUÇÃO: Priorize esses padrões reais sobre teoria genérica. Evite os padr
 export async function fetchHookPerformanceBlock(
   sb: any,
   userId: string | null | undefined,
-  niche: string | null | undefined
+  niche: string | null | undefined,
 ): Promise<string> {
   if (!userId) return "";
   try {
@@ -112,7 +117,7 @@ INSTRUÇÃO: Priorize o hook_type com maior retenção 30s comprovada para este 
 
 export async function fetchThumbnailStyleBlock(
   sb: any,
-  userId: string | null | undefined
+  userId: string | null | undefined,
 ): Promise<string> {
   if (!userId) return "";
   try {
