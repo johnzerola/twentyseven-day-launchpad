@@ -206,6 +206,8 @@ const Channels = () => {
         views: data.channel?.views || ch.views,
         videos: data.channel?.videos || ch.videos,
         niche: data.analysis?.niche_detected || ch.niche,
+        character_bio: data.analysis?.best_content_type || (ch as any).character_bio,
+        visual_style_prompt: data.analysis?.content_strategy || (ch as any).visual_style_prompt,
         analysis_json: { ...data.analysis, recentVideos: data.recentVideos, topVideos: data.topVideos, avgRecentViews: data.avgRecentViews, realMetrics: data.realMetrics },
       } as any).eq('id', ch.id);
       toast.success('Canal atualizado!');
