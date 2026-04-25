@@ -166,6 +166,92 @@ export const AutoPilotTab = () => {
     setSavingId('');
   };
 
+  const autoFillDNA = async (ch: Channel) => {
+    if (!ch.youtube_channel_id) {
+      toast.error('Canal sem youtube_channel_id. Atualize o canal primeiro.');
+      return;
+    }
+    setAutoFillingId(ch.id);
+    try {
+      toast.info('🧠 Analisando canal com IA...');
+
+      // 1) analyze-channel
+      const { data: ana, error: anaErr } = await supabase.functions.invoke('analyze-channel', {
+        body: { channelInput: ch.youtube_channel_id },
+      });
+      if (anaErr || ana?.error) throw new Error(ana?.error || anaErr?.message || 'Falha na análise');
+      const a = ana.analysis || {};
+      const topVideos: any[] = ana.topVideos || [];
+      const recentVideos: any[] = ana.recentVideos || [];
+
+      // 2) find-competitors-ai (best-effort)
+      let referenceChannels: string[] = [];
+      try {
+        const topTitles = [
+          ...topVideos.map((v: any) => v.title),
+          ...recentVideos.map((v: any) => v.title),
+        ].filter(Boolean).slice(0, 10);
+
+        if (topTitles.length > 0) {
+          toast.info('🔍 Buscando canais de referência...');
+          const { data: comp } = await supabase.functions.invoke('find-competitors-ai', {
+            body: {
+              channelId: ch.youtube_channel_id,
+              channelName: ch.channel_name,
+              topVideoTitles: topTitles,
+              subscribers: ch.subscribers || 0,
+              niche: a.niche_detected || ch.niche || '',
+              country: 'BR',
+            },
+          });
+          referenceChannels = (comp?.competitors || [])
+            .slice(0, 5)
+            .map((c: any) => c.channelId)
+            .filter(Boolean);
+        }
+      } catch (e) {
+        console.warn('find-competitors-ai falhou (seguindo sem reference_channels):', e);
+      }
+
+      const characterBio = [
+        a.best_content_type,
+        a.engagement_diagnosis ? 'Tom: ' + String(a.engagement_diagnosis).slice(0, 100) : null,
+      ].filter(Boolean).join('. ');
+
+      const payload: any = {
+        character_bio: characterBio || null,
+        visual_style_prompt: a.content_strategy || null,
+        niche: a.niche_detected || ch.niche || null,
+        language: 'pt-BR',
+        weekly_video_target: ch.weekly_video_target || 3,
+        min_interval_hours: ch.min_interval_hours || 48,
+        posting_hour: ch.posting_hour ?? 18,
+        analysis_json: {
+          ...a,
+          recentVideos,
+          topVideos,
+          avgRecentViews: ana.avgRecentViews,
+          realMetrics: ana.realMetrics,
+        },
+      };
+      if (referenceChannels.length > 0) {
+        payload.reference_channels = referenceChannels;
+      }
+
+      const { error: upErr } = await supabase.from('user_channels').update(payload).eq('id', ch.id);
+      if (upErr) throw upErr;
+
+      setChannels(prev => prev.map(c => c.id === ch.id ? { ...c, ...payload } : c));
+      setDraftMap(prev => ({ ...prev, [ch.id]: { ...(prev[ch.id] || ch), ...payload } }));
+
+      toast.success('✅ DNA preenchido automaticamente! Revise e ajuste se quiser.');
+    } catch (e: any) {
+      toast.error('Erro ao preencher DNA: ' + (e?.message || 'desconhecido'));
+    } finally {
+      setAutoFillingId('');
+    }
+  };
+
   const addAvoidTopic = (id: string) => {
     const v = (newAvoid[id] || '').trim();
     if (!v) return;
