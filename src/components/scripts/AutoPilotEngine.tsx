@@ -372,7 +372,7 @@ export const AutoPilotEngine = ({
   const [showPanel, setShowPanel] = useState(false);
   const [loadingAutoTopic, setLoadingAutoTopic] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const runPipelineRef = useRef<(() => void) | null>(null);
+  const runPipelineRef = useRef<(() => Promise<void>) | null>(null);
 
   // ── Launch modal: choose channel + scheduled date ──
   const [showLaunchModal, setShowLaunchModal] = useState(false);
