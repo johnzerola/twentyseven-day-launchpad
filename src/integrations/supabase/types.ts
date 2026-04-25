@@ -4515,7 +4515,13 @@ export type Database = {
           views: number | null
           visual_style_prompt: string | null
           weekly_video_target: number | null
+          youtube_access_token: string | null
           youtube_channel_id: string
+          youtube_oauth_connected_at: string | null
+          youtube_oauth_email: string | null
+          youtube_oauth_scope: string | null
+          youtube_refresh_token: string | null
+          youtube_token_expires_at: string | null
         }
         Insert: {
           analysis_json?: Json | null
@@ -4548,7 +4554,13 @@ export type Database = {
           views?: number | null
           visual_style_prompt?: string | null
           weekly_video_target?: number | null
+          youtube_access_token?: string | null
           youtube_channel_id: string
+          youtube_oauth_connected_at?: string | null
+          youtube_oauth_email?: string | null
+          youtube_oauth_scope?: string | null
+          youtube_refresh_token?: string | null
+          youtube_token_expires_at?: string | null
         }
         Update: {
           analysis_json?: Json | null
@@ -4581,7 +4593,13 @@ export type Database = {
           views?: number | null
           visual_style_prompt?: string | null
           weekly_video_target?: number | null
+          youtube_access_token?: string | null
           youtube_channel_id?: string
+          youtube_oauth_connected_at?: string | null
+          youtube_oauth_email?: string | null
+          youtube_oauth_scope?: string | null
+          youtube_refresh_token?: string | null
+          youtube_token_expires_at?: string | null
         }
         Relationships: []
       }
@@ -5239,15 +5257,20 @@ export type Database = {
           claim_expires_at: string | null
           claimed_at: string | null
           created_at: string | null
+          description: string | null
           duration_seconds: number | null
           error_message: string | null
           id: string
           idempotency_key: string | null
           intelligence_json: Json | null
           last_error_at: string | null
+          last_upload_attempt_at: string | null
+          made_for_kids: boolean | null
           max_retries: number
           next_retry_at: string | null
           niche: string | null
+          privacy_status: string | null
+          published_at: string | null
           rendered_video_sha256: string | null
           rendered_video_url: string | null
           retry_count: number
@@ -5255,12 +5278,20 @@ export type Database = {
           scheduled_at: string | null
           script: string | null
           status: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
           title: string
           total_render_cost_usd: number | null
           updated_at: string | null
+          upload_attempts: number | null
+          upload_completed_at: string | null
+          upload_session_uri: string | null
+          upload_started_at: string | null
           user_id: string
           video_type: Database["public"]["Enums"]["video_type"]
           worker_id: string | null
+          youtube_category_id: number | null
+          youtube_url: string | null
           youtube_video_id: string | null
         }
         Insert: {
@@ -5270,15 +5301,20 @@ export type Database = {
           claim_expires_at?: string | null
           claimed_at?: string | null
           created_at?: string | null
+          description?: string | null
           duration_seconds?: number | null
           error_message?: string | null
           id?: string
           idempotency_key?: string | null
           intelligence_json?: Json | null
           last_error_at?: string | null
+          last_upload_attempt_at?: string | null
+          made_for_kids?: boolean | null
           max_retries?: number
           next_retry_at?: string | null
           niche?: string | null
+          privacy_status?: string | null
+          published_at?: string | null
           rendered_video_sha256?: string | null
           rendered_video_url?: string | null
           retry_count?: number
@@ -5286,12 +5322,20 @@ export type Database = {
           scheduled_at?: string | null
           script?: string | null
           status?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
           title?: string
           total_render_cost_usd?: number | null
           updated_at?: string | null
+          upload_attempts?: number | null
+          upload_completed_at?: string | null
+          upload_session_uri?: string | null
+          upload_started_at?: string | null
           user_id: string
           video_type?: Database["public"]["Enums"]["video_type"]
           worker_id?: string | null
+          youtube_category_id?: number | null
+          youtube_url?: string | null
           youtube_video_id?: string | null
         }
         Update: {
@@ -5301,15 +5345,20 @@ export type Database = {
           claim_expires_at?: string | null
           claimed_at?: string | null
           created_at?: string | null
+          description?: string | null
           duration_seconds?: number | null
           error_message?: string | null
           id?: string
           idempotency_key?: string | null
           intelligence_json?: Json | null
           last_error_at?: string | null
+          last_upload_attempt_at?: string | null
+          made_for_kids?: boolean | null
           max_retries?: number
           next_retry_at?: string | null
           niche?: string | null
+          privacy_status?: string | null
+          published_at?: string | null
           rendered_video_sha256?: string | null
           rendered_video_url?: string | null
           retry_count?: number
@@ -5317,12 +5366,20 @@ export type Database = {
           scheduled_at?: string | null
           script?: string | null
           status?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
           title?: string
           total_render_cost_usd?: number | null
           updated_at?: string | null
+          upload_attempts?: number | null
+          upload_completed_at?: string | null
+          upload_session_uri?: string | null
+          upload_started_at?: string | null
           user_id?: string
           video_type?: Database["public"]["Enums"]["video_type"]
           worker_id?: string | null
+          youtube_category_id?: number | null
+          youtube_url?: string | null
           youtube_video_id?: string | null
         }
         Relationships: []
@@ -5806,6 +5863,65 @@ export type Database = {
         }
         Relationships: []
       }
+      youtube_upload_attempts: {
+        Row: {
+          attempt_number: number
+          bytes_uploaded: number | null
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          http_status: number | null
+          id: string
+          project_id: string
+          status: string
+          total_bytes: number | null
+          upload_session_uri: string | null
+          worker_id: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          attempt_number: number
+          bytes_uploaded?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          project_id: string
+          status: string
+          total_bytes?: number | null
+          upload_session_uri?: string | null
+          worker_id?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          bytes_uploaded?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          project_id?: string
+          status?: string
+          total_bytes?: number | null
+          upload_session_uri?: string | null
+          worker_id?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youtube_upload_attempts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       mv_avg_scores_by_niche: {
@@ -5889,6 +6005,10 @@ export type Database = {
           _lease_minutes?: number
           _worker_id: string
         }
+        Returns: Json
+      }
+      claim_next_upload: {
+        Args: { _lease_minutes?: number; _worker_id: string }
         Returns: Json
       }
       cleanup_expired_oauth_tokens: { Args: never; Returns: undefined }
