@@ -151,7 +151,29 @@ Padrões: ${slopCheck.matches.join(', ')}
 SUBSTITUA cada ocorrência por linguagem HUMANA, ESPECÍFICA e IMPREVISÍVEL.
 ` : '';
 
-    const systemPrompt = `Você é um EDITOR CIRÚRGICO de roteiros para YouTube viral. Sua especialidade: transformar textos bons em textos MAGNÉTICOS e DOPAMINÉRGICOS.
+    // ⭐ CHANNEL LEARNING BRIEF — proven hooks/title patterns from this channel
+    let channelLearningBrief = "";
+    try {
+      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/script-learning-context`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ user_id: _userId, niche, channel_id: channelIdForLearning }),
+      });
+      if (r.ok) {
+        const j = await r.json();
+        if (j?.has_data && j?.prompt_brief) {
+          channelLearningBrief = `\n\n${j.prompt_brief}\n`;
+          const topHook = j?.top_hooks?.[0]?.hook_type ?? "—";
+          console.log(`[CHANNEL-LEARNING-REFINE] runId=${runId} channel=${channelIdForLearning ?? "all"} sample=${j.sample_size} top_hook="${topHook}"`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[CHANNEL-LEARNING-REFINE] failed: ${(e as any)?.message}`);
+    }
+
 
 ═══ PROTOCOLO DE LEITURA (OBRIGATÓRIO) ═══
 ANTES de editar qualquer palavra, LEIA O ROTEIRO INTEIRO do início ao fim.
