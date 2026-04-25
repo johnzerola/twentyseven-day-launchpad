@@ -381,6 +381,7 @@ export const AutoPilotEngine = ({
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [scheduledLocal, setScheduledLocal] = useState<string>(tomorrow6pmLocal());
   const [confirmingLaunch, setConfirmingLaunch] = useState(false);
+  const [launchPhase, setLaunchPhase] = useState<'idle' | 'pipeline' | 'saving' | 'done'>('idle');
 
   const openLaunchModal = useCallback(async () => {
     setShowLaunchModal(true);
@@ -420,14 +421,16 @@ export const AutoPilotEngine = ({
     }
     const scheduledAt = new Date(scheduledLocal).toISOString();
     setConfirmingLaunch(true);
+    setLaunchPhase('pipeline');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Login required');
 
-      // Close modal and run the original pipeline
-      setShowLaunchModal(false);
+      // Run the original pipeline (modal stays open showing progress)
       const launch = runPipelineRef.current;
       if (launch) await launch();
+
+      setLaunchPhase('saving');
 
       // After pipeline completes, find the most recent project for this user
       const { data: project, error: projErr } = await supabase
@@ -473,10 +476,17 @@ export const AutoPilotEngine = ({
         .update({ next_slot_at: scheduledAt } as any)
         .eq('id', selectedChannelId);
 
+      setLaunchPhase('done');
       toast.success('✅ Vídeo enviado para produção! O AutoPilot vai montar e postar automaticamente.');
+      // Auto-close modal shortly after success
+      setTimeout(() => {
+        setShowLaunchModal(false);
+        setLaunchPhase('idle');
+      }, 1500);
     } catch (err: any) {
       console.error('Launch confirm failed:', err);
       toast.error('Falha ao enviar para produção: ' + (err.message || 'erro desconhecido'));
+      setLaunchPhase('idle');
     } finally {
       setConfirmingLaunch(false);
     }
@@ -1055,7 +1065,7 @@ export const AutoPilotEngine = ({
       </AnimatePresence>
 
       {/* Launch modal — choose channel + scheduled date */}
-      <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch) setShowLaunchModal(o); }}>
+      <Dialog open={showLaunchModal} onOpenChange={(o) => { if (!confirmingLaunch && launchPhase === 'idle') setShowLaunchModal(o); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1066,7 +1076,74 @@ export const AutoPilotEngine = ({
             </DialogDescription>
           </DialogHeader>
 
-          {loadingChannels ? (
+          {launchPhase !== 'idle' ? (
+            <div className="space-y-3 py-2">
+              {/* Pipeline live progress */}
+              <div className="space-y-2">
+                {steps.map((s) => {
+                  const phaseLabel =
+                    s.key === 'script' ? 'Gerando roteiro' :
+                    s.key === 'refine' ? 'Refinando narrativa' :
+                    s.key === 'voice' ? 'Gerando narração' :
+                    s.key === 'scenes' ? 'Montando cenas visuais' :
+                    s.key === 'titles' ? 'Otimizando títulos & SEO' :
+                    s.key === 'thumbnail' ? 'Criando thumbnail' :
+                    s.key === 'affiliate' ? 'Anexando links' :
+                    s.label;
+                  return (
+                    <div
+                      key={s.key}
+                      className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md border transition-colors ${
+                        s.status === 'running' ? 'border-primary bg-primary/5 text-foreground' :
+                        s.status === 'done' ? 'border-chart-2/40 bg-chart-2/5 text-muted-foreground' :
+                        s.status === 'error' ? 'border-destructive/40 bg-destructive/5 text-destructive' :
+                        s.status === 'skipped' ? 'border-muted bg-muted/20 text-muted-foreground' :
+                        'border-border text-muted-foreground/70'
+                      }`}
+                    >
+                      <span className="w-4 flex justify-center">
+                        {s.status === 'running' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> :
+                         s.status === 'done' ? <Check className="w-3.5 h-3.5 text-chart-2" /> :
+                         s.status === 'error' ? <AlertCircle className="w-3.5 h-3.5 text-destructive" /> :
+                         <span className="text-[11px]">{s.emoji}</span>}
+                      </span>
+                      <span className="flex-1 truncate">
+                        {phaseLabel}
+                        {s.status === 'running' && '…'}
+                      </span>
+                      {s.detail && s.status !== 'pending' && (
+                        <span className="text-[10px] opacity-70 truncate max-w-[40%]">{s.detail}</span>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Saving phase */}
+                <div
+                  className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md border transition-colors ${
+                    launchPhase === 'saving' ? 'border-primary bg-primary/5 text-foreground' :
+                    launchPhase === 'done' ? 'border-chart-2/40 bg-chart-2/5 text-muted-foreground' :
+                    'border-border text-muted-foreground/70'
+                  }`}
+                >
+                  <span className="w-4 flex justify-center">
+                    {launchPhase === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> :
+                     launchPhase === 'done' ? <Check className="w-3.5 h-3.5 text-chart-2" /> :
+                     <span className="text-[11px]">📤</span>}
+                  </span>
+                  <span className="flex-1 truncate">
+                    Enviando para o AutoPilot{launchPhase === 'saving' ? '…' : ''}
+                  </span>
+                </div>
+              </div>
+
+              {launchPhase === 'done' && (
+                <p className="text-xs text-chart-2 text-center">
+                  ✅ Tudo pronto! Fechando…
+                </p>
+              )}
+            </div>
+          ) : loadingChannels ? (
             <div className="py-6 flex items-center justify-center text-sm text-muted-foreground gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Carregando canais...
             </div>
@@ -1121,27 +1198,31 @@ export const AutoPilotEngine = ({
           )}
 
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setShowLaunchModal(false)}
-              disabled={confirmingLaunch}
-            >
-              Cancelar
-            </Button>
-            {channels.length > 0 && (
-              <Button
-                onClick={handleConfirmLaunch}
-                disabled={confirmingLaunch || !selectedChannelId || !scheduledLocal}
-                className="gap-2"
-              >
-                {confirmingLaunch ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
-                  </>
-                ) : (
-                  <>🚀 Enviar para Produção</>
+            {launchPhase === 'idle' && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowLaunchModal(false)}
+                  disabled={confirmingLaunch}
+                >
+                  Cancelar
+                </Button>
+                {channels.length > 0 && (
+                  <Button
+                    onClick={handleConfirmLaunch}
+                    disabled={confirmingLaunch || !selectedChannelId || !scheduledLocal}
+                    className="gap-2"
+                  >
+                    🚀 Enviar para Produção
+                  </Button>
                 )}
-              </Button>
+              </>
+            )}
+            {(launchPhase === 'pipeline' || launchPhase === 'saving') && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground w-full justify-center">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {launchPhase === 'pipeline' ? 'Gerando seu vídeo…' : 'Finalizando agendamento…'}
+              </div>
             )}
           </DialogFooter>
         </DialogContent>
