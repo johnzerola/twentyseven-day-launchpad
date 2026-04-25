@@ -62,6 +62,7 @@ export const AutoPilotTab = () => {
   const [savingId, setSavingId] = useState<string>('');
   const [newAvoid, setNewAvoid] = useState<Record<string, string>>({});
   const [showManual, setShowManual] = useState(false);
+  const [autoFillingId, setAutoFillingId] = useState<string>('');
   const [manualForm, setManualForm] = useState({ channel_id: '', topic: '', scheduled_at: '' });
 
   const reload = async () => {
