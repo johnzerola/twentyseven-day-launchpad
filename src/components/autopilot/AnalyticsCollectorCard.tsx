@@ -32,7 +32,7 @@ function timeAgo(iso: string) {
   return `há ${d} d`;
 }
 
-export const AnalyticsCollectorCard = () => {
+export const AnalyticsCollectorCard = forwardRef<HTMLDivElement>((_props, _ref) => {
   const [lastRun, setLastRun] = useState<RunRow | null>(null);
   const [needsReauthCount, setNeedsReauthCount] = useState(0);
   const [oauthChannelCount, setOauthChannelCount] = useState(0);
