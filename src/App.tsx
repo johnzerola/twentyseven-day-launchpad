@@ -36,6 +36,7 @@ import CalendarPage from "./pages/CalendarPage";
 import MyChannelIntelligence from "./pages/MyChannelIntelligence";
 import ChannelStudio from "./pages/ChannelStudio";
 import AdminTraces from "./pages/AdminTraces";
+import AgentsHub from "./pages/AgentsHub";
 import NotFound from "./pages/NotFound";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/growth-tools" element={<P><GrowthTools /></P>} />
             <Route path="/shorts-trends" element={<P><ShortsTrends /></P>} />
             <Route path="/squads" element={<P><Squads /></P>} />
+            <Route path="/agents" element={<P><AgentsHub /></P>} />
 
             {/* Consolidated redirects — old routes point to merged pages */}
             <Route path="/branding" element={<Navigate to="/growth-tools" replace />} />
